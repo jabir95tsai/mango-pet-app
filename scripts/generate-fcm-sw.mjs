@@ -34,7 +34,10 @@ function readEnvLocal(file) {
   return env;
 }
 
-const env = readEnvLocal(envPath);
+// In local dev .env.local has the values; in CI / Firebase App Hosting build,
+// the values come in via process.env (declared in apphosting.yaml or set in the
+// Firebase Console). Merge with .env.local taking precedence so devs can override.
+const env = { ...process.env, ...readEnvLocal(envPath) };
 const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
 const firebaseDep = pkg.dependencies?.firebase ?? "12.13.0";
 const firebaseVersion = firebaseDep.replace(/^[\^~]/, "");

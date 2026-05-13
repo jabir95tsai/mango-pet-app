@@ -334,7 +334,7 @@ export const acceptFriendRequest = onCall(
 
     const reqRef = db.doc(`users/${myUid}/friendRequests/${fromUid}`);
     const reqSnap = await reqRef.get();
-    if (!reqSnap.exists()) {
+    if (!reqSnap.exists) {
       throw new HttpsError("not-found", "Request not found");
     }
 
