@@ -1,0 +1,121 @@
+{
+  "App": {
+    "name": "Mango Pet",
+    "tagline": "Your pet life companion"
+  },
+  "Nav": {
+    "home": "Home",
+    "pets": "My Pets",
+    "walks": "Walks",
+    "leaderboard": "Leaderboard",
+    "restaurants": "Restaurants",
+    "knowledge": "Knowledge",
+    "friends": "Friends",
+    "feed": "Feed",
+    "settings": "Settings"
+  },
+  "Auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "signInWithGoogle": "Sign in with Google",
+    "signInWithApple": "Sign in with Apple",
+    "signInWithFacebook": "Sign in with Facebook",
+    "welcome": "Welcome to Mango Pet",
+    "subtitle": "Track, share, and discover life with your pets"
+  },
+  "Pet": {
+    "addPet": "Add pet",
+    "petDetail": "Pet detail",
+    "noPets": "No pets yet",
+    "species": {
+      "dog": "Dog",
+      "cat": "Cat",
+      "other": "Other"
+    }
+  },
+  "Health": {
+    "title": "Health records",
+    "addRecord": "Add record",
+    "timeline": "Timeline",
+    "weightChart": "Weight chart",
+    "noRecords": "No records yet",
+    "types": {
+      "weight": "Weight",
+      "feeding": "Feeding",
+      "vaccine": "Vaccine",
+      "vet": "Vet visit",
+      "medication": "Medication"
+    },
+    "fields": {
+      "recordedAt": "Recorded at",
+      "notes": "Notes",
+      "kg": "kg",
+      "brand": "Brand",
+      "amountG": "Amount (g)",
+      "foodType": "Food type",
+      "vaccineName": "Vaccine name",
+      "nextDue": "Next due",
+      "clinic": "Clinic",
+      "doctor": "Doctor",
+      "diagnosis": "Diagnosis",
+      "prescription": "Prescription",
+      "medName": "Medication",
+      "frequency": "Frequency",
+      "startsAt": "Starts",
+      "endsAt": "Ends"
+    }
+  },
+  "Reminder": {
+    "title": "Reminders",
+    "add": "Add reminder",
+    "upcoming": "Upcoming",
+    "overdue": "Overdue",
+    "noReminders": "No reminders",
+    "markDone": "Done",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "triggerAt": "Trigger at",
+      "repeat": "Repeat",
+      "notifyBefore": "Notify before",
+      "linkedPet": "Linked pet"
+    },
+    "repeat": {
+      "none": "Never",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly"
+    },
+    "notifyBefore": {
+      "0": "On time",
+      "15": "15 min before",
+      "60": "1 hour before",
+      "1440": "1 day before",
+      "10080": "1 week before"
+    }
+  },
+  "Push": {
+    "title": "Push notifications",
+    "enable": "Enable",
+    "disable": "Disable",
+    "status": {
+      "checking": "Checking...",
+      "unsupported": "Not supported on this device",
+      "disabled": "Not enabled yet",
+      "denied": "Blocked — re-enable notifications in your browser settings",
+      "enabled": "Active — you'll get a push when reminders fire"
+    }
+  },
+  "Common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "confirm": "Confirm",
+    "back": "Back",
+    "none": "None"
+  }
+}

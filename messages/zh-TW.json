@@ -1,0 +1,121 @@
+{
+  "App": {
+    "name": "芒果寵物",
+    "tagline": "你的寵物生活夥伴"
+  },
+  "Nav": {
+    "home": "首頁",
+    "pets": "我的寵物",
+    "walks": "遛狗",
+    "leaderboard": "排行榜",
+    "restaurants": "餐廳地圖",
+    "knowledge": "知識庫",
+    "friends": "好友",
+    "feed": "動態",
+    "settings": "設定"
+  },
+  "Auth": {
+    "signIn": "登入",
+    "signOut": "登出",
+    "signInWithGoogle": "用 Google 登入",
+    "signInWithApple": "用 Apple 登入",
+    "signInWithFacebook": "用 Facebook 登入",
+    "welcome": "歡迎來到芒果寵物",
+    "subtitle": "紀錄、分享、發現屬於你和毛孩的生活"
+  },
+  "Pet": {
+    "addPet": "新增寵物",
+    "petDetail": "寵物詳情",
+    "noPets": "還沒有寵物",
+    "species": {
+      "dog": "狗",
+      "cat": "貓",
+      "other": "其他"
+    }
+  },
+  "Health": {
+    "title": "健康紀錄",
+    "addRecord": "新增紀錄",
+    "timeline": "時間軸",
+    "weightChart": "體重變化",
+    "noRecords": "尚無紀錄",
+    "types": {
+      "weight": "體重",
+      "feeding": "餵食",
+      "vaccine": "疫苗",
+      "vet": "就醫",
+      "medication": "用藥"
+    },
+    "fields": {
+      "recordedAt": "紀錄日期",
+      "notes": "備註",
+      "kg": "公斤",
+      "brand": "品牌",
+      "amountG": "份量 (克)",
+      "foodType": "食物類型",
+      "vaccineName": "疫苗名稱",
+      "nextDue": "下次到期",
+      "clinic": "醫院",
+      "doctor": "獸醫",
+      "diagnosis": "診斷",
+      "prescription": "處方",
+      "medName": "藥名",
+      "frequency": "頻率",
+      "startsAt": "開始日期",
+      "endsAt": "結束日期"
+    }
+  },
+  "Reminder": {
+    "title": "提醒",
+    "add": "新增提醒",
+    "upcoming": "即將到期",
+    "overdue": "已過期",
+    "noReminders": "尚無提醒",
+    "markDone": "完成",
+    "fields": {
+      "title": "標題",
+      "description": "描述",
+      "triggerAt": "提醒時間",
+      "repeat": "重複",
+      "notifyBefore": "提前通知",
+      "linkedPet": "關聯寵物"
+    },
+    "repeat": {
+      "none": "不重複",
+      "daily": "每天",
+      "weekly": "每週",
+      "monthly": "每月",
+      "yearly": "每年"
+    },
+    "notifyBefore": {
+      "0": "準時",
+      "15": "提前 15 分鐘",
+      "60": "提前 1 小時",
+      "1440": "提前 1 天",
+      "10080": "提前 1 週"
+    }
+  },
+  "Push": {
+    "title": "推播通知",
+    "enable": "啟用",
+    "disable": "停用",
+    "status": {
+      "checking": "檢查中...",
+      "unsupported": "此裝置不支援推播",
+      "disabled": "尚未啟用",
+      "denied": "瀏覽器已拒絕，請到瀏覽器設定開啟通知權限",
+      "enabled": "已啟用，提醒到時會推播"
+    }
+  },
+  "Common": {
+    "loading": "載入中...",
+    "save": "儲存",
+    "cancel": "取消",
+    "delete": "刪除",
+    "edit": "編輯",
+    "add": "新增",
+    "confirm": "確認",
+    "back": "返回",
+    "none": "無"
+  }
+}

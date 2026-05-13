@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Users & owned sub-collections ──
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow create: if request.auth.uid == uid
+        && request.resource.data.uid == uid;
+      allow update: if request.auth.uid == uid;
+      allow delete: if false;
+
+      match /pets/{petId} {
+        allow read: if request.auth.uid == uid;
+        allow create: if request.auth.uid == uid
+          && request.resource.data.ownerUid == uid;
+        allow update, delete: if request.auth.uid == uid;
+      }
+
+      match /healthRecords/{recordId} {
+        allow read, write: if request.auth.uid == uid;
+      }
+
+      match /reminders/{reminderId} {
+        allow read, write: if request.auth.uid == uid;
+      }
+
+      match /walks/{walkId} {
+        allow read, write: if request.auth.uid == uid;
+      }
+
+      match /friends/{friendUid} {
+        allow read: if request.auth != null
+          && (request.auth.uid == uid || request.auth.uid == friendUid);
+        allow write: if request.auth.uid == uid;
+      }
+
+      // Anyone signed in can SEND a request to you (create only, with their uid).
+      // Only you can read or delete (accept/reject) requests.
+      match /friendRequests/{requestId} {
+        allow read: if request.auth.uid == uid;
+        allow create: if request.auth != null
+          && request.resource.data.fromUid == request.auth.uid
+          && requestId == request.auth.uid;
+        allow delete: if request.auth.uid == uid
+          || request.auth.uid == requestId;
+        allow update: if false;
+      }
+
+      match /favoriteRestaurants/{rid} {
+        allow read, write: if request.auth.uid == uid;
+      }
+
+      match /knowledgeBookmarks/{articleId} {
+        allow read, write: if request.auth.uid == uid;
+      }
+    }
+
+    // ── Posts (top-level) ──
+    function isFriend(authorUid, viewerUid) {
+      return exists(/databases/$(database)/documents/users/$(authorUid)/friends/$(viewerUid));
+    }
+
+    match /posts/{postId} {
+      allow read: if request.auth != null && (
+        resource.data.visibility == "public"
+        || resource.data.authorUid == request.auth.uid
+        || (resource.data.visibility == "friends"
+            && isFriend(resource.data.authorUid, request.auth.uid))
+      );
+
+      allow create: if request.auth != null
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.visibility in ["private", "friends", "public"];
+
+      // Allow author full update; allow others ONLY to change reactionCounts
+      allow update: if request.auth != null && (
+        resource.data.authorUid == request.auth.uid
+        || (request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(["reactionCounts"]))
+      );
+
+      allow delete: if request.auth.uid == resource.data.authorUid;
+
+      match /reactions/{uid} {
+        allow read: if request.auth != null;
+        allow write: if request.auth.uid == uid;
+      }
+    }
+
+    // ── Restaurants & reviews (read-anyone, write-signed-in) ──
+    match /restaurants/{rid} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.submittedByUid == request.auth.uid;
+      allow update, delete: if false; // admin only via Cloud Functions later
+
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if request.auth != null
+          && request.resource.data.authorUid == request.auth.uid;
+        allow update, delete: if request.auth.uid == resource.data.authorUid;
+      }
+    }
+
+    // ── Knowledge articles (public read, admin write later) ──
+    match /knowledgeArticles/{articleId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── Leaderboards (read-anyone, write only via Cloud Functions) ──
+    match /leaderboards/{period} {
+      allow read: if request.auth != null;
+      allow write: if false;
+
+      match /entries/{uid} {
+        allow read: if request.auth != null;
+        allow write: if false;
+      }
+    }
+  }
+}

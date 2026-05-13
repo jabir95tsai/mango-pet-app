@@ -32,10 +32,24 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
 
 # vercel
 .vercel
 
+# claude code session state
+.claude/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated FCM service worker (rebuilt by scripts/generate-fcm-sw.mjs)
+/public/firebase-messaging-sw.js
+
+# firebase
+firebase-debug.log
+firestore-debug.log
+.firebase
+/functions/lib
+/functions/node_modules

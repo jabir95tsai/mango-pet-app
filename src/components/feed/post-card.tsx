@@ -1,0 +1,96 @@
+"use client";
+
+import Image from "next/image";
+import { formatDistanceToNow } from "date-fns";
+import { zhTW, enUS } from "date-fns/locale";
+import { useLocale } from "next-intl";
+import { Globe, Users, Lock, Trash2 } from "lucide-react";
+import type { Post, Visibility } from "@/lib/types";
+import { Avatar } from "@/components/ui/avatar";
+import { EmojiReactions } from "./emoji-reactions";
+import { cn } from "@/lib/utils";
+
+type Props = {
+  post: Post;
+  currentUid: string;
+  onDelete?: () => void;
+};
+
+const VISIBILITY_ICON: Record<Visibility, typeof Globe> = {
+  public: Globe,
+  friends: Users,
+  private: Lock,
+};
+
+export function PostCard({ post, currentUid, onDelete }: Props) {
+  const locale = useLocale();
+  const dateLocale = locale === "zh-TW" ? zhTW : enUS;
+  const VIcon = VISIBILITY_ICON[post.visibility];
+
+  const createdMs =
+    (post.createdAt as { toMillis?: () => number } | undefined)?.toMillis?.() ??
+    Date.now();
+  const relTime = formatDistanceToNow(new Date(createdMs), {
+    addSuffix: true,
+    locale: dateLocale,
+  });
+
+  const isMine = post.authorUid === currentUid;
+
+  return (
+    <article className="rounded-2xl border border-amber-200/60 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 flex flex-col gap-3">
+      <header className="flex items-center gap-3">
+        <Avatar src={post.authorPhotoURL} name={post.authorName} size={40} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate">{post.authorName}</p>
+          <p className="text-xs text-zinc-500 flex items-center gap-1">
+            <VIcon className="size-3" />
+            {relTime}
+          </p>
+        </div>
+        {isMine && onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+            aria-label="Delete"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        )}
+      </header>
+
+      {post.text && <p className="text-sm whitespace-pre-wrap leading-relaxed">{post.text}</p>}
+
+      {post.photoURLs.length > 0 && (
+        <div
+          className={cn(
+            "grid gap-2 rounded-xl overflow-hidden",
+            post.photoURLs.length === 1 && "grid-cols-1",
+            post.photoURLs.length === 2 && "grid-cols-2",
+            post.photoURLs.length >= 3 && "grid-cols-2",
+          )}
+        >
+          {post.photoURLs.map((url) => (
+            <div key={url} className="relative aspect-square bg-zinc-100">
+              <Image
+                src={url}
+                alt=""
+                fill
+                sizes="(max-width: 640px) 50vw, 300px"
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <EmojiReactions
+        postId={post.postId}
+        uid={currentUid}
+        counts={post.reactionCounts}
+      />
+    </article>
+  );
+}
