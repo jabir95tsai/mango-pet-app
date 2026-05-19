@@ -2,7 +2,8 @@ import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
 import { getFirebaseApp } from "./config";
 import type { ExpenseCategory, ExtractedReceipt } from "@/lib/types";
 
-const MODEL = "gemini-2.0-flash";
+// gemini-2.0-flash sunsets 2026-06-01; 2.5-flash is the official successor.
+const MODEL = "gemini-2.5-flash";
 
 const PROMPT = `You extract structured data from a Taiwanese pet store / vet / pet service receipt photo.
 
