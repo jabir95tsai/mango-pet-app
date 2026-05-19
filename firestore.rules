@@ -54,6 +54,10 @@ service cloud.firestore {
       match /knowledgeBookmarks/{articleId} {
         allow read, write: if request.auth.uid == uid;
       }
+
+      match /expenses/{expenseId} {
+        allow read, write: if request.auth.uid == uid;
+      }
     }
 
     // ── Posts (top-level) ──

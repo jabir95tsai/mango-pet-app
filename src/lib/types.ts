@@ -289,3 +289,53 @@ export type Friend = {
   photoURL: string | null;
   addedAt: Timestamp;
 };
+
+// ── Expenses ──
+export type ExpenseCategory =
+  | "food"
+  | "medical"
+  | "grooming"
+  | "toy"
+  | "training"
+  | "insurance"
+  | "other";
+
+export type ExpenseSource = "manual" | "ai_scan";
+
+export type Expense = {
+  expenseId: string;
+  ownerUid: string;
+  petId: string;
+  petName?: string;
+  amount: number;          // in TWD
+  currency: "TWD";
+  vendor?: string;
+  category: ExpenseCategory;
+  spentAt: Timestamp;
+  notes?: string;
+  receiptURL?: string;     // optional Storage path
+  items?: string[];        // line items from receipt
+  source: ExpenseSource;
+  createdAt: Timestamp;
+};
+
+export type ExpenseInput = {
+  petId: string;
+  petName?: string;
+  amount: number;
+  vendor?: string;
+  category: ExpenseCategory;
+  spentAt: Date;
+  notes?: string;
+  items?: string[];
+  source: ExpenseSource;
+};
+
+/** AI-extracted data before user confirms. */
+export type ExtractedReceipt = {
+  amount?: number;
+  vendor?: string;
+  spentAt?: string;        // YYYY-MM-DD
+  category?: ExpenseCategory;
+  items?: string[];
+};

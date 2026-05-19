@@ -8,6 +8,7 @@
     "pets": "我的寵物",
     "walks": "遛狗",
     "leaderboard": "排行榜",
+    "expenses": "開銷",
     "restaurants": "餐廳地圖",
     "knowledge": "知識庫",
     "friends": "好友",
@@ -105,6 +106,31 @@
       "disabled": "尚未啟用",
       "denied": "瀏覽器已拒絕，請到瀏覽器設定開啟通知權限",
       "enabled": "已啟用，提醒到時會推播"
+    }
+  },
+  "Expense": {
+    "title": "寵物開銷",
+    "add": "新增開銷",
+    "manual": "手動",
+    "scanReceipt": "拍收據",
+    "totalSpent": "總支出",
+    "fields": {
+      "pet": "寵物",
+      "amount": "金額",
+      "vendor": "商家",
+      "category": "類別",
+      "spentAt": "消費日期",
+      "items": "明細",
+      "notes": "備註"
+    },
+    "categories": {
+      "food": "飼料",
+      "medical": "醫療",
+      "grooming": "美容",
+      "toy": "玩具",
+      "training": "訓練",
+      "insurance": "保險",
+      "other": "其他"
     }
   },
   "Common": {

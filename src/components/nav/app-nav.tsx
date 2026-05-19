@@ -12,6 +12,7 @@ import {
   BookOpen,
   Users,
   Newspaper,
+  Wallet,
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ const ITEMS = [
   { href: "/app/feed", key: "feed", icon: Newspaper },
   { href: "/app/walks", key: "walks", icon: Footprints },
   { href: "/app/leaderboard", key: "leaderboard", icon: Trophy },
+  { href: "/app/expenses", key: "expenses", icon: Wallet },
   { href: "/app/restaurants", key: "restaurants", icon: MapPin },
   { href: "/app/knowledge", key: "knowledge", icon: BookOpen },
   { href: "/app/friends", key: "friends", icon: Users },

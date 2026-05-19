@@ -8,6 +8,7 @@
     "pets": "My Pets",
     "walks": "Walks",
     "leaderboard": "Leaderboard",
+    "expenses": "Expenses",
     "restaurants": "Restaurants",
     "knowledge": "Knowledge",
     "friends": "Friends",
@@ -105,6 +106,31 @@
       "disabled": "Not enabled yet",
       "denied": "Blocked — re-enable notifications in your browser settings",
       "enabled": "Active — you'll get a push when reminders fire"
+    }
+  },
+  "Expense": {
+    "title": "Pet Expenses",
+    "add": "Add expense",
+    "manual": "Manual",
+    "scanReceipt": "Scan receipt",
+    "totalSpent": "Total spent",
+    "fields": {
+      "pet": "Pet",
+      "amount": "Amount",
+      "vendor": "Vendor",
+      "category": "Category",
+      "spentAt": "Date",
+      "items": "Items",
+      "notes": "Notes"
+    },
+    "categories": {
+      "food": "Food",
+      "medical": "Medical",
+      "grooming": "Grooming",
+      "toy": "Toys",
+      "training": "Training",
+      "insurance": "Insurance",
+      "other": "Other"
     }
   },
   "Common": {
