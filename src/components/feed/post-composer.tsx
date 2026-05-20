@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Image as ImageIcon, X, Globe, Users, Lock } from "lucide-react";
+import { Image as ImageIcon, Loader2, X, Globe, Users, Lock } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldLabel } from "@/components/ui/select";
 import { createPost } from "@/lib/firebase/posts";
 import { useAuth } from "@/components/auth/auth-provider";
+import { IMAGE_PRESETS, processImage } from "@/lib/image-processing";
 import type { Pet, Visibility } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
   const [previews, setPreviews] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<Visibility>("friends");
   const [selectedPets, setSelectedPets] = useState<string[]>([]);
+  const [processing, setProcessing] = useState(false);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +51,7 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
       setPreviews([]);
       setVisibility("friends");
       setSelectedPets([]);
+      setProcessing(false);
       setError(null);
     }
   }, [open]);
@@ -65,10 +68,25 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
     );
   }
 
-  function handleAddPhotos(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleAddPhotos(e: React.ChangeEvent<HTMLInputElement>) {
     const newFiles = Array.from(e.target.files ?? []);
-    setPhotos((prev) => [...prev, ...newFiles].slice(0, MAX_PHOTOS));
     e.target.value = "";
+    if (newFiles.length === 0) return;
+
+    setProcessing(true);
+    setError(null);
+    try {
+      const room = MAX_PHOTOS - photos.length;
+      const accepted = newFiles.slice(0, room);
+      const processed = await Promise.all(
+        accepted.map((f) => processImage(f, IMAGE_PRESETS.post)),
+      );
+      setPhotos((prev) => [...prev, ...processed].slice(0, MAX_PHOTOS));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "圖片處理失敗");
+    } finally {
+      setProcessing(false);
+    }
   }
 
   function removePhoto(idx: number) {
@@ -144,7 +162,7 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
           multiple
           className="hidden"
           onChange={handleAddPhotos}
@@ -156,11 +174,18 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
             variant="ghost"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
-            disabled={photos.length >= MAX_PHOTOS}
+            disabled={photos.length >= MAX_PHOTOS || processing}
           >
-            <ImageIcon className="size-4" />
+            {processing ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ImageIcon className="size-4" />
+            )}
             {photos.length}/{MAX_PHOTOS}
           </Button>
+          {processing && (
+            <span className="text-xs text-amber-600">處理照片中…</span>
+          )}
         </div>
 
         {pets.length > 0 && (
@@ -218,7 +243,7 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
           <Button variant="ghost" onClick={onClose} disabled={posting}>
             {tCommon("cancel")}
           </Button>
-          <Button onClick={handleSubmit} disabled={posting}>
+          <Button onClick={handleSubmit} disabled={posting || processing}>
             {posting ? "..." : tP("publish")}
           </Button>
         </div>

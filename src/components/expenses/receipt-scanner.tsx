@@ -7,6 +7,7 @@ import { Camera, Loader2, Sparkles, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { extractReceipt } from "@/lib/firebase/ai-receipt";
+import { IMAGE_PRESETS, processImage } from "@/lib/image-processing";
 import type { ExtractedReceipt } from "@/lib/types";
 
 type Props = {
@@ -44,13 +45,23 @@ export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
     onClose();
   }
 
-  function handlePick(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePick(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = e.target.files?.[0];
     e.target.value = "";
     if (!picked) return;
     reset();
-    setFile(picked);
-    setPreviewURL(URL.createObjectURL(picked));
+    setScanning(true); // shows loader while we run HEIC convert + light compress
+    setError(null);
+    try {
+      // Preserve quality — receipt text needs to stay legible for OCR.
+      const processed = await processImage(picked, IMAGE_PRESETS.receipt);
+      setFile(processed);
+      setPreviewURL(URL.createObjectURL(processed));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "圖片處理失敗");
+    } finally {
+      setScanning(false);
+    }
   }
 
   async function handleScan() {
@@ -81,7 +92,7 @@ export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
             <input
               ref={cameraInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
               capture="environment"
               className="hidden"
               onChange={handlePick}
@@ -89,7 +100,7 @@ export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
               className="hidden"
               onChange={handlePick}
             />

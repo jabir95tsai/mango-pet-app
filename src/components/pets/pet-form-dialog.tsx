@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Camera } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, FieldLabel } from "@/components/ui/select";
 import { fromLocalDateInput, toLocalDateInput } from "@/lib/dates";
+import { IMAGE_PRESETS, processImage } from "@/lib/image-processing";
 import type { Pet, PetInput, Species, Gender } from "@/lib/types";
 
 type Props = {
@@ -33,6 +34,7 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState<File | null>(null);
   const [previewURL, setPreviewURL] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +53,7 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
     setBio(initial?.bio ?? "");
     setAvatar(null);
     setPreviewURL(initial?.photoURL ?? null);
+    setProcessing(false);
     setError(null);
   }, [open, initial]);
 
@@ -101,8 +104,10 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
+            disabled={processing}
             aria-label={tPet("fields.photo")}
-            className="relative size-24 rounded-full overflow-hidden bg-amber-100 dark:bg-zinc-800 ring-2 ring-amber-300/60 hover:ring-amber-500 flex items-center justify-center transition-colors"
+            aria-busy={processing}
+            className="relative size-24 rounded-full overflow-hidden bg-amber-100 dark:bg-zinc-800 ring-2 ring-amber-300/60 hover:ring-amber-500 flex items-center justify-center transition-colors disabled:cursor-wait"
           >
             {previewURL ? (
               <Image
@@ -116,18 +121,36 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
             ) : (
               <Camera className="size-8 text-amber-700 dark:text-amber-400" />
             )}
+            {processing && (
+              <div className="absolute inset-0 bg-black/50 grid place-items-center">
+                <Loader2 className="size-6 text-white animate-spin" />
+              </div>
+            )}
           </button>
-          {!previewURL && (
+          {processing ? (
+            <span className="text-xs text-amber-600">處理中…</span>
+          ) : !previewURL ? (
             <span className="text-xs text-zinc-500">{tPet("fields.photo")}</span>
-          )}
+          ) : null}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
             className="hidden"
-            onChange={(e) => {
+            onChange={async (e) => {
               const file = e.target.files?.[0];
-              if (file) setAvatar(file);
+              e.target.value = "";
+              if (!file) return;
+              setProcessing(true);
+              setError(null);
+              try {
+                const processed = await processImage(file, IMAGE_PRESETS.avatar);
+                setAvatar(processed);
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "圖片處理失敗");
+              } finally {
+                setProcessing(false);
+              }
             }}
           />
         </div>
@@ -210,10 +233,15 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <div className="flex gap-3 justify-end pt-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={saving || processing}
+          >
             {tCommon("cancel")}
           </Button>
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || processing}>
             {saving ? "..." : tCommon("save")}
           </Button>
         </div>
