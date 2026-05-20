@@ -386,5 +386,70 @@ export const removeFriend = onCall(
   },
 );
 
-// Touch the unused import warning
-void FieldValue;
+// ─────────────────────────────────────────────────────────────────────
+// sendTestPush — callable, sends a sanity-check notification to the
+// caller's own FCM tokens. Use to verify VAPID key + SW registration
+// without waiting for the next scanReminders tick.
+// ─────────────────────────────────────────────────────────────────────
+
+export const sendTestPush = onCall(
+  { region: FUNCTION_REGION, cors: true },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+
+    const userSnap = await db.doc(`users/${uid}`).get();
+    if (!userSnap.exists) {
+      throw new HttpsError("not-found", "User doc not found");
+    }
+    const userData = userSnap.data() ?? {};
+    const tokens = ((userData.fcmTokens as string[] | undefined) ?? []).filter(
+      Boolean,
+    );
+    if (tokens.length === 0) {
+      throw new HttpsError(
+        "failed-precondition",
+        "尚未啟用推播通知，請先到設定開啟",
+      );
+    }
+
+    const response = await messaging.sendEachForMulticast({
+      tokens,
+      notification: {
+        title: "🥭 測試推播",
+        body: "推播設定成功！提醒到時間會像這樣通知你。",
+      },
+      data: { url: "/app" },
+      webpush: {
+        fcmOptions: { link: "/app" },
+      },
+    });
+
+    // Clean up invalid tokens — same logic as scanReminders so test
+    // pushes also self-heal stale registrations.
+    const invalidTokens: string[] = [];
+    response.responses.forEach((r, idx) => {
+      if (!r.success && r.error) {
+        const code = r.error.code;
+        if (
+          code === "messaging/invalid-registration-token" ||
+          code === "messaging/registration-token-not-registered"
+        ) {
+          invalidTokens.push(tokens[idx]);
+        }
+      }
+    });
+    if (invalidTokens.length > 0) {
+      await userSnap.ref.update({
+        fcmTokens: FieldValue.arrayRemove(...invalidTokens),
+      });
+    }
+
+    return {
+      ok: response.successCount > 0,
+      sent: response.successCount,
+      failed: response.failureCount,
+      invalidTokens: invalidTokens.length,
+    };
+  },
+);

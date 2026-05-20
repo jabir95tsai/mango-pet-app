@@ -12,7 +12,10 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { getDb, getFirebaseApp } from "./config";
+
+const FN_REGION = "asia-east1";
 
 const FCM_SCOPE = "/firebase-cloud-messaging-push-scope";
 const FCM_SW_URL = "/firebase-messaging-sw.js";
@@ -97,4 +100,19 @@ export async function subscribeForegroundMessages(
   const messaging = await getMessagingInstance();
   if (!messaging) return () => undefined;
   return onMessage(messaging, cb);
+}
+
+export type TestPushResult = {
+  ok: boolean;
+  sent: number;
+  failed: number;
+  invalidTokens: number;
+};
+
+/** Sends a sanity-check push to the current user's own tokens via Cloud Function. */
+export async function sendTestPush(): Promise<TestPushResult> {
+  const fns = getFunctions(getFirebaseApp(), FN_REGION);
+  const fn = httpsCallable<void, TestPushResult>(fns, "sendTestPush");
+  const result = await fn();
+  return result.data;
 }

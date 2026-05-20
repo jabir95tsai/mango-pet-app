@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Bell, BellOff, BellRing, Info } from "lucide-react";
+import { Bell, BellOff, BellRing, Info, Send } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   disablePush,
   enablePush,
   isPushSupported,
+  sendTestPush,
 } from "@/lib/firebase/messaging";
 import { getAppUser } from "@/lib/firebase/users";
 
@@ -39,6 +40,8 @@ export function PushToggle() {
   const [status, setStatus] = useState<Status>({ kind: "checking" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +106,26 @@ export function PushToggle() {
     }
   }
 
+  async function handleTest() {
+    setTesting(true);
+    setTestResult(null);
+    setError(null);
+    try {
+      const res = await sendTestPush();
+      if (res.ok && res.sent > 0) {
+        setTestResult(
+          `已送出 ${res.sent} 條推播${res.failed > 0 ? `（${res.failed} 失敗）` : ""}`,
+        );
+      } else {
+        setTestResult(`送出失敗：${res.failed} 失敗`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "測試推播失敗");
+    } finally {
+      setTesting(false);
+    }
+  }
+
   const showIosHint = isIosBrowserNotPwa() && status.kind !== "enabled";
   const isVapidMissingError = error?.includes("NEXT_PUBLIC_FIREBASE_VAPID_KEY");
 
@@ -126,15 +149,32 @@ export function PushToggle() {
         </div>
 
         {status.kind === "enabled" ? (
-          <Button size="sm" variant="secondary" onClick={handleDisable} disabled={busy}>
-            {busy ? "..." : tP("disable")}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleTest}
+              disabled={testing || busy}
+            >
+              <Send className="size-3.5" />
+              {testing ? "..." : "測試"}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={handleDisable} disabled={busy || testing}>
+              {busy ? "..." : tP("disable")}
+            </Button>
+          </div>
         ) : status.kind === "disabled" ? (
           <Button size="sm" onClick={handleEnable} disabled={busy}>
             {busy ? "..." : tP("enable")}
           </Button>
         ) : null}
       </div>
+
+      {testResult && (
+        <p className="text-xs text-emerald-700 dark:text-emerald-400">
+          {testResult}
+        </p>
+      )}
 
       {showIosHint && (
         <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
