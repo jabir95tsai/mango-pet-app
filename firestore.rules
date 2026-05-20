@@ -15,10 +15,11 @@ service cloud.firestore {
         allow create: if request.auth.uid == uid
           && request.resource.data.ownerUid == uid;
         allow update, delete: if request.auth.uid == uid;
-      }
 
-      match /healthRecords/{recordId} {
-        allow read, write: if request.auth.uid == uid;
+        // Health records are stored as a sub-sub-collection of each pet.
+        match /healthRecords/{recordId} {
+          allow read, write: if request.auth.uid == uid;
+        }
       }
 
       match /reminders/{reminderId} {

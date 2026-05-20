@@ -43,6 +43,7 @@
     "addPet": "新增寵物",
     "petDetail": "寵物詳情",
     "noPets": "還沒有寵物",
+    "notFound": "找不到這隻寵物",
     "species": {
       "dog": "狗",
       "cat": "貓",

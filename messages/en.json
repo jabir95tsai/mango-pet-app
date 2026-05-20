@@ -43,6 +43,7 @@
     "addPet": "Add pet",
     "petDetail": "Pet detail",
     "noPets": "No pets yet",
+    "notFound": "Pet not found",
     "species": {
       "dog": "Dog",
       "cat": "Cat",

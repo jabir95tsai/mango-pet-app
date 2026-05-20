@@ -82,22 +82,22 @@ export function ExpenseCard({ expense, onEdit, onDelete }: Props) {
         <p className="text-base font-bold tabular-nums">
           <span className="text-xs text-zinc-500">NT$</span> {expense.amount.toLocaleString()}
         </p>
-        <div className="flex gap-0 justify-end mt-0.5">
+        <div className="flex gap-1 justify-end mt-1">
           <button
             type="button"
             onClick={onEdit}
             aria-label={tC("edit")}
-            className="p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700"
+            className="size-8 rounded-full grid place-items-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700"
           >
-            <Pencil className="size-3.5" />
+            <Pencil className="size-4" />
           </button>
           <button
             type="button"
             onClick={onDelete}
             aria-label={tC("delete")}
-            className="p-1 rounded-full hover:bg-red-50 hover:text-red-600 text-zinc-400 dark:hover:bg-red-950"
+            className="size-8 rounded-full grid place-items-center hover:bg-red-50 hover:text-red-600 text-zinc-400 dark:hover:bg-red-950"
           >
-            <Trash2 className="size-3.5" />
+            <Trash2 className="size-4" />
           </button>
         </div>
       </div>

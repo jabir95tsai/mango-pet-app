@@ -71,20 +71,22 @@ export default function PetDetailPage() {
   const refresh = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    try {
-      const [p, recs, w, allReminders] = await Promise.all([
-        getPet(user.uid, petId),
-        listRecords(user.uid, petId),
-        listWeightSeries(user.uid, petId),
-        listReminders(user.uid),
-      ]);
-      setPet(p);
-      setRecords(recs);
-      setWeights(w);
-      setReminders(allReminders.filter((r) => r.petId === petId));
-    } finally {
-      setLoading(false);
-    }
+    // Use allSettled so one slow/broken query doesn't blank the whole page.
+    const [petR, recsR, wR, remR] = await Promise.allSettled([
+      getPet(user.uid, petId),
+      listRecords(user.uid, petId),
+      listWeightSeries(user.uid, petId),
+      listReminders(user.uid),
+    ]);
+    setPet(petR.status === "fulfilled" ? petR.value : null);
+    setRecords(recsR.status === "fulfilled" ? recsR.value : []);
+    setWeights(wR.status === "fulfilled" ? wR.value : []);
+    setReminders(
+      remR.status === "fulfilled"
+        ? remR.value.filter((r) => r.petId === petId)
+        : [],
+    );
+    setLoading(false);
   }, [user, petId]);
 
   useEffect(() => {
@@ -151,7 +153,7 @@ export default function PetDetailPage() {
     return (
       <EmptyState
         icon={PawPrint}
-        title={tPet("noPets")}
+        title={tPet("notFound")}
         action={
           <Button variant="secondary" onClick={() => router.push("/app/pets")}>
             <ArrowLeft className="size-4" />

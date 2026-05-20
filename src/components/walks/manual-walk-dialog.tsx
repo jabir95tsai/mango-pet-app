@@ -40,22 +40,30 @@ export function ManualWalkDialog({
 
   useEffect(() => {
     if (!open) return;
+    // Compute initial duration here (not via a separate effect that races with
+    // this one — when the strings collide, the dep array bail-out swallows the
+    // re-compute and the field stays empty).
+    const start = new Date(Date.now() - 60 * 60 * 1000);
+    const end = new Date();
+    const initialDuration = Math.max(
+      1,
+      Math.round((end.getTime() - start.getTime()) / 60_000),
+    );
     setPetId(pets[0]?.petId ?? "");
-    setStartedAt(toLocalDatetimeInput(new Date(Date.now() - 60 * 60 * 1000)));
-    setEndedAt(toLocalDatetimeInput(new Date()));
+    setStartedAt(toLocalDatetimeInput(start));
+    setEndedAt(toLocalDatetimeInput(end));
     setDistance("");
-    setDuration("");
+    setDuration(String(initialDuration));
     setNotes("");
     setError(null);
   }, [open, pets]);
 
-  // Auto-compute duration if both times set
+  // Re-compute duration whenever the user manually changes start/end times.
   useEffect(() => {
-    if (startedAt && endedAt) {
-      const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
-      if (ms > 0) {
-        setDuration(String(Math.round(ms / 60_000)));
-      }
+    if (!startedAt || !endedAt) return;
+    const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
+    if (ms > 0) {
+      setDuration(String(Math.round(ms / 60_000)));
     }
   }, [startedAt, endedAt]);
 
