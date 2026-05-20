@@ -65,15 +65,48 @@ export async function createPost(args: CreatePostArgs): Promise<Post> {
     reactionCounts: emptyReactionCounts(),
   });
 
-  const uploads = await Promise.all(
+  // Use allSettled so one failing upload doesn't kill the others. Keep the
+  // succeeded URLs; if *all* uploads fail and the post has no text, roll back
+  // the empty doc instead of leaving an orphan.
+  const results = await Promise.allSettled(
     args.photos.map((file, i) =>
       uploadImage(postPhotoPath(args.authorUid, docRef.id, i, fileExt(file)), file),
     ),
   );
 
-  const photoURLs = uploads.map((u) => u.url);
+  const photoURLs: string[] = [];
+  const failures: string[] = [];
+  for (const r of results) {
+    if (r.status === "fulfilled") photoURLs.push(r.value.url);
+    else failures.push(r.reason instanceof Error ? r.reason.message : String(r.reason));
+  }
+
+  const expectedPhotos = args.photos.length;
+  const allFailed = expectedPhotos > 0 && photoURLs.length === 0;
+  const textIsEmpty = !args.text.trim();
+
+  // Orphan rollback: nothing useful made it to the server.
+  if (allFailed && textIsEmpty) {
+    await deleteDoc(docRef);
+    throw new Error(
+      `照片上傳全部失敗，貼文已取消。${failures[0] ? `(${failures[0]})` : ""}`,
+    );
+  }
+
   if (photoURLs.length > 0) {
     await updateDoc(docRef, { photoURLs });
+  }
+
+  if (failures.length > 0) {
+    // Some photos uploaded, some didn't — surface a partial-failure error so
+    // the UI can tell the user. The doc is kept (still has text or some photos).
+    const snap = await getDoc(docRef);
+    const data = { ...(snap.data() as Post), postId: snap.id };
+    const err = new Error(
+      `${failures.length}/${expectedPhotos} 張照片上傳失敗，貼文已建立但缺少部分照片`,
+    );
+    (err as Error & { partial?: Post }).partial = data;
+    throw err;
   }
 
   const snap = await getDoc(docRef);

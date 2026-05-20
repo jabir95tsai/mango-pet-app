@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Filter, Heart, MapIcon, MapPin, Plus } from "lucide-react";
+import { AlertTriangle, Filter, Heart, MapIcon, MapPin, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ export default function RestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [origin, setOrigin] = useState(DEFAULT_LOCATION);
+  const [originFromBrowser, setOriginFromBrowser] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("list");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
@@ -64,9 +65,10 @@ export default function RestaurantsPage() {
 
   useEffect(() => {
     refresh();
-    getCurrentLocation().then((loc) =>
-      setOrigin({ lat: loc.lat, lng: loc.lng }),
-    );
+    getCurrentLocation().then((loc) => {
+      setOrigin({ lat: loc.lat, lng: loc.lng });
+      setOriginFromBrowser(loc.fromBrowser);
+    });
   }, [refresh]);
 
   const filtered = useMemo(() => {
@@ -133,6 +135,15 @@ export default function RestaurantsPage() {
           {favOnly ? "只看收藏" : "全部"}
         </button>
       </div>
+
+      {originFromBrowser === false && (
+        <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300 mb-3">
+          <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+          <span>
+            未取得你的位置 — 使用台北 101 為預設中心點，距離排序可能不正確。請在瀏覽器設定允許定位後重新整理。
+          </span>
+        </div>
+      )}
 
       <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 mb-4">
         <Filter className="size-3.5 text-zinc-400 shrink-0 self-center" />

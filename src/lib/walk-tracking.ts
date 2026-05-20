@@ -21,29 +21,57 @@ const MIN_ACCEPTABLE_ACCURACY_M = 50;
 const MIN_DISTANCE_M_BETWEEN_SAMPLES = 5;
 const MAX_PATH_POINTS = 500;
 
+/** Geolocation API error codes (W3C). */
+const GEO_PERMISSION_DENIED = 1;
+const GEO_POSITION_UNAVAILABLE = 2;
+const GEO_TIMEOUT = 3;
+
+export type WalkErrorKind =
+  | "unsupported"
+  | "permission_denied"
+  | "position_unavailable"
+  | "timeout"
+  | "backgrounded"
+  | "unknown";
+
 export type WalkSessionState = {
   isTracking: boolean;
+  /** True when the tab is backgrounded — duration ticker pauses. */
+  isPaused: boolean;
   startedAt: Date | null;
   totalDistanceKm: number;
   durationMin: number;
   path: WalkPathPoint[];
   lastError: string | null;
+  errorKind: WalkErrorKind | null;
+  /** Wall-clock ms accumulated while tab was hidden — subtracted from duration. */
+  hiddenMs: number;
 };
 
 export type WalkSessionListener = (state: WalkSessionState) => void;
 
-export class WalkSession {
-  private watchId: number | null = null;
-  private state: WalkSessionState = {
+function emptyState(): WalkSessionState {
+  return {
     isTracking: false,
+    isPaused: false,
     startedAt: null,
     totalDistanceKm: 0,
     durationMin: 0,
     path: [],
     lastError: null,
+    errorKind: null,
+    hiddenMs: 0,
   };
+}
+
+export class WalkSession {
+  private watchId: number | null = null;
+  private state: WalkSessionState = emptyState();
   private listeners = new Set<WalkSessionListener>();
   private ticker: ReturnType<typeof setInterval> | null = null;
+  /** Timestamp (ms) when tab was last hidden, or null if visible. */
+  private hiddenSince: number | null = null;
+  private visibilityHandler: (() => void) | null = null;
 
   on(listener: WalkSessionListener): () => void {
     this.listeners.add(listener);
@@ -63,30 +91,99 @@ export class WalkSession {
   start() {
     if (this.state.isTracking) return;
     if (!("geolocation" in navigator)) {
-      this.update({ lastError: "Browser does not support geolocation" });
+      this.update({
+        lastError: "瀏覽器不支援定位",
+        errorKind: "unsupported",
+      });
       return;
     }
 
     this.update({
+      ...emptyState(),
       isTracking: true,
       startedAt: new Date(),
-      totalDistanceKm: 0,
-      durationMin: 0,
-      path: [],
-      lastError: null,
     });
 
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => this.handlePosition(pos),
-      (err) => this.update({ lastError: err.message }),
+      (err) => this.handleGeoError(err),
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15_000 },
     );
 
     this.ticker = setInterval(() => {
       if (!this.state.startedAt) return;
-      const mins = (Date.now() - this.state.startedAt.getTime()) / 60_000;
+      // Subtract time spent backgrounded so duration reflects only foreground tracking.
+      const accumulatedHidden =
+        this.state.hiddenMs + (this.hiddenSince ? Date.now() - this.hiddenSince : 0);
+      const elapsedMs =
+        Date.now() - this.state.startedAt.getTime() - accumulatedHidden;
+      const mins = Math.max(0, elapsedMs / 60_000);
       this.update({ durationMin: Math.round(mins * 100) / 100 });
     }, 1000);
+
+    // Pause when tab hidden — mobile browsers stop firing watchPosition while
+    // backgrounded, so without this the duration would inflate and create
+    // "phantom walks" with 0 km but non-zero duration.
+    if (typeof document !== "undefined") {
+      this.visibilityHandler = () => this.handleVisibilityChange();
+      document.addEventListener("visibilitychange", this.visibilityHandler);
+    }
+  }
+
+  private handleGeoError(err: GeolocationPositionError) {
+    let errorKind: WalkErrorKind = "unknown";
+    let lastError = err.message;
+    switch (err.code) {
+      case GEO_PERMISSION_DENIED:
+        errorKind = "permission_denied";
+        lastError = "未授權定位 — 請在瀏覽器設定中允許定位後重試";
+        // Stop tracking entirely on denial; no point continuing.
+        if (this.watchId !== null) {
+          navigator.geolocation.clearWatch(this.watchId);
+          this.watchId = null;
+        }
+        if (this.ticker) {
+          clearInterval(this.ticker);
+          this.ticker = null;
+        }
+        this.update({
+          isTracking: false,
+          isPaused: false,
+          lastError,
+          errorKind,
+        });
+        return;
+      case GEO_POSITION_UNAVAILABLE:
+        errorKind = "position_unavailable";
+        lastError = "目前無法取得位置（訊號弱）";
+        break;
+      case GEO_TIMEOUT:
+        errorKind = "timeout";
+        lastError = "定位逾時 — 將持續重試";
+        break;
+    }
+    this.update({ lastError, errorKind });
+  }
+
+  private handleVisibilityChange() {
+    if (!this.state.isTracking) return;
+    if (document.hidden) {
+      this.hiddenSince = Date.now();
+      this.update({
+        isPaused: true,
+        lastError: "App 在背景時 GPS 會暫停，請保持畫面開啟",
+        errorKind: "backgrounded",
+      });
+    } else if (this.hiddenSince !== null) {
+      const delta = Date.now() - this.hiddenSince;
+      this.hiddenSince = null;
+      this.update({
+        isPaused: false,
+        hiddenMs: this.state.hiddenMs + delta,
+        lastError: null,
+        errorKind: null,
+      });
+    }
   }
 
   stop(): WalkSessionState {
@@ -98,20 +195,23 @@ export class WalkSession {
       clearInterval(this.ticker);
       this.ticker = null;
     }
-    this.update({ isTracking: false });
+    if (this.visibilityHandler && typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.visibilityHandler);
+      this.visibilityHandler = null;
+    }
+    // Flush any in-progress hidden interval into hiddenMs so duration is final.
+    if (this.hiddenSince !== null) {
+      const delta = Date.now() - this.hiddenSince;
+      this.hiddenSince = null;
+      this.update({ hiddenMs: this.state.hiddenMs + delta });
+    }
+    this.update({ isTracking: false, isPaused: false });
     return this.state;
   }
 
   reset() {
     this.stop();
-    this.state = {
-      isTracking: false,
-      startedAt: null,
-      totalDistanceKm: 0,
-      durationMin: 0,
-      path: [],
-      lastError: null,
-    };
+    this.state = emptyState();
     this.emit();
   }
 

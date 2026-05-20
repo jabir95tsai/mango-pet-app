@@ -47,6 +47,7 @@ function formatDate(ts: Timestamp | undefined, locale: string): string {
 
 export function HealthRecordCard({ record, onDelete }: Props) {
   const tH = useTranslations("Health");
+  const tC = useTranslations("Common");
   const locale = useLocale();
   const Icon = ICONS[record.type];
 
@@ -70,7 +71,7 @@ export function HealthRecordCard({ record, onDelete }: Props) {
       <button
         type="button"
         onClick={onDelete}
-        aria-label="delete"
+        aria-label={tC("delete")}
         className="self-start p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
       >
         <Trash2 className="size-4" />

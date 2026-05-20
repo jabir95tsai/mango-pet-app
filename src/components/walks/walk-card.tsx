@@ -2,7 +2,7 @@
 
 import { format, formatDistance } from "date-fns";
 import { zhTW, enUS } from "date-fns/locale";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Footprints, Hand, Trash2 } from "lucide-react";
 import type { Timestamp } from "firebase/firestore";
 import type { Walk } from "@/lib/types";
@@ -15,6 +15,7 @@ type Props = {
 
 export function WalkCard({ walk, onDelete }: Props) {
   const locale = useLocale();
+  const tC = useTranslations("Common");
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
   const ts = walk.startedAt as Timestamp | undefined;
   const start = ts ? new Date(ts.toMillis()) : new Date();
@@ -53,7 +54,7 @@ export function WalkCard({ walk, onDelete }: Props) {
       <button
         type="button"
         onClick={onDelete}
-        aria-label="delete"
+        aria-label={tC("delete")}
         className="self-start p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
       >
         <Trash2 className="size-4" />

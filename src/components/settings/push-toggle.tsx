@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Bell, BellOff, BellRing } from "lucide-react";
+import { Bell, BellOff, BellRing, Info } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,19 @@ type Status =
   | { kind: "disabled" }
   | { kind: "denied" }
   | { kind: "enabled"; token: string };
+
+/** True for iOS Safari running in a regular browser tab (not added to home screen). */
+function isIosBrowserNotPwa(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent;
+  const isIos = /iPad|iPhone|iPod/.test(ua);
+  if (!isIos) return false;
+  // PWA on iOS: navigator.standalone === true
+  const standalone =
+    "standalone" in navigator &&
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return !standalone;
+}
 
 export function PushToggle() {
   const tP = useTranslations("Push");
@@ -90,35 +103,60 @@ export function PushToggle() {
     }
   }
 
+  const showIosHint = isIosBrowserNotPwa() && status.kind !== "enabled";
+  const isVapidMissingError = error?.includes("NEXT_PUBLIC_FIREBASE_VAPID_KEY");
+
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="size-9 grid place-items-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-500/20 shrink-0">
-          {status.kind === "enabled" ? (
-            <BellRing className="size-4" />
-          ) : status.kind === "denied" || status.kind === "unsupported" ? (
-            <BellOff className="size-4" />
-          ) : (
-            <Bell className="size-4" />
-          )}
-        </span>
-        <div className="min-w-0">
-          <p className="font-medium text-sm">{tP("title")}</p>
-          <p className="text-xs text-zinc-500 truncate">{tP(`status.${status.kind}`)}</p>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="size-9 grid place-items-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-500/20 shrink-0">
+            {status.kind === "enabled" ? (
+              <BellRing className="size-4" />
+            ) : status.kind === "denied" || status.kind === "unsupported" ? (
+              <BellOff className="size-4" />
+            ) : (
+              <Bell className="size-4" />
+            )}
+          </span>
+          <div className="min-w-0">
+            <p className="font-medium text-sm">{tP("title")}</p>
+            <p className="text-xs text-zinc-500 truncate">{tP(`status.${status.kind}`)}</p>
+          </div>
         </div>
+
+        {status.kind === "enabled" ? (
+          <Button size="sm" variant="secondary" onClick={handleDisable} disabled={busy}>
+            {busy ? "..." : tP("disable")}
+          </Button>
+        ) : status.kind === "disabled" ? (
+          <Button size="sm" onClick={handleEnable} disabled={busy}>
+            {busy ? "..." : tP("enable")}
+          </Button>
+        ) : null}
       </div>
 
-      {status.kind === "enabled" ? (
-        <Button size="sm" variant="secondary" onClick={handleDisable} disabled={busy}>
-          {busy ? "..." : tP("disable")}
-        </Button>
-      ) : status.kind === "disabled" ? (
-        <Button size="sm" onClick={handleEnable} disabled={busy}>
-          {busy ? "..." : tP("enable")}
-        </Button>
-      ) : null}
+      {showIosHint && (
+        <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+          <Info className="size-4 shrink-0 mt-0.5" />
+          <span>
+            iPhone 需先把 App 加到主畫面（Safari 分享 → 加入主畫面）才能收推播。
+          </span>
+        </div>
+      )}
 
-      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+      {isVapidMissingError && (
+        <div className="flex items-start gap-2 rounded-xl bg-red-50 dark:bg-red-950 p-3 text-xs text-red-700 dark:text-red-300">
+          <Info className="size-4 shrink-0 mt-0.5" />
+          <span>
+            未設定 VAPID Key。請到 Firebase Console → 專案設定 → Cloud Messaging → Web push certificates 產生金鑰，並設為 <code className="font-mono">NEXT_PUBLIC_FIREBASE_VAPID_KEY</code>。
+          </span>
+        </div>
+      )}
+
+      {error && !isVapidMissingError && (
+        <p className="text-xs text-red-600">{error}</p>
+      )}
     </div>
   );
 }

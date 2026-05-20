@@ -18,6 +18,7 @@ type Props = {
 
 export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Props) {
   const tR = useTranslations("Reminder");
+  const tC = useTranslations("Common");
   const locale = useLocale();
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
 
@@ -87,7 +88,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
           <button
             type="button"
             onClick={onEdit}
-            aria-label="edit"
+            aria-label={tC("edit")}
             className="p-2 rounded-full hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950"
           >
             <Pencil className="size-4" />
@@ -96,7 +97,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
         <button
           type="button"
           onClick={onDelete}
-          aria-label="delete"
+          aria-label={tC("delete")}
           className="p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
         >
           <Trash2 className="size-4" />

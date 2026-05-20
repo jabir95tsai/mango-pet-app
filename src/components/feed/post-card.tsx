@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { zhTW, enUS } from "date-fns/locale";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Globe, Users, Lock, Trash2 } from "lucide-react";
 import type { Post, Visibility } from "@/lib/types";
 import { Avatar } from "@/components/ui/avatar";
@@ -24,6 +24,7 @@ const VISIBILITY_ICON: Record<Visibility, typeof Globe> = {
 
 export function PostCard({ post, currentUid, onDelete }: Props) {
   const locale = useLocale();
+  const tC = useTranslations("Common");
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
   const VIcon = VISIBILITY_ICON[post.visibility];
 
@@ -53,7 +54,7 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
             type="button"
             onClick={onDelete}
             className="p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
-            aria-label="Delete"
+            aria-label={tC("delete")}
           >
             <Trash2 className="size-4" />
           </button>

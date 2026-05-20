@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Footprints, Play, Square } from "lucide-react";
+import { AlertTriangle, Footprints, Pause, Play, Square } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, FieldLabel } from "@/components/ui/select";
@@ -141,8 +141,14 @@ export function WalkSessionDialog({
       {phase === "tracking" && state && (
         <div className="flex flex-col gap-5 items-center">
           <div className="flex flex-col items-center gap-1">
-            <Footprints className="size-10 text-amber-500 animate-pulse" />
-            <p className="text-xs text-zinc-500">追蹤中</p>
+            {state.isPaused ? (
+              <Pause className="size-10 text-zinc-500" />
+            ) : (
+              <Footprints className="size-10 text-amber-500 animate-pulse" />
+            )}
+            <p className="text-xs text-zinc-500">
+              {state.isPaused ? "已暫停（背景）" : "追蹤中"}
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-2 w-full text-center">
@@ -152,7 +158,16 @@ export function WalkSessionDialog({
           </div>
 
           {state.lastError && (
-            <p className="text-xs text-red-600 text-center">{state.lastError}</p>
+            <div
+              className={`flex items-start gap-2 rounded-xl p-3 text-xs ${
+                state.errorKind === "permission_denied"
+                  ? "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"
+                  : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+              }`}
+            >
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+              <span>{state.lastError}</span>
+            </div>
           )}
 
           <Button variant="danger" size="lg" onClick={handleStop}>
@@ -169,6 +184,14 @@ export function WalkSessionDialog({
             <Stat label="時長" value={`${state.durationMin.toFixed(1)}`} suffix="min" small />
             <Stat label="分數" value={liveScore.toFixed(1)} accent small />
           </div>
+          {state.path.length === 0 && (
+            <div className="flex items-start gap-2 rounded-xl bg-red-50 dark:bg-red-950 p-3 text-xs text-red-700 dark:text-red-300">
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+              <span>
+                沒有取得任何 GPS 點 — 可能是定位未授權或訊號太弱。改用「手動記錄」輸入距離與時間。
+              </span>
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <FieldLabel>備註 (選填)</FieldLabel>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -178,7 +201,10 @@ export function WalkSessionDialog({
             <Button variant="ghost" onClick={onClose} disabled={saving}>
               {tC("cancel")}
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button
+              onClick={handleSave}
+              disabled={saving || state.path.length === 0}
+            >
               {saving ? "..." : tC("save")}
             </Button>
           </div>

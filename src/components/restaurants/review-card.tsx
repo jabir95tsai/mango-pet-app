@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from "date-fns";
 import { zhTW, enUS } from "date-fns/locale";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Star, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ type Props = {
 
 export function ReviewCard({ review, currentUid, onDelete }: Props) {
   const locale = useLocale();
+  const tC = useTranslations("Common");
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
   const ts = review.createdAt as Timestamp | undefined;
   const ms = ts?.toMillis() ?? Date.now();
@@ -46,7 +47,7 @@ export function ReviewCard({ review, currentUid, onDelete }: Props) {
           <button
             type="button"
             onClick={onDelete}
-            aria-label="delete"
+            aria-label={tC("delete")}
             className="p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
           >
             <Trash2 className="size-4" />

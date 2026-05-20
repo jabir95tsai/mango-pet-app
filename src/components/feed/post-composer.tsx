@@ -115,7 +115,17 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
       onCreated?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Post failed");
+      // createPost throws a partial-success error with .partial when some
+      // photos uploaded — treat that as success-with-warning rather than failure.
+      const partial = (err as { partial?: unknown }).partial;
+      if (partial) {
+        onCreated?.();
+        setError(err instanceof Error ? err.message : "Partial post");
+        // Close after a brief moment so the user can read the warning.
+        setTimeout(() => onClose(), 1800);
+      } else {
+        setError(err instanceof Error ? err.message : "Post failed");
+      }
     } finally {
       setPosting(false);
     }
