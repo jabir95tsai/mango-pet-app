@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Bell, PawPrint, Plus } from "lucide-react";
+import { Bell, Newspaper, PawPrint, PenSquare, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Avatar } from "@/components/ui/avatar";
@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { ReminderCard } from "@/components/reminders/reminder-card";
 import { ReminderFormDialog } from "@/components/reminders/reminder-form-dialog";
+import { PostCard } from "@/components/feed/post-card";
+import { PostComposer } from "@/components/feed/post-composer";
 import { listPets } from "@/lib/firebase/pets";
 import {
   completeReminder,
@@ -19,8 +21,11 @@ import {
   deleteReminder,
   listOverdueReminders,
   listUpcomingReminders,
+  updateReminder,
 } from "@/lib/firebase/reminders";
-import type { Pet, Reminder, ReminderInput } from "@/lib/types";
+import { deletePost, listFeedPosts } from "@/lib/firebase/posts";
+import { listFriends } from "@/lib/firebase/friends";
+import type { Pet, Post, Reminder, ReminderInput } from "@/lib/types";
 
 export default function AppHome() {
   const tApp = useTranslations("App");
@@ -34,21 +39,31 @@ export default function AppHome() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [upcoming, setUpcoming] = useState<Reminder[]>([]);
   const [overdue, setOverdue] = useState<Reminder[]>([]);
+  const [feedPosts, setFeedPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingReminder, setAddingReminder] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const [petList, up, ov] = await Promise.all([
+      const [petList, up, ov, friends] = await Promise.all([
         listPets(user.uid),
         listUpcomingReminders(user.uid),
         listOverdueReminders(user.uid),
+        listFriends(user.uid),
       ]);
       setPets(petList);
       setUpcoming(up);
       setOverdue(ov);
+      const feed = await listFeedPosts(
+        user.uid,
+        friends.map((f) => f.uid),
+        5,
+      );
+      setFeedPosts(feed.slice(0, 3));
     } finally {
       setLoading(false);
     }
@@ -65,6 +80,20 @@ export default function AppHome() {
   async function handleAddReminder(input: ReminderInput) {
     if (!user) return;
     await createReminder(user.uid, input);
+    await refresh();
+  }
+
+  async function handleUpdateReminder(input: ReminderInput) {
+    if (!user || !editingReminder) return;
+    await updateReminder(user.uid, editingReminder.reminderId, {
+      title: input.title,
+      description: input.description,
+      petId: input.petId,
+      triggerAt: input.triggerAt,
+      repeat: input.repeat,
+      notifyBeforeMinutes: input.notifyBeforeMinutes,
+    });
+    setEditingReminder(null);
     await refresh();
   }
 
@@ -85,6 +114,19 @@ export default function AppHome() {
     });
     if (!ok) return;
     await deleteReminder(user.uid, reminder.reminderId);
+    await refresh();
+  }
+
+  async function handleDeletePost(post: Post) {
+    const ok = await askConfirm({
+      title: tC("delete"),
+      message: post.text ? post.text.slice(0, 80) : "貼文",
+      confirmText: tC("delete"),
+      cancelText: tC("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
+    await deletePost(post.postId);
     await refresh();
   }
 
@@ -172,6 +214,7 @@ export default function AppHome() {
                     pet={petById(r.petId)}
                     onComplete={() => handleCompleteReminder(r)}
                     onDelete={() => handleDeleteReminder(r)}
+                    onEdit={() => setEditingReminder(r)}
                   />
                 ))}
               </>
@@ -188,10 +231,54 @@ export default function AppHome() {
                     pet={petById(r.petId)}
                     onComplete={() => handleCompleteReminder(r)}
                     onDelete={() => handleDeleteReminder(r)}
+                    onEdit={() => setEditingReminder(r)}
                   />
                 ))}
               </>
             )}
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3 mb-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
+            {tNav("feed")}
+          </h2>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setComposerOpen(true)}>
+              <PenSquare className="size-4" />
+              發文
+            </Button>
+            <Link href="/app/feed" className="text-xs text-amber-600 hover:underline">
+              更多 →
+            </Link>
+          </div>
+        </div>
+
+        {feedPosts.length === 0 ? (
+          <EmptyState
+            icon={Newspaper}
+            title="尚無動態"
+            description="發第一篇貼文，或等好友的公開動態。"
+            action={
+              <Button size="sm" onClick={() => setComposerOpen(true)}>
+                <PenSquare className="size-4" />
+                發文
+              </Button>
+            }
+          />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {user &&
+              feedPosts.map((post) => (
+                <PostCard
+                  key={post.postId}
+                  post={post}
+                  currentUid={user.uid}
+                  onDelete={() => handleDeletePost(post)}
+                />
+              ))}
           </div>
         )}
       </section>
@@ -201,6 +288,21 @@ export default function AppHome() {
         onClose={() => setAddingReminder(false)}
         pets={pets}
         onSubmit={handleAddReminder}
+      />
+
+      <ReminderFormDialog
+        open={editingReminder !== null}
+        onClose={() => setEditingReminder(null)}
+        pets={pets}
+        initial={editingReminder ?? undefined}
+        onSubmit={handleUpdateReminder}
+      />
+
+      <PostComposer
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        pets={pets}
+        onCreated={refresh}
       />
     </>
   );

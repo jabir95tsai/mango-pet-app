@@ -3,7 +3,7 @@
 import { format, formatDistanceToNow } from "date-fns";
 import { zhTW, enUS } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
-import { Bell, Check, Trash2, Repeat } from "lucide-react";
+import { Bell, Check, Trash2, Repeat, Pencil } from "lucide-react";
 import type { Timestamp } from "firebase/firestore";
 import type { Pet, Reminder } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -13,9 +13,10 @@ type Props = {
   pet?: Pet;
   onComplete: () => void;
   onDelete: () => void;
+  onEdit?: () => void;
 };
 
-export function ReminderCard({ reminder, pet, onComplete, onDelete }: Props) {
+export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Props) {
   const tR = useTranslations("Reminder");
   const locale = useLocale();
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
@@ -82,6 +83,16 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete }: Props) {
         >
           <Check className="size-4" />
         </button>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label="edit"
+            className="p-2 rounded-full hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950"
+          >
+            <Pencil className="size-4" />
+          </button>
+        )}
         <button
           type="button"
           onClick={onDelete}

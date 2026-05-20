@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Sparkles } from "lucide-react";
+import { Plus, Sparkles, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,6 +100,7 @@ export function ExpenseFormDialog({
     }
 
     const pet = pets.find((p) => p.petId === petId);
+    const cleanItems = items.map((it) => it.trim()).filter(Boolean);
     setSaving(true);
     setError(null);
     try {
@@ -111,7 +112,7 @@ export function ExpenseFormDialog({
         category,
         spentAt: fromLocalDateInput(spentAt),
         notes: notes.trim() || undefined,
-        items: items.length ? items : undefined,
+        items: cleanItems.length ? cleanItems : undefined,
         source,
       });
       onClose();
@@ -130,10 +131,14 @@ export function ExpenseFormDialog({
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {source === "ai_scan" && !initial && (
-          <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 flex gap-2 items-center text-sm">
-            <Sparkles className="size-4 text-amber-500 shrink-0" />
+          <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 flex gap-2 items-start text-sm">
+            <Sparkles className="size-4 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-zinc-700 dark:text-zinc-300">
-              AI 已自動填入欄位，請確認後儲存
+              AI 已自動填入欄位，
+              <span className="font-semibold text-amber-700 dark:text-amber-400">
+                所有欄位都可手動編輯
+              </span>
+              ，請確認後儲存
             </p>
           </div>
         )}
@@ -206,18 +211,47 @@ export function ExpenseFormDialog({
           </div>
         </div>
 
-        {items.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <FieldLabel>{tE("fields.items")}</FieldLabel>
-            <ul className="text-xs text-zinc-600 dark:text-zinc-400 list-disc list-inside space-y-0.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 p-3">
+        <div className="flex flex-col gap-1.5">
+          <FieldLabel>{tE("fields.items")}</FieldLabel>
+          {items.length > 0 && (
+            <ul className="flex flex-col gap-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 p-2">
               {items.map((it, i) => (
-                <li key={i} className="break-words">
-                  {it}
+                <li key={i} className="flex items-center gap-1.5">
+                  <Input
+                    value={it}
+                    onChange={(e) => {
+                      const next = [...items];
+                      next[i] = e.target.value;
+                      setItems(next);
+                    }}
+                    className="flex-1 h-9 text-sm"
+                    placeholder="品項"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setItems(items.filter((_, idx) => idx !== i))
+                    }
+                    aria-label="移除品項"
+                    className="size-9 grid place-items-center rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 shrink-0"
+                  >
+                    <X className="size-4" />
+                  </button>
                 </li>
               ))}
             </ul>
-          </div>
-        )}
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => setItems([...items, ""])}
+            className="self-start"
+          >
+            <Plus className="size-3.5" />
+            新增品項
+          </Button>
+        </div>
 
         <div className="flex flex-col gap-1">
           <FieldLabel>{tE("fields.notes")}</FieldLabel>

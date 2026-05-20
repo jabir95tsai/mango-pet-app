@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, FieldLabel } from "@/components/ui/select";
-import type { Pet, ReminderInput, ReminderRepeat } from "@/lib/types";
+import type { Pet, Reminder, ReminderInput, ReminderRepeat } from "@/lib/types";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   pets: Pet[];
   defaultPetId?: string;
+  initial?: Reminder;
   onSubmit: (input: ReminderInput) => Promise<void>;
 };
 
@@ -28,11 +29,20 @@ function defaultTriggerLocal(): string {
   return d.toISOString().slice(0, 16);
 }
 
+function dateToLocalInput(date: Date): string {
+  const d = new Date(date);
+  d.setSeconds(0, 0);
+  const off = d.getTimezoneOffset();
+  d.setMinutes(d.getMinutes() - off);
+  return d.toISOString().slice(0, 16);
+}
+
 export function ReminderFormDialog({
   open,
   onClose,
   pets,
   defaultPetId,
+  initial,
   onSubmit,
 }: Props) {
   const tR = useTranslations("Reminder");
@@ -49,14 +59,23 @@ export function ReminderFormDialog({
 
   useEffect(() => {
     if (!open) return;
-    setTitle("");
-    setDescription("");
-    setPetId(defaultPetId ?? "");
-    setTriggerAt(defaultTriggerLocal());
-    setRepeat("none");
-    setNotifyBefore(60);
+    if (initial) {
+      setTitle(initial.title);
+      setDescription(initial.description ?? "");
+      setPetId(initial.petId ?? "");
+      setTriggerAt(dateToLocalInput(new Date(initial.triggerAt.toMillis())));
+      setRepeat(initial.repeat);
+      setNotifyBefore(initial.notifyBeforeMinutes);
+    } else {
+      setTitle("");
+      setDescription("");
+      setPetId(defaultPetId ?? "");
+      setTriggerAt(defaultTriggerLocal());
+      setRepeat("none");
+      setNotifyBefore(60);
+    }
     setError(null);
-  }, [open, defaultPetId]);
+  }, [open, defaultPetId, initial]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,7 +103,7 @@ export function ReminderFormDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title={tR("add")}>
+    <Dialog open={open} onClose={onClose} title={initial ? tC("edit") : tR("add")}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <FieldLabel>{tR("fields.title")}</FieldLabel>

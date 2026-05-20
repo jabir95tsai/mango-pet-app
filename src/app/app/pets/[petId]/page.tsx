@@ -28,6 +28,7 @@ import {
   createReminder,
   deleteReminder,
   listReminders,
+  updateReminder,
 } from "@/lib/firebase/reminders";
 import type {
   HealthRecord,
@@ -67,6 +68,7 @@ export default function PetDetailPage() {
   const [editingPet, setEditingPet] = useState(false);
   const [addingRecord, setAddingRecord] = useState(false);
   const [addingReminder, setAddingReminder] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -122,6 +124,20 @@ export default function PetDetailPage() {
   async function handleAddReminder(input: ReminderInput) {
     if (!user) return;
     await createReminder(user.uid, { ...input, petId });
+    await refresh();
+  }
+
+  async function handleUpdateReminder(input: ReminderInput) {
+    if (!user || !editingReminder) return;
+    await updateReminder(user.uid, editingReminder.reminderId, {
+      title: input.title,
+      description: input.description,
+      petId: input.petId,
+      triggerAt: input.triggerAt,
+      repeat: input.repeat,
+      notifyBeforeMinutes: input.notifyBeforeMinutes,
+    });
+    setEditingReminder(null);
     await refresh();
   }
 
@@ -286,6 +302,7 @@ export default function PetDetailPage() {
                 pet={pet}
                 onComplete={() => handleCompleteReminder(r)}
                 onDelete={() => handleDeleteReminder(r)}
+                onEdit={() => setEditingReminder(r)}
               />
             ))
           )}
@@ -309,6 +326,13 @@ export default function PetDetailPage() {
         pets={pet ? [pet] : []}
         defaultPetId={petId}
         onSubmit={handleAddReminder}
+      />
+      <ReminderFormDialog
+        open={editingReminder !== null}
+        onClose={() => setEditingReminder(null)}
+        pets={pet ? [pet] : []}
+        initial={editingReminder ?? undefined}
+        onSubmit={handleUpdateReminder}
       />
     </>
   );
