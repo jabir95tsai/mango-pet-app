@@ -79,6 +79,10 @@
       "unauthorizedDomain": "This domain isn't authorized for sign-in.",
       "config": "Sign-in is misconfigured. Please try again later.",
       "generic": "Sign-in failed. Please try again."
+    },
+    "linkHint": {
+      "title": "Sign in with {email} first",
+      "body": "This email is registered with {existing}. Sign in with {existing} and we'll automatically link {tried} to the same account."
     }
   },
   "Pet": {

@@ -79,6 +79,10 @@
       "unauthorizedDomain": "此網址未授權登入，請聯絡管理員",
       "config": "登入設定有問題，請稍後再試",
       "generic": "登入失敗，請稍後再試"
+    },
+    "linkHint": {
+      "title": "請先用 {email} 登入",
+      "body": "這個 Email 已綁定 {existing}。先用 {existing} 登入，登入後會自動把 {tried} 也連起來，之後兩個都能用。"
     }
   },
   "Pet": {
