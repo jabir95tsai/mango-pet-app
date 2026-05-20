@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Footprints, Pause, Play, Square } from "lucide-react";
+import { Footprints, Play, Square } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, FieldLabel } from "@/components/ui/select";
@@ -33,20 +33,22 @@ export function WalkSessionDialog({
   const [notes, setNotes] = useState("");
   const [phase, setPhase] = useState<"setup" | "tracking" | "done">("setup");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
-      sessionRef.current = new WalkSession();
-      const unsub = sessionRef.current.on(setState);
-      setPetId(pets[0]?.petId ?? "");
-      setNotes("");
-      setPhase("setup");
-      return () => {
-        unsub();
-        sessionRef.current?.stop();
-        sessionRef.current = null;
-      };
-    }
+    if (!open) return;
+    const session = new WalkSession();
+    sessionRef.current = session;
+    const unsub = session.on(setState);
+    setPetId(pets[0]?.petId ?? "");
+    setNotes("");
+    setPhase("setup");
+    setSaveError(null);
+    return () => {
+      unsub();
+      session.stop();
+      sessionRef.current = null;
+    };
   }, [open, pets]);
 
   function handleStart() {
@@ -64,6 +66,7 @@ export function WalkSessionDialog({
     if (!sessionRef.current || !state || !state.startedAt) return;
     const pet = pets.find((p) => p.petId === petId);
     setSaving(true);
+    setSaveError(null);
     try {
       const score = computeWalkScore({
         distanceKm: state.totalDistanceKm,
@@ -84,6 +87,8 @@ export function WalkSessionDialog({
         score,
       });
       onClose();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "儲存失敗");
     } finally {
       setSaving(false);
     }
@@ -106,10 +111,7 @@ export function WalkSessionDialog({
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <FieldLabel>選擇寵物</FieldLabel>
-            <Select
-              value={petId}
-              onChange={(e) => setPetId(e.target.value)}
-            >
+            <Select value={petId} onChange={(e) => setPetId(e.target.value)}>
               {pets.length === 0 ? (
                 <option value="">先新增寵物</option>
               ) : (
@@ -137,18 +139,20 @@ export function WalkSessionDialog({
       )}
 
       {phase === "tracking" && state && (
-        <div className="flex flex-col gap-6 items-center">
+        <div className="flex flex-col gap-5 items-center">
           <div className="flex flex-col items-center gap-1">
-            <Footprints className="size-12 text-amber-500 animate-pulse" />
+            <Footprints className="size-10 text-amber-500 animate-pulse" />
             <p className="text-xs text-zinc-500">追蹤中</p>
           </div>
 
-          <Stat label="距離" value={`${state.totalDistanceKm.toFixed(2)} km`} />
-          <Stat label="時長" value={`${state.durationMin.toFixed(1)} min`} />
-          <Stat label="即時分數" value={liveScore.toFixed(1)} accent />
+          <div className="grid grid-cols-3 gap-2 w-full text-center">
+            <Stat label="距離" value={`${state.totalDistanceKm.toFixed(2)}`} suffix="km" />
+            <Stat label="時長" value={`${state.durationMin.toFixed(1)}`} suffix="min" />
+            <Stat label="分數" value={liveScore.toFixed(1)} accent />
+          </div>
 
           {state.lastError && (
-            <p className="text-xs text-red-600">{state.lastError}</p>
+            <p className="text-xs text-red-600 text-center">{state.lastError}</p>
           )}
 
           <Button variant="danger" size="lg" onClick={handleStop}>
@@ -161,14 +165,15 @@ export function WalkSessionDialog({
       {phase === "done" && state && (
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl bg-amber-50 dark:bg-amber-500/10 p-4 grid grid-cols-3 gap-2 text-center">
-            <SmallStat label="距離" value={`${state.totalDistanceKm.toFixed(2)} km`} />
-            <SmallStat label="時長" value={`${state.durationMin.toFixed(1)} min`} />
-            <SmallStat label="分數" value={liveScore.toFixed(1)} />
+            <Stat label="距離" value={`${state.totalDistanceKm.toFixed(2)}`} suffix="km" small />
+            <Stat label="時長" value={`${state.durationMin.toFixed(1)}`} suffix="min" small />
+            <Stat label="分數" value={liveScore.toFixed(1)} accent small />
           </div>
           <div className="flex flex-col gap-1">
             <FieldLabel>備註 (選填)</FieldLabel>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
+          {saveError && <p className="text-sm text-red-600">{saveError}</p>}
           <div className="flex justify-end gap-3">
             <Button variant="ghost" onClick={onClose} disabled={saving}>
               {tC("cancel")}
@@ -183,29 +188,36 @@ export function WalkSessionDialog({
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Stat({
+  label,
+  value,
+  suffix,
+  accent,
+  small,
+}: {
+  label: string;
+  value: string;
+  suffix?: string;
+  accent?: boolean;
+  small?: boolean;
+}) {
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <span className="text-xs text-zinc-500 uppercase tracking-wider">{label}</span>
+      <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
+        {label}
+      </span>
       <span
-        className={`text-3xl font-bold tabular-nums ${
+        className={`font-bold tabular-nums ${small ? "text-base" : "text-2xl"} ${
           accent ? "text-amber-600 dark:text-amber-400" : ""
         }`}
       >
         {value}
+        {suffix && (
+          <span className="ml-0.5 text-xs font-normal text-zinc-500">
+            {suffix}
+          </span>
+        )}
       </span>
     </div>
   );
 }
-
-function SmallStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <span className="text-xs text-zinc-500">{label}</span>
-      <span className="text-base font-bold tabular-nums">{value}</span>
-    </div>
-  );
-}
-
-// Pause unused-imports lint by referencing icon (kept for future pause feature)
-void Pause;

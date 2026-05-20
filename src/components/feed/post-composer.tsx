@@ -115,12 +115,23 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
         {previews.length > 0 && (
           <div className="grid grid-cols-2 gap-2">
             {previews.map((url, i) => (
-              <div key={url} className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100">
-                <Image src={url} alt="" fill className="object-cover" sizes="200px" unoptimized />
+              <div
+                key={`${photos[i]?.name ?? i}-${i}`}
+                className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100"
+              >
+                <Image
+                  src={url}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="200px"
+                  unoptimized
+                />
                 <button
                   type="button"
                   onClick={() => removePhoto(i)}
-                  className="absolute top-1 right-1 size-7 rounded-full bg-black/60 text-white grid place-items-center"
+                  aria-label="移除照片"
+                  className="absolute top-1 right-1 size-8 rounded-full bg-black/60 text-white grid place-items-center hover:bg-black/80"
                 >
                   <X className="size-4" />
                 </button>

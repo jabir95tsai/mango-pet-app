@@ -6,6 +6,7 @@ import { Camera, Plus, Receipt, Wallet } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExpenseCard } from "@/components/expenses/expense-card";
 import { ExpenseFormDialog } from "@/components/expenses/expense-form-dialog";
@@ -46,6 +47,8 @@ export default function ExpensesPage() {
   const t = useTranslations("Nav");
   const tE = useTranslations("Expense");
   const tC = useTranslations("Common");
+  const tF = useTranslations("Filter");
+  const askConfirm = useConfirm();
   const { user } = useAuth();
 
   const [pets, setPets] = useState<Pet[]>([]);
@@ -128,7 +131,14 @@ export default function ExpensesPage() {
 
   async function handleDelete(expense: Expense) {
     if (!user) return;
-    if (!confirm(`${tC("delete")}?`)) return;
+    const ok = await askConfirm({
+      title: tC("delete"),
+      message: `${expense.vendor || tE(`categories.${expense.category}`)} · NT$ ${expense.amount.toLocaleString()}`,
+      confirmText: tC("delete"),
+      cancelText: tC("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     await deleteExpense(user.uid, expense.expenseId);
     await refresh();
   }
@@ -180,7 +190,7 @@ export default function ExpensesPage() {
                     : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800",
                 )}
               >
-                所有寵物
+                {tF("allPets")}
               </button>
               {pets.map((p) => (
                 <button
@@ -203,7 +213,7 @@ export default function ExpensesPage() {
           <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 mb-4">
             {FILTERS.map((f) => {
               const active = filter === f;
-              const label = f === "all" ? "全部" : tE(`categories.${f}`);
+              const label = f === "all" ? tF("all") : tE(`categories.${f}`);
               return (
                 <button
                   key={f}

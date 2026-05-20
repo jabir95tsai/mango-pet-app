@@ -7,7 +7,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <RequireAuth>
       <div className="flex flex-1 flex-col md:flex-row">
         <AppNav />
-        <div className="flex-1 pb-20 md:pb-0 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+4.5rem)] md:pb-0">
           <div className="max-w-3xl mx-auto p-6">{children}</div>
         </div>
       </div>

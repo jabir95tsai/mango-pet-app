@@ -6,6 +6,7 @@ import { Footprints, Hand, Play, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WalkSessionDialog } from "@/components/walks/walk-session-dialog";
 import { ManualWalkDialog } from "@/components/walks/manual-walk-dialog";
@@ -19,6 +20,7 @@ import type { Timestamp } from "firebase/firestore";
 export default function WalksPage() {
   const t = useTranslations("Nav");
   const tC = useTranslations("Common");
+  const askConfirm = useConfirm();
   const { user } = useAuth();
 
   const [pets, setPets] = useState<Pet[]>([]);
@@ -76,7 +78,14 @@ export default function WalksPage() {
 
   async function handleDelete(walk: Walk) {
     if (!user) return;
-    if (!confirm(`${tC("delete")}?`)) return;
+    const ok = await askConfirm({
+      title: tC("delete"),
+      message: `${walk.distanceKm.toFixed(2)} km · ${walk.durationMin.toFixed(0)} min`,
+      confirmText: tC("delete"),
+      cancelText: tC("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     await deleteWalk(user.uid, walk.walkId);
     await refresh();
   }

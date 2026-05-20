@@ -13,7 +13,12 @@
     "knowledge": "Knowledge",
     "friends": "Friends",
     "feed": "Feed",
-    "settings": "Settings"
+    "settings": "Settings",
+    "more": "More"
+  },
+  "Filter": {
+    "all": "All",
+    "allPets": "All pets"
   },
   "Auth": {
     "signIn": "Sign in",
@@ -22,7 +27,17 @@
     "signInWithApple": "Sign in with Apple",
     "signInWithFacebook": "Sign in with Facebook",
     "welcome": "Welcome to Mango Pet",
-    "subtitle": "Track, share, and discover life with your pets"
+    "subtitle": "Track, share, and discover life with your pets",
+    "errors": {
+      "cancelled": "Sign-in cancelled",
+      "popupBlocked": "Popup was blocked. Allow popups and try again.",
+      "network": "Network error. Check your connection and try again.",
+      "differentCredential": "This email is already linked to a different sign-in method.",
+      "providerDisabled": "This sign-in method isn't enabled.",
+      "unauthorizedDomain": "This domain isn't authorized for sign-in.",
+      "config": "Sign-in is misconfigured. Please try again later.",
+      "generic": "Sign-in failed. Please try again."
+    }
   },
   "Pet": {
     "addPet": "Add pet",

@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { PetFormDialog } from "@/components/pets/pet-form-dialog";
 import { HealthRecordFormDialog } from "@/components/health/health-record-form-dialog";
 import { HealthRecordCard } from "@/components/health/health-record-card";
@@ -53,6 +54,7 @@ export default function PetDetailPage() {
   const tR = useTranslations("Reminder");
   const tC = useTranslations("Common");
   const tPet = useTranslations("Pet");
+  const askConfirm = useConfirm();
 
   const [pet, setPet] = useState<Pet | null>(null);
   const [records, setRecords] = useState<HealthRecord[]>([]);
@@ -103,7 +105,14 @@ export default function PetDetailPage() {
 
   async function handleDeleteRecord(record: HealthRecord) {
     if (!user) return;
-    if (!confirm(`${tC("delete")}?`)) return;
+    const ok = await askConfirm({
+      title: tC("delete"),
+      message: tH(`types.${record.type}`),
+      confirmText: tC("delete"),
+      cancelText: tC("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     await deleteRecord(user.uid, petId, record.recordId);
     await refresh();
   }
@@ -122,7 +131,14 @@ export default function PetDetailPage() {
 
   async function handleDeleteReminder(reminder: Reminder) {
     if (!user) return;
-    if (!confirm(`${tC("delete")}?`)) return;
+    const ok = await askConfirm({
+      title: tC("delete"),
+      message: reminder.title,
+      confirmText: tC("delete"),
+      cancelText: tC("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     await deleteReminder(user.uid, reminder.reminderId);
     await refresh();
   }

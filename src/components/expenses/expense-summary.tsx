@@ -94,10 +94,10 @@ export function ExpenseSummary({ total, byCategory, byMonth }: Props) {
           </div>
 
           <ul className="flex flex-col gap-1 text-xs">
-            {byCategory.slice(0, 5).map((c) => (
+            {byCategory.map((c) => (
               <li key={c.category} className="flex items-center gap-2">
                 <span
-                  className="size-2 rounded-full"
+                  className="size-2 rounded-full shrink-0"
                   style={{ background: CATEGORY_COLORS[c.category] }}
                 />
                 <span className="font-medium">{tE(`categories.${c.category}`)}</span>

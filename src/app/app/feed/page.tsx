@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { PostComposer } from "@/components/feed/post-composer";
 import { PostCard } from "@/components/feed/post-card";
 import { deletePost, listFeedPosts } from "@/lib/firebase/posts";
@@ -17,6 +18,7 @@ import type { Pet, Post } from "@/lib/types";
 export default function FeedPage() {
   const t = useTranslations("Nav");
   const tCommon = useTranslations("Common");
+  const askConfirm = useConfirm();
   const { user } = useAuth();
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -48,7 +50,14 @@ export default function FeedPage() {
   }, [refresh]);
 
   async function handleDelete(post: Post) {
-    if (!confirm(`${tCommon("delete")}?`)) return;
+    const ok = await askConfirm({
+      title: tCommon("delete"),
+      message: post.text ? post.text.slice(0, 80) : "貼文",
+      confirmText: tCommon("delete"),
+      cancelText: tCommon("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     await deletePost(post.postId);
     await refresh();
   }

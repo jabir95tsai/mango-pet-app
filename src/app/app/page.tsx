@@ -7,6 +7,7 @@ import { Bell, PawPrint, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Avatar } from "@/components/ui/avatar";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { ReminderCard } from "@/components/reminders/reminder-card";
@@ -27,6 +28,7 @@ export default function AppHome() {
   const tR = useTranslations("Reminder");
   const tPet = useTranslations("Pet");
   const tC = useTranslations("Common");
+  const askConfirm = useConfirm();
   const { user } = useAuth();
 
   const [pets, setPets] = useState<Pet[]>([]);
@@ -74,7 +76,14 @@ export default function AppHome() {
 
   async function handleDeleteReminder(reminder: Reminder) {
     if (!user) return;
-    if (!confirm(`${tC("delete")}?`)) return;
+    const ok = await askConfirm({
+      title: tC("delete"),
+      message: reminder.title,
+      confirmText: tC("delete"),
+      cancelText: tC("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     await deleteReminder(user.uid, reminder.reminderId);
     await refresh();
   }

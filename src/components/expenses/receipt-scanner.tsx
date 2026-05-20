@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Camera, Loader2, Sparkles, X } from "lucide-react";
@@ -26,10 +26,16 @@ export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Revoke any previously-created blob URL when previewURL changes or unmounts.
+  useEffect(() => {
+    return () => {
+      if (previewURL) URL.revokeObjectURL(previewURL);
+    };
+  }, [previewURL]);
+
   function reset() {
     setFile(null);
-    if (previewURL) URL.revokeObjectURL(previewURL);
-    setPreviewURL(null);
+    setPreviewURL(null); // useEffect cleanup will revoke the previous URL
     setError(null);
   }
 

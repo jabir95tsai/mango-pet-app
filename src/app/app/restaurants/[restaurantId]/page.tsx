@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { RestaurantMap } from "@/components/restaurants/restaurant-map";
 import { ReviewCard } from "@/components/restaurants/review-card";
 import { ReviewFormDialog } from "@/components/restaurants/review-form-dialog";
@@ -46,6 +47,7 @@ export default function RestaurantDetailPage() {
   const restaurantId = params.restaurantId;
   const { user } = useAuth();
   const tC = useTranslations("Common");
+  const askConfirm = useConfirm();
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [reviews, setReviews] = useState<RestaurantReview[]>([]);
@@ -98,7 +100,14 @@ export default function RestaurantDetailPage() {
   }
 
   async function handleDeleteReview(review: RestaurantReview) {
-    if (!confirm(`${tC("delete")}?`)) return;
+    const ok = await askConfirm({
+      title: tC("delete"),
+      message: review.text.slice(0, 80),
+      confirmText: tC("delete"),
+      cancelText: tC("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     await deleteReview(restaurantId, review.reviewId, review.rating);
     await refresh();
   }

@@ -13,7 +13,12 @@
     "knowledge": "知識庫",
     "friends": "好友",
     "feed": "動態",
-    "settings": "設定"
+    "settings": "設定",
+    "more": "更多"
+  },
+  "Filter": {
+    "all": "全部",
+    "allPets": "所有寵物"
   },
   "Auth": {
     "signIn": "登入",
@@ -22,7 +27,17 @@
     "signInWithApple": "用 Apple 登入",
     "signInWithFacebook": "用 Facebook 登入",
     "welcome": "歡迎來到芒果寵物",
-    "subtitle": "紀錄、分享、發現屬於你和毛孩的生活"
+    "subtitle": "紀錄、分享、發現屬於你和毛孩的生活",
+    "errors": {
+      "cancelled": "登入已取消",
+      "popupBlocked": "瀏覽器阻擋了登入視窗，請允許彈跳視窗後重試",
+      "network": "網路連線失敗，請檢查網路後重試",
+      "differentCredential": "這個 Email 已使用其他方式登入過，請換登入方式",
+      "providerDisabled": "此登入方式尚未啟用",
+      "unauthorizedDomain": "此網址未授權登入，請聯絡管理員",
+      "config": "登入設定有問題，請稍後再試",
+      "generic": "登入失敗，請稍後再試"
+    }
   },
   "Pet": {
     "addPet": "新增寵物",

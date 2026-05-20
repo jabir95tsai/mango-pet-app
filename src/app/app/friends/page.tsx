@@ -8,6 +8,7 @@ import { RouteHeader } from "@/components/nav/route-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/ui/avatar";
 import { Tabs } from "@/components/ui/tabs";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { FriendSearch } from "@/components/friends/friend-search";
 import {
   acceptFriendRequest,
@@ -23,6 +24,7 @@ type Tab = "friends" | "requests" | "search";
 export default function FriendsPage() {
   const t = useTranslations("Nav");
   const tC = useTranslations("Common");
+  const askConfirm = useConfirm();
   const { user } = useAuth();
 
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -82,7 +84,15 @@ export default function FriendsPage() {
   }
 
   async function handleRemove(friendUid: string) {
-    if (!confirm(`${tC("delete")}?`)) return;
+    const friend = friends.find((f) => f.uid === friendUid);
+    const ok = await askConfirm({
+      title: tC("delete"),
+      message: friend?.displayName ?? "移除好友？",
+      confirmText: tC("delete"),
+      cancelText: tC("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(friendUid);
     setError(null);
     try {

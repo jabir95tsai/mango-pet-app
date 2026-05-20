@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { PetCard } from "@/components/pets/pet-card";
 import { PetFormDialog } from "@/components/pets/pet-form-dialog";
 import { createPet, deletePet, listPets, updatePet } from "@/lib/firebase/pets";
@@ -16,6 +17,7 @@ export default function PetsPage() {
   const t = useTranslations("Nav");
   const tPet = useTranslations("Pet");
   const tCommon = useTranslations("Common");
+  const askConfirm = useConfirm();
   const { user } = useAuth();
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,14 @@ export default function PetsPage() {
 
   async function handleDelete(pet: Pet) {
     if (!user) return;
-    if (!confirm(`${tCommon("delete")}: ${pet.name}?`)) return;
+    const ok = await askConfirm({
+      title: `${tCommon("delete")}: ${pet.name}`,
+      message: "刪除後相關的健康紀錄與貼文照片仍會保留，但寵物本身會被移除。",
+      confirmText: tCommon("delete"),
+      cancelText: tCommon("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     await deletePet(user.uid, pet.petId);
     await refresh();
   }

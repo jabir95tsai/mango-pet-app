@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { FirebaseError } from "firebase/app";
 import { signInWithProvider, type AuthProviderKind } from "@/lib/firebase/auth";
 import { useAuth } from "./auth-provider";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,33 @@ const PROVIDERS: { kind: AuthProviderKind; labelKey: string; className: string }
   },
 ];
 
+function friendlyError(err: unknown, t: (key: string) => string): string {
+  if (err instanceof FirebaseError) {
+    switch (err.code) {
+      case "auth/popup-closed-by-user":
+      case "auth/cancelled-popup-request":
+        return t("errors.cancelled");
+      case "auth/popup-blocked":
+        return t("errors.popupBlocked");
+      case "auth/network-request-failed":
+        return t("errors.network");
+      case "auth/account-exists-with-different-credential":
+        return t("errors.differentCredential");
+      case "auth/operation-not-allowed":
+        return t("errors.providerDisabled");
+      case "auth/unauthorized-domain":
+        return t("errors.unauthorizedDomain");
+      case "auth/internal-error":
+      case "auth/invalid-api-key":
+      case "auth/app-not-authorized":
+        return t("errors.config");
+      default:
+        return t("errors.generic");
+    }
+  }
+  return err instanceof Error ? err.message : t("errors.generic");
+}
+
 export function SignInButtons() {
   const t = useTranslations("Auth");
   const router = useRouter();
@@ -42,8 +70,7 @@ export function SignInButtons() {
     try {
       await signInWithProvider(kind);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Sign-in failed";
-      setError(message);
+      setError(friendlyError(err, t));
     } finally {
       setPending(null);
     }
