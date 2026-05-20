@@ -22,14 +22,15 @@ type Props = {
 
 const MAX_PHOTOS = 4;
 
-const VISIBILITY_OPTIONS: { value: Visibility; icon: typeof Globe; label: string }[] = [
-  { value: "public", icon: Globe, label: "公開" },
-  { value: "friends", icon: Users, label: "好友" },
-  { value: "private", icon: Lock, label: "私人" },
+const VISIBILITY_OPTIONS: { value: Visibility; icon: typeof Globe; labelKey: string }[] = [
+  { value: "public", icon: Globe, labelKey: "visibilityPublic" },
+  { value: "friends", icon: Users, labelKey: "visibilityFriends" },
+  { value: "private", icon: Lock, labelKey: "visibilityPrivate" },
 ];
 
 export function PostComposer({ open, onClose, pets, onCreated }: Props) {
   const tCommon = useTranslations("Common");
+  const tP = useTranslations("Post");
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,7 +78,7 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
   async function handleSubmit() {
     if (!user) return;
     if (!text.trim() && photos.length === 0) {
-      setError("文字或照片至少要有一個");
+      setError(tP("needTextOrPhoto"));
       return;
     }
     setPosting(true);
@@ -103,12 +104,12 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="發新貼文">
+    <Dialog open={open} onClose={onClose} title={tP("compose")}>
       <div className="flex flex-col gap-4">
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="今天和毛孩做了什麼?"
+          placeholder={tP("placeholder")}
           rows={4}
         />
 
@@ -164,7 +165,7 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
 
         {pets.length > 0 && (
           <div className="flex flex-col gap-2">
-            <FieldLabel>Tag 寵物</FieldLabel>
+            <FieldLabel>{tP("tagPet")}</FieldLabel>
             <div className="flex flex-wrap gap-2">
               {pets.map((p) => {
                 const on = selectedPets.includes(p.petId);
@@ -189,22 +190,23 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
         )}
 
         <div className="flex flex-col gap-2">
-          <FieldLabel>公開度</FieldLabel>
+          <FieldLabel>{tP("visibility")}</FieldLabel>
           <div className="flex gap-2">
-            {VISIBILITY_OPTIONS.map(({ value, icon: Icon, label }) => (
+            {VISIBILITY_OPTIONS.map(({ value, icon: Icon, labelKey }) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setVisibility(value)}
+                aria-pressed={visibility === value}
                 className={cn(
                   "flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-medium transition-colors",
                   visibility === value
                     ? "bg-amber-500 text-white"
-                    : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+                    : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 hover:bg-zinc-200",
                 )}
               >
                 <Icon className="size-3.5" />
-                {label}
+                {tP(labelKey)}
               </button>
             ))}
           </div>
@@ -217,7 +219,7 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
             {tCommon("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={posting}>
-            {posting ? "..." : "發布"}
+            {posting ? "..." : tP("publish")}
           </Button>
         </div>
       </div>

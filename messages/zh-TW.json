@@ -20,6 +20,48 @@
     "all": "全部",
     "allPets": "所有寵物"
   },
+  "Post": {
+    "compose": "發新貼文",
+    "publish": "發布",
+    "placeholder": "今天和毛孩做了什麼?",
+    "tagPet": "標記寵物",
+    "visibility": "公開度",
+    "visibilityPublic": "公開",
+    "visibilityFriends": "好友",
+    "visibilityPrivate": "私人",
+    "needTextOrPhoto": "文字或照片至少要有一個",
+    "removePhoto": "移除照片",
+    "react": "回應 {emoji}"
+  },
+  "Restaurant": {
+    "title": "餐廳",
+    "addRestaurant": "新增餐廳",
+    "fields": {
+      "name": "名稱",
+      "address": "地址",
+      "latitude": "緯度 (lat)",
+      "longitude": "經度 (lng)",
+      "useCurrentLocation": "使用我目前位置",
+      "petLevel": "寵物友善程度",
+      "phone": "電話 (選填)",
+      "website": "網站 (選填)",
+      "waterBowl": "💧 提供水碗",
+      "petMenu": "🍽️ 寵物餐點",
+      "largeDogsOk": "🐕‍🦺 大型犬 OK"
+    },
+    "level": {
+      "indoor_ok": "可進室內",
+      "outdoor_only": "僅戶外座位",
+      "restricted": "限制條件"
+    },
+    "review": {
+      "write": "寫評論",
+      "rating": "評分",
+      "text": "評論",
+      "placeholder": "寵物可以進室內嗎? 服務態度如何? 適合大型犬嗎?",
+      "needText": "請寫些評論內容"
+    }
+  },
   "Auth": {
     "signIn": "登入",
     "signOut": "登出",
@@ -44,6 +86,24 @@
     "petDetail": "寵物詳情",
     "noPets": "還沒有寵物",
     "notFound": "找不到這隻寵物",
+    "fields": {
+      "name": "名字",
+      "species": "種類",
+      "gender": "性別",
+      "breed": "品種",
+      "weight": "體重 (公斤)",
+      "birthday": "生日",
+      "bio": "簡介",
+      "photo": "點擊上傳照片",
+      "namePlaceholder": "芒果",
+      "breedPlaceholder": "柴犬 / 米克斯…",
+      "bioPlaceholder": "個性、喜好…"
+    },
+    "gender": {
+      "unspecified": "—",
+      "male": "♂ 公",
+      "female": "♀ 母"
+    },
     "species": {
       "dog": "狗",
       "cat": "貓",
@@ -53,8 +113,11 @@
   "Health": {
     "title": "健康紀錄",
     "addRecord": "新增紀錄",
+    "type": "類型",
     "timeline": "時間軸",
     "weightChart": "體重變化",
+    "needTwoForChart": "需要 2 筆以上的體重紀錄才會顯示圖表",
+    "weightPositive": "體重必須大於 0",
     "noRecords": "尚無紀錄",
     "types": {
       "weight": "體重",

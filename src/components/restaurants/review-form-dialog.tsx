@@ -18,6 +18,7 @@ type Props = {
 
 export function ReviewFormDialog({ open, onClose, onSubmit }: Props) {
   const tC = useTranslations("Common");
+  const tR = useTranslations("Restaurant.review");
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,7 +35,7 @@ export function ReviewFormDialog({ open, onClose, onSubmit }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) {
-      setError("請寫些評論內容");
+      setError(tR("needText"));
       return;
     }
     setSaving(true);
@@ -50,18 +51,19 @@ export function ReviewFormDialog({ open, onClose, onSubmit }: Props) {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="寫評論">
+    <Dialog open={open} onClose={onClose} title={tR("write")}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <FieldLabel>評分</FieldLabel>
+          <FieldLabel>{tR("rating")}</FieldLabel>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
                 type="button"
                 onClick={() => setRating(n)}
-                aria-label={`${n} stars`}
-                className="p-1"
+                aria-label={`${n} / 5`}
+                aria-pressed={n === rating}
+                className="size-10 grid place-items-center rounded-full hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
               >
                 <Star
                   className={cn(
@@ -74,13 +76,17 @@ export function ReviewFormDialog({ open, onClose, onSubmit }: Props) {
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <FieldLabel>評論</FieldLabel>
+          <FieldLabel>{tR("text")}</FieldLabel>
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="寵物可以進室內嗎? 服務態度如何? 適合大型犬嗎?"
+            placeholder={tR("placeholder")}
             rows={4}
+            maxLength={500}
           />
+          <p className="text-[10px] text-zinc-400 self-end">
+            {text.length}/500
+          </p>
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex gap-3 justify-end">

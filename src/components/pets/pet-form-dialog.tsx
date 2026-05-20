@@ -97,11 +97,12 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
       title={initial ? tCommon("edit") : tPet("addPet")}
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="relative size-24 rounded-full overflow-hidden bg-amber-100 dark:bg-zinc-800 ring-2 ring-amber-300/60 flex items-center justify-center"
+            aria-label={tPet("fields.photo")}
+            className="relative size-24 rounded-full overflow-hidden bg-amber-100 dark:bg-zinc-800 ring-2 ring-amber-300/60 hover:ring-amber-500 flex items-center justify-center transition-colors"
           >
             {previewURL ? (
               <Image
@@ -113,9 +114,12 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
                 unoptimized
               />
             ) : (
-              <Camera className="size-8 text-amber-500" />
+              <Camera className="size-8 text-amber-700 dark:text-amber-400" />
             )}
           </button>
+          {!previewURL && (
+            <span className="text-xs text-zinc-500">{tPet("fields.photo")}</span>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -129,18 +133,18 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <FieldLabel>Name</FieldLabel>
+          <FieldLabel>{tPet("fields.name")}</FieldLabel>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="芒果"
+            placeholder={tPet("fields.namePlaceholder")}
             required
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <FieldLabel>Species</FieldLabel>
+            <FieldLabel>{tPet("fields.species")}</FieldLabel>
             <Select
               value={species}
               onChange={(e) => setSpecies(e.target.value as Species)}
@@ -151,40 +155,41 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <FieldLabel>Gender</FieldLabel>
+            <FieldLabel>{tPet("fields.gender")}</FieldLabel>
             <Select
               value={gender}
               onChange={(e) => setGender(e.target.value as Gender)}
             >
-              <option value="unknown">—</option>
-              <option value="male">♂</option>
-              <option value="female">♀</option>
+              <option value="unknown">{tPet("gender.unspecified")}</option>
+              <option value="male">{tPet("gender.male")}</option>
+              <option value="female">{tPet("gender.female")}</option>
             </Select>
           </div>
         </div>
 
         <div className="flex flex-col gap-1">
-          <FieldLabel>Breed</FieldLabel>
+          <FieldLabel>{tPet("fields.breed")}</FieldLabel>
           <Input
             value={breed}
             onChange={(e) => setBreed(e.target.value)}
-            placeholder="柴犬 / Shiba"
+            placeholder={tPet("fields.breedPlaceholder")}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <FieldLabel>Weight (kg)</FieldLabel>
+            <FieldLabel>{tPet("fields.weight")}</FieldLabel>
             <Input
               type="number"
               step="0.1"
+              min="0"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               placeholder="8.5"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <FieldLabel>Birthday</FieldLabel>
+            <FieldLabel>{tPet("fields.birthday")}</FieldLabel>
             <Input
               type="date"
               value={birthday}
@@ -194,11 +199,11 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <FieldLabel>Bio</FieldLabel>
+          <FieldLabel>{tPet("fields.bio")}</FieldLabel>
           <Textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="個性、喜好..."
+            placeholder={tPet("fields.bioPlaceholder")}
           />
         </div>
 

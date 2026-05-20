@@ -18,6 +18,7 @@ type Props = {
 
 export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
   const tC = useTranslations("Common");
+  const tR = useTranslations("Restaurant");
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -51,7 +52,8 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
     const loc = await getCurrentLocation();
     setLat(loc.lat.toFixed(6));
     setLng(loc.lng.toFixed(6));
-    if (!loc.fromBrowser) setError("無法取得 GPS，已填入預設座標 (台北 101)");
+    if (!loc.fromBrowser)
+      setError("無法取得目前位置，已填入預設座標。請手動修正。");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,7 +61,11 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
     const latNum = Number(lat);
     const lngNum = Number(lng);
     if (!name.trim() || !address.trim() || Number.isNaN(latNum) || Number.isNaN(lngNum)) {
-      setError("名稱、地址、座標必填");
+      setError(`${tR("fields.name")} / ${tR("fields.address")} / ${tR("fields.latitude")} / ${tR("fields.longitude")}`);
+      return;
+    }
+    if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
+      setError(`${tR("fields.latitude")} / ${tR("fields.longitude")}`);
       return;
     }
     setSaving(true);
@@ -85,10 +91,10 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="新增餐廳">
+    <Dialog open={open} onClose={onClose} title={tR("addRestaurant")}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <FieldLabel>名稱</FieldLabel>
+          <FieldLabel>{tR("fields.name")}</FieldLabel>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -97,7 +103,7 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <FieldLabel>地址</FieldLabel>
+          <FieldLabel>{tR("fields.address")}</FieldLabel>
           <Input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -108,10 +114,12 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <FieldLabel>緯度 (lat)</FieldLabel>
+            <FieldLabel>{tR("fields.latitude")}</FieldLabel>
             <Input
               type="number"
               step="0.000001"
+              min="-90"
+              max="90"
               value={lat}
               onChange={(e) => setLat(e.target.value)}
               placeholder="25.0339"
@@ -119,10 +127,12 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <FieldLabel>經度 (lng)</FieldLabel>
+            <FieldLabel>{tR("fields.longitude")}</FieldLabel>
             <Input
               type="number"
               step="0.000001"
+              min="-180"
+              max="180"
               value={lng}
               onChange={(e) => setLng(e.target.value)}
               placeholder="121.5644"
@@ -133,24 +143,25 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
 
         <Button type="button" variant="ghost" size="sm" onClick={useCurrentLocation}>
           <MapPin className="size-4" />
-          使用我目前位置
+          {tR("fields.useCurrentLocation")}
         </Button>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <FieldLabel>寵物友善程度</FieldLabel>
+            <FieldLabel>{tR("fields.petLevel")}</FieldLabel>
             <Select
               value={level}
               onChange={(e) => setLevel(e.target.value as PetFriendlyLevel)}
             >
-              <option value="indoor_ok">可進室內</option>
-              <option value="outdoor_only">僅戶外座位</option>
-              <option value="restricted">限制條件</option>
+              <option value="indoor_ok">{tR("level.indoor_ok")}</option>
+              <option value="outdoor_only">{tR("level.outdoor_only")}</option>
+              <option value="restricted">{tR("level.restricted")}</option>
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <FieldLabel>電話 (選填)</FieldLabel>
+            <FieldLabel>{tR("fields.phone")}</FieldLabel>
             <Input
+              type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="02-XXX-XXXX"
@@ -159,7 +170,7 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <FieldLabel>網站 (選填)</FieldLabel>
+          <FieldLabel>{tR("fields.website")}</FieldLabel>
           <Input
             type="url"
             value={website}
@@ -169,9 +180,21 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Toggle on={hasWater} onChange={setHasWater} label="💧 提供水碗" />
-          <Toggle on={hasMenu} onChange={setHasMenu} label="🍽️ 寵物餐點" />
-          <Toggle on={largeOk} onChange={setLargeOk} label="🐕‍🦺 大型犬 OK" />
+          <Toggle
+            on={hasWater}
+            onChange={setHasWater}
+            label={tR("fields.waterBowl")}
+          />
+          <Toggle
+            on={hasMenu}
+            onChange={setHasMenu}
+            label={tR("fields.petMenu")}
+          />
+          <Toggle
+            on={largeOk}
+            onChange={setLargeOk}
+            label={tR("fields.largeDogsOk")}
+          />
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -202,10 +225,11 @@ function Toggle({
     <button
       type="button"
       onClick={() => onChange(!on)}
+      aria-pressed={on}
       className={`px-3 h-8 rounded-full text-xs font-medium transition-colors ${
         on
           ? "bg-amber-500 text-white"
-          : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400"
       }`}
     >
       {label}

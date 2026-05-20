@@ -19,10 +19,14 @@ type Props = {
 export function WeightChart({ data }: Props) {
   const tH = useTranslations("Health");
 
+  // Hide entirely when there's nothing yet — the page already shows a generic
+  // "no records" empty state below.
+  if (data.length === 0) return null;
+
   if (data.length < 2) {
     return (
-      <div className="rounded-2xl border border-dashed border-amber-300/60 bg-amber-50/40 dark:border-zinc-700 dark:bg-zinc-900/40 p-8 text-center text-sm text-zinc-500">
-        {tH("noRecords")} — 至少 2 筆體重紀錄才會出現圖表
+      <div className="rounded-2xl border border-dashed border-amber-300/60 bg-amber-50/40 dark:border-zinc-700 dark:bg-zinc-900/40 p-4 text-center text-xs text-zinc-500">
+        {tH("needTwoForChart")}
       </div>
     );
   }

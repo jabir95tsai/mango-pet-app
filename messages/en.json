@@ -20,6 +20,48 @@
     "all": "All",
     "allPets": "All pets"
   },
+  "Post": {
+    "compose": "New post",
+    "publish": "Publish",
+    "placeholder": "What did you and your pet do today?",
+    "tagPet": "Tag a pet",
+    "visibility": "Visibility",
+    "visibilityPublic": "Public",
+    "visibilityFriends": "Friends",
+    "visibilityPrivate": "Private",
+    "needTextOrPhoto": "Add text or a photo",
+    "removePhoto": "Remove photo",
+    "react": "React {emoji}"
+  },
+  "Restaurant": {
+    "title": "Restaurant",
+    "addRestaurant": "Add restaurant",
+    "fields": {
+      "name": "Name",
+      "address": "Address",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "useCurrentLocation": "Use my current location",
+      "petLevel": "Pet-friendly level",
+      "phone": "Phone (optional)",
+      "website": "Website (optional)",
+      "waterBowl": "💧 Water bowl",
+      "petMenu": "🍽️ Pet menu",
+      "largeDogsOk": "🐕‍🦺 Large dogs OK"
+    },
+    "level": {
+      "indoor_ok": "Indoor OK",
+      "outdoor_only": "Outdoor only",
+      "restricted": "Restricted"
+    },
+    "review": {
+      "write": "Write review",
+      "rating": "Rating",
+      "text": "Review",
+      "placeholder": "Can pets go indoors? How's the service? Good for big dogs?",
+      "needText": "Please write some review content"
+    }
+  },
   "Auth": {
     "signIn": "Sign in",
     "signOut": "Sign out",
@@ -44,6 +86,24 @@
     "petDetail": "Pet detail",
     "noPets": "No pets yet",
     "notFound": "Pet not found",
+    "fields": {
+      "name": "Name",
+      "species": "Species",
+      "gender": "Gender",
+      "breed": "Breed",
+      "weight": "Weight (kg)",
+      "birthday": "Birthday",
+      "bio": "Bio",
+      "photo": "Tap to add a photo",
+      "namePlaceholder": "Mango",
+      "breedPlaceholder": "Shiba / Mixed…",
+      "bioPlaceholder": "Personality, favorites…"
+    },
+    "gender": {
+      "unspecified": "—",
+      "male": "♂ Male",
+      "female": "♀ Female"
+    },
     "species": {
       "dog": "Dog",
       "cat": "Cat",
@@ -53,8 +113,11 @@
   "Health": {
     "title": "Health records",
     "addRecord": "Add record",
+    "type": "Type",
     "timeline": "Timeline",
     "weightChart": "Weight chart",
+    "needTwoForChart": "Need at least 2 weight records to show the chart",
+    "weightPositive": "Weight must be greater than 0",
     "noRecords": "No records yet",
     "types": {
       "weight": "Weight",

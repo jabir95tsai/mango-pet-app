@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { getMyReaction, setReaction } from "@/lib/firebase/posts";
 import { REACTION_EMOJIS, type ReactionEmoji } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function EmojiReactions({ postId, uid, counts, onChange }: Props) {
+  const tP = useTranslations("Post");
   const [mine, setMine] = useState<ReactionEmoji | null>(null);
   const [pending, setPending] = useState<ReactionEmoji | null>(null);
   const [localCounts, setLocalCounts] = useState(counts);
@@ -64,6 +66,8 @@ export function EmojiReactions({ postId, uid, counts, onChange }: Props) {
             type="button"
             onClick={() => handleClick(emoji)}
             disabled={pending !== null}
+            aria-label={tP("react", { emoji })}
+            aria-pressed={active}
             className={cn(
               "inline-flex items-center gap-1 h-8 px-2.5 rounded-full text-sm transition-colors",
               active
@@ -71,7 +75,7 @@ export function EmojiReactions({ postId, uid, counts, onChange }: Props) {
                 : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700",
             )}
           >
-            <span>{emoji}</span>
+            <span aria-hidden="true">{emoji}</span>
             {count > 0 && <span className="text-xs font-medium">{count}</span>}
           </button>
         );

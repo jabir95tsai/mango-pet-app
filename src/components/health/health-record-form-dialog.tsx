@@ -30,7 +30,7 @@ const TYPES: HealthRecordType[] = ["weight", "feeding", "vaccine", "vet", "medic
 function emptyDataFor(type: HealthRecordType): HealthRecordData {
   switch (type) {
     case "weight":
-      return { kg: 0 };
+      return {} as { kg: number };
     case "feeding":
       return {};
     case "vaccine":
@@ -70,6 +70,32 @@ export function HealthRecordFormDialog({ open, onClose, onSubmit }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Type-specific validation
+    if (type === "weight") {
+      const kg = (data as { kg?: number }).kg;
+      if (!kg || kg <= 0) {
+        setError(tH("weightPositive"));
+        return;
+      }
+    } else if (type === "vaccine") {
+      const name = (data as { name?: string }).name;
+      if (!name?.trim()) {
+        setError(tH("fields.vaccineName"));
+        return;
+      }
+    } else if (type === "vet") {
+      const d = data as { clinic?: string; diagnosis?: string };
+      if (!d.clinic?.trim() || !d.diagnosis?.trim()) {
+        setError(tH("fields.clinic"));
+        return;
+      }
+    } else if (type === "medication") {
+      const name = (data as { name?: string }).name;
+      if (!name?.trim()) {
+        setError(tH("fields.medName"));
+        return;
+      }
+    }
     setSaving(true);
     setError(null);
     try {
@@ -91,7 +117,7 @@ export function HealthRecordFormDialog({ open, onClose, onSubmit }: Props) {
     <Dialog open={open} onClose={onClose} title={tH("addRecord")}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <FieldLabel>{tH("title")}</FieldLabel>
+          <FieldLabel>{tH("type")}</FieldLabel>
           <Select
             value={type}
             onChange={(e) => switchType(e.target.value as HealthRecordType)}
@@ -152,8 +178,10 @@ function TypeFields({ type, data, setData, tH }: FieldsProps) {
           <Input
             type="number"
             step="0.1"
-            value={(data as { kg?: number }).kg ?? ""}
+            min="0.1"
+            value={(data as { kg?: number }).kg || ""}
             onChange={(e) => setData({ kg: Number(e.target.value) })}
+            placeholder="例如 8.5"
             required
           />
         </div>
