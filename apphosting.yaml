@@ -9,17 +9,30 @@ runConfig:
   concurrency: 80
   timeoutSeconds: 60
 
-# Environment variables: set via Firebase Console after `firebase init apphosting`.
-#   Console → App Hosting → 你的 backend → Settings → Environment variables
-# Mark each with availability: BUILD + RUNTIME so they're embedded in the client bundle.
+# Environment variables.
 #
-# Required:
+# Console-set vars (Console → App Hosting → backend → Settings → 環境變數)
+# are RUNTIME-only — that's fine for server-only secrets. NEXT_PUBLIC_* must
+# be BUILD-available too because Next.js inlines them into the client bundle
+# at compile time. The console UI doesn't expose the BUILD flag, so anything
+# NEXT_PUBLIC_* that needs to reach the browser must be declared here.
+#
+# Console-managed (runtime; values not in repo):
 #   NEXT_PUBLIC_FIREBASE_API_KEY
 #   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 #   NEXT_PUBLIC_FIREBASE_PROJECT_ID
 #   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 #   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 #   NEXT_PUBLIC_FIREBASE_APP_ID
-#   NEXT_PUBLIC_FIREBASE_VAPID_KEY      (optional, push notifications)
-#   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY     (optional, restaurants map)
-#   NEXT_PUBLIC_SITE_URL                (your custom domain or *.web.app URL)
+#   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+#   NEXT_PUBLIC_SITE_URL
+
+env:
+  # VAPID public key for Web Push. It's the public half of a key pair —
+  # designed to be shipped to every browser, safe to commit. Without
+  # BUILD availability, getToken() at runtime sees undefined.
+  - variable: NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    value: BPctFsCllbzHX5VxOTI8bd7Pdmn7SS4P9oAHQlDIw_7HnnvQYlj8RAixuSPoOZo1Fzd4cCVf54eyRwco8S85yRE
+    availability:
+      - BUILD
+      - RUNTIME
