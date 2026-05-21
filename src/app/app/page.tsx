@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Bell, Newspaper, PawPrint, PenSquare, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useFamily } from "@/components/family/family-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Avatar } from "@/components/ui/avatar";
 import { useConfirm } from "@/components/ui/confirm-provider";
@@ -35,6 +36,7 @@ export default function AppHome() {
   const tC = useTranslations("Common");
   const askConfirm = useConfirm();
   const { user } = useAuth();
+  const { family, loading: familyLoading } = useFamily();
 
   const [pets, setPets] = useState<Pet[]>([]);
   const [upcoming, setUpcoming] = useState<Reminder[]>([]);
@@ -46,11 +48,11 @@ export default function AppHome() {
   const [composerOpen, setComposerOpen] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!user || !family) return;
     setLoading(true);
     try {
       const [petList, up, ov, friends] = await Promise.all([
-        listPets(user.uid),
+        listPets(family.familyId),
         listUpcomingReminders(user.uid),
         listOverdueReminders(user.uid),
         listFriends(user.uid),
@@ -67,11 +69,12 @@ export default function AppHome() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, family]);
 
   useEffect(() => {
+    if (familyLoading) return;
     refresh();
-  }, [refresh]);
+  }, [familyLoading, refresh]);
 
   function petById(id?: string) {
     return id ? pets.find((p) => p.petId === id) : undefined;

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { PawPrint, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useFamily } from "@/components/family/family-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -19,24 +20,26 @@ export default function PetsPage() {
   const tCommon = useTranslations("Common");
   const askConfirm = useConfirm();
   const { user } = useAuth();
+  const { family, loading: familyLoading } = useFamily();
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Pet | undefined>();
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!family) return;
     setLoading(true);
     try {
-      setPets(await listPets(user.uid));
+      setPets(await listPets(family.familyId));
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [family]);
 
   useEffect(() => {
+    if (familyLoading) return;
     refresh();
-  }, [refresh]);
+  }, [familyLoading, refresh]);
 
   function handleAdd() {
     setEditing(undefined);
@@ -49,7 +52,6 @@ export default function PetsPage() {
   }
 
   async function handleDelete(pet: Pet) {
-    if (!user) return;
     const ok = await askConfirm({
       title: `${tCommon("delete")}: ${pet.name}`,
       message: "刪除後相關的健康紀錄與貼文照片仍會保留，但寵物本身會被移除。",
@@ -58,16 +60,16 @@ export default function PetsPage() {
       danger: true,
     });
     if (!ok) return;
-    await deletePet(user.uid, pet.petId);
+    await deletePet(pet.petId);
     await refresh();
   }
 
   async function handleSubmit(input: PetInput, avatar?: File) {
-    if (!user) return;
+    if (!user || !family) return;
     if (editing) {
-      await updatePet(user.uid, editing.petId, input, avatar);
+      await updatePet(editing.petId, input, user.uid, avatar);
     } else {
-      await createPet(user.uid, input, avatar);
+      await createPet(family.familyId, user.uid, input, avatar);
     }
     await refresh();
   }

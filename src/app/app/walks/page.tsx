@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Footprints, Hand, Play, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useFamily } from "@/components/family/family-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-provider";
@@ -22,6 +23,7 @@ export default function WalksPage() {
   const tC = useTranslations("Common");
   const askConfirm = useConfirm();
   const { user } = useAuth();
+  const { family, loading: familyLoading } = useFamily();
 
   const [pets, setPets] = useState<Pet[]>([]);
   const [walks, setWalks] = useState<Walk[]>([]);
@@ -30,11 +32,11 @@ export default function WalksPage() {
   const [manualOpen, setManualOpen] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!user || !family) return;
     setLoading(true);
     try {
       const [petList, walkList] = await Promise.all([
-        listPets(user.uid),
+        listPets(family.familyId),
         listWalks(user.uid),
       ]);
       setPets(petList);
@@ -42,11 +44,12 @@ export default function WalksPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, family]);
 
   useEffect(() => {
+    if (familyLoading) return;
     refresh();
-  }, [refresh]);
+  }, [familyLoading, refresh]);
 
   const streakDays = useMemo(
     () =>

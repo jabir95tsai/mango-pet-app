@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Newspaper, PenSquare } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useFamily } from "@/components/family/family-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ export default function FeedPage() {
   const tCommon = useTranslations("Common");
   const askConfirm = useConfirm();
   const { user } = useAuth();
+  const { family, loading: familyLoading } = useFamily();
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
@@ -27,11 +29,11 @@ export default function FeedPage() {
   const [composerOpen, setComposerOpen] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!user || !family) return;
     setLoading(true);
     try {
       const [myPets, friends] = await Promise.all([
-        listPets(user.uid),
+        listPets(family.familyId),
         listFriends(user.uid),
       ]);
       const feed = await listFeedPosts(
@@ -43,11 +45,12 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, family]);
 
   useEffect(() => {
+    if (familyLoading) return;
     refresh();
-  }, [refresh]);
+  }, [familyLoading, refresh]);
 
   async function handleDelete(post: Post) {
     const ok = await askConfirm({

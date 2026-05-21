@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Camera, Plus, Receipt, Wallet } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useFamily } from "@/components/family/family-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-provider";
@@ -50,6 +51,7 @@ export default function ExpensesPage() {
   const tF = useTranslations("Filter");
   const askConfirm = useConfirm();
   const { user } = useAuth();
+  const { family, loading: familyLoading } = useFamily();
 
   const [pets, setPets] = useState<Pet[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -63,11 +65,11 @@ export default function ExpensesPage() {
   const [prefill, setPrefill] = useState<ExtractedReceipt | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!user || !family) return;
     setLoading(true);
     try {
       const [petList, exList] = await Promise.all([
-        listPets(user.uid),
+        listPets(family.familyId),
         listExpenses(user.uid),
       ]);
       setPets(petList);
@@ -75,11 +77,12 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, family]);
 
   useEffect(() => {
+    if (familyLoading) return;
     refresh();
-  }, [refresh]);
+  }, [familyLoading, refresh]);
 
   const filtered = useMemo(() => {
     return expenses.filter((e) => {

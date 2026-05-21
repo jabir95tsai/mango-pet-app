@@ -16,6 +16,7 @@ import {
   listMyFamilies,
   setCurrentFamily,
 } from "@/lib/firebase/families";
+import { migrateLegacyPetsToFamily } from "@/lib/firebase/pets";
 import { getAppUser } from "@/lib/firebase/users";
 import type { Family } from "@/lib/types";
 
@@ -44,16 +45,22 @@ const FamilyContext = createContext<FamilyContextValue>({
  *  bootstraps existing users (who pre-date the family feature) and new
  *  signups on a first login — every user ends up with at least one family,
  *  so all data reads/writes can unconditionally assume `family != null`. */
-async function ensureDefaultFamily(uid: string): Promise<string> {
+async function ensureDefaultFamily(uid: string): Promise<{
+  familyId: string;
+  justCreated: boolean;
+}> {
   const appUser = await getAppUser(uid);
   const existing = appUser?.familyIds ?? [];
   if (existing.length > 0) {
-    return appUser?.currentFamilyId ?? existing[0];
+    return {
+      familyId: appUser?.currentFamilyId ?? existing[0],
+      justCreated: false,
+    };
   }
   // No family yet — create one via the callable. Name defaults to 我的家庭
   // on the server; user can rename later from settings.
   const { familyId } = await callCreateFamily("我的家庭");
-  return familyId;
+  return { familyId, justCreated: true };
 }
 
 export function FamilyProvider({ children }: { children: ReactNode }) {
@@ -72,7 +79,27 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       // Ensure user has at least one family (auto-creates if none).
-      const currentId = await ensureDefaultFamily(user.uid);
+      const { familyId: currentId, justCreated } = await ensureDefaultFamily(
+        user.uid,
+      );
+
+      // First-login migration: when we just created the default family for
+      // an existing user, move their legacy pets/walks/etc. into it. Each
+      // migration helper is idempotent and a no-op for users with no
+      // legacy data, so running it on every fresh-family creation is safe.
+      if (justCreated) {
+        try {
+          const moved = await migrateLegacyPetsToFamily(user.uid, currentId);
+          if (moved > 0) {
+            console.info(`[FamilyProvider] migrated ${moved} legacy pets`);
+          }
+        } catch (err) {
+          // Non-fatal — user can still use the app; legacy data stays
+          // visible via the back-compat read paths until next attempt.
+          console.error("[FamilyProvider] pet migration failed:", err);
+        }
+      }
+
       const [all, current] = await Promise.all([
         listMyFamilies(user.uid),
         getFamily(currentId),

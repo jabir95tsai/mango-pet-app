@@ -134,12 +134,13 @@ export type HealthRecordData =
 
 export type HealthRecord = {
   recordId: string;
-  /** Family the pet belongs to — denormalised here so we can use a single
-   * `where("familyId", "==", ...)` query against the top-level collection. */
-  familyId: string;
+  /** Family the pet belongs to. Optional during the migration window —
+   *  legacy records still under `users/{uid}/pets/.../healthRecords/` won't
+   *  have it; new top-level records always will. */
+  familyId?: string;
   petId: string;
-  /** User who recorded it (for attribution). */
-  recordedByUid: string;
+  /** User who recorded it (for attribution). Optional for legacy data. */
+  recordedByUid?: string;
   type: HealthRecordType;
   recordedAt: Timestamp;
   data: HealthRecordData;
@@ -159,10 +160,10 @@ export type ReminderRepeat = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
 export type Reminder = {
   reminderId: string;
-  /** Family that this reminder belongs to. All members get notified by default. */
-  familyId: string;
+  /** Family that this reminder belongs to. Optional during migration window. */
+  familyId?: string;
   /** User who created the reminder (for attribution). */
-  createdByUid: string;
+  createdByUid?: string;
   petId?: string;
   title: string;
   description?: string;
@@ -249,13 +250,14 @@ export type WalkPathPoint = { lat: number; lng: number; t: number };
 
 export type Walk = {
   walkId: string;
-  /** Family the pet belongs to. */
-  familyId: string;
-  /** Member of the family who actually did the walk — drives leaderboard credit. */
-  walkerUid: string;
+  /** Family the pet belongs to. Optional during migration window. */
+  familyId?: string;
+  /** Member of the family who actually did the walk — drives leaderboard
+   *  credit. Optional during migration (legacy walks use `ownerUid`). */
+  walkerUid?: string;
   walkerName?: string;
   walkerPhotoURL?: string | null;
-  /** Legacy/back-compat: alias of walkerUid. Keep populated for old reads. */
+  /** Legacy/back-compat: alias of walkerUid. */
   ownerUid: string;
   petId: string;
   petName?: string;
@@ -349,10 +351,10 @@ export type ExpenseSource = "manual" | "ai_scan";
 
 export type Expense = {
   expenseId: string;
-  /** Family the pet belongs to. */
-  familyId: string;
+  /** Family the pet belongs to. Optional during migration window. */
+  familyId?: string;
   /** Member who paid (for attribution + per-payer breakdowns). */
-  payerUid: string;
+  payerUid?: string;
   payerName?: string;
   /** Legacy alias of payerUid for back-compat. */
   ownerUid: string;

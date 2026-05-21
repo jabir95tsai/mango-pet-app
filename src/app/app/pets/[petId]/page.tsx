@@ -74,8 +74,10 @@ export default function PetDetailPage() {
     if (!user) return;
     setLoading(true);
     // Use allSettled so one slow/broken query doesn't blank the whole page.
+    // Pets now live top-level (family-scoped); health records and reminders
+    // are still per-user until Phase 3 of the family migration.
     const [petR, recsR, wR, remR] = await Promise.allSettled([
-      getPet(user.uid, petId),
+      getPet(petId),
       listRecords(user.uid, petId),
       listWeightSeries(user.uid, petId),
       listReminders(user.uid),
@@ -97,7 +99,7 @@ export default function PetDetailPage() {
 
   async function handlePetUpdate(input: PetInput, avatar?: File) {
     if (!user) return;
-    await updatePet(user.uid, petId, input, avatar);
+    await updatePet(petId, input, user.uid, avatar);
     await refresh();
   }
 
