@@ -31,7 +31,24 @@ async function ensureSwRegistration(): Promise<ServiceWorkerRegistration> {
   cachedRegistration = await navigator.serviceWorker.register(FCM_SW_URL, {
     scope: FCM_SCOPE,
   });
-  await navigator.serviceWorker.ready;
+  // NOTE: don't use `navigator.serviceWorker.ready` here — that waits for a
+  // SW matching the *page's* URL scope (e.g. `/app/settings`), but our SW is
+  // registered under a sibling scope (`/firebase-cloud-messaging-push-scope`),
+  // so the page-scope match never resolves and the whole enablePush() hangs
+  // silently. Wait on this registration's own activation instead.
+  if (cachedRegistration.active) return cachedRegistration;
+  const pending = cachedRegistration.installing ?? cachedRegistration.waiting;
+  if (pending) {
+    await new Promise<void>((resolve) => {
+      const onChange = () => {
+        if (pending.state === "activated") {
+          pending.removeEventListener("statechange", onChange);
+          resolve();
+        }
+      };
+      pending.addEventListener("statechange", onChange);
+    });
+  }
   return cachedRegistration;
 }
 
