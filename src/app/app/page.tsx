@@ -51,21 +51,28 @@ export default function AppHome() {
     if (!user || !family) return;
     setLoading(true);
     try {
-      const [petList, up, ov, friends] = await Promise.all([
+      // allSettled so one failure (e.g. an index still building) doesn't
+      // blank the whole page. Each section degrades independently.
+      const [petR, upR, ovR, friendsR] = await Promise.allSettled([
         listPets(family.familyId),
         listUpcomingReminders(family.familyId),
         listOverdueReminders(family.familyId),
         listFriends(user.uid),
       ]);
-      setPets(petList);
-      setUpcoming(up);
-      setOverdue(ov);
-      const feed = await listFeedPosts(
-        user.uid,
-        friends.map((f) => f.uid),
-        5,
-      );
-      setFeedPosts(feed.slice(0, 3));
+      setPets(petR.status === "fulfilled" ? petR.value : []);
+      setUpcoming(upR.status === "fulfilled" ? upR.value : []);
+      setOverdue(ovR.status === "fulfilled" ? ovR.value : []);
+      const friends = friendsR.status === "fulfilled" ? friendsR.value : [];
+      try {
+        const feed = await listFeedPosts(
+          user.uid,
+          friends.map((f) => f.uid),
+          5,
+        );
+        setFeedPosts(feed.slice(0, 3));
+      } catch {
+        setFeedPosts([]);
+      }
     } finally {
       setLoading(false);
     }

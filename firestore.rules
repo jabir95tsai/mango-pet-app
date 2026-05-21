@@ -105,8 +105,19 @@ service cloud.firestore {
     // All members of `data.familyId` can read/write. Each doc must carry
     // `familyId` and the actor's uid in the appropriate `*Uid` field.
 
+    // NOTE on `resource == null` clauses:
+    //   The migration helpers call getDoc() to check whether a top-level
+    //   doc with the same id as a legacy doc exists yet. When it doesn't,
+    //   Firestore evaluates the rule with `resource == null`, and
+    //   `resource.data.familyId` is undefined → permission denied. Allowing
+    //   read of non-existing docs (which leak nothing — the snapshot just
+    //   says "doesn't exist") fixes this and is a standard Firestore
+    //   pattern for "did this doc get created yet?" checks. The `list`
+    //   query for family pets/walks/etc. still uses the familyId filter
+    //   so non-family members can't enumerate.
+
     match /pets/{petId} {
-      allow read: if isFamilyMember(resource.data.familyId);
+      allow read: if resource == null || isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
         && isFamilyMember(request.resource.data.familyId)
         && request.resource.data.ownerUid == request.auth.uid;
@@ -117,14 +128,15 @@ service cloud.firestore {
       // Health records flattened to a subcollection of pet at top-level.
       // Both reads and writes gated by the parent pet's family.
       match /healthRecords/{recordId} {
-        allow read, write: if isFamilyMember(
-          get(/databases/$(database)/documents/pets/$(petId)).data.familyId
-        );
+        allow read, write: if resource == null
+          || isFamilyMember(
+            get(/databases/$(database)/documents/pets/$(petId)).data.familyId
+          );
       }
     }
 
     match /walks/{walkId} {
-      allow read: if isFamilyMember(resource.data.familyId);
+      allow read: if resource == null || isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
         && isFamilyMember(request.resource.data.familyId)
         && request.resource.data.walkerUid == request.auth.uid;
@@ -135,7 +147,7 @@ service cloud.firestore {
     }
 
     match /reminders/{reminderId} {
-      allow read: if isFamilyMember(resource.data.familyId);
+      allow read: if resource == null || isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
         && isFamilyMember(request.resource.data.familyId)
         && request.resource.data.createdByUid == request.auth.uid;
@@ -145,7 +157,7 @@ service cloud.firestore {
     }
 
     match /expenses/{expenseId} {
-      allow read: if isFamilyMember(resource.data.familyId);
+      allow read: if resource == null || isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
         && isFamilyMember(request.resource.data.familyId)
         && request.resource.data.payerUid == request.auth.uid;
