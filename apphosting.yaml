@@ -36,3 +36,14 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+  # Firebase Web App ID. Must be the FULL "1:{sender}:web:{hash}" form,
+  # NOT just the sender ID. The console-set value was incorrectly the
+  # sender ID only (722604603606), which made the Firebase Installations
+  # API reject getToken() with "INVALID_ARGUMENT". This yaml value
+  # overrides the console value at build time.
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:722604603606:web:9d4efbb3033bfd9811f177"
+    availability:
+      - BUILD
+      - RUNTIME
