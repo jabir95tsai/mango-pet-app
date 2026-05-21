@@ -43,23 +43,23 @@ export function RestaurantCard({
     <article
       onClick={onClick}
       className={cn(
-        "rounded-2xl border bg-white p-4 dark:bg-zinc-950 transition-colors cursor-pointer",
+        "cursor-pointer rounded-lg border bg-white p-4 shadow-sm shadow-zinc-200/40 transition-colors dark:bg-zinc-950 dark:shadow-none",
         selected
-          ? "border-amber-400 bg-amber-50/40 dark:bg-amber-500/5"
-          : "border-amber-200/60 hover:border-amber-300 dark:border-zinc-800",
+          ? "border-emerald-300 bg-emerald-50/40 dark:bg-emerald-500/10"
+          : "border-zinc-200/80 hover:border-emerald-300 dark:border-zinc-800",
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <Link
           href={`/app/restaurants/${restaurant.restaurantId}`}
-          className="flex-1 min-w-0"
+          className="min-w-0 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-1.5 flex-wrap">
             <h3 className="font-semibold truncate">{restaurant.name}</h3>
             <span
               className={cn(
-                "text-[10px] font-medium px-1.5 py-0.5 rounded-full",
+                "rounded-md px-1.5 py-0.5 text-[10px] font-medium",
                 LEVEL_COLOR[restaurant.petFriendlyLevel],
               )}
             >
@@ -92,7 +92,7 @@ export function RestaurantCard({
           }}
           aria-label={isFavorite ? tCommon("delete") : tCommon("add")}
           className={cn(
-            "p-2 rounded-full transition-colors shrink-0",
+            "shrink-0 rounded-lg p-2 transition-colors",
             isFavorite
               ? "bg-red-100 text-red-600 dark:bg-red-950"
               : "hover:bg-zinc-100 text-zinc-400 hover:text-red-600 dark:hover:bg-zinc-800",

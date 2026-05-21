@@ -74,9 +74,9 @@ export default function PetsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <RouteHeader title={t("pets")} />
-        <Button onClick={handleAdd} size="md">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <RouteHeader title={t("pets")} className="mb-0" />
+        <Button onClick={handleAdd} size="md" className="w-full sm:w-auto">
           <Plus className="size-4" />
           {tPet("addPet")}
         </Button>
@@ -97,7 +97,7 @@ export default function PetsPage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid gap-3 lg:grid-cols-2">
           {pets.map((pet) => (
             <PetCard
               key={pet.petId}

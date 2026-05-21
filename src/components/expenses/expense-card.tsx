@@ -53,7 +53,7 @@ export function ExpenseCard({ expense, onEdit, onDelete }: Props) {
   const dateStr = format(date, "MM/dd");
 
   return (
-    <article className="flex items-center gap-3 rounded-2xl border border-amber-200/60 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+    <article className="flex items-center gap-3 rounded-lg border border-zinc-200/80 bg-white p-3 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <div className={cn("shrink-0 size-10 rounded-full grid place-items-center", COLORS[expense.category])}>
         <Icon className="size-5" />
       </div>
@@ -64,7 +64,7 @@ export function ExpenseCard({ expense, onEdit, onDelete }: Props) {
             {expense.vendor || tE(`categories.${expense.category}`)}
           </p>
           {expense.source === "ai_scan" && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
               <Sparkles className="size-2.5" /> AI
             </span>
           )}
@@ -87,7 +87,7 @@ export function ExpenseCard({ expense, onEdit, onDelete }: Props) {
             type="button"
             onClick={onEdit}
             aria-label={tC("edit")}
-            className="size-8 rounded-full grid place-items-center hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700"
+            className="grid size-8 place-items-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800"
           >
             <Pencil className="size-4" />
           </button>
@@ -95,7 +95,7 @@ export function ExpenseCard({ expense, onEdit, onDelete }: Props) {
             type="button"
             onClick={onDelete}
             aria-label={tC("delete")}
-            className="size-8 rounded-full grid place-items-center hover:bg-red-50 hover:text-red-600 text-zinc-400 dark:hover:bg-red-950"
+            className="grid size-8 place-items-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
           >
             <Trash2 className="size-4" />
           </button>

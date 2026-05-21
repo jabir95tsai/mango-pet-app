@@ -38,8 +38,12 @@ export default function LeaderboardPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <RouteHeader title={t("leaderboard")} subtitle="加權公式：距離×體型係數 + 時長 + 連續天數" />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <RouteHeader
+          title={t("leaderboard")}
+          subtitle="加權公式：距離×體型係數 + 時長 + 連續天數"
+          className="mb-0"
+        />
       </div>
 
       <div className="mb-4">
@@ -63,7 +67,7 @@ export default function LeaderboardPage() {
           description="Cloud Function 每天午夜 (Asia/Taipei) 聚合一次。先去遛狗累積分數！"
         />
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="grid gap-2 lg:grid-cols-2">
           {entries.map((e, idx) => (
             <LeaderboardRow
               key={e.uid}

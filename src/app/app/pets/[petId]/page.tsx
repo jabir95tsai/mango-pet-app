@@ -186,17 +186,17 @@ export default function PetDetailPage() {
         <button
           type="button"
           onClick={() => router.push("/app/pets")}
-          className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           aria-label={tC("back")}
         >
           <ArrowLeft className="size-5" />
         </button>
       </div>
 
-      <header className="flex items-center gap-4 mb-6 rounded-2xl border border-amber-200/60 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+      <header className="mb-6 flex items-center gap-4 rounded-lg border border-zinc-200/80 bg-white p-5 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
         <Avatar src={pet.photoURL} name={pet.name} size={80} />
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold tracking-tight truncate">{pet.name}</h1>
+          <h1 className="truncate text-xl font-bold">{pet.name}</h1>
           <div className="text-sm text-zinc-500 flex gap-2 flex-wrap mt-1">
             <span>{tPet(`species.${pet.species}`)}</span>
             {pet.breed && <span>· {pet.breed}</span>}
@@ -209,7 +209,7 @@ export default function PetDetailPage() {
         <button
           type="button"
           onClick={() => setEditingPet(true)}
-          className="self-start p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="self-start rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           aria-label={tC("edit")}
         >
           <Pencil className="size-4" />
@@ -252,11 +252,12 @@ export default function PetDetailPage() {
                     key={t}
                     type="button"
                     onClick={() => setTypeFilter(t)}
+                    aria-pressed={active}
                     className={cn(
-                      "shrink-0 px-3 h-7 rounded-full text-xs font-medium transition-colors",
+                      "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                       active
-                        ? "bg-amber-500 text-white"
-                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400",
+                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                        : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-800",
                     )}
                   >
                     {t === "all" ? "全部" : label}

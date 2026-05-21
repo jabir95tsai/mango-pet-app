@@ -138,14 +138,15 @@ export default function AppHome() {
     <>
       <RouteHeader title={`🥭 ${tApp("name")}`} subtitle={tApp("tagline")} />
 
-      <section className="flex flex-col gap-3 mb-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+      <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
             {tNav("pets")}
           </h2>
           <Link
             href="/app/pets"
-            className="text-xs text-amber-600 hover:underline"
+            className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-300"
           >
             {tC("edit")} →
           </Link>
@@ -170,13 +171,13 @@ export default function AppHome() {
               <Link
                 key={p.petId}
                 href={`/app/pets/${p.petId}`}
-                className="shrink-0 flex flex-col items-center gap-1.5 group"
+                className="group flex shrink-0 flex-col items-center gap-1.5 rounded-lg p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
                 <Avatar
                   src={p.photoURL}
                   name={p.name}
                   size={64}
-                  className="ring-2 ring-transparent group-hover:ring-amber-400"
+                  className="ring-2 ring-transparent group-hover:ring-emerald-400"
                 />
                 <span className="text-xs font-medium max-w-[64px] truncate">
                   {p.name}
@@ -187,7 +188,7 @@ export default function AppHome() {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 mb-6">
+      <section className="flex flex-col gap-3 xl:row-span-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
             {tR("title")}
@@ -204,7 +205,7 @@ export default function AppHome() {
           <div className="flex flex-col gap-3">
             {overdue.length > 0 && (
               <>
-                <p className="text-xs uppercase tracking-wider text-red-600 font-semibold">
+                <p className="text-xs font-semibold text-red-600">
                   {tR("overdue")}
                 </p>
                 {overdue.map((r) => (
@@ -221,7 +222,7 @@ export default function AppHome() {
             )}
             {upcoming.length > 0 && (
               <>
-                <p className="text-xs uppercase tracking-wider text-amber-600 font-semibold mt-2">
+                <p className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                   {tR("upcoming")}
                 </p>
                 {upcoming.map((r) => (
@@ -240,7 +241,7 @@ export default function AppHome() {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 mb-6">
+      <section className="flex flex-col gap-3 xl:col-span-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
             {tNav("feed")}
@@ -250,7 +251,10 @@ export default function AppHome() {
               <PenSquare className="size-4" />
               發文
             </Button>
-            <Link href="/app/feed" className="text-xs text-amber-600 hover:underline">
+            <Link
+              href="/app/feed"
+              className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            >
               更多 →
             </Link>
           </div>
@@ -282,6 +286,7 @@ export default function AppHome() {
           </div>
         )}
       </section>
+      </div>
 
       <ReminderFormDialog
         open={addingReminder}

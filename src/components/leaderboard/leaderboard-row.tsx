@@ -22,10 +22,10 @@ export function LeaderboardRow({ rank, entry, highlight }: Props) {
   return (
     <article
       className={cn(
-        "flex items-center gap-3 rounded-2xl border p-3 transition-colors",
+        "flex items-center gap-3 rounded-lg border p-3 shadow-sm shadow-zinc-200/40 transition-colors dark:shadow-none",
         highlight
-          ? "border-amber-400 bg-amber-50/60 dark:border-amber-500/60 dark:bg-amber-500/10"
-          : "border-amber-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-950",
+          ? "border-emerald-300 bg-emerald-50/70 dark:border-emerald-500/50 dark:bg-emerald-500/10"
+          : "border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-950",
       )}
     >
       <div className={cn("w-8 text-center text-lg font-bold", color)}>{emoji}</div>
@@ -38,10 +38,10 @@ export function LeaderboardRow({ rank, entry, highlight }: Props) {
         </p>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+        <p className="text-lg font-bold text-emerald-700 tabular-nums dark:text-emerald-300">
           {entry.totalScore.toFixed(0)}
         </p>
-        <p className="text-[10px] text-zinc-500 uppercase tracking-wider">分</p>
+        <p className="text-[10px] text-zinc-500">分</p>
       </div>
     </article>
   );

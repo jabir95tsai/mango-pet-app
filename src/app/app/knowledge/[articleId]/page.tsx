@@ -102,10 +102,10 @@ export default function ArticlePage() {
           onClick={handleToggleBookmark}
           aria-label="bookmark"
           className={cn(
-            "p-2 rounded-full",
+            "rounded-lg p-2",
             bookmarked
               ? "text-amber-600"
-              : "text-zinc-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-zinc-800",
+              : "text-zinc-400 hover:bg-zinc-100 hover:text-amber-500 dark:hover:bg-zinc-800",
           )}
         >
           {bookmarked ? (
@@ -117,7 +117,7 @@ export default function ArticlePage() {
       </div>
 
       {article.coverImageURL && (
-        <div className="relative aspect-video w-full rounded-2xl overflow-hidden mb-4 bg-amber-100">
+        <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-lg bg-surface-muted">
           <Image
             src={article.coverImageURL}
             alt=""
@@ -130,14 +130,14 @@ export default function ArticlePage() {
       )}
 
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-2xl font-bold">{title}</h1>
         <p className="text-xs text-zinc-500 mt-1">
           {article.authorName}
           {publishedAt && ` · ${format(new Date(publishedAt), "yyyy-MM-dd", { locale: dateLocale })}`}
         </p>
       </header>
 
-      <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-headings:font-semibold prose-a:text-amber-600 prose-img:rounded-xl">
+      <div className="prose prose-sm prose-zinc max-w-none prose-headings:font-semibold prose-a:text-emerald-700 prose-img:rounded-lg dark:prose-invert dark:prose-a:text-emerald-300">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
     </article>

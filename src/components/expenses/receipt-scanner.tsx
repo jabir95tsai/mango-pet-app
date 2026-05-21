@@ -123,7 +123,7 @@ export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-zinc-100">
+            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-zinc-100">
               <Image
                 src={previewURL}
                 alt="receipt"

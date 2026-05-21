@@ -2,26 +2,60 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f8f5;
+  --foreground: #18181b;
+  --surface: #ffffff;
+  --surface-muted: #eef6f1;
+  --focus-ring: #0f766e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #09090b;
+    --foreground: #f4f4f5;
+    --surface: #18181b;
+    --surface-muted: #10201b;
+    --focus-ring: #34d399;
   }
+}
+
+html {
+  background: var(--background);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #fde68a;
+  color: #18181b;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

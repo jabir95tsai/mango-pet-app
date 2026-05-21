@@ -38,9 +38,9 @@ export function ExpenseSummary({ total, byCategory, byMonth }: Props) {
   if (total === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-amber-200/60 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 flex flex-col gap-4 mb-4">
-      <div className="flex items-baseline gap-2">
-        <span className="text-xs text-zinc-500 uppercase tracking-wider">
+    <div className="mb-4 flex flex-col gap-4 rounded-lg border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="text-xs text-zinc-500">
           {tE("totalSpent")}
         </span>
         <span className="text-2xl font-bold tabular-nums">
@@ -66,7 +66,7 @@ export function ExpenseSummary({ total, byCategory, byMonth }: Props) {
       )}
 
       {byCategory.length > 0 && (
-        <div className="grid grid-cols-[1fr,auto] gap-3 items-center">
+        <div className="grid gap-3 sm:grid-cols-[1fr,auto] sm:items-center">
           <div className="h-28 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>

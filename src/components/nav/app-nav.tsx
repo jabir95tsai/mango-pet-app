@@ -16,6 +16,7 @@ import {
   Wallet,
   Settings,
   MoreHorizontal,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,8 @@ function isActive(pathname: string | null, href: string): boolean {
 export function AppNav() {
   const pathname = usePathname();
   const t = useTranslations("Nav");
+  const tApp = useTranslations("App");
+  const tC = useTranslations("Common");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Close drawer when navigating
@@ -73,7 +76,27 @@ export function AppNav() {
   return (
     <>
       {/* Desktop sidebar (all items) */}
-      <nav className="hidden md:flex md:flex-col md:h-screen md:w-60 md:shrink-0 border-r border-amber-200/60 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
+      <nav
+        aria-label="Primary"
+        className="hidden border-r border-zinc-200/80 bg-white/90 backdrop-blur md:sticky md:top-0 md:flex md:h-dvh md:w-64 md:shrink-0 md:flex-col dark:border-zinc-800 dark:bg-zinc-950/90"
+      >
+        <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-4 dark:border-zinc-900">
+          <span
+            className="grid size-11 shrink-0 place-items-center rounded-lg bg-amber-100 text-2xl dark:bg-amber-500/15"
+            aria-hidden="true"
+          >
+            🥭
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-zinc-950 dark:text-zinc-50">
+              {tApp("name")}
+            </p>
+            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+              {tApp("tagline")}
+            </p>
+          </div>
+        </div>
+
         <ul className="flex flex-col gap-1 p-3">
           {ALL_ITEMS.map(({ href, key, icon: Icon }) => {
             const active = isActive(pathname, href);
@@ -81,11 +104,12 @@ export function AppNav() {
               <li key={href}>
                 <Link
                   href={href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                     active
-                      ? "text-amber-600 bg-amber-100/60 dark:text-amber-400 dark:bg-amber-500/10"
-                      : "text-zinc-600 hover:text-amber-600 hover:bg-amber-50 dark:text-zinc-400 dark:hover:bg-zinc-900",
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20"
+                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100",
                   )}
                 >
                   <Icon className="size-5 shrink-0" />
@@ -99,7 +123,8 @@ export function AppNav() {
 
       {/* Mobile bottom tab bar (5 slots: 4 primary + More) */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-amber-200/60 bg-white/95 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95"
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/80 bg-white/95 shadow-[0_-8px_24px_rgba(24,24,27,0.08)] backdrop-blur md:hidden dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-none"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ul className="grid grid-cols-5">
@@ -109,15 +134,16 @@ export function AppNav() {
               <li key={href}>
                 <Link
                   href={href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 h-14 text-[10px] font-medium transition-colors",
+                    "flex h-[3.75rem] min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                     active
-                      ? "text-amber-600 dark:text-amber-400"
-                      : "text-zinc-500 hover:text-amber-600 dark:text-zinc-400",
+                      ? "text-emerald-700 dark:text-emerald-300"
+                      : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
                   )}
                 >
                   <Icon className="size-5" />
-                  <span>{t(key)}</span>
+                  <span className="max-w-full truncate">{t(key)}</span>
                 </Link>
               </li>
             );
@@ -126,16 +152,17 @@ export function AppNav() {
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              aria-label="更多"
+              aria-label={t("more")}
+              aria-expanded={drawerOpen}
               className={cn(
-                "w-full flex flex-col items-center justify-center gap-0.5 h-14 text-[10px] font-medium transition-colors",
+                "flex h-[3.75rem] w-full min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                 anyOverflowActive
-                  ? "text-amber-600 dark:text-amber-400"
-                  : "text-zinc-500 hover:text-amber-600 dark:text-zinc-400",
+                  ? "text-emerald-700 dark:text-emerald-300"
+                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
               )}
             >
               <MoreHorizontal className="size-5" />
-              <span>{t("more")}</span>
+              <span className="max-w-full truncate">{t("more")}</span>
             </button>
           </li>
         </ul>
@@ -144,14 +171,30 @@ export function AppNav() {
       {/* Mobile drawer */}
       {drawerOpen && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/40 flex items-end"
+          className="fixed inset-0 z-40 flex items-end bg-black/40 md:hidden"
           onClick={() => setDrawerOpen(false)}
+          role="presentation"
         >
           <div
-            className="w-full rounded-t-2xl bg-white dark:bg-zinc-950 p-4 pb-[max(env(safe-area-inset-bottom),1rem)] shadow-2xl"
+            className="w-full rounded-t-lg bg-white p-4 pb-[max(env(safe-area-inset-bottom),1rem)] shadow-2xl dark:bg-zinc-950"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("more")}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+                {t("more")}
+              </p>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                aria-label={tC("close")}
+                className="grid size-9 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
             <ul className="grid grid-cols-3 gap-2">
               {overflow.map(({ href, key, icon: Icon }) => {
                 const active = isActive(pathname, href);
@@ -159,15 +202,16 @@ export function AppNav() {
                   <li key={href}>
                     <Link
                       href={href}
+                      aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex flex-col items-center justify-center gap-1 py-3 rounded-xl text-xs font-medium transition-colors",
+                        "flex min-h-20 flex-col items-center justify-center gap-1 rounded-lg px-2 py-3 text-center text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                         active
-                          ? "text-amber-600 bg-amber-100/60 dark:text-amber-400 dark:bg-amber-500/10"
-                          : "text-zinc-700 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800",
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                          : "bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800",
                       )}
                     >
                       <Icon className="size-5" />
-                      <span>{t(key)}</span>
+                      <span className="max-w-full leading-4">{t(key)}</span>
                     </Link>
                   </li>
                 );

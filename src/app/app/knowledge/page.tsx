@@ -88,11 +88,12 @@ export default function KnowledgePage() {
               key={f.value}
               type="button"
               onClick={() => setFilter(f.value)}
+              aria-pressed={active}
               className={cn(
-                "shrink-0 px-3 h-7 rounded-full text-xs font-medium transition-colors",
+                "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                 active
-                  ? "bg-amber-500 text-white"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800",
+                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                  : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:ring-zinc-800",
               )}
             >
               {f.label}
@@ -114,7 +115,7 @@ export default function KnowledgePage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid gap-3 xl:grid-cols-2">
           {filtered.map((a) => (
             <ArticleCard
               key={a.articleId}

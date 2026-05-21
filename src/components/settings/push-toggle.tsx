@@ -131,9 +131,9 @@ export function PushToggle() {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="size-9 grid place-items-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-500/20 shrink-0">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
             {status.kind === "enabled" ? (
               <BellRing className="size-4" />
             ) : status.kind === "denied" || status.kind === "unsupported" ? (
@@ -144,7 +144,7 @@ export function PushToggle() {
           </span>
           <div className="min-w-0">
             <p className="font-medium text-sm">{tP("title")}</p>
-            <p className="text-xs text-zinc-500 truncate">{tP(`status.${status.kind}`)}</p>
+            <p className="text-xs leading-5 text-zinc-500">{tP(`status.${status.kind}`)}</p>
           </div>
         </div>
 
@@ -177,7 +177,7 @@ export function PushToggle() {
       )}
 
       {showIosHint && (
-        <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
           <Info className="size-4 shrink-0 mt-0.5" />
           <span>
             iPhone 需先把 App 加到主畫面（Safari 分享 → 加入主畫面）才能收推播。
@@ -186,7 +186,7 @@ export function PushToggle() {
       )}
 
       {isVapidMissingError && (
-        <div className="flex items-start gap-2 rounded-xl bg-red-50 dark:bg-red-950 p-3 text-xs text-red-700 dark:text-red-300">
+        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
           <Info className="size-4 shrink-0 mt-0.5" />
           <span>
             未設定 VAPID Key。請到 Firebase Console → 專案設定 → Cloud Messaging → Web push certificates 產生金鑰，並設為 <code className="font-mono">NEXT_PUBLIC_FIREBASE_VAPID_KEY</code>。

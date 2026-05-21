@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { FamilyProvider } from "@/components/family/family-provider";
 import { ConfirmProvider } from "@/components/ui/confirm-provider";
 import "./globals.css";
 
@@ -72,10 +73,12 @@ export default async function RootLayout({
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-amber-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <body className="min-h-full flex flex-col bg-background text-zinc-900 dark:text-zinc-100">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AuthProvider>
-            <ConfirmProvider>{children}</ConfirmProvider>
+            <FamilyProvider>
+              <ConfirmProvider>{children}</ConfirmProvider>
+            </FamilyProvider>
           </AuthProvider>
         </NextIntlClientProvider>
       </body>

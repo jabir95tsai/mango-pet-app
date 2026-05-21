@@ -9,9 +9,13 @@ type Props = {
 
 export function EmptyState({ icon: Icon, title, description, action }: Props) {
   return (
-    <div className="flex flex-col items-center text-center gap-3 py-12 px-6 rounded-2xl border border-dashed border-amber-300/60 bg-amber-50/40 dark:border-zinc-700 dark:bg-zinc-900/40">
-      {Icon && <Icon className="size-10 text-amber-500" />}
-      <h2 className="font-semibold">{title}</h2>
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-zinc-300/80 bg-white/75 px-6 py-12 text-center shadow-sm shadow-zinc-200/40 dark:border-zinc-700 dark:bg-zinc-900/55 dark:shadow-none">
+      {Icon && (
+        <span className="grid size-12 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <Icon className="size-6" />
+        </span>
+      )}
+      <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
       {description && (
         <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm">
           {description}

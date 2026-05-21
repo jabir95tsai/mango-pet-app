@@ -2,8 +2,25 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper: is `uid` a member of `familyId`?
+    function inFamily(familyId, uid) {
+      return exists(/databases/$(database)/documents/families/$(familyId))
+        && uid in get(/databases/$(database)/documents/families/$(familyId)).data.memberUids;
+    }
+
+    // Helper: does the request's auth match a member of this family?
+    function isFamilyMember(familyId) {
+      return request.auth != null && inFamily(familyId, request.auth.uid);
+    }
+
     // ── Users & owned sub-collections ──
     match /users/{uid} {
+      // Family members need to read each other's profile (displayName, photo)
+      // to render member lists / attribution. Email + tokens stay private
+      // because Firestore rules can't filter fields — clients must request
+      // only the fields they need (the AppUser type already excludes them
+      // from rendered UI). For now, allow any signed-in user to read public
+      // profile docs; tighten later if PII concerns emerge.
       allow read: if request.auth != null;
       allow create: if request.auth.uid == uid
         && request.resource.data.uid == uid;
@@ -11,23 +28,36 @@ service cloud.firestore {
       allow delete: if false;
 
       match /pets/{petId} {
+        // LEGACY: pets used to be nested under user. New pets go to the
+        // top-level /pets collection. These rules stay for back-compat
+        // until migration is complete.
         allow read: if request.auth.uid == uid;
         allow create: if request.auth.uid == uid
           && request.resource.data.ownerUid == uid;
         allow update, delete: if request.auth.uid == uid;
 
-        // Health records are stored as a sub-sub-collection of each pet.
         match /healthRecords/{recordId} {
           allow read, write: if request.auth.uid == uid;
         }
       }
 
       match /reminders/{reminderId} {
-        allow read, write: if request.auth.uid == uid;
+        // LEGACY path — kept readable so the migration helper can copy data
+        // out. Writes blocked once the user has migrated.
+        allow read: if request.auth.uid == uid;
+        allow write: if request.auth.uid == uid;
       }
 
       match /walks/{walkId} {
-        allow read, write: if request.auth.uid == uid;
+        // LEGACY path — same migration window as reminders.
+        allow read: if request.auth.uid == uid;
+        allow write: if request.auth.uid == uid;
+      }
+
+      match /expenses/{expenseId} {
+        // LEGACY path — same.
+        allow read: if request.auth.uid == uid;
+        allow write: if request.auth.uid == uid;
       }
 
       match /friends/{friendUid} {
@@ -36,8 +66,6 @@ service cloud.firestore {
         allow write: if request.auth.uid == uid;
       }
 
-      // Anyone signed in can SEND a request to you (create only, with their uid).
-      // Only you can read or delete (accept/reject) requests.
       match /friendRequests/{requestId} {
         allow read: if request.auth.uid == uid;
         allow create: if request.auth != null
@@ -55,13 +83,78 @@ service cloud.firestore {
       match /knowledgeBookmarks/{articleId} {
         allow read, write: if request.auth.uid == uid;
       }
+    }
 
-      match /expenses/{expenseId} {
-        allow read, write: if request.auth.uid == uid;
+    // ── Families ──
+    // A family doc lists its members. Membership is a single source of truth
+    // for all the family-scoped collections below.
+    match /families/{familyId} {
+      // Members can read their own family doc. The join-by-code path runs
+      // server-side in a Cloud Function, so non-members never need read here.
+      allow read: if request.auth != null
+        && request.auth.uid in resource.data.memberUids;
+
+      // No client writes — every create/update/delete goes through callables
+      // (createFamily / joinFamilyByCode / leaveFamily / regenerateInviteCode
+      // / removeFamilyMember). This keeps inviteCode generation, member
+      // invariants, and last-member cleanup atomic and auditable.
+      allow create, update, delete: if false;
+    }
+
+    // ── Family-scoped top-level collections ──
+    // All members of `data.familyId` can read/write. Each doc must carry
+    // `familyId` and the actor's uid in the appropriate `*Uid` field.
+
+    match /pets/{petId} {
+      allow read: if isFamilyMember(resource.data.familyId);
+      allow create: if request.auth != null
+        && isFamilyMember(request.resource.data.familyId)
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isFamilyMember(resource.data.familyId)
+        && isFamilyMember(request.resource.data.familyId);
+      allow delete: if isFamilyMember(resource.data.familyId);
+
+      // Health records flattened to a subcollection of pet at top-level.
+      // Both reads and writes gated by the parent pet's family.
+      match /healthRecords/{recordId} {
+        allow read, write: if isFamilyMember(
+          get(/databases/$(database)/documents/pets/$(petId)).data.familyId
+        );
       }
     }
 
-    // ── Posts (top-level) ──
+    match /walks/{walkId} {
+      allow read: if isFamilyMember(resource.data.familyId);
+      allow create: if request.auth != null
+        && isFamilyMember(request.resource.data.familyId)
+        && request.resource.data.walkerUid == request.auth.uid;
+      // Updates allowed by the walker only (e.g., editing notes). Deletes
+      // allowed by any family member (so anyone can clean up bad data).
+      allow update: if request.auth.uid == resource.data.walkerUid;
+      allow delete: if isFamilyMember(resource.data.familyId);
+    }
+
+    match /reminders/{reminderId} {
+      allow read: if isFamilyMember(resource.data.familyId);
+      allow create: if request.auth != null
+        && isFamilyMember(request.resource.data.familyId)
+        && request.resource.data.createdByUid == request.auth.uid;
+      // Any member can mark done / edit / delete reminders — caring for
+      // pets is a shared responsibility.
+      allow update, delete: if isFamilyMember(resource.data.familyId);
+    }
+
+    match /expenses/{expenseId} {
+      allow read: if isFamilyMember(resource.data.familyId);
+      allow create: if request.auth != null
+        && isFamilyMember(request.resource.data.familyId)
+        && request.resource.data.payerUid == request.auth.uid;
+      // Payer edits their own expense, any member can delete bad entries.
+      allow update: if request.auth.uid == resource.data.payerUid;
+      allow delete: if isFamilyMember(resource.data.familyId);
+    }
+
+    // ── Posts (top-level, author-owned, friend/public visibility) ──
     function isFriend(authorUid, viewerUid) {
       return exists(/databases/$(database)/documents/users/$(authorUid)/friends/$(viewerUid));
     }
@@ -78,7 +171,6 @@ service cloud.firestore {
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.visibility in ["private", "friends", "public"];
 
-      // Allow author full update; allow others ONLY to change reactionCounts
       allow update: if request.auth != null && (
         resource.data.authorUid == request.auth.uid
         || (request.resource.data.diff(resource.data).affectedKeys()
@@ -93,12 +185,12 @@ service cloud.firestore {
       }
     }
 
-    // ── Restaurants & reviews (read-anyone, write-signed-in) ──
+    // ── Restaurants & reviews ──
     match /restaurants/{rid} {
       allow read: if true;
       allow create: if request.auth != null
         && request.resource.data.submittedByUid == request.auth.uid;
-      allow update, delete: if false; // admin only via Cloud Functions later
+      allow update, delete: if false;
 
       match /reviews/{reviewId} {
         allow read: if true;

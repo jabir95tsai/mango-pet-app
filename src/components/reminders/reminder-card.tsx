@@ -35,10 +35,10 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
   return (
     <article
       className={cn(
-        "flex gap-3 rounded-2xl border p-4 bg-white dark:bg-zinc-950",
+        "flex gap-3 rounded-lg border bg-white p-4 shadow-sm shadow-zinc-200/40 dark:bg-zinc-950 dark:shadow-none",
         isPast
           ? "border-red-200 dark:border-red-900/40"
-          : "border-amber-200/60 dark:border-zinc-800",
+          : "border-zinc-200/80 dark:border-zinc-800",
       )}
     >
       <div
@@ -46,7 +46,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
           "shrink-0 size-10 rounded-full grid place-items-center",
           isPast
             ? "bg-red-100 text-red-600 dark:bg-red-950"
-            : "bg-amber-100 text-amber-600 dark:bg-amber-500/20",
+            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
         )}
       >
         <Bell className="size-5" />
@@ -59,7 +59,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
             <span className="text-xs text-zinc-500">🐾 {pet.name}</span>
           )}
           {reminder.repeat !== "none" && (
-            <span className="inline-flex items-center gap-1 text-xs text-amber-600">
+            <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300">
               <Repeat className="size-3" />
               {tR(`repeat.${reminder.repeat}`)}
             </span>
@@ -80,7 +80,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
           type="button"
           onClick={onComplete}
           aria-label={tR("markDone")}
-          className="p-2 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-400"
+          className="rounded-lg bg-emerald-100 p-2 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-400"
         >
           <Check className="size-4" />
         </button>
@@ -89,7 +89,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
             type="button"
             onClick={onEdit}
             aria-label={tC("edit")}
-            className="p-2 rounded-full hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950"
+            className="rounded-lg p-2 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800"
           >
             <Pencil className="size-4" />
           </button>
@@ -98,7 +98,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
           type="button"
           onClick={onDelete}
           aria-label={tC("delete")}
-          className="p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+          className="rounded-lg p-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
         >
           <Trash2 className="size-4" />
         </button>

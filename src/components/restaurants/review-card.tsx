@@ -25,7 +25,7 @@ export function ReviewCard({ review, currentUid, onDelete }: Props) {
   const isMine = review.authorUid === currentUid;
 
   return (
-    <article className="rounded-2xl border border-amber-200/60 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 flex flex-col gap-2">
+    <article className="flex flex-col gap-2 rounded-lg border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <header className="flex items-center gap-3">
         <Avatar src={review.authorPhotoURL} name={review.authorName} size={36} />
         <div className="flex-1 min-w-0">
@@ -48,7 +48,7 @@ export function ReviewCard({ review, currentUid, onDelete }: Props) {
             type="button"
             onClick={onDelete}
             aria-label={tC("delete")}
-            className="p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+            className="rounded-lg p-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
           >
             <Trash2 className="size-4" />
           </button>

@@ -21,10 +21,37 @@ export type AppUser = {
   defaultPostVisibility: Visibility;
   allowFriendRequests: boolean;
   fcmTokens?: string[];
+  /** Families the user belongs to. Empty array before first migration. */
+  familyIds?: string[];
+  /** Active family for filtering reads/writes. Falls back to familyIds[0]. */
+  currentFamilyId?: string;
+};
+
+// ── Families ──
+export type Family = {
+  familyId: string;
+  name: string;
+  ownerUid: string;
+  memberUids: string[];
+  /** 6-digit numeric code shared out-of-band to invite new members. */
+  inviteCode: string;
+  inviteCodeExpiresAt?: Timestamp;
+  createdAt: Timestamp;
+};
+
+export type FamilyMember = {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  /** When this user joined the family. */
+  joinedAt: Timestamp;
 };
 
 export type Pet = {
   petId: string;
+  /** Family this pet belongs to. All members of the family can read/write. */
+  familyId: string;
+  /** The user who originally created the pet. Kept for attribution; not a permission boundary. */
   ownerUid: string;
   name: string;
   species: Species;
@@ -107,7 +134,12 @@ export type HealthRecordData =
 
 export type HealthRecord = {
   recordId: string;
+  /** Family the pet belongs to — denormalised here so we can use a single
+   * `where("familyId", "==", ...)` query against the top-level collection. */
+  familyId: string;
   petId: string;
+  /** User who recorded it (for attribution). */
+  recordedByUid: string;
   type: HealthRecordType;
   recordedAt: Timestamp;
   data: HealthRecordData;
@@ -127,6 +159,10 @@ export type ReminderRepeat = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
 export type Reminder = {
   reminderId: string;
+  /** Family that this reminder belongs to. All members get notified by default. */
+  familyId: string;
+  /** User who created the reminder (for attribution). */
+  createdByUid: string;
   petId?: string;
   title: string;
   description?: string;
@@ -135,6 +171,8 @@ export type Reminder = {
   notifyBeforeMinutes: number;
   done: boolean;
   doneAt?: Timestamp;
+  /** User who marked the reminder done (attribution). */
+  doneByUid?: string;
   /** Set by scheduled function after a push was sent for this trigger. Reset when advancing. */
   notified?: boolean;
   notifiedAt?: Timestamp;
@@ -211,6 +249,13 @@ export type WalkPathPoint = { lat: number; lng: number; t: number };
 
 export type Walk = {
   walkId: string;
+  /** Family the pet belongs to. */
+  familyId: string;
+  /** Member of the family who actually did the walk — drives leaderboard credit. */
+  walkerUid: string;
+  walkerName?: string;
+  walkerPhotoURL?: string | null;
+  /** Legacy/back-compat: alias of walkerUid. Keep populated for old reads. */
   ownerUid: string;
   petId: string;
   petName?: string;
@@ -304,6 +349,12 @@ export type ExpenseSource = "manual" | "ai_scan";
 
 export type Expense = {
   expenseId: string;
+  /** Family the pet belongs to. */
+  familyId: string;
+  /** Member who paid (for attribution + per-payer breakdowns). */
+  payerUid: string;
+  payerName?: string;
+  /** Legacy alias of payerUid for back-compat. */
   ownerUid: string;
   petId: string;
   petName?: string;

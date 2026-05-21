@@ -92,18 +92,22 @@ export default function WalksPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <RouteHeader title={t("walks")} subtitle="GPS 追蹤 + 手動補登" />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <RouteHeader
+          title={t("walks")}
+          subtitle="GPS 追蹤 + 手動補登"
+          className="mb-0"
+        />
       </div>
 
-      <div className="grid grid-cols-4 gap-2 mb-6 rounded-2xl border border-amber-200/60 bg-white p-4 text-center dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg border border-zinc-200/80 bg-white p-4 text-center shadow-sm shadow-zinc-200/40 sm:grid-cols-4 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
         <Stat label="連續天數" value={`${streakDays}`} suffix="天" accent />
         <Stat label="本週次數" value={`${weekTotals.count}`} />
         <Stat label="本週距離" value={`${weekTotals.distanceKm.toFixed(1)}`} suffix="km" />
         <Stat label="本週分數" value={`${weekTotals.score.toFixed(0)}`} />
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row">
         <Button
           onClick={() => setSessionOpen(true)}
           disabled={pets.length === 0}
@@ -117,6 +121,7 @@ export default function WalksPage() {
           variant="secondary"
           onClick={() => setManualOpen(true)}
           disabled={pets.length === 0}
+          className="sm:w-auto"
         >
           <Hand className="size-4" />
           補登
@@ -182,7 +187,7 @@ function Stat({
 }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{label}</span>
+      <span className="text-[10px] text-zinc-500">{label}</span>
       <span
         className={`text-lg font-bold tabular-nums ${
           accent ? "text-amber-600 dark:text-amber-400" : ""

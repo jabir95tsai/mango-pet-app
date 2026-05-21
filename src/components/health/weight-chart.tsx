@@ -25,7 +25,7 @@ export function WeightChart({ data }: Props) {
 
   if (data.length < 2) {
     return (
-      <div className="rounded-2xl border border-dashed border-amber-300/60 bg-amber-50/40 dark:border-zinc-700 dark:bg-zinc-900/40 p-4 text-center text-xs text-zinc-500">
+      <div className="rounded-lg border border-dashed border-zinc-300/80 bg-white/75 p-4 text-center text-xs text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/55">
         {tH("needTwoForChart")}
       </div>
     );
@@ -37,7 +37,7 @@ export function WeightChart({ data }: Props) {
   }));
 
   return (
-    <div className="rounded-2xl border border-amber-200/60 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="rounded-lg border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <h3 className="text-sm font-semibold mb-3">{tH("weightChart")}</h3>
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">

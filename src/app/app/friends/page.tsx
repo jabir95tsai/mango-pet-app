@@ -137,7 +137,7 @@ export default function FriendsPage() {
             {friends.map((f) => (
               <div
                 key={f.uid}
-                className="flex items-center gap-3 rounded-2xl border border-amber-200/60 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                className="flex items-center gap-3 rounded-lg border border-zinc-200/80 bg-white p-3 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none"
               >
                 <Avatar src={f.photoURL} name={f.displayName} size={40} />
                 <div className="flex-1 min-w-0">
@@ -148,7 +148,7 @@ export default function FriendsPage() {
                   onClick={() => handleRemove(f.uid)}
                   disabled={busy === f.uid}
                   aria-label={tC("delete")}
-                  className="p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                  className="rounded-lg p-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
                 >
                   <UserMinus className="size-4" />
                 </button>
@@ -167,7 +167,7 @@ export default function FriendsPage() {
             {requests.map((r) => (
               <div
                 key={r.requestId}
-                className="flex items-center gap-3 rounded-2xl border border-amber-200/60 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                className="flex items-center gap-3 rounded-lg border border-zinc-200/80 bg-white p-3 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none"
               >
                 <Avatar src={r.fromPhotoURL} name={r.fromName} size={40} />
                 <div className="flex-1 min-w-0">
@@ -179,7 +179,7 @@ export default function FriendsPage() {
                   onClick={() => handleAccept(r.fromUid)}
                   disabled={busy === r.fromUid}
                   aria-label="accept"
-                  className="p-2 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-400"
+                  className="rounded-lg bg-emerald-100 p-2 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-400"
                 >
                   <Check className="size-4" />
                 </button>
@@ -188,7 +188,7 @@ export default function FriendsPage() {
                   onClick={() => handleReject(r.requestId)}
                   disabled={busy === r.requestId}
                   aria-label="reject"
-                  className="p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                  className="rounded-lg p-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
                 >
                   <UserX className="size-4" />
                 </button>

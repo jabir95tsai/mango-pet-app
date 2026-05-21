@@ -145,11 +145,15 @@ export default function ExpensesPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <RouteHeader title={t("expenses")} subtitle="拍收據 AI 自動記帳" />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <RouteHeader
+          title={t("expenses")}
+          subtitle="拍收據 AI 自動記帳"
+          className="mb-0"
+        />
       </div>
 
-      <div className="flex gap-2 mb-4">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
         <Button
           size="md"
           className="flex-1"
@@ -164,6 +168,7 @@ export default function ExpensesPage() {
           variant="secondary"
           onClick={openAddManual}
           disabled={pets.length === 0}
+          className="sm:w-auto"
         >
           <Plus className="size-4" />
           {tE("manual")}
@@ -183,11 +188,12 @@ export default function ExpensesPage() {
               <button
                 type="button"
                 onClick={() => setPetFilter("all")}
+                aria-pressed={petFilter === "all"}
                 className={cn(
-                  "shrink-0 px-3 h-7 rounded-full text-xs font-medium transition-colors",
+                  "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                   petFilter === "all"
-                    ? "bg-amber-500 text-white"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800",
+                    ? "bg-emerald-700 text-white"
+                    : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:ring-zinc-800",
                 )}
               >
                 {tF("allPets")}
@@ -197,11 +203,12 @@ export default function ExpensesPage() {
                   key={p.petId}
                   type="button"
                   onClick={() => setPetFilter(p.petId)}
+                  aria-pressed={petFilter === p.petId}
                   className={cn(
-                    "shrink-0 px-3 h-7 rounded-full text-xs font-medium transition-colors",
+                    "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                     petFilter === p.petId
-                      ? "bg-amber-500 text-white"
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800",
+                      ? "bg-emerald-700 text-white"
+                      : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:ring-zinc-800",
                   )}
                 >
                   🐾 {p.name}
@@ -219,11 +226,12 @@ export default function ExpensesPage() {
                   key={f}
                   type="button"
                   onClick={() => setFilter(f)}
+                  aria-pressed={active}
                   className={cn(
-                    "shrink-0 px-3 h-7 rounded-full text-xs font-medium transition-colors",
+                    "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                     active
-                      ? "bg-amber-500 text-white"
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800",
+                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                      : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:ring-zinc-800",
                   )}
                 >
                   {label}

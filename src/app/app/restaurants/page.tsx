@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, Filter, Heart, MapIcon, MapPin, Plus } from "lucide-react";
+import { AlertTriangle, Filter, Heart, MapPin, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Button } from "@/components/ui/button";
@@ -104,9 +104,13 @@ export default function RestaurantsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <RouteHeader title={tNav("restaurants")} subtitle="寵物友善餐廳地圖" />
-        <Button onClick={() => setAdding(true)} size="sm">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <RouteHeader
+          title={tNav("restaurants")}
+          subtitle="寵物友善餐廳地圖"
+          className="mb-0"
+        />
+        <Button onClick={() => setAdding(true)} size="sm" className="w-full sm:w-auto">
           <Plus className="size-4" />
           新增
         </Button>
@@ -125,10 +129,10 @@ export default function RestaurantsPage() {
           type="button"
           onClick={() => setFavOnly(!favOnly)}
           className={cn(
-            "h-8 px-3 rounded-full text-xs font-medium inline-flex items-center gap-1 transition-colors",
+            "inline-flex h-8 items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
             favOnly
               ? "bg-red-100 text-red-600 dark:bg-red-950"
-              : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800",
+              : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:ring-zinc-800",
           )}
         >
           <Heart className={cn("size-3.5", favOnly && "fill-current")} />
@@ -137,7 +141,7 @@ export default function RestaurantsPage() {
       </div>
 
       {originFromBrowser === false && (
-        <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300 mb-3">
+        <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
           <AlertTriangle className="size-4 shrink-0 mt-0.5" />
           <span>
             未取得你的位置 — 使用台北 101 為預設中心點，距離排序可能不正確。請在瀏覽器設定允許定位後重新整理。
@@ -154,11 +158,12 @@ export default function RestaurantsPage() {
               key={l.value}
               type="button"
               onClick={() => setLevelFilter(l.value)}
+              aria-pressed={active}
               className={cn(
-                "shrink-0 px-3 h-7 rounded-full text-xs font-medium transition-colors",
+                "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                 active
-                  ? "bg-amber-500 text-white"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400",
+                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                  : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-800",
               )}
             >
               {l.label}
@@ -194,7 +199,7 @@ export default function RestaurantsPage() {
             center={origin}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            className="h-96 w-full rounded-2xl overflow-hidden border border-amber-200/60 dark:border-zinc-800"
+            className="h-96 w-full overflow-hidden rounded-lg border border-zinc-200/80 dark:border-zinc-800"
           />
           {selectedId &&
             (() => {
@@ -213,7 +218,7 @@ export default function RestaurantsPage() {
             })()}
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid gap-3 xl:grid-cols-2">
           {filtered.map((r) => (
             <RestaurantCard
               key={r.restaurantId}

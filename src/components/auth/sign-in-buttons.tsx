@@ -97,7 +97,7 @@ export function SignInButtons() {
   }
 
   return (
-    <div className="flex flex-col gap-3 w-full max-w-xs">
+    <div className="flex w-full max-w-xs flex-col gap-3">
       {PROVIDERS.map((p) => {
         const isSuggested =
           linkHint?.existingKind === p.kind ? true : false;
@@ -108,9 +108,10 @@ export function SignInButtons() {
             onClick={() => handleSignIn(p.kind)}
             disabled={pending !== null}
             className={cn(
-              "h-12 rounded-full font-medium transition-colors disabled:opacity-60 relative",
+              "relative h-12 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60",
               p.className,
-              isSuggested && "ring-4 ring-amber-300 ring-offset-2 ring-offset-amber-50 dark:ring-offset-zinc-950",
+              isSuggested &&
+                "ring-4 ring-emerald-300 ring-offset-2 ring-offset-background",
             )}
           >
             {pending === p.kind ? "..." : t(p.labelKey)}
@@ -119,13 +120,13 @@ export function SignInButtons() {
       })}
 
       {linkHint && (
-        <div className="rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/30 p-3 text-sm">
-          <p className="text-amber-900 dark:text-amber-200 font-medium mb-1">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
+          <p className="mb-1 font-medium text-emerald-950 dark:text-emerald-200">
             {t("linkHint.title", {
               email: PROVIDER_LABEL[linkHint.existingKind],
             })}
           </p>
-          <p className="text-amber-800 dark:text-amber-300 text-xs">
+          <p className="text-xs text-emerald-800 dark:text-emerald-300">
             {t("linkHint.body", {
               existing: PROVIDER_LABEL[linkHint.existingKind],
               tried: PROVIDER_LABEL[linkHint.newKind],

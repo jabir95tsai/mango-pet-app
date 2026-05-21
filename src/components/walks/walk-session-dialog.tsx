@@ -144,7 +144,7 @@ export function WalkSessionDialog({
             {state.isPaused ? (
               <Pause className="size-10 text-zinc-500" />
             ) : (
-              <Footprints className="size-10 text-amber-500 animate-pulse" />
+              <Footprints className="size-10 animate-pulse text-emerald-600 dark:text-emerald-300" />
             )}
             <p className="text-xs text-zinc-500">
               {state.isPaused ? "已暫停（背景）" : "追蹤中"}
@@ -159,10 +159,10 @@ export function WalkSessionDialog({
 
           {state.lastError && (
             <div
-              className={`flex items-start gap-2 rounded-xl p-3 text-xs ${
+              className={`flex items-start gap-2 p-3 text-xs ${
                 state.errorKind === "permission_denied"
-                  ? "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"
-                  : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                  ? "rounded-lg bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"
+                  : "rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
               }`}
             >
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
@@ -179,13 +179,13 @@ export function WalkSessionDialog({
 
       {phase === "done" && state && (
         <div className="flex flex-col gap-4">
-          <div className="rounded-2xl bg-amber-50 dark:bg-amber-500/10 p-4 grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-3 gap-2 rounded-lg bg-surface-muted p-4 text-center dark:bg-emerald-500/10">
             <Stat label="距離" value={`${state.totalDistanceKm.toFixed(2)}`} suffix="km" small />
             <Stat label="時長" value={`${state.durationMin.toFixed(1)}`} suffix="min" small />
             <Stat label="分數" value={liveScore.toFixed(1)} accent small />
           </div>
           {state.path.length === 0 && (
-            <div className="flex items-start gap-2 rounded-xl bg-red-50 dark:bg-red-950 p-3 text-xs text-red-700 dark:text-red-300">
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
               <span>
                 沒有取得任何 GPS 點 — 可能是定位未授權或訊號太弱。改用「手動記錄」輸入距離與時間。
@@ -229,12 +229,12 @@ function Stat({
 }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
+      <span className="text-[10px] text-zinc-500">
         {label}
       </span>
       <span
         className={`font-bold tabular-nums ${small ? "text-base" : "text-2xl"} ${
-          accent ? "text-amber-600 dark:text-amber-400" : ""
+          accent ? "text-emerald-700 dark:text-emerald-300" : ""
         }`}
       >
         {value}

@@ -57,6 +57,54 @@
         { "fieldPath": "type", "order": "ASCENDING" },
         { "fieldPath": "recordedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "families",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "inviteCode", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "walks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "startedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reminders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "triggerAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reminders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "done", "order": "ASCENDING" },
+        { "fieldPath": "triggerAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "expenses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "spentAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

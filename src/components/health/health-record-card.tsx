@@ -52,7 +52,7 @@ export function HealthRecordCard({ record, onDelete }: Props) {
   const Icon = ICONS[record.type];
 
   return (
-    <article className="flex gap-3 rounded-2xl border border-amber-200/60 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+    <article className="flex gap-3 rounded-lg border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <div className={`shrink-0 size-10 rounded-full bg-zinc-100 dark:bg-zinc-900 grid place-items-center ${ICON_COLORS[record.type]}`}>
         <Icon className="size-5" />
       </div>
@@ -72,7 +72,7 @@ export function HealthRecordCard({ record, onDelete }: Props) {
         type="button"
         onClick={onDelete}
         aria-label={tC("delete")}
-        className="self-start p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+        className="self-start rounded-lg p-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
       >
         <Trash2 className="size-4" />
       </button>

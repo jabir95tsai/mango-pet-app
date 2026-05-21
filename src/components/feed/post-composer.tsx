@@ -146,7 +146,7 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
             {previews.map((url, i) => (
               <div
                 key={`${photos[i]?.name ?? i}-${i}`}
-                className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100"
+                className="relative aspect-square overflow-hidden rounded-lg bg-zinc-100"
               >
                 <Image
                   src={url}

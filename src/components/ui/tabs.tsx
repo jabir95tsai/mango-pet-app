@@ -13,7 +13,7 @@ export function Tabs<T extends string>({ value, onChange, options, className }: 
   return (
     <div
       className={cn(
-        "inline-flex rounded-full bg-zinc-100 p-1 dark:bg-zinc-900",
+        "inline-flex rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900",
         className,
       )}
       role="tablist"
@@ -28,9 +28,9 @@ export function Tabs<T extends string>({ value, onChange, options, className }: 
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "h-8 px-4 text-sm font-medium rounded-full transition-colors",
+              "h-8 rounded-md px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
               active
-                ? "bg-white text-amber-600 shadow-sm dark:bg-zinc-950"
+                ? "bg-white text-emerald-700 shadow-sm dark:bg-zinc-950 dark:text-emerald-300"
                 : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200",
             )}
           >

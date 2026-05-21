@@ -64,9 +64,17 @@ export default function FeedPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <RouteHeader title={t("feed")} subtitle="好友與公開動態" />
-        <Button onClick={() => setComposerOpen(true)} size="md">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <RouteHeader
+          title={t("feed")}
+          subtitle="好友與公開動態"
+          className="mb-0"
+        />
+        <Button
+          onClick={() => setComposerOpen(true)}
+          size="md"
+          className="w-full sm:w-auto"
+        >
           <PenSquare className="size-4" />
           發文
         </Button>
@@ -87,7 +95,7 @@ export default function FeedPage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex max-w-2xl flex-col gap-3">
           {user &&
             posts.map((post) => (
               <PostCard

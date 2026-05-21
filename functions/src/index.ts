@@ -453,3 +453,252 @@ export const sendTestPush = onCall(
     };
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// Families — multi-user pet sharing
+//
+// Data model:
+//   families/{familyId}
+//     name, ownerUid, memberUids[], inviteCode (6 digits), createdAt
+//   users/{uid}.familyIds: string[]
+//   users/{uid}.currentFamilyId: string
+//
+// Invite flow: creator gets a 6-digit code, shares it OOB (LINE/SMS), invitee
+// types it into the join dialog. Code is unique across active families.
+// ─────────────────────────────────────────────────────────────────────
+
+const INVITE_CODE_LENGTH = 6;
+const INVITE_CODE_MAX_ATTEMPTS = 10;
+
+function generateInviteCode(): string {
+  let out = "";
+  for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
+    out += Math.floor(Math.random() * 10).toString();
+  }
+  return out;
+}
+
+async function reserveUniqueInviteCode(): Promise<string> {
+  // Family inviteCode collisions are vanishingly rare at small scale (10^6
+  // codes, dozens of families). Retry-on-collide is fine.
+  for (let attempt = 0; attempt < INVITE_CODE_MAX_ATTEMPTS; attempt++) {
+    const code = generateInviteCode();
+    const dupe = await db
+      .collection("families")
+      .where("inviteCode", "==", code)
+      .limit(1)
+      .get();
+    if (dupe.empty) return code;
+  }
+  throw new HttpsError(
+    "resource-exhausted",
+    "Could not allocate a unique invite code after retries",
+  );
+}
+
+export const createFamily = onCall(
+  { region: FUNCTION_REGION, cors: true },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+    const name = ((req.data?.name as string | undefined) ?? "").trim() || "我的家庭";
+    if (name.length > 40) {
+      throw new HttpsError("invalid-argument", "Family name too long");
+    }
+
+    const inviteCode = await reserveUniqueInviteCode();
+    const familyRef = db.collection("families").doc();
+    const now = Timestamp.now();
+
+    const batch = db.batch();
+    batch.set(familyRef, {
+      name,
+      ownerUid: uid,
+      memberUids: [uid],
+      inviteCode,
+      createdAt: now,
+    });
+    // Append to user.familyIds; set currentFamilyId so subsequent reads scope
+    // to this family without an explicit switch.
+    batch.set(
+      db.doc(`users/${uid}`),
+      {
+        familyIds: FieldValue.arrayUnion(familyRef.id),
+        currentFamilyId: familyRef.id,
+      },
+      { merge: true },
+    );
+    await batch.commit();
+
+    return { familyId: familyRef.id, inviteCode };
+  },
+);
+
+export const joinFamilyByCode = onCall(
+  { region: FUNCTION_REGION, cors: true },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+    const code = ((req.data?.inviteCode as string | undefined) ?? "").trim();
+    if (!/^\d{6}$/.test(code)) {
+      throw new HttpsError("invalid-argument", "邀請碼必須是 6 位數字");
+    }
+
+    const found = await db
+      .collection("families")
+      .where("inviteCode", "==", code)
+      .limit(1)
+      .get();
+    if (found.empty) {
+      throw new HttpsError("not-found", "邀請碼無效或已過期");
+    }
+    const familyDoc = found.docs[0];
+    const family = familyDoc.data();
+    const members = (family.memberUids as string[] | undefined) ?? [];
+
+    if (members.includes(uid)) {
+      return { familyId: familyDoc.id, alreadyMember: true };
+    }
+
+    const batch = db.batch();
+    batch.update(familyDoc.ref, {
+      memberUids: FieldValue.arrayUnion(uid),
+    });
+    batch.set(
+      db.doc(`users/${uid}`),
+      {
+        familyIds: FieldValue.arrayUnion(familyDoc.id),
+        // Switching context to the just-joined family is the obvious
+        // default — user typed the code, they want to use it now.
+        currentFamilyId: familyDoc.id,
+      },
+      { merge: true },
+    );
+    await batch.commit();
+
+    return { familyId: familyDoc.id, alreadyMember: false };
+  },
+);
+
+export const leaveFamily = onCall(
+  { region: FUNCTION_REGION, cors: true },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+    const familyId = ((req.data?.familyId as string | undefined) ?? "").trim();
+    if (!familyId) throw new HttpsError("invalid-argument", "familyId required");
+
+    const familyRef = db.doc(`families/${familyId}`);
+    const snap = await familyRef.get();
+    if (!snap.exists) throw new HttpsError("not-found", "Family not found");
+    const family = snap.data() ?? {};
+    const members = (family.memberUids as string[] | undefined) ?? [];
+    if (!members.includes(uid)) {
+      throw new HttpsError("failed-precondition", "Not a member");
+    }
+
+    const isOwner = family.ownerUid === uid;
+    const isLast = members.length === 1;
+
+    const batch = db.batch();
+
+    if (isLast) {
+      // Last member out — delete the family doc entirely. The owned pets /
+      // walks / etc. remain (orphaned) for safety; the user can re-link
+      // them by creating a new family. We don't cascade-delete user data.
+      batch.delete(familyRef);
+    } else {
+      // Remove from memberUids; if the owner is leaving, promote the
+      // earliest-listed remaining member to owner.
+      const remaining = members.filter((m) => m !== uid);
+      const update: Record<string, unknown> = {
+        memberUids: FieldValue.arrayRemove(uid),
+      };
+      if (isOwner && remaining.length > 0) {
+        update.ownerUid = remaining[0];
+      }
+      batch.update(familyRef, update);
+    }
+
+    // Detach from this user's familyIds. If currentFamilyId points here,
+    // unset it; client will pick another family (if any) on next refresh.
+    const userRef = db.doc(`users/${uid}`);
+    const userSnap = await userRef.get();
+    const userData = userSnap.data() ?? {};
+    const update: Record<string, unknown> = {
+      familyIds: FieldValue.arrayRemove(familyId),
+    };
+    if (userData.currentFamilyId === familyId) {
+      update.currentFamilyId = FieldValue.delete();
+    }
+    batch.update(userRef, update);
+
+    await batch.commit();
+    return { ok: true };
+  },
+);
+
+export const regenerateInviteCode = onCall(
+  { region: FUNCTION_REGION, cors: true },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+    const familyId = ((req.data?.familyId as string | undefined) ?? "").trim();
+    if (!familyId) throw new HttpsError("invalid-argument", "familyId required");
+
+    const familyRef = db.doc(`families/${familyId}`);
+    const snap = await familyRef.get();
+    if (!snap.exists) throw new HttpsError("not-found", "Family not found");
+    const family = snap.data() ?? {};
+    const members = (family.memberUids as string[] | undefined) ?? [];
+    if (!members.includes(uid)) {
+      throw new HttpsError("permission-denied", "Not a member of this family");
+    }
+
+    const inviteCode = await reserveUniqueInviteCode();
+    await familyRef.update({ inviteCode });
+    return { inviteCode };
+  },
+);
+
+export const removeFamilyMember = onCall(
+  { region: FUNCTION_REGION, cors: true },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+    const familyId = ((req.data?.familyId as string | undefined) ?? "").trim();
+    const memberUid = ((req.data?.memberUid as string | undefined) ?? "").trim();
+    if (!familyId || !memberUid) {
+      throw new HttpsError("invalid-argument", "familyId and memberUid required");
+    }
+
+    const familyRef = db.doc(`families/${familyId}`);
+    const snap = await familyRef.get();
+    if (!snap.exists) throw new HttpsError("not-found", "Family not found");
+    const family = snap.data() ?? {};
+
+    // Only the owner can remove others; anyone can remove themselves (use
+    // leaveFamily for that, but allow self-removal here too as a fallback).
+    if (family.ownerUid !== uid && memberUid !== uid) {
+      throw new HttpsError("permission-denied", "Only the family owner can remove members");
+    }
+
+    const batch = db.batch();
+    batch.update(familyRef, {
+      memberUids: FieldValue.arrayRemove(memberUid),
+    });
+    const memberRef = db.doc(`users/${memberUid}`);
+    const memberSnap = await memberRef.get();
+    const memberData = memberSnap.data() ?? {};
+    const memberUpdate: Record<string, unknown> = {
+      familyIds: FieldValue.arrayRemove(familyId),
+    };
+    if (memberData.currentFamilyId === familyId) {
+      memberUpdate.currentFamilyId = FieldValue.delete();
+    }
+    batch.update(memberRef, memberUpdate);
+    await batch.commit();
+
+    return { ok: true };
+  },
+);

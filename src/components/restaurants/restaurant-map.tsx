@@ -148,7 +148,7 @@ export function RestaurantMap({
     <div
       className={
         className ??
-        "h-80 w-full rounded-2xl overflow-hidden border border-amber-200/60 dark:border-zinc-800"
+        "h-80 w-full overflow-hidden rounded-lg border border-zinc-200/80 dark:border-zinc-800"
       }
     >
       {error ? (

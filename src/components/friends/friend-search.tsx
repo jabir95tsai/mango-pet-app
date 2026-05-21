@@ -84,7 +84,7 @@ export function FriendSearch({ excludeUids, onSent }: Props) {
             return (
               <div
                 key={u.uid}
-                className="flex items-center gap-3 rounded-2xl border border-amber-200/60 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                className="flex items-center gap-3 rounded-lg border border-zinc-200/80 bg-white p-3 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none"
               >
                 <Avatar src={u.photoURL} name={u.displayName} size={40} />
                 <div className="flex-1 min-w-0">

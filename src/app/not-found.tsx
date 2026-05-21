@@ -12,7 +12,7 @@ export default function NotFound() {
       </div>
       <Link
         href="/"
-        className="h-10 px-5 rounded-full bg-amber-500 text-white text-sm font-medium flex items-center hover:bg-amber-600"
+        className="flex h-10 items-center rounded-lg bg-amber-500 px-5 text-sm font-medium text-white hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
       >
         回首頁
       </Link>

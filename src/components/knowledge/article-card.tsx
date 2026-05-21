@@ -45,13 +45,13 @@ export function ArticleCard({ article, bookmarked, onToggleBookmark }: Props) {
   const labelMap = lang === "zh-TW" ? CATEGORY_LABEL_ZH : CATEGORY_LABEL_EN;
 
   return (
-    <article className="flex gap-3 rounded-2xl border border-amber-200/60 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950 hover:border-amber-300 transition-colors">
+    <article className="flex gap-3 rounded-lg border border-zinc-200/80 bg-white p-3 shadow-sm shadow-zinc-200/40 transition-colors hover:border-emerald-300 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <Link
         href={`/app/knowledge/${article.articleId}`}
-        className="flex flex-1 gap-3 min-w-0"
+        className="flex min-w-0 flex-1 gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
       >
         {article.coverImageURL && (
-          <div className="relative size-20 rounded-xl overflow-hidden bg-amber-100 shrink-0">
+          <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-surface-muted">
             <Image
               src={article.coverImageURL}
               alt=""
@@ -84,10 +84,10 @@ export function ArticleCard({ article, bookmarked, onToggleBookmark }: Props) {
         onClick={onToggleBookmark}
         aria-label="bookmark"
         className={cn(
-          "self-start p-2 rounded-full",
+          "self-start rounded-lg p-2",
           bookmarked
             ? "text-amber-600"
-            : "text-zinc-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-zinc-800",
+            : "text-zinc-400 hover:bg-zinc-100 hover:text-amber-500 dark:hover:bg-zinc-800",
         )}
       >
         {bookmarked ? (

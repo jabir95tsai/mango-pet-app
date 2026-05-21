@@ -131,7 +131,7 @@ export function ExpenseFormDialog({
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {source === "ai_scan" && !initial && (
-          <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 flex gap-2 items-start text-sm">
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm dark:bg-amber-500/10">
             <Sparkles className="size-4 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-zinc-700 dark:text-zinc-300">
               AI 已自動填入欄位，
@@ -214,7 +214,7 @@ export function ExpenseFormDialog({
         <div className="flex flex-col gap-1.5">
           <FieldLabel>{tE("fields.items")}</FieldLabel>
           {items.length > 0 && (
-            <ul className="flex flex-col gap-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 p-2">
+            <ul className="flex flex-col gap-1.5 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-900">
               {items.map((it, i) => (
                 <li key={i} className="flex items-center gap-1.5">
                   <Input

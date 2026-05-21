@@ -138,36 +138,36 @@ export default function RestaurantDetailPage() {
           type="button"
           onClick={() => router.push("/app/restaurants")}
           aria-label={tC("back")}
-          className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
           <ArrowLeft className="size-5" />
         </button>
       </div>
 
-      <header className="rounded-2xl border border-amber-200/60 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950 mb-4">
+      <header className="mb-4 rounded-lg border border-zinc-200/80 bg-white p-5 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold tracking-tight">{restaurant.name}</h1>
+            <h1 className="text-xl font-bold">{restaurant.name}</h1>
             <p className="text-sm text-zinc-500 mt-1 flex items-center gap-1">
               <MapPin className="size-3.5" />
               {restaurant.address}
             </p>
             <div className="flex flex-wrap gap-2 mt-3 text-xs">
-              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full dark:bg-amber-900/40 dark:text-amber-200">
+              <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                 {LEVEL_LABEL[restaurant.petFriendlyLevel]}
               </span>
               {restaurant.hasWaterBowl && (
-                <span className="bg-zinc-100 px-2 py-0.5 rounded-full dark:bg-zinc-800">
+                <span className="rounded-md bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
                   💧 水碗
                 </span>
               )}
               {restaurant.hasPetMenu && (
-                <span className="bg-zinc-100 px-2 py-0.5 rounded-full dark:bg-zinc-800">
+                <span className="rounded-md bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
                   🍽️ 寵物餐
                 </span>
               )}
               {restaurant.allowsLargeDogs && (
-                <span className="bg-zinc-100 px-2 py-0.5 rounded-full dark:bg-zinc-800">
+                <span className="rounded-md bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
                   🐕‍🦺 大型犬 OK
                 </span>
               )}
@@ -187,7 +187,7 @@ export default function RestaurantDetailPage() {
             onClick={handleToggleFav}
             aria-label="favorite"
             className={cn(
-              "p-2 rounded-full shrink-0",
+              "shrink-0 rounded-lg p-2",
               isFav
                 ? "bg-red-100 text-red-600 dark:bg-red-950"
                 : "hover:bg-zinc-100 text-zinc-400 hover:text-red-600 dark:hover:bg-zinc-800",
@@ -202,7 +202,7 @@ export default function RestaurantDetailPage() {
             href={mapsLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-700"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-xs font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <ExternalLink className="size-3.5" />
             開 Google Maps
@@ -210,7 +210,7 @@ export default function RestaurantDetailPage() {
           {restaurant.phone && (
             <a
               href={`tel:${restaurant.phone}`}
-              className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-medium bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-100 px-3 text-xs font-medium hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-zinc-800"
             >
               <Phone className="size-3.5" />
               {restaurant.phone}
@@ -221,7 +221,7 @@ export default function RestaurantDetailPage() {
               href={restaurant.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-medium bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-100 px-3 text-xs font-medium hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-zinc-800"
             >
               <ExternalLink className="size-3.5" />
               網站
@@ -233,7 +233,7 @@ export default function RestaurantDetailPage() {
       <RestaurantMap
         restaurants={[restaurant]}
         center={restaurant.location}
-        className="h-56 w-full rounded-2xl overflow-hidden border border-amber-200/60 dark:border-zinc-800 mb-6"
+        className="mb-6 h-56 w-full overflow-hidden rounded-lg border border-zinc-200/80 dark:border-zinc-800"
       />
 
       <section className="flex flex-col gap-3">

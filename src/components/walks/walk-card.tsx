@@ -23,13 +23,13 @@ export function WalkCard({ walk, onDelete }: Props) {
   const rel = formatDistance(start, new Date(), { addSuffix: true, locale: dateLocale });
 
   return (
-    <article className="flex gap-3 rounded-2xl border border-amber-200/60 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+    <article className="flex gap-3 rounded-lg border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <div
         className={cn(
           "shrink-0 size-10 rounded-full grid place-items-center",
           walk.isManual
             ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-            : "bg-amber-100 text-amber-600 dark:bg-amber-500/20",
+            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
         )}
       >
         {walk.isManual ? <Hand className="size-5" /> : <Footprints className="size-5" />}
@@ -41,10 +41,10 @@ export function WalkCard({ walk, onDelete }: Props) {
           <span className="text-xs text-zinc-500">{rel}</span>
         </div>
         <p className="text-xs text-zinc-500 mt-0.5">{dateStr}</p>
-        <div className="flex gap-3 text-sm mt-1">
+        <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
           <span>📏 {walk.distanceKm.toFixed(2)} km</span>
           <span>⏱️ {walk.durationMin.toFixed(0)} min</span>
-          <span className="text-amber-600 font-semibold">⭐ {walk.score.toFixed(1)}</span>
+          <span className="font-semibold text-amber-600">⭐ {walk.score.toFixed(1)}</span>
         </div>
         {walk.notes && (
           <p className="text-xs text-zinc-500 mt-1 line-clamp-1">{walk.notes}</p>
@@ -55,7 +55,7 @@ export function WalkCard({ walk, onDelete }: Props) {
         type="button"
         onClick={onDelete}
         aria-label={tC("delete")}
-        className="self-start p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+        className="self-start rounded-lg p-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
       >
         <Trash2 className="size-4" />
       </button>

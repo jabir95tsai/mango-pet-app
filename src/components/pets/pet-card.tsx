@@ -32,7 +32,7 @@ export function PetCard({ pet, onEdit, onDelete }: Props) {
   return (
     <Link
       href={`/app/pets/${pet.petId}`}
-      className="flex items-center gap-4 rounded-2xl border border-amber-200/60 bg-white p-4 transition-colors hover:border-amber-400 hover:bg-amber-50/40 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+      className="flex items-center gap-4 rounded-lg border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 transition-colors hover:border-emerald-300 hover:bg-emerald-50/35 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none dark:hover:bg-zinc-900"
     >
       <Avatar src={pet.photoURL} name={pet.name} size={64} />
 
@@ -60,7 +60,7 @@ export function PetCard({ pet, onEdit, onDelete }: Props) {
           type="button"
           onClick={stop(onEdit)}
           aria-label={tCommon("edit")}
-          className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
           <Pencil className="size-4" />
         </button>
@@ -68,7 +68,7 @@ export function PetCard({ pet, onEdit, onDelete }: Props) {
           type="button"
           onClick={stop(onDelete)}
           aria-label={tCommon("delete")}
-          className="p-2 rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+          className="rounded-lg p-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
         >
           <Trash2 className="size-4" />
         </button>
