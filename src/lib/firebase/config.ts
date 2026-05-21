@@ -16,6 +16,18 @@ const storageBucket =
       ? `${projectId}.firebasestorage.app`
       : undefined;
 
+// Firebase Web App ID is "1:{senderId}:web:{hash}". The App Hosting console
+// originally had this set to just the sender ID (no ":web:" suffix), which
+// made the Installations API reject getToken() with INVALID_ARGUMENT. The
+// console env takes precedence over apphosting.yaml at build time, so we
+// can't override it via yaml alone — guard here. A correctly-set env var
+// (containing ":web:") passes through unchanged; a malformed one falls back
+// to the known-good hardcoded value (it's public, baked into every bundle).
+const APP_ID_KNOWN_GOOD = "1:722604603606:web:9d4efbb3033bfd9811f177";
+const appIdEnv = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+const appId =
+  appIdEnv && appIdEnv.includes(":web:") ? appIdEnv : APP_ID_KNOWN_GOOD;
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain:
@@ -24,7 +36,7 @@ const firebaseConfig = {
   projectId,
   storageBucket,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  appId,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
