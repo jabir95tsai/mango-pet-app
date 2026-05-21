@@ -75,6 +75,17 @@ export function ExpenseCard({ expense, onEdit, onDelete }: Props) {
           <span>🐾 {expense.petName ?? "?"}</span>
           <span>·</span>
           <span>{tE(`categories.${expense.category}`)}</span>
+          {expense.payerName && (
+            <>
+              <span>·</span>
+              <span>
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                  {expense.payerName}
+                </span>{" "}
+                付的
+              </span>
+            </>
+          )}
         </div>
       </div>
 

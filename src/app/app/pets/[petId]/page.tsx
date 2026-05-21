@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Bell, Pencil, Plus, PawPrint } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useFamily } from "@/components/family/family-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
@@ -50,6 +51,7 @@ export default function PetDetailPage() {
   const params = useParams<{ petId: string }>();
   const petId = params.petId;
   const { user } = useAuth();
+  const { family } = useFamily();
 
   const tH = useTranslations("Health");
   const tR = useTranslations("Reminder");
@@ -71,27 +73,21 @@ export default function PetDetailPage() {
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!family) return;
     setLoading(true);
-    // Use allSettled so one slow/broken query doesn't blank the whole page.
-    // Pets now live top-level (family-scoped); health records and reminders
-    // are still per-user until Phase 3 of the family migration.
+    // allSettled so one slow query doesn't blank the whole page.
     const [petR, recsR, wR, remR] = await Promise.allSettled([
       getPet(petId),
-      listRecords(user.uid, petId),
-      listWeightSeries(user.uid, petId),
-      listReminders(user.uid),
+      listRecords(petId),
+      listWeightSeries(petId),
+      listReminders(family.familyId, { petId }),
     ]);
     setPet(petR.status === "fulfilled" ? petR.value : null);
     setRecords(recsR.status === "fulfilled" ? recsR.value : []);
     setWeights(wR.status === "fulfilled" ? wR.value : []);
-    setReminders(
-      remR.status === "fulfilled"
-        ? remR.value.filter((r) => r.petId === petId)
-        : [],
-    );
+    setReminders(remR.status === "fulfilled" ? remR.value : []);
     setLoading(false);
-  }, [user, petId]);
+  }, [family, petId]);
 
   useEffect(() => {
     refresh();
@@ -105,12 +101,11 @@ export default function PetDetailPage() {
 
   async function handleAddRecord(input: HealthRecordInput) {
     if (!user) return;
-    await createRecord(user.uid, petId, input);
+    await createRecord(petId, user.uid, input);
     await refresh();
   }
 
   async function handleDeleteRecord(record: HealthRecord) {
-    if (!user) return;
     const ok = await askConfirm({
       title: tC("delete"),
       message: tH(`types.${record.type}`),
@@ -119,19 +114,24 @@ export default function PetDetailPage() {
       danger: true,
     });
     if (!ok) return;
-    await deleteRecord(user.uid, petId, record.recordId);
+    await deleteRecord(petId, record.recordId);
     await refresh();
   }
 
   async function handleAddReminder(input: ReminderInput) {
-    if (!user) return;
-    await createReminder(user.uid, { ...input, petId });
+    if (!user || !family) return;
+    await createReminder({
+      ...input,
+      petId,
+      familyId: family.familyId,
+      createdByUid: user.uid,
+    });
     await refresh();
   }
 
   async function handleUpdateReminder(input: ReminderInput) {
-    if (!user || !editingReminder) return;
-    await updateReminder(user.uid, editingReminder.reminderId, {
+    if (!editingReminder) return;
+    await updateReminder(editingReminder.reminderId, {
       title: input.title,
       description: input.description,
       petId: input.petId,
@@ -145,12 +145,11 @@ export default function PetDetailPage() {
 
   async function handleCompleteReminder(reminder: Reminder) {
     if (!user) return;
-    await completeReminder(user.uid, reminder);
+    await completeReminder(reminder, user.uid);
     await refresh();
   }
 
   async function handleDeleteReminder(reminder: Reminder) {
-    if (!user) return;
     const ok = await askConfirm({
       title: tC("delete"),
       message: reminder.title,
@@ -159,7 +158,7 @@ export default function PetDetailPage() {
       danger: true,
     });
     if (!ok) return;
-    await deleteReminder(user.uid, reminder.reminderId);
+    await deleteReminder(reminder.reminderId);
     await refresh();
   }
 

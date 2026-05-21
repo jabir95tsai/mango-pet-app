@@ -70,7 +70,7 @@ export default function ExpensesPage() {
     try {
       const [petList, exList] = await Promise.all([
         listPets(family.familyId),
-        listExpenses(user.uid),
+        listExpenses(family.familyId),
       ]);
       setPets(petList);
       setExpenses(exList);
@@ -123,17 +123,21 @@ export default function ExpensesPage() {
   }
 
   async function handleSubmit(input: ExpenseInput) {
-    if (!user) return;
+    if (!user || !family) return;
     if (editing) {
-      await updateExpense(user.uid, editing.expenseId, input);
+      await updateExpense(editing.expenseId, input);
     } else {
-      await createExpense(user.uid, input);
+      await createExpense({
+        ...input,
+        familyId: family.familyId,
+        payerUid: user.uid,
+        payerName: user.displayName ?? undefined,
+      });
     }
     await refresh();
   }
 
   async function handleDelete(expense: Expense) {
-    if (!user) return;
     const ok = await askConfirm({
       title: tC("delete"),
       message: `${expense.vendor || tE(`categories.${expense.category}`)} · NT$ ${expense.amount.toLocaleString()}`,
@@ -142,7 +146,7 @@ export default function ExpensesPage() {
       danger: true,
     });
     if (!ok) return;
-    await deleteExpense(user.uid, expense.expenseId);
+    await deleteExpense(expense.expenseId);
     await refresh();
   }
 

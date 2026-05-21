@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -10,16 +11,19 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import { getDb } from "./config";
 import type { Reminder, ReminderInput } from "@/lib/types";
 
-function remindersCol(uid: string) {
-  return collection(getDb(), "users", uid, "reminders");
+const REMINDERS = "reminders";
+
+function remindersCol() {
+  return collection(getDb(), REMINDERS);
 }
 
-function reminderDoc(uid: string, reminderId: string) {
-  return doc(getDb(), "users", uid, "reminders", reminderId);
+function reminderDoc(reminderId: string) {
+  return doc(getDb(), REMINDERS, reminderId);
 }
 
 function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
@@ -29,10 +33,16 @@ function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
 }
 
 export async function listReminders(
-  uid: string,
+  familyId: string,
   opts?: { petId?: string; includeDone?: boolean },
 ): Promise<Reminder[]> {
-  const snap = await getDocs(query(remindersCol(uid), orderBy("triggerAt", "asc")));
+  const snap = await getDocs(
+    query(
+      remindersCol(),
+      where("familyId", "==", familyId),
+      orderBy("triggerAt", "asc"),
+    ),
+  );
   let reminders = snap.docs.map((d) => ({
     ...(d.data() as Reminder),
     reminderId: d.id,
@@ -47,14 +57,15 @@ export async function listReminders(
 }
 
 export async function listUpcomingReminders(
-  uid: string,
+  familyId: string,
   withinDays = 30,
 ): Promise<Reminder[]> {
   const now = Timestamp.now();
   const cutoff = Timestamp.fromMillis(Date.now() + withinDays * 86400_000);
   const snap = await getDocs(
     query(
-      remindersCol(uid),
+      remindersCol(),
+      where("familyId", "==", familyId),
       where("triggerAt", ">=", now),
       where("triggerAt", "<=", cutoff),
       orderBy("triggerAt", "asc"),
@@ -65,11 +76,12 @@ export async function listUpcomingReminders(
     .filter((r) => !r.done);
 }
 
-export async function listOverdueReminders(uid: string): Promise<Reminder[]> {
+export async function listOverdueReminders(familyId: string): Promise<Reminder[]> {
   const now = Timestamp.now();
   const snap = await getDocs(
     query(
-      remindersCol(uid),
+      remindersCol(),
+      where("familyId", "==", familyId),
       where("triggerAt", "<", now),
       orderBy("triggerAt", "desc"),
     ),
@@ -79,39 +91,35 @@ export async function listOverdueReminders(uid: string): Promise<Reminder[]> {
     .filter((r) => !r.done);
 }
 
+export type CreateReminderArgs = ReminderInput & {
+  familyId: string;
+  createdByUid: string;
+};
+
 export async function createReminder(
-  uid: string,
-  input: ReminderInput,
+  args: CreateReminderArgs,
 ): Promise<Reminder> {
   const docRef = await addDoc(
-    remindersCol(uid),
+    remindersCol(),
     clean({
-      petId: input.petId,
-      title: input.title,
-      description: input.description,
-      triggerAt: Timestamp.fromDate(input.triggerAt),
-      repeat: input.repeat,
-      notifyBeforeMinutes: input.notifyBeforeMinutes,
+      familyId: args.familyId,
+      createdByUid: args.createdByUid,
+      petId: args.petId,
+      title: args.title,
+      description: args.description,
+      triggerAt: Timestamp.fromDate(args.triggerAt),
+      repeat: args.repeat,
+      notifyBeforeMinutes: args.notifyBeforeMinutes,
       done: false,
       notified: false,
       createdAt: serverTimestamp(),
     }),
   );
-  return {
-    reminderId: docRef.id,
-    petId: input.petId,
-    title: input.title,
-    description: input.description,
-    triggerAt: Timestamp.fromDate(input.triggerAt),
-    repeat: input.repeat,
-    notifyBeforeMinutes: input.notifyBeforeMinutes,
-    done: false,
-    createdAt: Timestamp.now(),
-  };
+  const snap = await getDoc(docRef);
+  return { ...(snap.data() as Reminder), reminderId: docRef.id };
 }
 
 export async function updateReminder(
-  uid: string,
   reminderId: string,
   patch: Partial<ReminderInput>,
 ): Promise<void> {
@@ -123,7 +131,7 @@ export async function updateReminder(
     notifyBeforeMinutes: patch.notifyBeforeMinutes,
     triggerAt: patch.triggerAt ? Timestamp.fromDate(patch.triggerAt) : undefined,
   });
-  await updateDoc(reminderDoc(uid, reminderId), updates);
+  await updateDoc(reminderDoc(reminderId), updates);
 }
 
 function advance(triggerAt: Date, repeat: Reminder["repeat"]): Date | null {
@@ -159,29 +167,63 @@ function advanceToFuture(from: Date, repeat: Reminder["repeat"]): Date | null {
 }
 
 export async function completeReminder(
-  uid: string,
   reminder: Reminder,
+  /** Member who marked it done — attribution for shared reminders. */
+  doneByUid: string,
 ): Promise<void> {
   const next = advanceToFuture(
     (reminder.triggerAt as Timestamp).toDate(),
     reminder.repeat,
   );
   if (next) {
-    await updateDoc(reminderDoc(uid, reminder.reminderId), {
+    await updateDoc(reminderDoc(reminder.reminderId), {
       triggerAt: Timestamp.fromDate(next),
       notified: false,
+      // Track who last marked it done for the "fed by 媽媽" badge UX.
+      doneByUid,
     });
   } else {
-    await updateDoc(reminderDoc(uid, reminder.reminderId), {
+    await updateDoc(reminderDoc(reminder.reminderId), {
       done: true,
       doneAt: serverTimestamp(),
+      doneByUid,
     });
   }
 }
 
-export async function deleteReminder(
-  uid: string,
-  reminderId: string,
-): Promise<void> {
-  await deleteDoc(reminderDoc(uid, reminderId));
+export async function deleteReminder(reminderId: string): Promise<void> {
+  await deleteDoc(reminderDoc(reminderId));
+}
+
+/** One-shot legacy migration: users/{uid}/reminders/* → top-level reminders/*
+ *  Idempotent — won't overwrite existing top-level docs by the same id. */
+export async function migrateLegacyRemindersToFamily(
+  legacyUid: string,
+  familyId: string,
+): Promise<number> {
+  const legacy = await getDocs(
+    collection(getDb(), "users", legacyUid, "reminders"),
+  );
+  if (legacy.empty) return 0;
+
+  let migrated = 0;
+  const docs = legacy.docs;
+  for (let i = 0; i < docs.length; i += 400) {
+    const slice = docs.slice(i, i + 400);
+    const batch = writeBatch(getDb());
+    for (const legacyDoc of slice) {
+      const newRef = doc(getDb(), REMINDERS, legacyDoc.id);
+      const existing = await getDoc(newRef);
+      if (existing.exists()) continue;
+      const data = legacyDoc.data();
+      batch.set(newRef, {
+        ...data,
+        familyId,
+        createdByUid: data.createdByUid ?? legacyUid,
+      });
+      migrated++;
+    }
+    if (migrated > 0) await batch.commit();
+  }
+  return migrated;
 }

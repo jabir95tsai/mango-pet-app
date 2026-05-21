@@ -37,7 +37,7 @@ export default function WalksPage() {
     try {
       const [petList, walkList] = await Promise.all([
         listPets(family.familyId),
-        listWalks(user.uid),
+        listWalks(family.familyId),
       ]);
       setPets(petList);
       setWalks(walkList);
@@ -73,14 +73,20 @@ export default function WalksPage() {
   }, [walks]);
 
   async function handleCreate(input: WalkInput & { score: number }) {
-    if (!user) return;
+    if (!user || !family) return;
     const { score, ...rest } = input;
-    await createWalk({ ...rest, ownerUid: user.uid, score });
+    await createWalk({
+      ...rest,
+      familyId: family.familyId,
+      walkerUid: user.uid,
+      walkerName: user.displayName ?? undefined,
+      walkerPhotoURL: user.photoURL,
+      score,
+    });
     await refresh();
   }
 
   async function handleDelete(walk: Walk) {
-    if (!user) return;
     const ok = await askConfirm({
       title: tC("delete"),
       message: `${walk.distanceKm.toFixed(2)} km · ${walk.durationMin.toFixed(0)} min`,
@@ -89,7 +95,7 @@ export default function WalksPage() {
       danger: true,
     });
     if (!ok) return;
-    await deleteWalk(user.uid, walk.walkId);
+    await deleteWalk(walk.walkId);
     await refresh();
   }
 

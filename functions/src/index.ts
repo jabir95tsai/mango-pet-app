@@ -44,6 +44,12 @@ export const scanReminders = onSchedule(
     const now = Timestamp.now();
     const nowMs = now.toMillis();
 
+    // collectionGroup catches both:
+    //   - legacy: users/{uid}/reminders/*
+    //   - new:    reminders/{reminderId} (top-level, family-scoped)
+    // We dispatch by whether the doc has a `familyId` field. Once all
+    // legacy data is migrated and the legacy paths are deleted, the
+    // collectionGroup query will only return top-level docs.
     const snap = await db
       .collectionGroup("reminders")
       .where("done", "==", false)
@@ -71,14 +77,41 @@ export const scanReminders = onSchedule(
           continue;
         }
 
-        const uid = reminderDoc.ref.parent.parent?.id;
-        if (!uid) continue;
+        // Determine recipient uids:
+        //   - Family reminder (top-level with familyId): broadcast to all
+        //     members of the family. Anyone can mark done, so everyone
+        //     should know the pet needs attention.
+        //   - Legacy per-user reminder: send only to that user.
+        let recipientUids: string[];
+        const familyId = reminder.familyId as string | undefined;
+        if (familyId) {
+          const famSnap = await db.doc(`families/${familyId}`).get();
+          const fam = famSnap.data();
+          recipientUids = ((fam?.memberUids ?? []) as string[]).filter(Boolean);
+        } else {
+          const parentUid = reminderDoc.ref.parent.parent?.id;
+          recipientUids = parentUid ? [parentUid] : [];
+        }
 
-        const userSnap = await db.doc(`users/${uid}`).get();
-        const userData = userSnap.data();
-        const tokens = ((userData?.fcmTokens ?? []) as string[]).filter(Boolean);
+        if (recipientUids.length === 0) {
+          await reminderDoc.ref.update({ notified: true, notifiedAt: now });
+          continue;
+        }
 
-        if (tokens.length === 0) {
+        // Collect FCM tokens from every recipient. Each token-removal write
+        // happens against its own user doc, so we keep track of which uid
+        // each token came from for later cleanup.
+        const tokensWithOwner: { uid: string; token: string }[] = [];
+        const userRefByUid = new Map<string, FirebaseFirestore.DocumentReference>();
+        for (const recipUid of recipientUids) {
+          const userRef = db.doc(`users/${recipUid}`);
+          const userSnap = await userRef.get();
+          userRefByUid.set(recipUid, userRef);
+          const t = ((userSnap.data()?.fcmTokens ?? []) as string[]).filter(Boolean);
+          for (const tok of t) tokensWithOwner.push({ uid: recipUid, token: tok });
+        }
+
+        if (tokensWithOwner.length === 0) {
           await reminderDoc.ref.update({ notified: true, notifiedAt: now });
           noTokens++;
           continue;
@@ -89,8 +122,9 @@ export const scanReminders = onSchedule(
           (reminder.description as string) ||
           (reminder.petId ? "🐾 提醒到時間了" : "🔔 提醒到時間了");
 
+        const tokensList = tokensWithOwner.map((t) => t.token);
         const response = await messaging.sendEachForMulticast({
-          tokens,
+          tokens: tokensList,
           notification: { title, body },
           data: {
             reminderId: reminderDoc.id,
@@ -104,7 +138,8 @@ export const scanReminders = onSchedule(
           },
         });
 
-        const invalidTokens: string[] = [];
+        // Group invalid tokens by their owner uid for per-user arrayRemove.
+        const invalidByUid = new Map<string, string[]>();
         response.responses.forEach((r, idx) => {
           if (!r.success && r.error) {
             const code = r.error.code;
@@ -112,14 +147,18 @@ export const scanReminders = onSchedule(
               code === "messaging/invalid-registration-token" ||
               code === "messaging/registration-token-not-registered"
             ) {
-              invalidTokens.push(tokens[idx]);
+              const { uid, token } = tokensWithOwner[idx];
+              const list = invalidByUid.get(uid) ?? [];
+              list.push(token);
+              invalidByUid.set(uid, list);
             }
           }
         });
-
-        if (invalidTokens.length > 0) {
-          await userSnap.ref.update({
-            fcmTokens: FieldValue.arrayRemove(...invalidTokens),
+        for (const [uid, tokens] of invalidByUid) {
+          const ref = userRefByUid.get(uid);
+          if (!ref) continue;
+          await ref.update({
+            fcmTokens: FieldValue.arrayRemove(...tokens),
           });
         }
 
@@ -274,8 +313,27 @@ export const aggregateLeaderboards = onSchedule(
       return acc;
     }
 
+    // Dedupe across legacy (users/{uid}/walks/) and new (walks/) paths.
+    // During the migration window both can exist for the same logical
+    // walk (same doc id, the migration copies preserving id). We prefer
+    // the top-level doc when both are present (it has familyId set), but
+    // count whichever exists exactly once.
+    const docsById = new Map<
+      string,
+      { data: WalkRow; path: string; isTopLevel: boolean }
+    >();
     for (const doc of allWalks.docs) {
-      const w = doc.data() as WalkRow;
+      const isTopLevel = !doc.ref.path.startsWith("users/");
+      const prior = docsById.get(doc.id);
+      if (prior && prior.isTopLevel) continue; // already have the canonical copy
+      docsById.set(doc.id, {
+        data: doc.data() as WalkRow,
+        path: doc.ref.path,
+        isTopLevel,
+      });
+    }
+
+    for (const { data: w } of docsById.values()) {
       if (!w.ownerUid) continue;
 
       if (!usersById.has(w.ownerUid)) {

@@ -17,6 +17,10 @@ import {
   setCurrentFamily,
 } from "@/lib/firebase/families";
 import { migrateLegacyPetsToFamily } from "@/lib/firebase/pets";
+import { migrateLegacyWalksToFamily } from "@/lib/firebase/walks";
+import { migrateLegacyRemindersToFamily } from "@/lib/firebase/reminders";
+import { migrateLegacyExpensesToFamily } from "@/lib/firebase/expenses";
+import { migrateLegacyHealthRecordsToFamily } from "@/lib/firebase/health-records";
 import { getAppUser } from "@/lib/firebase/users";
 import type { Family } from "@/lib/types";
 
@@ -87,16 +91,49 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       // an existing user, move their legacy pets/walks/etc. into it. Each
       // migration helper is idempotent and a no-op for users with no
       // legacy data, so running it on every fresh-family creation is safe.
+      // We run them in parallel — they touch different collections and
+      // none depend on each other.
       if (justCreated) {
         try {
-          const moved = await migrateLegacyPetsToFamily(user.uid, currentId);
-          if (moved > 0) {
-            console.info(`[FamilyProvider] migrated ${moved} legacy pets`);
+          const [pets, walks, reminders, expenses, healthRecords] = await Promise.all([
+            migrateLegacyPetsToFamily(user.uid, currentId).catch((e) => {
+              console.error("[FamilyProvider] pet migration failed:", e);
+              return 0;
+            }),
+            migrateLegacyWalksToFamily(user.uid, currentId).catch((e) => {
+              console.error("[FamilyProvider] walk migration failed:", e);
+              return 0;
+            }),
+            migrateLegacyRemindersToFamily(user.uid, currentId).catch((e) => {
+              console.error("[FamilyProvider] reminder migration failed:", e);
+              return 0;
+            }),
+            migrateLegacyExpensesToFamily(user.uid, currentId).catch((e) => {
+              console.error("[FamilyProvider] expense migration failed:", e);
+              return 0;
+            }),
+            // Health records migration must run AFTER pets are at top-level
+            // because it writes under pets/{petId}/healthRecords. The pets
+            // migration above is the same Promise.all batch — they'll both
+            // see the legacy pets list, so order within the parallel batch
+            // is fine.
+            migrateLegacyHealthRecordsToFamily(user.uid).catch((e) => {
+              console.error("[FamilyProvider] health-record migration failed:", e);
+              return 0;
+            }),
+          ]);
+          const total = pets + walks + reminders + expenses + healthRecords;
+          if (total > 0) {
+            console.info(
+              `[FamilyProvider] migrated ${pets} pets, ${walks} walks, ` +
+                `${reminders} reminders, ${expenses} expenses, ` +
+                `${healthRecords} health records`,
+            );
           }
         } catch (err) {
-          // Non-fatal — user can still use the app; legacy data stays
-          // visible via the back-compat read paths until next attempt.
-          console.error("[FamilyProvider] pet migration failed:", err);
+          // Outer catch is just defense-in-depth — each .catch above already
+          // swallowed individual failures.
+          console.error("[FamilyProvider] migration outer failure:", err);
         }
       }
 

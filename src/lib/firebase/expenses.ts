@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -11,6 +12,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import { getDb } from "./config";
 import type {
@@ -19,12 +21,14 @@ import type {
   ExpenseInput,
 } from "@/lib/types";
 
-function expensesCol(uid: string) {
-  return collection(getDb(), "users", uid, "expenses");
+const EXPENSES = "expenses";
+
+function expensesCol() {
+  return collection(getDb(), EXPENSES);
 }
 
-function expenseDoc(uid: string, expenseId: string) {
-  return doc(getDb(), "users", uid, "expenses", expenseId);
+function expenseDoc(expenseId: string) {
+  return doc(getDb(), EXPENSES, expenseId);
 }
 
 function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
@@ -33,45 +37,42 @@ function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
   ) as Partial<T>;
 }
 
+export type CreateExpenseArgs = ExpenseInput & {
+  familyId: string;
+  payerUid: string;
+  payerName?: string;
+};
+
 export async function createExpense(
-  uid: string,
-  input: ExpenseInput,
+  args: CreateExpenseArgs,
 ): Promise<Expense> {
   const data = clean({
-    ownerUid: uid,
-    petId: input.petId,
-    petName: input.petName,
-    amount: input.amount,
+    familyId: args.familyId,
+    payerUid: args.payerUid,
+    payerName: args.payerName,
+    // Mirror to ownerUid so legacy queries that group by ownerUid still
+    // attribute correctly to the payer.
+    ownerUid: args.payerUid,
+    petId: args.petId,
+    petName: args.petName,
+    amount: args.amount,
     currency: "TWD" as const,
-    vendor: input.vendor,
-    category: input.category,
-    spentAt: Timestamp.fromDate(input.spentAt),
-    notes: input.notes,
-    items: input.items?.length ? input.items : undefined,
-    source: input.source,
+    vendor: args.vendor,
+    category: args.category,
+    spentAt: Timestamp.fromDate(args.spentAt),
+    notes: args.notes,
+    items: args.items?.length ? args.items : undefined,
+    source: args.source,
     createdAt: serverTimestamp(),
   });
 
-  const docRef = await addDoc(expensesCol(uid), data);
-  return {
-    expenseId: docRef.id,
-    ownerUid: uid,
-    petId: input.petId,
-    petName: input.petName,
-    amount: input.amount,
-    currency: "TWD",
-    vendor: input.vendor,
-    category: input.category,
-    spentAt: Timestamp.fromDate(input.spentAt),
-    notes: input.notes,
-    items: input.items,
-    source: input.source,
-    createdAt: Timestamp.now(),
-  };
+  const docRef = await addDoc(expensesCol(), data);
+  const snap = await getDoc(docRef);
+  return { ...(snap.data() as Expense), expenseId: docRef.id };
 }
 
 export async function listExpenses(
-  uid: string,
+  familyId: string,
   opts?: {
     petId?: string;
     category?: ExpenseCategory;
@@ -81,7 +82,12 @@ export async function listExpenses(
 ): Promise<Expense[]> {
   const max = opts?.max ?? 200;
   const snap = await getDocs(
-    query(expensesCol(uid), orderBy("spentAt", "desc"), limit(max)),
+    query(
+      expensesCol(),
+      where("familyId", "==", familyId),
+      orderBy("spentAt", "desc"),
+      limit(max),
+    ),
   );
   let rows = snap.docs.map((d) => ({
     ...(d.data() as Expense),
@@ -95,13 +101,14 @@ export async function listExpenses(
 }
 
 export async function listExpensesInRange(
-  uid: string,
+  familyId: string,
   fromMs: number,
   toMs: number,
 ): Promise<Expense[]> {
   const snap = await getDocs(
     query(
-      expensesCol(uid),
+      expensesCol(),
+      where("familyId", "==", familyId),
       where("spentAt", ">=", Timestamp.fromMillis(fromMs)),
       where("spentAt", "<=", Timestamp.fromMillis(toMs)),
       orderBy("spentAt", "desc"),
@@ -114,7 +121,6 @@ export async function listExpensesInRange(
 }
 
 export async function updateExpense(
-  uid: string,
   expenseId: string,
   patch: Partial<ExpenseInput>,
 ): Promise<void> {
@@ -127,14 +133,43 @@ export async function updateExpense(
     spentAt: patch.spentAt ? Timestamp.fromDate(patch.spentAt) : undefined,
     notes: patch.notes,
   });
-  await updateDoc(expenseDoc(uid, expenseId), updates);
+  await updateDoc(expenseDoc(expenseId), updates);
 }
 
-export async function deleteExpense(
-  uid: string,
-  expenseId: string,
-): Promise<void> {
-  await deleteDoc(expenseDoc(uid, expenseId));
+export async function deleteExpense(expenseId: string): Promise<void> {
+  await deleteDoc(expenseDoc(expenseId));
+}
+
+/** One-shot legacy migration: users/{uid}/expenses/* → top-level. */
+export async function migrateLegacyExpensesToFamily(
+  legacyUid: string,
+  familyId: string,
+): Promise<number> {
+  const legacy = await getDocs(
+    collection(getDb(), "users", legacyUid, "expenses"),
+  );
+  if (legacy.empty) return 0;
+
+  let migrated = 0;
+  const docs = legacy.docs;
+  for (let i = 0; i < docs.length; i += 400) {
+    const slice = docs.slice(i, i + 400);
+    const batch = writeBatch(getDb());
+    for (const legacyDoc of slice) {
+      const newRef = doc(getDb(), EXPENSES, legacyDoc.id);
+      const existing = await getDoc(newRef);
+      if (existing.exists()) continue;
+      const data = legacyDoc.data();
+      batch.set(newRef, {
+        ...data,
+        familyId,
+        payerUid: data.ownerUid ?? legacyUid,
+      });
+      migrated++;
+    }
+    if (migrated > 0) await batch.commit();
+  }
+  return migrated;
 }
 
 // ── Aggregations ──
@@ -175,4 +210,26 @@ export function aggregateByMonth(expenses: Expense[]): MonthlyTotal[] {
   return Array.from(map.entries())
     .map(([month, total]) => ({ month, total }))
     .sort((a, b) => a.month.localeCompare(b.month));
+}
+
+/** Per-payer breakdown: who paid how much in this set of expenses. */
+export type PayerTotal = { uid: string; name?: string; total: number; count: number };
+
+export function aggregateByPayer(expenses: Expense[]): PayerTotal[] {
+  const map = new Map<string, PayerTotal>();
+  for (const e of expenses) {
+    const uid = e.payerUid ?? e.ownerUid;
+    if (!uid) continue;
+    const cur = map.get(uid) ?? {
+      uid,
+      name: e.payerName,
+      total: 0,
+      count: 0,
+    };
+    cur.total += e.amount;
+    cur.count += 1;
+    if (!cur.name && e.payerName) cur.name = e.payerName;
+    map.set(uid, cur);
+  }
+  return Array.from(map.values()).sort((a, b) => b.total - a.total);
 }

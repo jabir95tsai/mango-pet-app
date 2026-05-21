@@ -53,8 +53,8 @@ export default function AppHome() {
     try {
       const [petList, up, ov, friends] = await Promise.all([
         listPets(family.familyId),
-        listUpcomingReminders(user.uid),
-        listOverdueReminders(user.uid),
+        listUpcomingReminders(family.familyId),
+        listOverdueReminders(family.familyId),
         listFriends(user.uid),
       ]);
       setPets(petList);
@@ -81,14 +81,18 @@ export default function AppHome() {
   }
 
   async function handleAddReminder(input: ReminderInput) {
-    if (!user) return;
-    await createReminder(user.uid, input);
+    if (!user || !family) return;
+    await createReminder({
+      ...input,
+      familyId: family.familyId,
+      createdByUid: user.uid,
+    });
     await refresh();
   }
 
   async function handleUpdateReminder(input: ReminderInput) {
-    if (!user || !editingReminder) return;
-    await updateReminder(user.uid, editingReminder.reminderId, {
+    if (!editingReminder) return;
+    await updateReminder(editingReminder.reminderId, {
       title: input.title,
       description: input.description,
       petId: input.petId,
@@ -102,12 +106,11 @@ export default function AppHome() {
 
   async function handleCompleteReminder(reminder: Reminder) {
     if (!user) return;
-    await completeReminder(user.uid, reminder);
+    await completeReminder(reminder, user.uid);
     await refresh();
   }
 
   async function handleDeleteReminder(reminder: Reminder) {
-    if (!user) return;
     const ok = await askConfirm({
       title: tC("delete"),
       message: reminder.title,
@@ -116,7 +119,7 @@ export default function AppHome() {
       danger: true,
     });
     if (!ok) return;
-    await deleteReminder(user.uid, reminder.reminderId);
+    await deleteReminder(reminder.reminderId);
     await refresh();
   }
 

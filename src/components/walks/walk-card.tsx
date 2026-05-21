@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Footprints, Hand, Trash2 } from "lucide-react";
 import type { Timestamp } from "firebase/firestore";
 import type { Walk } from "@/lib/types";
+import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -46,6 +47,21 @@ export function WalkCard({ walk, onDelete }: Props) {
           <span>⏱️ {walk.durationMin.toFixed(0)} min</span>
           <span className="font-semibold text-amber-600">⭐ {walk.score.toFixed(1)}</span>
         </div>
+        {walk.walkerName && (
+          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-zinc-500">
+            <Avatar
+              src={walk.walkerPhotoURL}
+              name={walk.walkerName}
+              size={18}
+            />
+            <span>
+              <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                {walk.walkerName}
+              </span>{" "}
+              走的
+            </span>
+          </div>
+        )}
         {walk.notes && (
           <p className="text-xs text-zinc-500 mt-1 line-clamp-1">{walk.notes}</p>
         )}
