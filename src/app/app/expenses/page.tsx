@@ -68,12 +68,14 @@ export default function ExpensesPage() {
     if (!user || !family) return;
     setLoading(true);
     try {
-      const [petList, exList] = await Promise.all([
+      // allSettled so an index-still-building expense query doesn't
+      // also blank the pet picker.
+      const [petR, exR] = await Promise.allSettled([
         listPets(family.familyId),
         listExpenses(family.familyId),
       ]);
-      setPets(petList);
-      setExpenses(exList);
+      setPets(petR.status === "fulfilled" ? petR.value : []);
+      setExpenses(exR.status === "fulfilled" ? exR.value : []);
     } finally {
       setLoading(false);
     }

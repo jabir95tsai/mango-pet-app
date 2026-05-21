@@ -35,12 +35,12 @@ export default function WalksPage() {
     if (!user || !family) return;
     setLoading(true);
     try {
-      const [petList, walkList] = await Promise.all([
+      const [petR, walkR] = await Promise.allSettled([
         listPets(family.familyId),
         listWalks(family.familyId),
       ]);
-      setPets(petList);
-      setWalks(walkList);
+      setPets(petR.status === "fulfilled" ? petR.value : []);
+      setWalks(walkR.status === "fulfilled" ? walkR.value : []);
     } finally {
       setLoading(false);
     }

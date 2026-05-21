@@ -32,16 +32,21 @@ export default function FeedPage() {
     if (!user || !family) return;
     setLoading(true);
     try {
-      const [myPets, friends] = await Promise.all([
+      const [petR, friendsR] = await Promise.allSettled([
         listPets(family.familyId),
         listFriends(user.uid),
       ]);
-      const feed = await listFeedPosts(
-        user.uid,
-        friends.map((f) => f.uid),
-      );
-      setPosts(feed);
-      setPets(myPets);
+      const friends = friendsR.status === "fulfilled" ? friendsR.value : [];
+      setPets(petR.status === "fulfilled" ? petR.value : []);
+      try {
+        const feed = await listFeedPosts(
+          user.uid,
+          friends.map((f) => f.uid),
+        );
+        setPosts(feed);
+      } catch {
+        setPosts([]);
+      }
     } finally {
       setLoading(false);
     }
