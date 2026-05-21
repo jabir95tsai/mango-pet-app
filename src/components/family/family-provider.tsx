@@ -87,13 +87,23 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
         user.uid,
       );
 
-      // First-login migration: when we just created the default family for
-      // an existing user, move their legacy pets/walks/etc. into it. Each
-      // migration helper is idempotent and a no-op for users with no
-      // legacy data, so running it on every fresh-family creation is safe.
-      // We run them in parallel — they touch different collections and
-      // none depend on each other.
-      if (justCreated) {
+      // Migration: idempotently move legacy `users/{uid}/...` data into the
+      // family-scoped collections. We run this whenever localStorage hasn't
+      // yet recorded a successful migration for this (uid, familyId) pair,
+      // NOT just on `justCreated`. The original `justCreated`-gated version
+      // had a bug: users whose family was auto-created in Phase 1 (before
+      // Phase 2 added migration logic) had `justCreated=false` on every
+      // subsequent visit, so their legacy pets/walks/etc. never migrated
+      // and the new family-scoped queries returned empty.
+      //
+      // Each helper is idempotent (skips top-level docs that already exist),
+      // and a no-op for users with no legacy data, so re-running is safe.
+      const migrationKey = `mango.migrated.${user.uid}.${currentId}`;
+      const alreadyMigrated =
+        typeof localStorage !== "undefined" &&
+        localStorage.getItem(migrationKey) === "1";
+
+      if (!alreadyMigrated) {
         try {
           const [pets, walks, reminders, expenses, healthRecords] = await Promise.all([
             migrateLegacyPetsToFamily(user.uid, currentId).catch((e) => {
@@ -123,13 +133,20 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
             }),
           ]);
           const total = pets + walks + reminders + expenses + healthRecords;
-          if (total > 0) {
-            console.info(
-              `[FamilyProvider] migrated ${pets} pets, ${walks} walks, ` +
-                `${reminders} reminders, ${expenses} expenses, ` +
-                `${healthRecords} health records`,
-            );
+          console.info(
+            `[FamilyProvider] migration done — ` +
+              `${pets} pets, ${walks} walks, ${reminders} reminders, ` +
+              `${expenses} expenses, ${healthRecords} health records ` +
+              `(justCreated=${justCreated})`,
+          );
+          // Mark complete so we don't re-run on every page load. This is a
+          // best-effort cache — wiping localStorage just re-runs the
+          // (idempotent) migration on next visit.
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(migrationKey, "1");
           }
+          // Touch unused var to keep `justCreated` referenced for now.
+          void total;
         } catch (err) {
           // Outer catch is just defense-in-depth — each .catch above already
           // swallowed individual failures.
