@@ -59,13 +59,6 @@
       ]
     },
     {
-      "collectionGroup": "families",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "inviteCode", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "pets",
       "queryScope": "COLLECTION",
       "fields": [
