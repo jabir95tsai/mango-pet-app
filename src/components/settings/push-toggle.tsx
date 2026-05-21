@@ -133,7 +133,7 @@ export function PushToggle() {
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
             {status.kind === "enabled" ? (
               <BellRing className="size-4" />
             ) : status.kind === "denied" || status.kind === "unsupported" ? (

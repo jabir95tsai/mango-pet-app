@@ -18,7 +18,7 @@ const CATEGORY_COLOR: Record<KnowledgeCategory, string> = {
   training: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
   health: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400",
   breed: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400",
-  lifestyle: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
+  lifestyle: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
 };
 
 const CATEGORY_LABEL_ZH: Record<KnowledgeCategory, string> = {
@@ -45,10 +45,10 @@ export function ArticleCard({ article, bookmarked, onToggleBookmark }: Props) {
   const labelMap = lang === "zh-TW" ? CATEGORY_LABEL_ZH : CATEGORY_LABEL_EN;
 
   return (
-    <article className="flex gap-3 rounded-lg border border-zinc-200/80 bg-white p-3 shadow-sm shadow-zinc-200/40 transition-colors hover:border-emerald-300 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+    <article className="flex gap-3 rounded-lg border border-amber-200/80 bg-white p-3 shadow-sm shadow-amber-100/70 transition-colors hover:border-amber-400 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <Link
         href={`/app/knowledge/${article.articleId}`}
-        className="flex min-w-0 flex-1 gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+        className="flex min-w-0 flex-1 gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
       >
         {article.coverImageURL && (
           <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-surface-muted">

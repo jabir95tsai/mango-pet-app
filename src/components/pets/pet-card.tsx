@@ -32,7 +32,7 @@ export function PetCard({ pet, onEdit, onDelete }: Props) {
   return (
     <Link
       href={`/app/pets/${pet.petId}`}
-      className="flex items-center gap-4 rounded-lg border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 transition-colors hover:border-emerald-300 hover:bg-emerald-50/35 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none dark:hover:bg-zinc-900"
+      className="flex items-center gap-4 rounded-lg border border-amber-200/80 bg-white p-4 shadow-sm shadow-amber-100/70 transition-colors hover:border-amber-400 hover:bg-amber-50/60 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none dark:hover:bg-zinc-900"
     >
       <Avatar src={pet.photoURL} name={pet.name} size={64} />
 

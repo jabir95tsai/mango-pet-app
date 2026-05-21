@@ -150,7 +150,7 @@ export function FamilySection() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
             <Users className="size-4" />
           </span>
           <div>
@@ -182,7 +182,7 @@ export function FamilySection() {
               className={cn(
                 "rounded-full px-3 h-7 text-xs font-medium transition-colors",
                 f.familyId === family?.familyId
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-amber-500 text-white"
                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400",
               )}
             >
@@ -249,7 +249,7 @@ export function FamilySection() {
                       <p className="text-sm font-medium truncate">
                         {m.displayName}
                         {m.uid === family.ownerUid && (
-                          <span className="ml-1.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                          <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
                             擁有者
                           </span>
                         )}

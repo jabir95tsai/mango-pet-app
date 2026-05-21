@@ -2,14 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, UserMinus, UserX, Users } from "lucide-react";
+import { Check, QrCode, UserMinus, UserX, Users } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RouteHeader } from "@/components/nav/route-header";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/ui/avatar";
 import { Tabs } from "@/components/ui/tabs";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { FriendSearch } from "@/components/friends/friend-search";
+import { MyQrDialog } from "@/components/friends/my-qr-dialog";
 import {
   acceptFriendRequest,
   listFriendRequests,
@@ -33,6 +35,7 @@ export default function FriendsPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -107,7 +110,22 @@ export default function FriendsPage() {
 
   return (
     <>
-      <RouteHeader title={t("friends")} subtitle="加好友、看彼此的寵物動態" />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <RouteHeader
+          title={t("friends")}
+          subtitle="加好友、看彼此的寵物動態"
+          className="mb-0"
+        />
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setQrOpen(true)}
+          disabled={!user}
+        >
+          <QrCode className="size-4" />
+          我的 QR
+        </Button>
+      </div>
 
       <div className="mb-4">
         <Tabs<Tab>
@@ -198,6 +216,8 @@ export default function FriendsPage() {
         ))}
 
       {tab === "search" && <FriendSearch excludeUids={excludeUids} onSent={refresh} />}
+
+      <MyQrDialog open={qrOpen} onClose={() => setQrOpen(false)} />
     </>
   );
 }

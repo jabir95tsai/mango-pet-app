@@ -126,9 +126,16 @@ export async function deletePet(petId: string): Promise<void> {
   if (pet?.photoURL) {
     const guessedExt = pet.photoURL.split("?")[0].split(".").pop() ?? "jpg";
     // Storage was uploaded by whoever created the pet; only that user has
-    // write to that path. If another family member deletes, Storage may
-    // leave the file orphaned (low cost; cleaner via batched cron later).
-    await deleteImage(petAvatarPath(pet.ownerUid, petId, guessedExt));
+    // write to that path. If another family member deletes, Storage will
+    // reject with permission-denied and would otherwise kill the whole
+    // delete operation — so we treat storage cleanup as best-effort and
+    // always proceed to delete the Firestore doc. Orphan images cost
+    // virtually nothing and can be swept by a future cron.
+    try {
+      await deleteImage(petAvatarPath(pet.ownerUid, petId, guessedExt));
+    } catch (err) {
+      console.warn("[deletePet] storage cleanup failed (continuing):", err);
+    }
   }
   await deleteDoc(petDoc(petId));
 }

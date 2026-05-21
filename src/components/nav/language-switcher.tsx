@@ -23,10 +23,10 @@ export function LanguageSwitcher() {
           disabled={pending}
           onClick={() => startTransition(() => setLocale(opt.value))}
           className={cn(
-            "rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
+            "rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
             current === opt.value
               ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-              : "text-zinc-600 hover:text-emerald-700 dark:text-zinc-400 dark:hover:text-emerald-300",
+              : "text-zinc-600 hover:text-amber-700 dark:text-zinc-400 dark:hover:text-amber-300",
           )}
         >
           {opt.label}

@@ -46,10 +46,10 @@ export default async function Home() {
       </section>
 
       <footer className="flex justify-center gap-4 pb-2 text-xs text-zinc-400">
-        <Link href="/privacy" className="hover:text-emerald-700">
+        <Link href="/privacy" className="hover:text-amber-700">
           隱私權政策
         </Link>
-        <Link href="/terms" className="hover:text-emerald-700">
+        <Link href="/terms" className="hover:text-amber-700">
           服務條款
         </Link>
       </footer>

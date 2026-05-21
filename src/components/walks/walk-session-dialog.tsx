@@ -144,7 +144,7 @@ export function WalkSessionDialog({
             {state.isPaused ? (
               <Pause className="size-10 text-zinc-500" />
             ) : (
-              <Footprints className="size-10 animate-pulse text-emerald-600 dark:text-emerald-300" />
+              <Footprints className="size-10 animate-pulse text-amber-600 dark:text-amber-300" />
             )}
             <p className="text-xs text-zinc-500">
               {state.isPaused ? "已暫停（背景）" : "追蹤中"}
@@ -179,7 +179,7 @@ export function WalkSessionDialog({
 
       {phase === "done" && state && (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-3 gap-2 rounded-lg bg-surface-muted p-4 text-center dark:bg-emerald-500/10">
+          <div className="grid grid-cols-3 gap-2 rounded-lg bg-surface-muted p-4 text-center dark:bg-amber-500/10">
             <Stat label="距離" value={`${state.totalDistanceKm.toFixed(2)}`} suffix="km" small />
             <Stat label="時長" value={`${state.durationMin.toFixed(1)}`} suffix="min" small />
             <Stat label="分數" value={liveScore.toFixed(1)} accent small />
@@ -234,7 +234,7 @@ function Stat({
       </span>
       <span
         className={`font-bold tabular-nums ${small ? "text-base" : "text-2xl"} ${
-          accent ? "text-emerald-700 dark:text-emerald-300" : ""
+          accent ? "text-amber-700 dark:text-amber-300" : ""
         }`}
       >
         {value}

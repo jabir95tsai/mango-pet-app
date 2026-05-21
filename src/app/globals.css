@@ -2,11 +2,11 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  --background: #f6f8f5;
+  --background: #fff8e1;
   --foreground: #18181b;
   --surface: #ffffff;
-  --surface-muted: #eef6f1;
-  --focus-ring: #0f766e;
+  --surface-muted: #fff1b8;
+  --focus-ring: #d97706;
 }
 
 @theme inline {
@@ -23,8 +23,8 @@
     --background: #09090b;
     --foreground: #f4f4f5;
     --surface: #18181b;
-    --surface-muted: #10201b;
-    --focus-ring: #34d399;
+    --surface-muted: #2c2112;
+    --focus-ring: #fbbf24;
   }
 }
 

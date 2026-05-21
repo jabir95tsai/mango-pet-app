@@ -64,7 +64,7 @@ export function ExpenseCard({ expense, onEdit, onDelete }: Props) {
             {expense.vendor || tE(`categories.${expense.category}`)}
           </p>
           {expense.source === "ai_scan" && (
-            <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
               <Sparkles className="size-2.5" /> AI
             </span>
           )}

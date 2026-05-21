@@ -120,14 +120,15 @@ export default function WalksPage() {
         <Button
           onClick={() => setSessionOpen(true)}
           disabled={pets.length === 0}
-          size="md"
-          className="flex-1"
+          size="lg"
+          className="flex-1 text-base font-semibold"
         >
-          <Play className="size-4" />
+          <Play className="size-5" />
           開始遛狗
         </Button>
         <Button
           variant="secondary"
+          size="lg"
           onClick={() => setManualOpen(true)}
           disabled={pets.length === 0}
           className="sm:w-auto"

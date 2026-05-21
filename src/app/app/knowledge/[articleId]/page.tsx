@@ -137,7 +137,7 @@ export default function ArticlePage() {
         </p>
       </header>
 
-      <div className="prose prose-sm prose-zinc max-w-none prose-headings:font-semibold prose-a:text-emerald-700 prose-img:rounded-lg dark:prose-invert dark:prose-a:text-emerald-300">
+      <div className="prose prose-sm prose-zinc max-w-none prose-headings:font-semibold prose-a:text-amber-700 prose-img:rounded-lg dark:prose-invert dark:prose-a:text-amber-300">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
     </article>

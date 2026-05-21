@@ -145,7 +145,18 @@ export default function PetDetailPage() {
 
   async function handleCompleteReminder(reminder: Reminder) {
     if (!user) return;
-    await completeReminder(reminder, user.uid);
+    try {
+      await completeReminder(reminder, user.uid);
+    } catch (err) {
+      console.error("[completeReminder] failed:", err);
+      await askConfirm({
+        title: "標記完成失敗",
+        message: err instanceof Error ? err.message : "未知錯誤",
+        confirmText: "知道了",
+        cancelText: tC("cancel"),
+      });
+      return;
+    }
     await refresh();
   }
 
@@ -255,7 +266,7 @@ export default function PetDetailPage() {
                     onClick={() => setTypeFilter(t)}
                     aria-pressed={active}
                     className={cn(
-                      "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
+                      "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
                       active
                         ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
                         : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-800",

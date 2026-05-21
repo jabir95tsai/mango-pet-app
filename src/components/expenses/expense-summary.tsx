@@ -74,9 +74,10 @@ export function ExpenseSummary({ total, byCategory, byMonth }: Props) {
                   data={byCategory}
                   dataKey="total"
                   nameKey="category"
-                  innerRadius={28}
-                  outerRadius={50}
-                  paddingAngle={2}
+                  innerRadius={32}
+                  outerRadius={52}
+                  paddingAngle={0}
+                  stroke="none"
                 >
                   {byCategory.map((c) => (
                     <Cell key={c.category} fill={CATEGORY_COLORS[c.category]} />

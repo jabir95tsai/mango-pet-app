@@ -28,9 +28,9 @@ export function Tabs<T extends string>({ value, onChange, options, className }: 
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "h-8 rounded-md px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
+              "h-8 rounded-md px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
               active
-                ? "bg-white text-emerald-700 shadow-sm dark:bg-zinc-950 dark:text-emerald-300"
+                ? "bg-white text-amber-700 shadow-sm dark:bg-zinc-950 dark:text-amber-300"
                 : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200",
             )}
           >

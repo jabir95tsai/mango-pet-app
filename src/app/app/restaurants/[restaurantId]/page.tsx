@@ -153,7 +153,7 @@ export default function RestaurantDetailPage() {
               {restaurant.address}
             </p>
             <div className="flex flex-wrap gap-2 mt-3 text-xs">
-              <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <span className="rounded-md bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
                 {LEVEL_LABEL[restaurant.petFriendlyLevel]}
               </span>
               {restaurant.hasWaterBowl && (
@@ -202,7 +202,7 @@ export default function RestaurantDetailPage() {
             href={mapsLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-xs font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-xs font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
             <ExternalLink className="size-3.5" />
             開 Google Maps
@@ -210,7 +210,7 @@ export default function RestaurantDetailPage() {
           {restaurant.phone && (
             <a
               href={`tel:${restaurant.phone}`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-100 px-3 text-xs font-medium hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-zinc-800"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-100 px-3 text-xs font-medium hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-zinc-800"
             >
               <Phone className="size-3.5" />
               {restaurant.phone}
@@ -221,7 +221,7 @@ export default function RestaurantDetailPage() {
               href={restaurant.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-100 px-3 text-xs font-medium hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-zinc-800"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-100 px-3 text-xs font-medium hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-zinc-800"
             >
               <ExternalLink className="size-3.5" />
               網站

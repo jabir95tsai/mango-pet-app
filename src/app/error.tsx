@@ -31,13 +31,13 @@ export default function GlobalError({ error, reset }: Props) {
         <button
           type="button"
           onClick={reset}
-          className="h-10 rounded-lg bg-amber-500 px-5 text-sm font-medium text-white hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="h-10 rounded-lg bg-amber-500 px-5 text-sm font-medium text-white hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         >
           重試
         </button>
         <Link
           href="/"
-          className="flex h-10 items-center rounded-lg border border-zinc-200 px-5 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="flex h-10 items-center rounded-lg border border-zinc-200 px-5 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-zinc-700 dark:hover:bg-zinc-800"
         >
           回首頁
         </Link>

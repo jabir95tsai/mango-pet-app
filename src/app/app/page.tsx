@@ -113,7 +113,20 @@ export default function AppHome() {
 
   async function handleCompleteReminder(reminder: Reminder) {
     if (!user) return;
-    await completeReminder(reminder, user.uid);
+    try {
+      await completeReminder(reminder, user.uid);
+    } catch (err) {
+      console.error("[completeReminder] failed:", err);
+      // Surface to user so silent permission denials don't look like
+      // "button doesn't work".
+      await askConfirm({
+        title: "標記完成失敗",
+        message: err instanceof Error ? err.message : "未知錯誤",
+        confirmText: "知道了",
+        cancelText: tC("cancel"),
+      });
+      return;
+    }
     await refresh();
   }
 
@@ -159,7 +172,7 @@ export default function AppHome() {
           </h2>
           <Link
             href="/app/pets"
-            className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            className="text-xs font-medium text-amber-700 hover:underline dark:text-amber-300"
           >
             {tC("edit")} →
           </Link>
@@ -184,13 +197,13 @@ export default function AppHome() {
               <Link
                 key={p.petId}
                 href={`/app/pets/${p.petId}`}
-                className="group flex shrink-0 flex-col items-center gap-1.5 rounded-lg p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="group flex shrink-0 flex-col items-center gap-1.5 rounded-lg p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
               >
                 <Avatar
                   src={p.photoURL}
                   name={p.name}
                   size={64}
-                  className="ring-2 ring-transparent group-hover:ring-emerald-400"
+                  className="ring-2 ring-transparent group-hover:ring-amber-400"
                 />
                 <span className="text-xs font-medium max-w-[64px] truncate">
                   {p.name}
@@ -235,7 +248,7 @@ export default function AppHome() {
             )}
             {upcoming.length > 0 && (
               <>
-                <p className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
                   {tR("upcoming")}
                 </p>
                 {upcoming.map((r) => (
@@ -266,7 +279,7 @@ export default function AppHome() {
             </Button>
             <Link
               href="/app/feed"
-              className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+              className="text-xs font-medium text-amber-700 hover:underline dark:text-amber-300"
             >
               更多 →
             </Link>

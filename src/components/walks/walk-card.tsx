@@ -30,7 +30,7 @@ export function WalkCard({ walk, onDelete }: Props) {
           "shrink-0 size-10 rounded-full grid place-items-center",
           walk.isManual
             ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+            : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
         )}
       >
         {walk.isManual ? <Hand className="size-5" /> : <Footprints className="size-5" />}

@@ -36,7 +36,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => signOutCurrent()}
-              className="h-10 self-start rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="h-10 self-start rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {tAuth("signOut")}
             </button>
@@ -53,7 +53,7 @@ export default function SettingsPage() {
 
         <section className="flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
           <div className="flex items-center gap-3">
-            <Globe className="size-5 text-emerald-700 dark:text-emerald-300" />
+            <Globe className="size-5 text-amber-700 dark:text-amber-300" />
             <p className="font-medium">Language / 語言</p>
           </div>
           <LanguageSwitcher />

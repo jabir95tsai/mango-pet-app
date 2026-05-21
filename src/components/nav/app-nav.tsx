@@ -106,9 +106,9 @@ export function AppNav() {
                   href={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
                     active
-                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20"
+                      ? "bg-amber-100/80 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/20"
                       : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100",
                   )}
                 >
@@ -136,9 +136,9 @@ export function AppNav() {
                   href={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex h-[3.75rem] min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
+                    "flex h-[3.75rem] min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
                     active
-                      ? "text-emerald-700 dark:text-emerald-300"
+                      ? "text-amber-700 dark:text-amber-300"
                       : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
                   )}
                 >
@@ -155,9 +155,9 @@ export function AppNav() {
               aria-label={t("more")}
               aria-expanded={drawerOpen}
               className={cn(
-                "flex h-[3.75rem] w-full min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
+                "flex h-[3.75rem] w-full min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
                 anyOverflowActive
-                  ? "text-emerald-700 dark:text-emerald-300"
+                  ? "text-amber-700 dark:text-amber-300"
                   : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
               )}
             >
@@ -204,9 +204,9 @@ export function AppNav() {
                       href={href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex min-h-20 flex-col items-center justify-center gap-1 rounded-lg px-2 py-3 text-center text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
+                        "flex min-h-20 flex-col items-center justify-center gap-1 rounded-lg px-2 py-3 text-center text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
                         active
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                          ? "bg-amber-100/80 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
                           : "bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800",
                       )}
                     >

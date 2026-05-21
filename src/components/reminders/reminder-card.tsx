@@ -46,7 +46,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
           "shrink-0 size-10 rounded-full grid place-items-center",
           isPast
             ? "bg-red-100 text-red-600 dark:bg-red-950"
-            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+            : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
         )}
       >
         <Bell className="size-5" />
@@ -59,7 +59,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
             <span className="text-xs text-zinc-500">🐾 {pet.name}</span>
           )}
           {reminder.repeat !== "none" && (
-            <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300">
+            <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
               <Repeat className="size-3" />
               {tR(`repeat.${reminder.repeat}`)}
             </span>
