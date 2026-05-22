@@ -66,7 +66,11 @@ type Hint = {
   newKind: AuthProviderKind;
 };
 
-export function SignInButtons() {
+type Props = {
+  nextPath?: string;
+};
+
+export function SignInButtons({ nextPath = "/app" }: Props) {
   const t = useTranslations("Auth");
   const router = useRouter();
   const { user } = useAuth();
@@ -75,8 +79,8 @@ export function SignInButtons() {
   const [linkHint, setLinkHint] = useState<Hint | null>(null);
 
   useEffect(() => {
-    if (user) router.replace("/app");
-  }, [user, router]);
+    if (user) router.replace(nextPath);
+  }, [user, router, nextPath]);
 
   async function handleSignIn(kind: AuthProviderKind) {
     setPending(kind);

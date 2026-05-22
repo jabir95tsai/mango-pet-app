@@ -11,7 +11,10 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const t = useTranslations("Common");
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/");
+    if (!loading && !user) {
+      const nextPath = `${window.location.pathname}${window.location.search}`;
+      router.replace(`/?next=${encodeURIComponent(nextPath)}`);
+    }
   }, [loading, user, router]);
 
   if (loading) {

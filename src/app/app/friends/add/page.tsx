@@ -46,9 +46,8 @@ export default function AddFriendPage() {
     })();
   }, [targetUid]);
 
-  // If the user lands here logged out, we just show the profile; they'll
-  // need to sign in then re-tap the invite. (Auth flow doesn't preserve
-  // query params, so retrying after login is the simplest UX.)
+  // RequireAuth sends logged-out users through the sign-in page with this
+  // invite path preserved, so the request can continue after they return.
 
   async function handleAdd() {
     if (!user || !target) return;

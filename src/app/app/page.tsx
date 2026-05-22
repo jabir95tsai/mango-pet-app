@@ -49,7 +49,6 @@ export default function AppHome() {
 
   const refresh = useCallback(async () => {
     if (!user || !family) return;
-    setLoading(true);
     try {
       // allSettled so one failure (e.g. an index still building) doesn't
       // blank the whole page. Each section degrades independently.
@@ -78,6 +77,16 @@ export default function AppHome() {
     }
   }, [user, family]);
 
+  const refreshReminders = useCallback(async () => {
+    if (!family) return;
+    const [upR, ovR] = await Promise.allSettled([
+      listUpcomingReminders(family.familyId),
+      listOverdueReminders(family.familyId),
+    ]);
+    setUpcoming(upR.status === "fulfilled" ? upR.value : []);
+    setOverdue(ovR.status === "fulfilled" ? ovR.value : []);
+  }, [family]);
+
   useEffect(() => {
     if (familyLoading) return;
     refresh();
@@ -94,21 +103,28 @@ export default function AppHome() {
       familyId: family.familyId,
       createdByUid: user.uid,
     });
-    await refresh();
+    await refreshReminders();
   }
 
   async function handleUpdateReminder(input: ReminderInput) {
     if (!editingReminder) return;
-    await updateReminder(editingReminder.reminderId, {
-      title: input.title,
-      description: input.description,
-      petId: input.petId,
-      triggerAt: input.triggerAt,
-      repeat: input.repeat,
-      notifyBeforeMinutes: input.notifyBeforeMinutes,
-    });
+    const scheduleChanged =
+      editingReminder.triggerAt.toMillis() !== input.triggerAt.getTime() ||
+      editingReminder.notifyBeforeMinutes !== input.notifyBeforeMinutes;
+    await updateReminder(
+      editingReminder.reminderId,
+      {
+        title: input.title,
+        description: input.description,
+        petId: input.petId,
+        triggerAt: input.triggerAt,
+        repeat: input.repeat,
+        notifyBeforeMinutes: input.notifyBeforeMinutes,
+      },
+      { resetNotification: scheduleChanged },
+    );
     setEditingReminder(null);
-    await refresh();
+    await refreshReminders();
   }
 
   async function handleCompleteReminder(reminder: Reminder) {
@@ -127,7 +143,7 @@ export default function AppHome() {
       });
       return;
     }
-    await refresh();
+    await refreshReminders();
   }
 
   async function handleDeleteReminder(reminder: Reminder) {
@@ -140,7 +156,7 @@ export default function AppHome() {
     });
     if (!ok) return;
     await deleteReminder(reminder.reminderId);
-    await refresh();
+    await refreshReminders();
   }
 
   async function handleDeletePost(post: Post) {

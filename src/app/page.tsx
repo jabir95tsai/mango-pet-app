@@ -4,9 +4,24 @@ import { getTranslations } from "next-intl/server";
 import { SignInButtons } from "@/components/auth/sign-in-buttons";
 import { LanguageSwitcher } from "@/components/nav/language-switcher";
 
-export default async function Home() {
+type Props = {
+  searchParams: Promise<{ next?: string | string[] }>;
+};
+
+function getNextPath(next: string | string[] | undefined): string {
+  const value = Array.isArray(next) ? next[0] : next;
+
+  if (value === "/app" || value?.startsWith("/app/")) {
+    return value;
+  }
+
+  return "/app";
+}
+
+export default async function Home({ searchParams }: Props) {
   const tApp = await getTranslations("App");
   const tAuth = await getTranslations("Auth");
+  const nextPath = getNextPath((await searchParams).next);
 
   return (
     <main className="flex min-h-dvh flex-1 flex-col px-4 py-5 sm:px-6">
@@ -41,7 +56,7 @@ export default async function Home() {
               {tAuth("subtitle")}
             </p>
           </div>
-          <SignInButtons />
+          <SignInButtons nextPath={nextPath} />
         </div>
       </section>
 

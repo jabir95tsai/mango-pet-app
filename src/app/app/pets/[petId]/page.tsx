@@ -74,19 +74,30 @@ export default function PetDetailPage() {
 
   const refresh = useCallback(async () => {
     if (!family) return;
-    setLoading(true);
-    // allSettled so one slow query doesn't blank the whole page.
-    const [petR, recsR, wR, remR] = await Promise.allSettled([
-      getPet(petId),
-      listRecords(petId),
-      listWeightSeries(petId),
-      listReminders(family.familyId, { petId }),
-    ]);
-    setPet(petR.status === "fulfilled" ? petR.value : null);
-    setRecords(recsR.status === "fulfilled" ? recsR.value : []);
-    setWeights(wR.status === "fulfilled" ? wR.value : []);
-    setReminders(remR.status === "fulfilled" ? remR.value : []);
-    setLoading(false);
+    try {
+      // allSettled so one slow query doesn't blank the whole page.
+      const [petR, recsR, wR, remR] = await Promise.allSettled([
+        getPet(petId),
+        listRecords(petId),
+        listWeightSeries(petId),
+        listReminders(family.familyId, { petId }),
+      ]);
+      setPet(petR.status === "fulfilled" ? petR.value : null);
+      setRecords(recsR.status === "fulfilled" ? recsR.value : []);
+      setWeights(wR.status === "fulfilled" ? wR.value : []);
+      setReminders(remR.status === "fulfilled" ? remR.value : []);
+    } finally {
+      setLoading(false);
+    }
+  }, [family, petId]);
+
+  const refreshReminders = useCallback(async () => {
+    if (!family) return;
+    try {
+      setReminders(await listReminders(family.familyId, { petId }));
+    } catch {
+      setReminders([]);
+    }
   }, [family, petId]);
 
   useEffect(() => {
@@ -126,21 +137,28 @@ export default function PetDetailPage() {
       familyId: family.familyId,
       createdByUid: user.uid,
     });
-    await refresh();
+    await refreshReminders();
   }
 
   async function handleUpdateReminder(input: ReminderInput) {
     if (!editingReminder) return;
-    await updateReminder(editingReminder.reminderId, {
-      title: input.title,
-      description: input.description,
-      petId: input.petId,
-      triggerAt: input.triggerAt,
-      repeat: input.repeat,
-      notifyBeforeMinutes: input.notifyBeforeMinutes,
-    });
+    const scheduleChanged =
+      editingReminder.triggerAt.toMillis() !== input.triggerAt.getTime() ||
+      editingReminder.notifyBeforeMinutes !== input.notifyBeforeMinutes;
+    await updateReminder(
+      editingReminder.reminderId,
+      {
+        title: input.title,
+        description: input.description,
+        petId: input.petId,
+        triggerAt: input.triggerAt,
+        repeat: input.repeat,
+        notifyBeforeMinutes: input.notifyBeforeMinutes,
+      },
+      { resetNotification: scheduleChanged },
+    );
     setEditingReminder(null);
-    await refresh();
+    await refreshReminders();
   }
 
   async function handleCompleteReminder(reminder: Reminder) {
@@ -157,7 +175,7 @@ export default function PetDetailPage() {
       });
       return;
     }
-    await refresh();
+    await refreshReminders();
   }
 
   async function handleDeleteReminder(reminder: Reminder) {
@@ -170,7 +188,7 @@ export default function PetDetailPage() {
     });
     if (!ok) return;
     await deleteReminder(reminder.reminderId);
-    await refresh();
+    await refreshReminders();
   }
 
   if (loading) {

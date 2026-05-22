@@ -25,7 +25,10 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
-const LOOK_AHEAD_MS = 24 * 60 * 60 * 1000;
+// Keep this aligned with the largest "notify before" option in the reminder form.
+// The function queries by trigger time, so a one-week advance notification must
+// include reminders whose trigger is still a week away.
+const LOOK_AHEAD_MS = 7 * 24 * 60 * 60 * 1000;
 const FUNCTION_REGION = "asia-east1";
 
 // ─────────────────────────────────────────────────────────────────────

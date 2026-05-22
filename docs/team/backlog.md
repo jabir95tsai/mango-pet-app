@@ -39,6 +39,7 @@ P3 = 也許永遠不做的「想法」。
   migration 忠實搬了過來
 - **建議交付給**：Bug Hunter（手動刪一隻即可）或 Backend（寫去重 migration）
 - **優先級提示**：P2
+- **狀態**：✅ 已升級 → `docs/features/mango-dedupe-migration.md`（PM 2026-05-22）。保留條目當教學範例。
 
 ---
 
@@ -46,17 +47,25 @@ P3 = 也許永遠不做的「想法」。
 
 （PM session 從 Inbox 搬過來）
 
+_目前沒有條目。下一個 PM session 過 Inbox 時新增。_
+
 ---
 
 ## 已分類 — UI/UX 接
+
+_目前沒有條目。下一個 PM session 過 Inbox 時新增。_
 
 ---
 
 ## 已分類 — Feature Builder 接
 
+_目前沒有條目。已規格化項目見 `docs/roadmap.md` 的「下一個」與 `docs/features/*.md`。_
+
 ---
 
 ## 已分類 — Backend 接
+
+_目前沒有條目。已規格化項目見 `docs/roadmap.md` 的「下一個」與 `docs/features/mango-dedupe-migration.md`。_
 
 ---
 

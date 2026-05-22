@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -122,6 +123,7 @@ export async function createReminder(
 export async function updateReminder(
   reminderId: string,
   patch: Partial<ReminderInput>,
+  opts?: { resetNotification?: boolean },
 ): Promise<void> {
   const updates = clean({
     petId: patch.petId,
@@ -131,7 +133,16 @@ export async function updateReminder(
     notifyBeforeMinutes: patch.notifyBeforeMinutes,
     triggerAt: patch.triggerAt ? Timestamp.fromDate(patch.triggerAt) : undefined,
   });
-  await updateDoc(reminderDoc(reminderId), updates);
+  await updateDoc(
+    reminderDoc(reminderId),
+    opts?.resetNotification
+      ? {
+          ...updates,
+          notified: false,
+          notifiedAt: deleteField(),
+        }
+      : updates,
+  );
 }
 
 function advance(triggerAt: Date, repeat: Reminder["repeat"]): Date | null {

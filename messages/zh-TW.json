@@ -156,6 +156,14 @@
     "overdue": "已過期",
     "noReminders": "尚無提醒",
     "markDone": "完成",
+    "placeholders": {
+      "title": "疫苗追加 / 餵藥..."
+    },
+    "errors": {
+      "titleRequired": "請輸入提醒標題",
+      "invalidTime": "請選擇有效的提醒時間",
+      "saveFailed": "儲存提醒失敗"
+    },
     "fields": {
       "title": "標題",
       "description": "描述",

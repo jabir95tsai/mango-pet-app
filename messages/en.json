@@ -156,6 +156,14 @@
     "overdue": "Overdue",
     "noReminders": "No reminders",
     "markDone": "Done",
+    "placeholders": {
+      "title": "Vaccination booster / medication..."
+    },
+    "errors": {
+      "titleRequired": "Enter a reminder title",
+      "invalidTime": "Choose a valid reminder time",
+      "saveFailed": "Failed to save reminder"
+    },
     "fields": {
       "title": "Title",
       "description": "Description",

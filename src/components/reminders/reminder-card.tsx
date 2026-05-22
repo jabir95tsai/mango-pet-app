@@ -1,6 +1,6 @@
 "use client";
 
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isPast } from "date-fns";
 import { zhTW, enUS } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
 import { Bell, Check, Trash2, Repeat, Pencil } from "lucide-react";
@@ -23,8 +23,8 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
 
   const ts = reminder.triggerAt as Timestamp;
-  const triggerDate = ts ? new Date(ts.toMillis()) : new Date();
-  const isPast = triggerDate.getTime() < Date.now();
+  const triggerDate = new Date(ts.toMillis());
+  const isOverdue = isPast(triggerDate);
 
   const rel = formatDistanceToNow(triggerDate, {
     addSuffix: true,
@@ -36,7 +36,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
     <article
       className={cn(
         "flex gap-3 rounded-lg border bg-white p-4 shadow-sm shadow-zinc-200/40 dark:bg-zinc-950 dark:shadow-none",
-        isPast
+        isOverdue
           ? "border-red-200 dark:border-red-900/40"
           : "border-zinc-200/80 dark:border-zinc-800",
       )}
@@ -44,7 +44,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
       <div
         className={cn(
           "shrink-0 size-10 rounded-full grid place-items-center",
-          isPast
+          isOverdue
             ? "bg-red-100 text-red-600 dark:bg-red-950"
             : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
         )}
@@ -65,7 +65,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
             </span>
           )}
         </div>
-        <p className={cn("text-xs mt-0.5", isPast ? "text-red-600" : "text-zinc-500")}>
+        <p className={cn("text-xs mt-0.5", isOverdue ? "text-red-600" : "text-zinc-500")}>
           {rel} · {abs}
         </p>
         {reminder.description && (
@@ -80,6 +80,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
           type="button"
           onClick={onComplete}
           aria-label={tR("markDone")}
+          title={tR("markDone")}
           className="rounded-lg bg-emerald-100 p-2 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-400"
         >
           <Check className="size-4" />
@@ -89,6 +90,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
             type="button"
             onClick={onEdit}
             aria-label={tC("edit")}
+            title={tC("edit")}
             className="rounded-lg p-2 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800"
           >
             <Pencil className="size-4" />
@@ -98,6 +100,7 @@ export function ReminderCard({ reminder, pet, onComplete, onDelete, onEdit }: Pr
           type="button"
           onClick={onDelete}
           aria-label={tC("delete")}
+          title={tC("delete")}
           className="rounded-lg p-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
         >
           <Trash2 className="size-4" />

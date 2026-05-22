@@ -22,7 +22,11 @@ function buildInviteUrl(uid: string): string {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL ??
     (typeof window !== "undefined" ? window.location.origin : "");
-  return `${base}/app/friends/add?uid=${encodeURIComponent(uid)}`;
+  const params = new URLSearchParams({
+    uid,
+    openExternalBrowser: "1",
+  });
+  return `${base}/app/friends/add?${params.toString()}`;
 }
 
 export function MyQrDialog({ open, onClose }: Props) {
@@ -41,9 +45,9 @@ export function MyQrDialog({ open, onClose }: Props) {
       margin: 2,
       width: 320,
       color: {
-        // Match brand emerald + soft white so the QR feels on-brand
+        // Match brand amber + soft white so the QR feels on-brand
         // rather than stock-black.
-        dark: "#0f766e",
+        dark: "#b45309",
         light: "#ffffff",
       },
     }).then(setDataUrl).catch(() => setDataUrl(null));
@@ -77,7 +81,7 @@ export function MyQrDialog({ open, onClose }: Props) {
                 className="size-full"
               />
               {/* Centre logo overlay — survives the H-level error correction. */}
-              <div className="absolute grid place-items-center rounded-full bg-white p-1 shadow ring-2 ring-emerald-500">
+              <div className="absolute grid place-items-center rounded-full bg-white p-1 shadow ring-2 ring-amber-500">
                 {user ? (
                   <Avatar
                     src={user.photoURL}
@@ -85,7 +89,7 @@ export function MyQrDialog({ open, onClose }: Props) {
                     size={48}
                   />
                 ) : (
-                  <QrCode className="size-12 text-emerald-600" />
+                  <QrCode className="size-12 text-amber-600" />
                 )}
               </div>
             </>
