@@ -9,7 +9,7 @@
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
 - **家庭功能 epic — 一個一個收尾**（使用者偏好：不並行，做完一條才開下一條）
-  - 👉 **下個動工**：[家庭 onboarding 重設計 — Phase B1（Schema + Rules）](../features/family-onboarding-redesign.md) — Backend session
+  - 👉 **進行中**：[家庭 onboarding 重設計 — 全 4 phases](../features/family-onboarding-redesign.md) — Feature Builder unsupervised run（使用者 2026-05-23 睡前 launch）
 
 ## 家庭功能 epic — 收尾順序
 
@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | 1 | [Reminder 完成歸屬顯示](../features/reminder-done-attribution.md) | S | Feature Builder | ✅ **SHIPPED** @ `ec8c6fd`(spec-gap ACCEPTED by PM)|
 | 1b | [Repeat reminder 歸屬顯示](../features/repeat-reminder-attribution.md) | S | Feature Builder | ✅ 已規格化（使用者排序：#3 #4 ship 後重評）|
-| **2** | **[家庭 onboarding 重設計（解 B）](../features/family-onboarding-redesign.md)** | L（4 phases） | Backend (B1) → Feature Builder (B2) → 合作 (B3, B4) | ✅ **READY-FOR-DEV — 下個動工 Phase B1**|
+| **2** | **[家庭 onboarding 重設計（解 B）](../features/family-onboarding-redesign.md)** | L（4 phases） | Feature Builder（整 epic 一條龍）| 🟢 **READY-FOR-DEV — unsupervised run 模式，使用者睡前 launch** |
 | 3 | [家庭 leaderboard 切換](../features/family-leaderboard.md) | M | Feature Builder | ✅ 已規格化（#2 ship 後需補 personal mode edge case）|
 | 4 | [寵物去重 migration](../features/mango-dedupe-migration.md) | M | Backend | ✅ 已規格化（merge logic 跟 #2 Phase B4 可共用，建議先做 #4 抽共用函式）|
 | 5 | 開銷 payer 分析卡 | S | UI/UX 或 Feature Builder | 📝 未規格化（aggregateByPayer helper 已 ready）|

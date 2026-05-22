@@ -4,7 +4,8 @@
 建立日期：2026-05-23
 最後更新：2026-05-23
 規格作者：PM session @ 78539cc
-角色：Feature Builder + Backend 深度合作（schema、rules、callable 都會動）
+角色：Feature Builder（整 epic 一條龍跑 4 phases — feature-builder.md 角色定義允許跨 stack 動 type/lib/page/component/rules/indexes/functions）
+執行模式：**Unsupervised run** by 使用者要求（2026-05-23 睡前 launch；guardrails 見 launch prompt）
 
 ---
 
