@@ -154,8 +154,13 @@
     "add": "新增提醒",
     "upcoming": "即將到期",
     "overdue": "已過期",
+    "todayDone": "今日已完成",
     "noReminders": "尚無提醒",
     "markDone": "完成",
+    "doneLabel": "已完成",
+    "doneTimeLabel": "已完成 · {time}",
+    "doneByLabel": "已完成 — by {name} · {time}",
+    "formerMember": "（已離開的成員）",
     "placeholders": {
       "title": "疫苗追加 / 餵藥..."
     },

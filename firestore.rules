@@ -152,8 +152,17 @@ service cloud.firestore {
         && isFamilyMember(request.resource.data.familyId)
         && request.resource.data.createdByUid == request.auth.uid;
       // Any member can mark done / edit / delete reminders — caring for
-      // pets is a shared responsibility.
-      allow update, delete: if isFamilyMember(resource.data.familyId);
+      // pets is a shared responsibility. But if this update touches the
+      // `doneByUid` attribution field, it must either be cleared (uncomplete)
+      // or set to the actor's own uid — you can't impersonate another
+      // member's "done" credit.
+      allow update: if isFamilyMember(resource.data.familyId)
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(["doneByUid"])
+          || !("doneByUid" in request.resource.data)
+          || request.resource.data.doneByUid == request.auth.uid
+        );
+      allow delete: if isFamilyMember(resource.data.familyId);
     }
 
     match /expenses/{expenseId} {

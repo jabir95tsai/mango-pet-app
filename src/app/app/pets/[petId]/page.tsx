@@ -28,10 +28,13 @@ import {
   completeReminder,
   createReminder,
   deleteReminder,
+  listRecentlyCompletedReminders,
   listReminders,
   updateReminder,
 } from "@/lib/firebase/reminders";
+import { listFamilyMembers } from "@/lib/firebase/families";
 import type {
+  FamilyMember,
   HealthRecord,
   HealthRecordInput,
   HealthRecordType,
@@ -63,6 +66,10 @@ export default function PetDetailPage() {
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [weights, setWeights] = useState<{ date: number; kg: number }[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [todayDone, setTodayDone] = useState<Reminder[]>([]);
+  const [membersById, setMembersById] = useState<Map<string, FamilyMember>>(
+    () => new Map(),
+  );
   const [tab, setTab] = useState<Tab>("health");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [loading, setLoading] = useState(true);
@@ -76,16 +83,24 @@ export default function PetDetailPage() {
     if (!family) return;
     try {
       // allSettled so one slow query doesn't blank the whole page.
-      const [petR, recsR, wR, remR] = await Promise.allSettled([
+      const [petR, recsR, wR, remR, doneR, membersR] = await Promise.allSettled([
         getPet(petId),
         listRecords(petId),
         listWeightSeries(petId),
         listReminders(family.familyId, { petId }),
+        listRecentlyCompletedReminders(family.familyId, { petId }),
+        listFamilyMembers(family),
       ]);
       setPet(petR.status === "fulfilled" ? petR.value : null);
       setRecords(recsR.status === "fulfilled" ? recsR.value : []);
       setWeights(wR.status === "fulfilled" ? wR.value : []);
       setReminders(remR.status === "fulfilled" ? remR.value : []);
+      setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
+      setMembersById(
+        membersR.status === "fulfilled"
+          ? new Map(membersR.value.map((m) => [m.uid, m]))
+          : new Map(),
+      );
     } finally {
       setLoading(false);
     }
@@ -93,11 +108,12 @@ export default function PetDetailPage() {
 
   const refreshReminders = useCallback(async () => {
     if (!family) return;
-    try {
-      setReminders(await listReminders(family.familyId, { petId }));
-    } catch {
-      setReminders([]);
-    }
+    const [remR, doneR] = await Promise.allSettled([
+      listReminders(family.familyId, { petId }),
+      listRecentlyCompletedReminders(family.familyId, { petId }),
+    ]);
+    setReminders(remR.status === "fulfilled" ? remR.value : []);
+    setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
   }, [family, petId]);
 
   useEffect(() => {
@@ -319,23 +335,43 @@ export default function PetDetailPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {reminders.length === 0 ? (
+          {reminders.length === 0 && todayDone.length === 0 ? (
             <EmptyState
               icon={Bell}
               title={tR("noReminders")}
               description="新增第一個提醒"
             />
           ) : (
-            reminders.map((r) => (
-              <ReminderCard
-                key={r.reminderId}
-                reminder={r}
-                pet={pet}
-                onComplete={() => handleCompleteReminder(r)}
-                onDelete={() => handleDeleteReminder(r)}
-                onEdit={() => setEditingReminder(r)}
-              />
-            ))
+            <>
+              {reminders.map((r) => (
+                <ReminderCard
+                  key={r.reminderId}
+                  reminder={r}
+                  pet={pet}
+                  members={membersById}
+                  onComplete={() => handleCompleteReminder(r)}
+                  onDelete={() => handleDeleteReminder(r)}
+                  onEdit={() => setEditingReminder(r)}
+                />
+              ))}
+              {todayDone.length > 0 && (
+                <>
+                  <p className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    {tR("todayDone")}
+                  </p>
+                  {todayDone.map((r) => (
+                    <ReminderCard
+                      key={r.reminderId}
+                      reminder={r}
+                      pet={pet}
+                      members={membersById}
+                      onComplete={() => handleCompleteReminder(r)}
+                      onDelete={() => handleDeleteReminder(r)}
+                    />
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       )}

@@ -154,8 +154,13 @@
     "add": "Add reminder",
     "upcoming": "Upcoming",
     "overdue": "Overdue",
+    "todayDone": "Done today",
     "noReminders": "No reminders",
     "markDone": "Done",
+    "doneLabel": "Done",
+    "doneTimeLabel": "Done · {time}",
+    "doneByLabel": "Done by {name} · {time}",
+    "formerMember": "(former member)",
     "placeholders": {
       "title": "Vaccination booster / medication..."
     },

@@ -202,6 +202,57 @@ export async function completeReminder(
   }
 }
 
+/** Reverse a non-repeat reminder back to active state and clear the
+ *  attribution fields so we don't leave stale "done by X" data behind.
+ *  No UI surfaces this yet (Phase 4 spec deferred the uncheck button),
+ *  but the lib helper exists so the future toggle is one line. */
+export async function uncompleteReminder(reminderId: string): Promise<void> {
+  await updateDoc(reminderDoc(reminderId), {
+    done: false,
+    doneAt: deleteField(),
+    doneByUid: deleteField(),
+  });
+}
+
+/** Family-scoped list of reminders that were marked done within the last
+ *  `withinHours` window. Used for the "今日已完成" / "Done today"
+ *  attribution section — see docs/features/reminder-done-attribution.md.
+ *
+ *  Implementation note: we deliberately filter client-side instead of
+ *  adding a composite (familyId, doneAt) index, because realistic family
+ *  reminder counts are well under the few-hundred mark where a single
+ *  familyId query is cheap. Promote to an indexed query only if list
+ *  sizes grow. */
+export async function listRecentlyCompletedReminders(
+  familyId: string,
+  opts?: { petId?: string; withinHours?: number },
+): Promise<Reminder[]> {
+  const withinHours = opts?.withinHours ?? 24;
+  const cutoffMs = Date.now() - withinHours * 3600_000;
+  const snap = await getDocs(
+    query(remindersCol(), where("familyId", "==", familyId)),
+  );
+  let reminders = snap.docs.map((d) => ({
+    ...(d.data() as Reminder),
+    reminderId: d.id,
+  }));
+  if (opts?.petId) {
+    reminders = reminders.filter((r) => r.petId === opts.petId);
+  }
+  return reminders
+    .filter(
+      (r) =>
+        r.done === true
+        && r.doneAt
+        && (r.doneAt as Timestamp).toMillis() >= cutoffMs,
+    )
+    .sort(
+      (a, b) =>
+        (b.doneAt as Timestamp).toMillis() -
+        (a.doneAt as Timestamp).toMillis(),
+    );
+}
+
 export async function deleteReminder(reminderId: string): Promise<void> {
   await deleteDoc(reminderDoc(reminderId));
 }

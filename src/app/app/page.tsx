@@ -21,12 +21,20 @@ import {
   createReminder,
   deleteReminder,
   listOverdueReminders,
+  listRecentlyCompletedReminders,
   listUpcomingReminders,
   updateReminder,
 } from "@/lib/firebase/reminders";
+import { listFamilyMembers } from "@/lib/firebase/families";
 import { deletePost, listFeedPosts } from "@/lib/firebase/posts";
 import { listFriends } from "@/lib/firebase/friends";
-import type { Pet, Post, Reminder, ReminderInput } from "@/lib/types";
+import type {
+  FamilyMember,
+  Pet,
+  Post,
+  Reminder,
+  ReminderInput,
+} from "@/lib/types";
 
 export default function AppHome() {
   const tApp = useTranslations("App");
@@ -41,6 +49,10 @@ export default function AppHome() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [upcoming, setUpcoming] = useState<Reminder[]>([]);
   const [overdue, setOverdue] = useState<Reminder[]>([]);
+  const [todayDone, setTodayDone] = useState<Reminder[]>([]);
+  const [membersById, setMembersById] = useState<Map<string, FamilyMember>>(
+    () => new Map(),
+  );
   const [feedPosts, setFeedPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingReminder, setAddingReminder] = useState(false);
@@ -52,15 +64,23 @@ export default function AppHome() {
     try {
       // allSettled so one failure (e.g. an index still building) doesn't
       // blank the whole page. Each section degrades independently.
-      const [petR, upR, ovR, friendsR] = await Promise.allSettled([
+      const [petR, upR, ovR, doneR, membersR, friendsR] = await Promise.allSettled([
         listPets(family.familyId),
         listUpcomingReminders(family.familyId),
         listOverdueReminders(family.familyId),
+        listRecentlyCompletedReminders(family.familyId),
+        listFamilyMembers(family),
         listFriends(user.uid),
       ]);
       setPets(petR.status === "fulfilled" ? petR.value : []);
       setUpcoming(upR.status === "fulfilled" ? upR.value : []);
       setOverdue(ovR.status === "fulfilled" ? ovR.value : []);
+      setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
+      setMembersById(
+        membersR.status === "fulfilled"
+          ? new Map(membersR.value.map((m) => [m.uid, m]))
+          : new Map(),
+      );
       const friends = friendsR.status === "fulfilled" ? friendsR.value : [];
       try {
         const feed = await listFeedPosts(
@@ -79,12 +99,14 @@ export default function AppHome() {
 
   const refreshReminders = useCallback(async () => {
     if (!family) return;
-    const [upR, ovR] = await Promise.allSettled([
+    const [upR, ovR, doneR] = await Promise.allSettled([
       listUpcomingReminders(family.familyId),
       listOverdueReminders(family.familyId),
+      listRecentlyCompletedReminders(family.familyId),
     ]);
     setUpcoming(upR.status === "fulfilled" ? upR.value : []);
     setOverdue(ovR.status === "fulfilled" ? ovR.value : []);
+    setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
   }, [family]);
 
   useEffect(() => {
@@ -241,7 +263,7 @@ export default function AppHome() {
           </Button>
         </div>
 
-        {overdue.length === 0 && upcoming.length === 0 ? (
+        {overdue.length === 0 && upcoming.length === 0 && todayDone.length === 0 ? (
           <EmptyState icon={Bell} title={tR("noReminders")} />
         ) : (
           <div className="flex flex-col gap-3">
@@ -255,6 +277,7 @@ export default function AppHome() {
                     key={r.reminderId}
                     reminder={r}
                     pet={petById(r.petId)}
+                    members={membersById}
                     onComplete={() => handleCompleteReminder(r)}
                     onDelete={() => handleDeleteReminder(r)}
                     onEdit={() => setEditingReminder(r)}
@@ -272,9 +295,27 @@ export default function AppHome() {
                     key={r.reminderId}
                     reminder={r}
                     pet={petById(r.petId)}
+                    members={membersById}
                     onComplete={() => handleCompleteReminder(r)}
                     onDelete={() => handleDeleteReminder(r)}
                     onEdit={() => setEditingReminder(r)}
+                  />
+                ))}
+              </>
+            )}
+            {todayDone.length > 0 && (
+              <>
+                <p className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                  {tR("todayDone")}
+                </p>
+                {todayDone.map((r) => (
+                  <ReminderCard
+                    key={r.reminderId}
+                    reminder={r}
+                    pet={petById(r.petId)}
+                    members={membersById}
+                    onComplete={() => handleCompleteReminder(r)}
+                    onDelete={() => handleDeleteReminder(r)}
                   />
                 ))}
               </>
