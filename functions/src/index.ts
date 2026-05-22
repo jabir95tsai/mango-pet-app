@@ -386,7 +386,15 @@ export const aggregateLeaderboards = onSchedule(
 // ─────────────────────────────────────────────────────────────────────
 
 export const acceptFriendRequest = onCall(
-  { region: FUNCTION_REGION, cors: true },
+  // `invoker: "public"` is the default for callable functions. The Cloud
+  // Run IAM for this service had drifted (OPTIONS preflight returned 403
+  // while paired callables on the same config returned 204), and a
+  // plain `firebase deploy` UPDATE path does NOT re-apply the invoker
+  // binding — only the initial CREATE does. The fix that landed was to
+  // `firebase functions:delete acceptFriendRequest --force` then deploy
+  // fresh. Setting this explicitly is documentation + defense for any
+  // future re-create.
+  { region: FUNCTION_REGION, cors: true, invoker: "public" },
   async (req) => {
     const myUid = req.auth?.uid;
     if (!myUid) throw new HttpsError("unauthenticated", "Sign-in required");
