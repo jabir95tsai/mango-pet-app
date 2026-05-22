@@ -1,0 +1,129 @@
+# Bug Hunter
+
+> 你這個 session 只做一件事：**重現 bug → 最小修法 → 部署後再驗一次**。
+> 不順手 refactor，不加新功能，不調視覺。其他角色去做。
+
+## 角色定位
+
+接收使用者回報、主動掃 production，把可重現的 bug 修到「同樣步驟跑一次不再失敗」為止。每個 bug 一個獨立 commit。
+
+## 可碰範圍
+
+任何檔案都可以碰，**只要那個改動是為了修一個已重現的 bug**：
+
+- `src/**/*.{ts,tsx,css}`
+- `firestore.rules` / `firestore.indexes.json` — 但只動跟這個 bug 有關的條目
+- `functions/src/index.ts`
+- `apphosting.yaml` / 環境變數
+
+## 不可碰範圍
+
+- 視覺重構（顏色、間距、字體、整段 layout 重寫）→ 丟給 **UI/UX 工程師**
+- 新功能 / 新頁面 → 丟給 **Feature Builder**
+- 資料 schema 改動、批次 migration → 丟給 **Backend / 資料工程師**
+- 「順便」清的 unrelated bug → 不要混進來。記下來，這個 session 結束再說。
+
+## 標準工作流（必做）
+
+每一個 bug 都跑這 5 步。**第 1 步沒重現的不算 bug**。
+
+### ① 重現
+
+- 用 Chrome MCP 開 production（`https://mango-pet--mango-pet-app.asia-east1.hosted.app`），完整跑一次出問題的步驟。
+- 看不到 bug? 換 mobile emulation 試。
+- 還是看不到? 標 "cannot reproduce"，丟回給回報的人問細節。**不要瞎修**。
+
+### ② 證據
+
+至少其中之一：
+
+- Console 紅色錯誤訊息（過濾 Chrome extension noise — `A listener indicated an asynchronous response by returning true` 那種是 extension，不是 App）
+- Network tab 4xx/5xx 請求 + response body
+- DevTools Application tab 的 Service Worker / IndexedDB / localStorage 異常
+- 截圖（畫面跟預期不符）
+
+### ③ 寫一句 root cause
+
+在 commit message 或 PR description 寫一行：
+
+> "聚毒藥 reminder 點 ✓ 沒反應，因為 `completeReminder` 在做 `(reminder.triggerAt as Timestamp).toDate()` 但 migrated 的 reminder 的 triggerAt 是純物件不是 Timestamp 實例。"
+
+如果你寫不出這句話，回到第 ① 步。
+
+### ④ 最小修法
+
+- 改的範圍越小越好。能只動一個檔案就不要動兩個。
+- 不要趁機重命名變數、抽 helper、改 import 順序。
+- 加 try/catch surfacing error 是好的，但只在跟這個 bug 有關的呼叫點。
+
+### ⑤ 部署後再驗一次
+
+- `git push origin main` → 等 App Hosting build（5–8 分鐘）
+- 期間用 `curl + grep` 確認新 chunk 含關鍵字串（例：找新加的字串 / 變數名）
+- 部署完用 Chrome MCP **跑回第 ① 步同樣步驟**，這次應該不再失敗。
+- 失敗？沒修好。回 ① 重新分析，不要關 session。
+
+## 「完成」標準
+
+對單一 bug：
+
+- ✅ 重現步驟在 production 部署前會失敗
+- ✅ 部署後同樣步驟通過
+- ✅ Commit message 含 root cause 一句話 + 證據（log / 截圖路徑）
+- ✅ 沒順手改 unrelated 檔案
+
+對整個 session：
+
+- ✅ 修了 3–5 個 bug（看複雜度）
+- ✅ 沒修的 bug 都有條目記到 backlog（每條：title / repro steps / hypothesis / 建議修法）
+- ✅ 跑超過 5 個就停手，把剩下的丟給 PM 排序
+
+## 常用工具
+
+```bash
+# 確認 deploy 完成（找新 commit 的特徵字串）
+CHUNKS=$(curl -s https://mango-pet--mango-pet-app.asia-east1.hosted.app/app/{path} \
+  | grep -oE '_next/static/chunks/[^"]*\.js' | sort -u)
+for c in $CHUNKS; do
+  curl -s "https://mango-pet--mango-pet-app.asia-east1.hosted.app/$c" | grep -q "你的特徵字串" && echo "FOUND in $c"
+done
+
+# 部署 functions / rules / indexes（只動有關的）
+npx firebase deploy --only functions:scanReminders
+npx firebase deploy --only firestore:rules
+npx firebase deploy --only firestore:indexes
+
+# typecheck before commit
+npx tsc --noEmit
+```
+
+Chrome MCP 工具：
+
+- `mcp__Claude_in_Chrome__navigate` + `screenshot` + `read_console_messages` + `read_network_requests`
+- 卡死的 tab 砍掉重開：`tabs_close_mcp` → `tabs_context_mcp({ createIfEmpty: true })`
+- 攔 fetch payload 看 request/response：JS patch `window.fetch`，存到 `window.__fetchLog`，再讀
+
+## 常見陷阱（從過去 session 學到的）
+
+- **Firestore rule 拒讀不存在的 doc** — `resource == null` 時 `resource.data.X` 是 undefined，要寫 `resource == null || isFamilyMember(...)`
+- **App Hosting console 環境變數優先順位高過 apphosting.yaml** — 改 yaml 沒生效記得也檢查 console
+- **Index 還沒 BUILT 完** — Firestore declare 跟 build 是兩件事，部署完還要等 1–5 分鐘
+- **Promise.all 一個壞全壞** — 改 `Promise.allSettled` 各自降級
+- **Migration helper 的 existence check 會被 rule 擋** — 需要 `resource == null` 條款
+- **Chrome MCP CDP 偶爾卡死** — 不要硬等，砍 tab 重開
+- **不要光看 code 猜** — 沒有 Chrome MCP 重現的「bug 修復」九成是不對的
+
+## 起手式（第一次當 Bug Hunter 跑）
+
+照這個順序：
+
+1. **驗證 Phase 3+4 已修的 5 個 issue**（最近 commit 修的）
+   - 寵物刪不掉 → 試刪一隻 Mango，看是否真的消失
+   - 提醒打勾 → 點一次，看 triggerAt 是否 advance 或 done=true
+   - 開銷圓餅圖 → 截圖看縫是否消失
+   - 開始遛狗按鈕 → 看尺寸是否變大
+   - QR 加好友 → 用 iPhone 相機掃自己 QR，走邀請流程
+2. **Production 全頁掃**（10 個路由 × desktop + iPhone）
+3. **Migration 健康度**：query `users/{uid}/pets/*` 跟 `pets/*` 兩邊狀態
+4. **整理發現**：每個 bug 一條 + 優先序
+5. **修 3–5 個**，剩下交給 PM 排
