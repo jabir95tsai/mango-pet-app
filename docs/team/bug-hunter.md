@@ -80,15 +80,40 @@
 
 ## 常用工具
 
-```bash
-# 確認 deploy 完成（找新 commit 的特徵字串）
-CHUNKS=$(curl -s https://mango-pet--mango-pet-app.asia-east1.hosted.app/app/{path} \
-  | grep -oE '_next/static/chunks/[^"]*\.js' | sort -u)
-for c in $CHUNKS; do
-  curl -s "https://mango-pet--mango-pet-app.asia-east1.hosted.app/$c" | grep -q "你的特徵字串" && echo "FOUND in $c"
-done
+> 本機是 Windows + PowerShell（搭配 Git Bash on Windows）。`npx` / `git` /
+> `firebase` 在兩邊都一樣，但 `curl | grep | for` 那種 pipeline 寫法差很多。
+> 兩種都列出來，挑你當下開的 terminal 用。
 
-# 部署 functions / rules / indexes（只動有關的）
+### 確認 deploy 完成（找新 commit 的特徵字串）
+
+**Bash / Git Bash:**
+
+```bash
+HOST=https://mango-pet--mango-pet-app.asia-east1.hosted.app
+NEEDLE='你的特徵字串'      # 例：'mango.migrated' / '走的' / 'sendTestPush'
+CHUNKS=$(curl -s "$HOST/app" | grep -oE '_next/static/chunks/[^"]*\.js' | sort -u)
+for c in $CHUNKS; do
+  curl -s "$HOST/$c" | grep -q "$NEEDLE" && echo "FOUND in $c"
+done
+```
+
+**PowerShell:**
+
+```powershell
+$host = 'https://mango-pet--mango-pet-app.asia-east1.hosted.app'
+$needle = '你的特徵字串'
+$page = (Invoke-WebRequest "$host/app" -UseBasicParsing).Content
+$chunks = ([regex]'_next/static/chunks/[^"]*\.js').Matches($page) `
+  | ForEach-Object { $_.Value } | Sort-Object -Unique
+foreach ($c in $chunks) {
+  $body = (Invoke-WebRequest "$host/$c" -UseBasicParsing).Content
+  if ($body -match [regex]::Escape($needle)) { Write-Host "FOUND in $c" }
+}
+```
+
+### 部署（兩邊指令一樣）
+
+```
 npx firebase deploy --only functions:scanReminders
 npx firebase deploy --only firestore:rules
 npx firebase deploy --only firestore:indexes
@@ -118,11 +143,19 @@ Chrome MCP 工具：
 照這個順序：
 
 1. **驗證 Phase 3+4 已修的 5 個 issue**（最近 commit 修的）
-   - 寵物刪不掉 → 試刪一隻 Mango，看是否真的消失
-   - 提醒打勾 → 點一次，看 triggerAt 是否 advance 或 done=true
-   - 開銷圓餅圖 → 截圖看縫是否消失
-   - 開始遛狗按鈕 → 看尺寸是否變大
-   - QR 加好友 → 用 iPhone 相機掃自己 QR，走邀請流程
+
+   ⚠️ 這是 production，**不要動真實資料**。每個驗證一律照「建測試 fixture →
+   只操作這個 fixture → 觀察結果 → 刪掉 fixture」走，不要刪 Mango。
+
+   - **寵物刪不掉** → 建一隻名為「test-{時間戳}」的 disposable pet，立刻刪這隻，
+     確認在列表與 Firestore 都消失。完事再刪。**不要刪 Mango**。
+   - **提醒打勾** → 建一個「test-reminder-{時間戳}」、repeat=daily、triggerAt=
+     當下 +5 分鐘，點 ✓，確認 triggerAt advance 一天或 done=true，最後刪。
+   - **開銷圓餅圖** → 唯讀檢查 — 看現有資料的圓餅圖截圖，確認段間沒縫。
+     不需要建測試開銷。
+   - **開始遛狗按鈕** → 唯讀檢查 — 看 `/app/walks` 按鈕視覺尺寸。不需要按。
+   - **QR 加好友** → 用 iPhone 相機掃自己 QR，走到「這是你自己的 QR code」提示
+     就停。**不要真的送邀請給別的帳號**（除非你有第二個測試帳號）。
 2. **Production 全頁掃**（10 個路由 × desktop + iPhone）
 3. **Migration 健康度**：query `users/{uid}/pets/*` 跟 `pets/*` 兩邊狀態
 4. **整理發現**：每個 bug 一條 + 優先序

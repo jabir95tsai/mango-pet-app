@@ -88,26 +88,46 @@ walks/{walkId}
 
 ## 常用工具
 
-```bash
-# Functions build + deploy
+> 本機是 Windows + PowerShell（搭 Git Bash on Windows）。`npx firebase` /
+> `git` 兩邊一樣，pipeline 不一樣。
+
+### Functions / Rules / Indexes 部署（兩邊都一樣）
+
+```
 npm --prefix functions run build
 npx firebase deploy --only functions:scanReminders
-
-# Rules
 npx firebase deploy --only firestore:rules
-
-# Indexes
 npx firebase deploy --only firestore:indexes
-# 到 Console 看 build 狀態（不能透過 CLI 看）
-# https://console.firebase.google.com/project/mango-pet-app/firestore/indexes
-
-# App Hosting env
-npx firebase apphosting:backends:get mango-pet --json | grep -i env
-
-# Logs（最近 24h）
-gcloud functions logs read scanReminders --limit 100  # 需安裝 gcloud
-# 或 Firebase Console → Functions → Logs
 ```
+
+Indexes 看 build 狀態（CLI 沒辦法看，只能去 Console）：
+<https://console.firebase.google.com/project/mango-pet-app/firestore/indexes>
+
+### App Hosting env 篩 env 欄位
+
+**Bash / Git Bash:**
+
+```bash
+npx firebase apphosting:backends:get mango-pet --json | grep -i env
+```
+
+**PowerShell:**
+
+```powershell
+npx firebase apphosting:backends:get mango-pet --json `
+  | Select-String -Pattern 'env' -CaseSensitive:$false
+```
+
+### Cloud Functions logs（最近 24h）
+
+CLI 路徑需要 `gcloud`（沒裝就走 Firebase Console → Functions → Logs）：
+
+```
+gcloud functions logs read scanReminders --limit 100
+```
+
+Console 連結：
+<https://console.firebase.google.com/project/mango-pet-app/functions/logs>
 
 ## 常見陷阱（過去 session 學到的）
 
