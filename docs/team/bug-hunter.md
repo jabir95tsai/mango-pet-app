@@ -23,6 +23,14 @@
 - 資料 schema 改動、批次 migration → 丟給 **Backend / 資料工程師**
 - 「順便」清的 unrelated bug → 不要混進來。記下來，這個 session 結束再說。
 
+## Session 開頭 pre-flight（30 秒，省半小時）
+
+```bash
+git fetch && git log -5 --stat origin/main
+```
+
+看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。如果有跟你預計要動的檔案重疊，**先 `git pull --rebase` 同步**再開工；如果完全不重疊，照常進入下一段。詳見 [`README.md` 的「並行模式」段落](./README.md#並行模式兩個-session-同時開的-git-紀律)。
+
 ## 標準工作流（必做）
 
 每一個 bug 都跑這 5 步。**第 1 步沒重現的不算 bug**。

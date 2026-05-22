@@ -55,6 +55,61 @@
 - **Backend** 跑完 migration → 通知所有角色舊路徑可以清了
 - **PM** 是 fan-out 端點：所有「想做但沒人實作」最終都要回到 PM 排序
 
+## 並行模式（兩個 session 同時開的 git 紀律）
+
+> Claude + Codex 雙開、或兩個 Claude 雙開時，commit 才不會撞車。
+
+### 規則 1（永遠做）：Push 前三件套
+
+不管有沒有並行，commit 完一律：
+
+```bash
+git fetch && git pull --rebase origin main && git push origin main
+```
+
+- 對方有新 commit → rebase 把你的 commit 重放在上面，沒衝突就順利推上
+- 有衝突 → git 停下叫你解，你立刻知道對方改了同樣的地方
+- 養成這個三件套肌肉記憶後，後面所有層都站得穩
+
+**PowerShell 版本相同**（`git` 指令在 Bash / PowerShell 完全一致，不用換）。
+
+### 規則 2（要並行就遵守）：角色分流不分檔
+
+兩邊同時開 session 時，**刻意挑不重疊的角色**：
+
+| 安全組合 | 為什麼 |
+|---|---|
+| **Backend / PM** + **UI/UX** | 一個動 `firestore/functions/lib/`、一個動 `app/components/`，撞檔案機率近 0 |
+| **Bug Hunter (前端 bug)** + **Backend** | 一個查 UI、一個整 schema |
+| **PM** + 任何一個其他角色 | PM 只動 `docs/`，零碰 production code |
+| ❌ 兩邊都 **Bug Hunter** | 都可動任何檔案，撞 src/ 機率高 |
+| ❌ 兩邊都 **UI/UX** 或 **Feature Builder** | 同 lane 必撞 |
+
+### 規則 3（會省下半小時痛苦）：Session 開頭 pre-flight
+
+每個角色檔案頂端的「Session 開頭 pre-flight」段落都寫了同樣的指令：
+
+```bash
+git fetch && git log -5 --stat origin/main
+```
+
+讀對方最近 5 個 commit 改了什麼，再決定要不要動同一個檔案。Session 開頭花 30 秒做這件事，省下後面 30 分鐘解衝突。
+
+### 進階選項：Git Worktree（真要長期雙開）
+
+如果你預期長期雙開、想徹底隔離兩邊的 working tree（連 system-reminder「intentional change」狂噴都消除），用 git worktree：
+
+```bash
+cd /c/Users/jabir/Hacker_J
+git -C mango_pet_app worktree add ../mango_pet_app-codex main
+```
+
+- Claude 開 `C:\Users\jabir\Hacker_J\mango_pet_app\`
+- Codex 開 `C:\Users\jabir\Hacker_J\mango_pet_app-codex\`
+- 兩邊獨立 working tree，共用 `.git`，push 時還是回到規則 1
+
+家庭 epic 收尾期不必，等下一階段（同時多功能開發）再啟動。
+
 ## 共用工具備忘
 
 每個角色都會用到：

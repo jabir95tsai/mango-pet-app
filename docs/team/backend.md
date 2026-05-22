@@ -22,6 +22,14 @@
 - 改 API 簽名一定要更新**所有** caller 並 `npx tsc --noEmit` pass，否則禁止
 - 不新增使用者直接看到的功能 — 那是 Feature Builder
 
+## Session 開頭 pre-flight（30 秒，省半小時）
+
+```bash
+git fetch && git log -5 --stat origin/main
+```
+
+看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。Backend 主動 `src/lib/firebase/*`、`firestore.rules`、`functions/`，跟 UI/UX 並行通常零碰撞，但跟 Feature Builder 並行要小心（對方可能正在新增同個 collection 的 caller）。有重疊 **先 `git pull --rebase`**，並且**部署 functions / rules / indexes 前再 fetch 一次**避免覆寫對方剛 deploy 的版本。詳見 [`README.md` 的「並行模式」段落](./README.md#並行模式兩個-session-同時開的-git-紀律)。
+
 ## 標準工作流
 
 ### ① 先把 schema 畫出來（commentary）

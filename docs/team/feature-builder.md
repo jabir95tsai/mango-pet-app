@@ -27,6 +27,14 @@
 - 舊 schema 大改 — 跟 **Backend** 對齊先
 - 順手 refactor 不相關的 module — 不要
 
+## Session 開頭 pre-flight（30 秒，省半小時）
+
+```bash
+git fetch && git log -5 --stat origin/main
+```
+
+看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。Feature Builder 涉及整 stack，最容易撞別人的 in-flight 工作 — 如果對方剛動 `src/lib/firebase/*`、`firestore.rules`、或你預計要改的 page，**先 `git pull --rebase` 同步**；如果是無關區域照常開工。詳見 [`README.md` 的「並行模式」段落](./README.md#並行模式兩個-session-同時開的-git-紀律)。
+
 ## 標準工作流
 
 ### ① 規格段落（必寫，commit message 第一段）

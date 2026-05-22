@@ -23,6 +23,14 @@
 - 任何頁面的 `useEffect` data-fetching 邏輯、Firebase call signatures
 - 新增 npm dependency 之前先停手（除非是純前端視覺套件如 `framer-motion`）
 
+## Session 開頭 pre-flight（30 秒，省半小時）
+
+```bash
+git fetch && git log -5 --stat origin/main
+```
+
+看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。UI/UX 跟 Backend 並行通常很安全，但跟另一個 UI/UX 或 Feature Builder 並行就會撞 `src/components/`。有重疊 **先 `git pull --rebase`**；零重疊照常進入下一段。詳見 [`README.md` 的「並行模式」段落](./README.md#並行模式兩個-session-同時開的-git-紀律)。
+
 ## 標準工作流
 
 ### ① 截圖 baseline
