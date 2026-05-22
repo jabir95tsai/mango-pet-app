@@ -2,33 +2,50 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-22
+最後更新：2026-05-22（#1 SHIPPED，下一個動工是 #2 家庭 leaderboard）
 
 ## 進行中
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- _目前沒有正式進行中項目 — 等下方「下一個」開始接手。_
+- **家庭功能 epic — 一個一個收尾**（使用者偏好：不並行，做完一條才開下一條）
+  - 👉 **下個動工**：[家庭 leaderboard 切換](../features/family-leaderboard.md)（M, Feature Builder）
+
+## 家庭功能 epic — 收尾順序
+
+> 使用者明確要求「先把家庭功能做完，一個一個」。下面是執行順序與當前狀態。
+
+| # | 項目 | 工作量 | 角色 | 狀態 |
+|---|---|---|---|---|
+| 1 | [Reminder 完成歸屬顯示](../features/reminder-done-attribution.md) | S | Feature Builder | ✅ **SHIPPED**（commit `ec8c6fd`，待 PM 驗收 spec gap）|
+| 1b | [Repeat reminder 歸屬顯示](../features/repeat-reminder-attribution.md) | S | Feature Builder | ✅ 已規格化（接續 #1 的 spec gap，待 PM 排序）|
+| 2 | [家庭 leaderboard 切換](../features/family-leaderboard.md) | M | Feature Builder | ✅ 已規格化 — **下個動工** |
+| 3 | [寵物去重 migration](../features/mango-dedupe-migration.md) | M | Backend | ✅ 已規格化 |
+| 4 | 開銷 payer 分析卡 | S | UI/UX 或 Feature Builder | 📝 未規格化（aggregateByPayer helper 已 ready）|
+| 5 | Legacy 路徑清理 | M | Backend | 📝 未規格化（等 #3 dedupe 跑完再啟動）|
+
+**為什麼這個順序**（給使用者一個一個做）：
+
+- **#1 Reminder 完成歸屬**：✅ 已收尾。spec gap（已完成 reminder 在預設 list 不出現）以「今日已完成」sub-section 解決；待 PM 驗收這個入口或要不要換做 toggle / 歷史頁
+- **#2 家庭 leaderboard 接著做**：social hook，把家庭功能從工具升級為日常使用習慣
+- **#3 Mango dedupe 排第三**：技術債，影響面有限（少數 legacy 帳號），不擋使用者前進；但 #5 Legacy 清理依賴它先跑完
+- **#4 Payer 分析**：純前端，等 #1 #2 做完後再規格化（保持 spec 新鮮度）
+- **#5 Legacy 清理**：必須在 #3 完成且確認 family 路徑穩定後才動，否則風險高
+
+每收尾一條，回 PM session 把它從這張表打勾、把下一條的 spec（若未規格化）寫好。
 
 ## 下一個（已規格化，可直接交付）
 
-> 有 spec、有完成標準。對應角色 session 開起來就能接手實作。
+> 對應角色 session 開起來就能接手實作。家庭 epic 在上方獨立排序，這邊列其他主題的下一步（目前無）。
 
-- **新功能** — [家庭 leaderboard 切換](../features/family-leaderboard.md) — Feature Builder 接（工作量 M）
-- **體驗** — [Reminder 完成歸屬顯示](../features/reminder-done-attribution.md) — Feature Builder 接（工作量 S）
-- **技術債** — [寵物去重 migration](../features/mango-dedupe-migration.md) — Backend 接（工作量 M）
-
-建議交付順序：
-1. 先 Backend 跑 Mango dedupe（dryRun → 真實）— 後面兩條 UI 工作如果不小心碰到 pets 資料，先有乾淨資料底
-2. Feature Builder 接 Reminder 完成歸屬（工作量 S，當熱身）
-3. Feature Builder 接家庭 leaderboard（工作量 M，sprint 收尾）
+- _家庭 epic 期間，其他主題不另開新 spec。等 epic 收完再排下一波。_
 
 ## 想做但還沒規格
 
-> 想法階段。下個 PM session 決定要不要做、做的話怎麼做。
+> 想法階段。家庭 epic 收尾後（或中間插隊評估），下個 PM session 決定。
 
-- **開銷 payer 分析卡**：哪個家庭成員花了多少（`aggregateByPayer` helper 已就緒，純前端 UI 改動）— 候選下下個 sprint 升級
-- **Legacy 路徑清理**：family 完成 migration 後刪 `users/{uid}/pets|walks|reminders|expenses` + rule 中對應規則 — 等 dedupe migration 跑完再評估
+- **開銷 payer 分析卡**（屬家庭 epic #4，等 #1 #2 完成後規格化）
+- **Legacy 路徑清理**（屬家庭 epic #5，等 #3 完成後規格化）
 - **餐廳 Google Places 整合**：目前餐廳僅手動建。Places API 可大幅擴大資料庫，但成本與審核機制要先想
 - **知識庫持續產出**：目前只 seed 5 篇。要每月持續產出 1–2 篇還是放著？需要 PM 決策
 - **Analytics / 北極星指標接線**：定性觀察不夠，要決定接 GA4 / Firebase Analytics / 自己開 minimal events collection

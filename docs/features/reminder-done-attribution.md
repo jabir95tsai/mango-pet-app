@@ -1,6 +1,6 @@
 # Reminder 完成歸屬顯示
 
-狀態：SHIPPED（待 PM 驗收 spec-gap 決策）
+狀態：SHIPPED ✅（spec-gap 決策已 ACCEPTED by PM 2026-05-22）
 建立日期：2026-05-22
 最後更新：2026-05-22
 規格作者：PM session @ 3298731
@@ -74,20 +74,19 @@
 - [x] 「relativeTime」要 live tick 嗎？
   - 不要。沿用 `date-fns` 的 `formatDistanceToNow`（reminder-card.tsx 既有 import），重新整理才更新。
 
-## 實作 spec gap 記錄（等 PM 確認）
+## 實作 spec gap 記錄 — ACCEPTED（PM 2026-05-22）
 
 Spec 完成標準寫「reminder-card.tsx 在已完成狀態下顯示」，但既有 code path 下 `listReminders` 預設 `includeDone: false`，已完成 reminder 從不出現在任何列表 → 寫好的 UI 沒人看得到。
 
-**Feature Builder 自選的最小推斷**：在主頁 (`app/page.tsx`) 與寵物詳情 (`pets/[petId]/page.tsx`) 的 reminders 區塊下方，加一個「今日已完成」(過去 24 小時) sub-section，對齊既有 `overdue` / `upcoming` 的視覺結構。
+**Feature Builder 採取的最小推斷**：在主頁 (`app/page.tsx`) 與寵物詳情 (`pets/[petId]/page.tsx`) 的 reminders 區塊下方，加一個「今日已完成」(過去 24 小時) sub-section，對齊既有 `overdue` / `upcoming` 的視覺結構。
 
-理由：
-- 對齊 user story 的時間性「家裡有人勾了沒口頭通知」— 通常隔天就不再敏感
-- 不引入新 page、不違反 spec「不做歷史紀錄頁」
-- 如果 PM 之後想換成 toggle / grace period / 專屬歷史頁，schema + lib + card UI 都能無痛重用
+**PM 決策：ACCEPTED**（2026-05-22）
+- ✅ 對齊 user story 的時間性（隔天就不再敏感）
+- ✅ 不引入新 page / 新 nav，視覺對齊既有 overdue / upcoming
+- ✅ 沒有過度設計（沒做歷史頁、沒做 toggle）
+- ✅ schema + lib + card 抽象正確，未來換入口無痛
+- 本決策不開 follow-up spec；`listRecentlyCompletedReminders` / `uncompleteReminder` 作為 stable lib API 保留
 
-**PM 行動**：若決定不要這個入口或要換別的入口，回頭 spec 一張 follow-up，本次 lib 函式（`listRecentlyCompletedReminders` / `uncompleteReminder`）與 reminder-card 的 done 分支 UI 都可保留。
+## 已知後續觀察 — 已升級為 epic #2
 
-## 已知後續觀察（非本 spec scope，給 PM 排序參考）
-
-- **repeat reminder 永遠不會 done=true** — `completeReminder` 對 repeat 推進 triggerAt，done 維持 false。所以「餵藥 daily」這種反而是 user story 最痛點（家人 prozess 餵了沒），但本 spec 的 UI **看不到 repeat reminder 的歸屬**。
-  - 解法候選（下次 spec）：active repeat reminder 卡片上多顯示一行 sub-text「上次：媽媽勾 · 3 小時前」，data 已就緒（`doneByUid` 在 advance 時就寫了）。
+- **repeat reminder 永遠不會 done=true** → 已寫成獨立 spec：[`repeat-reminder-attribution.md`](./repeat-reminder-attribution.md)（PM 2026-05-22 升級，插隊家庭 leaderboard 之前）

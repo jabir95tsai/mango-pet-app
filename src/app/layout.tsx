@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "zh_TW",
     siteName: "Mango Pet",
-    images: [{ url: "/icons/icon.svg", width: 512, height: 512 }],
+    images: [{ url: "/icons/icon-512.png", width: 512, height: 512 }],
   },
   twitter: {
     card: "summary",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     description: "Your pet life companion.",
   },
   icons: {
-    icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" }],
     apple: [{ url: "/icons/icon-192.png" }],
   },
 };
