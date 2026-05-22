@@ -48,6 +48,20 @@ P3 = 也許永遠不做的「想法」。
 - **優先級提示**：P2（社群人數還小、QR + 完整 displayName prefix 搜尋已 cover
   大多數使用情境）
 
+### 未登入首頁 footer 連結文字硬編碼中文，沒走 i18n
+- **發現於**：2026-05-22、UI/UX session（登入頁加 icon + 置中時順手看到）
+- **類型**：體驗 / 技術債
+- **重現 / 觀察**：`/`（未登入首頁）右上切到 EN，標題與按鈕都英文，但 footer 仍顯示
+  「隱私權政策／服務條款」。位置：`src/app/page.tsx` L65 與 L68，文字直接寫死，
+  沒經過 `getTranslations`。
+- **建議交付給**：Feature Builder
+  - 在 `messages/zh-TW.json` 與 `messages/en.json` 新增 key（建議放 `Common`，
+    例如 `Common.privacy` / `Common.terms`，或新開 `Legal` namespace）
+  - 改 `src/app/page.tsx` 用 `getTranslations(...)` 取代寫死字串
+  - UI/UX 角色約定不新增 i18n key，所以本次 session 沒順手修
+- **優先級提示**：P2（不影響功能，但對英文使用者觀感不一致；登入頁是 first
+  impression，建議在下次 i18n batch 一起補）
+
 ### [範例] 重複的 Mango pet
 - **發現於**：2026-05-21、Bug Hunter session
 - **類型**：bug / 資料殘留
