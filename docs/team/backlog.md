@@ -32,6 +32,22 @@ P3 = 也許永遠不做的「想法」。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 
+### 好友搜尋無法 case-insensitive / 中段 match
+- **發現於**：2026-05-22、Bug Hunter session（「無法加好友」修完之後留的限制）
+- **類型**：技術債 / 體驗
+- **重現 / 觀察**：`/app/friends` → 搜尋 → 輸入「jabir」（小寫）找不到 displayName
+  是「蔡智博Jabir」的人；輸入「Jabir」也找不到，因為 Firestore range query 是
+  case-sensitive 且只能 prefix-match，「蔡智博Jabir」prefix 是「蔡」不是「Jabir」。
+  Bug Hunter 已修最明顯的 bug（強制 .toLowerCase() 讓任何含大寫字母的名字都搜
+  不到 — 見 commit），但完整的 case-insensitive + 中段 match 需要 schema 改動。
+- **建議交付給**：Backend
+  - 加 `displayNameLower` shadow field 到 `users/*`
+  - upsertUser 寫入時同步寫 lowercase 版本
+  - 寫一次 backfill migration 補齊 existing docs
+  - 改 `searchUsers` 改打 `displayNameLower` 欄位
+- **優先級提示**：P2（社群人數還小、QR + 完整 displayName prefix 搜尋已 cover
+  大多數使用情境）
+
 ### [範例] 重複的 Mango pet
 - **發現於**：2026-05-21、Bug Hunter session
 - **類型**：bug / 資料殘留

@@ -22,14 +22,15 @@ function getFns() {
 }
 
 export async function searchUsers(qStr: string): Promise<AppUser[]> {
-  const term = qStr.trim().toLowerCase();
+  const term = qStr.trim();
   if (!term) return [];
 
   const ref = collection(getDb(), "users");
 
-  // Try exact email match first
+  // Try exact email match first. Firebase Auth normalizes email to
+  // lowercase, so we lowercase the input on this comparison only.
   const byEmail = await getDocs(
-    query(ref, where("email", "==", term), limit(5)),
+    query(ref, where("email", "==", term.toLowerCase()), limit(5)),
   );
   if (!byEmail.empty) {
     return byEmail.docs.map((d) => d.data() as AppUser);
