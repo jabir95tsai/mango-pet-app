@@ -17,8 +17,8 @@
 
 | # | 項目 | 工作量 | 角色 | 狀態 |
 |---|---|---|---|---|
-| 1 | [Reminder 完成歸屬顯示](../features/reminder-done-attribution.md) | S | Feature Builder | ✅ **SHIPPED**（commit `ec8c6fd`，待 PM 驗收 spec gap）|
-| 1b | [Repeat reminder 歸屬顯示](../features/repeat-reminder-attribution.md) | S | Feature Builder | ✅ 已規格化（接續 #1 的 spec gap，待 PM 排序）|
+| 1 | [Reminder 完成歸屬顯示](../features/reminder-done-attribution.md) | S | Feature Builder | ✅ **SHIPPED** @ `ec8c6fd`（spec-gap ACCEPTED by PM）|
+| 1b | [Repeat reminder 歸屬顯示](../features/repeat-reminder-attribution.md) | S | Feature Builder | ✅ 已規格化（使用者排序：#2 #3 ship 後重評是否啟動）|
 | 2 | [家庭 leaderboard 切換](../features/family-leaderboard.md) | M | Feature Builder | ✅ 已規格化 — **下個動工** |
 | 3 | [寵物去重 migration](../features/mango-dedupe-migration.md) | M | Backend | ✅ 已規格化 |
 | 4 | 開銷 payer 分析卡 | S | UI/UX 或 Feature Builder | 📝 未規格化（aggregateByPayer helper 已 ready）|
@@ -26,7 +26,8 @@
 
 **為什麼這個順序**（給使用者一個一個做）：
 
-- **#1 Reminder 完成歸屬**：✅ 已收尾。spec gap（已完成 reminder 在預設 list 不出現）以「今日已完成」sub-section 解決；待 PM 驗收這個入口或要不要換做 toggle / 歷史頁
+- **#1 Reminder 完成歸屬**：✅ 已收尾。spec gap（已完成 reminder 在預設 list 不出現）以「今日已完成」24h sub-section 解決；入口已 ACCEPTED by PM
+- **#1b Repeat reminder 歸屬**：#1 ship 過程發現 — repeat reminder（餵藥/餵食 daily）永遠不會 `done=true`，看不到 #1 的歸屬 UI。data 已就緒（`doneByUid` 在 advance 時已寫入），工作量 S。**PM 觀點**：這是 user story 原文「家裡有人勾了沒口頭通知」最痛的場景，建議盡早做。**使用者排序**：等 #2 #3 ship 後重評，目前不擋 #2 動工
 - **#2 家庭 leaderboard 接著做**：social hook，把家庭功能從工具升級為日常使用習慣
 - **#3 Mango dedupe 排第三**：技術債，影響面有限（少數 legacy 帳號），不擋使用者前進；但 #5 Legacy 清理依賴它先跑完
 - **#4 Payer 分析**：純前端，等 #1 #2 做完後再規格化（保持 spec 新鮮度）

@@ -32,35 +32,7 @@ P3 = 也許永遠不做的「想法」。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 
-### 好友搜尋無法 case-insensitive / 中段 match
-- **發現於**：2026-05-22、Bug Hunter session（「無法加好友」修完之後留的限制）
-- **類型**：技術債 / 體驗
-- **重現 / 觀察**：`/app/friends` → 搜尋 → 輸入「jabir」（小寫）找不到 displayName
-  是「蔡智博Jabir」的人；輸入「Jabir」也找不到，因為 Firestore range query 是
-  case-sensitive 且只能 prefix-match，「蔡智博Jabir」prefix 是「蔡」不是「Jabir」。
-  Bug Hunter 已修最明顯的 bug（強制 .toLowerCase() 讓任何含大寫字母的名字都搜
-  不到 — 見 commit），但完整的 case-insensitive + 中段 match 需要 schema 改動。
-- **建議交付給**：Backend
-  - 加 `displayNameLower` shadow field 到 `users/*`
-  - upsertUser 寫入時同步寫 lowercase 版本
-  - 寫一次 backfill migration 補齊 existing docs
-  - 改 `searchUsers` 改打 `displayNameLower` 欄位
-- **優先級提示**：P2（社群人數還小、QR + 完整 displayName prefix 搜尋已 cover
-  大多數使用情境）
-
-### 未登入首頁 footer 連結文字硬編碼中文，沒走 i18n
-- **發現於**：2026-05-22、UI/UX session（登入頁加 icon + 置中時順手看到）
-- **類型**：體驗 / 技術債
-- **重現 / 觀察**：`/`（未登入首頁）右上切到 EN，標題與按鈕都英文，但 footer 仍顯示
-  「隱私權政策／服務條款」。位置：`src/app/page.tsx` L65 與 L68，文字直接寫死，
-  沒經過 `getTranslations`。
-- **建議交付給**：Feature Builder
-  - 在 `messages/zh-TW.json` 與 `messages/en.json` 新增 key（建議放 `Common`，
-    例如 `Common.privacy` / `Common.terms`，或新開 `Legal` namespace）
-  - 改 `src/app/page.tsx` 用 `getTranslations(...)` 取代寫死字串
-  - UI/UX 角色約定不新增 i18n key，所以本次 session 沒順手修
-- **優先級提示**：P2（不影響功能，但對英文使用者觀感不一致；登入頁是 first
-  impression，建議在下次 i18n batch 一起補）
+_2026-05-22 PM session 已清空 — 兩條新條目（好友搜尋 / footer i18n）已搬到對應分類區。_
 
 ### [範例] 重複的 Mango pet
 - **發現於**：2026-05-21、Bug Hunter session
@@ -89,13 +61,46 @@ _目前沒有條目。下一個 PM session 過 Inbox 時新增。_
 
 ## 已分類 — Feature Builder 接
 
-_目前沒有條目。已規格化項目見 `docs/roadmap.md` 的「下一個」與 `docs/features/*.md`。_
+### 未登入首頁 footer 連結文字硬編碼中文，沒走 i18n
+- **發現於**：2026-05-22、UI/UX session（登入頁加 icon + 置中時順手看到）
+- **類型**：體驗 / 技術債
+- **重現 / 觀察**：`/`（未登入首頁）右上切到 EN，標題與按鈕都英文，但 footer 仍顯示
+  「隱私權政策／服務條款」。位置：`src/app/page.tsx` L65 與 L68，文字直接寫死，
+  沒經過 `getTranslations`。
+- **建議交付給**：Feature Builder
+  - 在 `messages/zh-TW.json` 與 `messages/en.json` 新增 key（建議放 `Common`，
+    例如 `Common.privacy` / `Common.terms`，或新開 `Legal` namespace）
+  - 改 `src/app/page.tsx` 用 `getTranslations(...)` 取代寫死字串
+  - UI/UX 角色約定不新增 i18n key，所以本次 session 沒順手修
+- **優先級提示**：P2（不影響功能，但對英文使用者觀感不一致；登入頁是 first
+  impression，建議在下次 i18n batch 一起補）
+- **PM 排序（2026-05-22）**：家庭功能 epic 收完後找空檔順手做；不另寫 spec（backlog
+  條目已足夠 Feature Builder 接手）
 
 ---
 
 ## 已分類 — Backend 接
 
-_目前沒有條目。已規格化項目見 `docs/roadmap.md` 的「下一個」與 `docs/features/mango-dedupe-migration.md`。_
+### 好友搜尋無法 case-insensitive / 中段 match
+- **發現於**：2026-05-22、Bug Hunter session（「無法加好友」修完之後留的限制）
+- **類型**：技術債 / 體驗
+- **重現 / 觀察**：`/app/friends` → 搜尋 → 輸入「jabir」（小寫）找不到 displayName
+  是「蔡智博Jabir」的人；輸入「Jabir」也找不到，因為 Firestore range query 是
+  case-sensitive 且只能 prefix-match，「蔡智博Jabir」prefix 是「蔡」不是「Jabir」。
+  Bug Hunter 已修最明顯的 bug（強制 .toLowerCase() 讓任何含大寫字母的名字都搜
+  不到 — 見 commit），但完整的 case-insensitive + 中段 match 需要 schema 改動。
+- **建議交付給**：Backend
+  - 加 `displayNameLower` shadow field 到 `users/*`
+  - upsertUser 寫入時同步寫 lowercase 版本
+  - 寫一次 backfill migration 補齊 existing docs
+  - 改 `searchUsers` 改打 `displayNameLower` 欄位
+- **優先級提示**：P2（社群人數還小、QR + 完整 displayName prefix 搜尋已 cover
+  大多數使用情境）
+- **PM 排序（2026-05-22）**：家庭功能 epic 之後排序；屬 PRD §3.6 social 區。
+  動工前 PM session 需把這條升級為 `docs/features/friends-search-lowercase.md` spec
+  （含 backfill 步驟 + schema 影響面）。目前不擋家庭 epic。
+
+_其他 Backend 項目見 `docs/roadmap.md` 的「下一個」與 `docs/features/mango-dedupe-migration.md`。_
 
 ---
 
