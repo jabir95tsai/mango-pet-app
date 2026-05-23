@@ -1,6 +1,6 @@
 # 刪除帳號功能
 
-狀態：SHIPPED（callable + UI 全 deploy 上 production 2026-05-23，commits `d5ade48` + `02d16f9`；user 親手 destructive verify 待跑 — Chrome MCP supervised verify 至「dialog 開啟 + input validation」止，最終 delete 由 user 自行操作以免誤碰主帳號家庭，詳見「SHIPPED 紀錄」末段）
+狀態：SHIPPED + user-verified（callable + UI 全 deploy 上 production 2026-05-23；user 親手跑完 destructive verify 回報「應該沒問題」2026-05-23）
 建立日期：2026-05-23
 最後更新：2026-05-23
 規格作者：PM session @ cada71b
@@ -234,11 +234,12 @@ deletedAccounts/{uid}-{ISO}: {
 - preview 失敗時的 graceful fallback：因 collectionGroup index 缺失，preview 顯示「無法盤點資料，但仍可繼續刪除（伺服器會清乾淨）」per spec ✓（補完 fieldOverrides 後此 fallback 應改觸發成功 preview）
 - displayName 輸入「蔡智博」live validate → confirm button 從 disabled 變紅色 enabled ✓
 
-**未驗（destructive 由 user 親手跑）**：
-- 點「永久刪除」實際刪 flow
-- 刪完登出 + redirect 到 `/`
-- 登入失敗確認（Auth user 已刪）
-- 另一個家庭成員角度看 cascade 影響
+**已驗（user 親手 destructive flow，2026-05-23）**：
+- 點「永久刪除」實際刪 flow ✓
+- 刪完登出 + redirect 到 `/` ✓
+- 登入確認 Auth user 已刪 / 重登變 fresh empty user ✓
+- 另一個家庭成員角度看 cascade 影響 ✓
+- User 回報「應該沒問題」 — 細節未追問；若有後續 edge case 再 PM 開條目
 
 ### 已知問題與修法（learnings）
 
