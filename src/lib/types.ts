@@ -290,6 +290,12 @@ export type Walk = {
   /** Weighted score per scoring formula (see lib/scoring.ts). */
   score: number;
   notes?: string;
+  /** Up to 5 user-captured photos taken during the walk (spec D2). Each
+   *  URL is a Firebase Storage download URL backed by
+   *  `users/{walkerUid}/walks/{walkId}/photos/{idx}-{ts}.{ext}`. Old
+   *  walks without this field are fine — every render-site treats
+   *  `photoURLs?.length` defensively. */
+  photoURLs?: string[];
   createdAt: Timestamp;
 };
 
@@ -303,6 +309,10 @@ export type WalkInput = {
   path?: WalkPathPoint[];
   isManual: boolean;
   notes?: string;
+  /** Pre-uploaded Storage download URLs (spec docs/features/
+   *  walks-photo-and-celebration.md). Up to 5 entries; pre-uploaded
+   *  during tracking so the create call only persists the references. */
+  photoURLs?: string[];
 };
 
 // ── Leaderboards ──

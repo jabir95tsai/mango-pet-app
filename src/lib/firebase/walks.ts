@@ -68,6 +68,10 @@ export async function createWalk(args: CreateWalkArgs): Promise<Walk> {
       isManual: args.isManual,
       score: args.score,
       notes: args.notes,
+      // Spec D2 caps at 5; client pre-uploads each photo to Storage
+      // during tracking, then hands the resulting download URLs here.
+      // Empty array is fine — the `clean` helper strips it.
+      photoURLs: args.photoURLs?.length ? args.photoURLs : undefined,
       createdAt: serverTimestamp(),
     }),
   };

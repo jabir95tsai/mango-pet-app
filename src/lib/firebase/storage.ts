@@ -33,6 +33,22 @@ export function postPhotoPath(uid: string, postId: string, idx: number, ext: str
   return `users/${uid}/posts/${postId}/${idx}.${ext}`;
 }
 
+/** Path for one walk photo. Lives under the walker's own namespace so
+ *  the existing `users/{uid}/{allPaths=**}` storage rule covers writes
+ *  (uploader == self) and reads (any signed-in family member). Spec
+ *  caps at 5 per walk; `idx` is 0-4 and `ts` is `Date.now()` to keep
+ *  filenames unique within an idx slot when the user deletes + re-takes
+ *  the same slot. */
+export function walkPhotoPath(
+  uid: string,
+  walkId: string,
+  idx: number,
+  ts: number,
+  ext: string,
+): string {
+  return `users/${uid}/walks/${walkId}/photos/${idx}-${ts}.${ext}`;
+}
+
 export function fileExt(file: File): string {
   const fromName = file.name.split(".").pop()?.toLowerCase();
   if (fromName) return fromName;
