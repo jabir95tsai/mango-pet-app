@@ -2,14 +2,13 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-23（#2 family-onboarding-redesign 解 B 確認動工，下個動工是 Phase B1 / Backend）
+最後更新：2026-05-23（#2 SHIPPED — 全 4 phases；下個動工 TBD，等使用者 live test 後重排）
 
 ## 進行中
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- **家庭功能 epic — 一個一個收尾**（使用者偏好：不並行，做完一條才開下一條）
-  - 👉 **進行中**：[家庭 onboarding 重設計 — 全 4 phases](../features/family-onboarding-redesign.md) — Feature Builder unsupervised run（使用者 2026-05-23 睡前 launch）
+- **無正式進行中項目** — #2 剛 ship 完，等使用者 live test 結果後決定下個動工
 
 ## 家庭功能 epic — 收尾順序
 
@@ -19,20 +18,20 @@
 |---|---|---|---|---|
 | 1 | [Reminder 完成歸屬顯示](../features/reminder-done-attribution.md) | S | Feature Builder | ✅ **SHIPPED** @ `ec8c6fd`(spec-gap ACCEPTED by PM)|
 | 1b | [Repeat reminder 歸屬顯示](../features/repeat-reminder-attribution.md) | S | Feature Builder | ✅ 已規格化（使用者排序：#3 #4 ship 後重評）|
-| **2** | **[家庭 onboarding 重設計（解 B）](../features/family-onboarding-redesign.md)** | L（4 phases） | Feature Builder（整 epic 一條龍）| 🟢 **READY-FOR-DEV — unsupervised run 模式，使用者睡前 launch** |
-| 3 | [家庭 leaderboard 切換](../features/family-leaderboard.md) | M | Feature Builder | ✅ 已規格化（#2 ship 後需補 personal mode edge case）|
-| 4 | [寵物去重 migration](../features/mango-dedupe-migration.md) | M | Backend | ✅ 已規格化（merge logic 跟 #2 Phase B4 可共用，建議先做 #4 抽共用函式）|
+| 2 | [家庭 onboarding 重設計（解 B）](../features/family-onboarding-redesign.md) | L（4 phases） | Feature Builder | ✅ **SHIPPED** — B1 `60d820c` / B2 `8ebcf72` / B3 `347d71a` / B4 `f450ad0` / spec `bfd1360`（**personal-mode live test 待使用者親手跑**；2 條 deviation 進 backlog）|
+| 3 | [家庭 leaderboard 切換](../features/family-leaderboard.md) | M | Feature Builder | ✅ 已規格化（**動工前 PM 需處理 prereq**：personal walks 防刷 — 見 backlog Inbox）|
+| 4 | [寵物去重 migration](../features/mango-dedupe-migration.md) | M（可能降為 S） | Backend | ✅ 已規格化（merge logic 已在 #2 B4 `mergeAndImportToFamily` callable — 直接重用降工作量）|
 | 5 | 開銷 payer 分析卡 | S | UI/UX 或 Feature Builder | 📝 未規格化（aggregateByPayer helper 已 ready）|
 | 6 | Legacy 路徑清理 | M | Backend | 📝 未規格化（等 #4 dedupe 跑完再啟動）|
 
 **為什麼這個順序**（給使用者一個一個做）：
 
-- **#1 Reminder 完成歸屬**：✅ 已收尾。spec-gap ACCEPTED by PM
+- **#1 Reminder 完成歸屬**：✅ SHIPPED
 - **#1b Repeat reminder 歸屬**：data 已就緒，工作量 S。**使用者排序**：等 #3 #4 ship 後重評
-- **#2 家庭 onboarding 重設計（PM 插隊 2026-05-23，解 B 確認動工）**：使用者要求「先沒家庭，可選擇創建或加入；養同一隻狗希望同步資料」。**最終 product principle**：「家庭是 optional feature — 單身飼主不該被強迫建單人家庭」（PM 解 C 提議因為違反此 principle 被否決）。Schema 改動 + onboarding + import + merge wizard。拆 4 phases (B1 schema/rules → B2 onboarding UI → B3 import wizard → B4 pet merge)。merge logic 跟 #4 dedupe 可共用
-- **#3 家庭 leaderboard**：#2 ship 後接手；要補 edge case「personal mode 下隱藏 leaderboard 或顯示個人 stats only」
-- **#4 Mango dedupe**：技術債；merge logic 跟 #2 B4 共用。**建議實作順序**：先 #4 把搬子集合 + 刪重複的 logic 拆成共用函式，#2 B4 直接重用（但 #2 整體優先級高於 #4，等 #2 B1+B2+B3 ship 後 + #4 抽函式 + #2 B4 收尾）
-- **#5 Payer 分析**：純前端，等 #2 #3 做完後規格化
+- **#2 家庭 onboarding 重設計**：✅ SHIPPED（2026-05-23 unsupervised run，4 phases B1+B2+B3+B4 連續部署）。Personal mode + onboarding + import wizard + pet merge 全部上線。**但 live test 還沒跑**（unsupervised run 限制），使用者醒來後需親手驗證 personal-mode 端到端流程
+- **#3 家庭 leaderboard**：spec 已 ready。**動工前 PM 需先處理 prereq**：backlog 條目「Personal walks 不應進全 App leaderboard」要么寫進 #3 spec，要么另開短 spec 先做。也要評估 personal mode 使用者該看什麼（不是家庭排行榜也不是全 App 排行榜 — 可能是個人 stats）
+- **#4 Mango dedupe**：merge logic 已被 #2 B4 寫成 `mergeAndImportToFamily` callable — **#4 工作量可能從 M 降到 S**（直接重用 + 改成同 family 內 trigger）。Backend session 動工前先 review B4 code
+- **#5 Payer 分析**：純前端，等 #1b/#3/#4 做完後規格化
 - **#6 Legacy 清理**：必須在 #4 完成且 family 路徑穩定後才動
 
 每收尾一條，回 PM session 把它從這張表打勾、把下一條的 spec（若未規格化）寫好、評估有沒有「ship 過程中發現的觀察」需要插隊。
@@ -47,7 +46,7 @@
 
 > 想法階段。家庭 epic 收尾後（或中間插隊評估），下個 PM session 決定。
 
-- **開銷 payer 分析卡**（屬家庭 epic #5，等 #2 #3 完成後規格化）
+- **開銷 payer 分析卡**（屬家庭 epic #5，等 #1b/#3/#4 完成後規格化）
 - **Legacy 路徑清理**（屬家庭 epic #6，等 #4 完成後規格化）
 - **餐廳 Google Places 整合**：目前餐廳僅手動建。Places API 可大幅擴大資料庫，但成本與審核機制要先想
 - **知識庫持續產出**：目前只 seed 5 篇。要每月持續產出 1–2 篇還是放著？需要 PM 決策

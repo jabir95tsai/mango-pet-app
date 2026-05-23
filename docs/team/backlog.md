@@ -32,7 +32,35 @@ P3 = 也許永遠不做的「想法」。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 
-_2026-05-22 PM session 已清空 — 兩條新條目（好友搜尋 / footer i18n）已搬到對應分類區。_
+_2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 2 條 deviation。_
+
+### Personal walks 不應進全 App leaderboard
+- **發現於**：2026-05-23、Feature Builder unsupervised run #2 收尾（spec deviations 段）
+- **類型**：技術債 / 設計
+- **重現 / 觀察**：B1 把 walks 的 familyId 允許 null（personal mode）後，schema 上
+  personal walks 已可被 `aggregateLeaderboards` collectionGroup query 看到，但
+  `functions/src/index.ts` 的 aggregation 邏輯沒 filter 掉 `familyId == null` 的
+  walks → 理論上單身使用者個人遛狗紀錄會擠進全 App 排行榜，違反 #2 spec line 130
+  「Personal walks 不進全 App leaderboard」
+- **建議交付給**：Backend
+  - 改 `aggregateLeaderboards` 加 `familyId != null` filter
+  - 或在 walks doc 加 `excludeFromLeaderboard: bool` 顯式標記
+- **優先級提示**：P2（目前 personal mode 使用者只有自己 + 0 個其他人，但動
+  leaderboard 邏輯前要做掉，否則未來 personal users 上線會洩漏個人 stats）
+- **PM 排序（2026-05-23）**：#3 family-leaderboard 動工前 prerequisite。可直接寫進
+  #3 spec 升級，或另開短 spec。等下次 PM session 排序
+
+### Settings 沒加直接到 /onboarding 的 link
+- **發現於**：2026-05-23、Feature Builder unsupervised run #2 收尾（spec deviations 段）
+- **類型**：體驗 / 小事
+- **重現 / 觀察**：#2 spec B2 line 93 寫「Settings 頁顯示『邀請家人 / 加入家庭』入口」—
+  Feature Builder 認為既有 family-section 的「加入」「新建」buttons 已滿足，沒額外
+  加 `/onboarding` 的明確 link。實際上 `/onboarding` 目前只有「第一次登入」會自動
+  進去，使用者後續想看 onboarding 介紹頁要直接輸入 URL
+- **建議交付給**：UI/UX 或 Feature Builder（補 1 行 Link 的事）
+- **優先級提示**：P3（onboarding 後就不會看了；除非使用者明確想要 settings 入口）
+- **PM 排序（2026-05-23）**：等下次 PM session 看是否歸入 Deferred（onboarding 頁
+  本來就是首次體驗）
 
 ### [範例] 重複的 Mango pet
 - **發現於**：2026-05-21、Bug Hunter session
