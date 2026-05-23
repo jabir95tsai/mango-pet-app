@@ -57,3 +57,11 @@ firestore-debug.log
 .firebase
 /functions/lib
 /functions/node_modules
+
+# codex local build verification artifacts (kept out of repo + App Hosting
+# build; Codex runs `npm install --prefix .codex-build-check` etc. when
+# sanity-checking changes locally — those caches should never leak into
+# the production build context)
+/.codex-build-check/
+/.codex-build-check.tar
+/.codex-npm-cache/
