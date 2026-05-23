@@ -1,6 +1,6 @@
 # 家庭 onboarding 重設計 — 解 B：Personal mode + Pet merge
 
-狀態：SHIPPED — B1+B2+B3+B4 全 4 phases 已 deploy 到 production（2026-05-23 unsupervised run，PM 醒來後仍需 personal-mode end-to-end live test，詳見「SHIPPED 紀錄」末段）
+狀態：SHIPPED — B1+B2+B3 全部，B4 merge feature **使用者醒來後決定拿掉**，UI 層 rollback 待 Feature Builder session 接手（見「Post-ship change」段）
 建立日期：2026-05-23
 最後更新：2026-05-23
 規格作者：PM session @ 78539cc
@@ -183,3 +183,49 @@ allow update, delete: 沿用 read 邏輯
 - **B4 merge 偵測：完全 client-side**：spec 沒明指 server vs client；採 client 偵測（在 wizard 開啟時 fetch 兩邊 pets 比對）以減少 callable 數量。Server 側 mergeAndImportToFamily 仍 re-verify ownership 防偽。
 - **Personal walks 防刷 leaderboard 沒做**：spec line 130 寫「Personal walks 進全 App leaderboard（避免被刷分；personal stats 只給本人看）」 — 本次 schema 已支援（`familyId: null` walks 可被 `aggregateLeaderboards` 看到），但**沒動 `aggregateLeaderboards` 函式去 filter 掉 personal walks**。留 follow-up 給 PM 排序時帶到 backlog 或下一輪 Backend spec。
 - **`useFamilyId` hook**：保留現有實作（family null 時 throw）— 沒人呼叫它（grep 只有 declaration），不為 personal mode 改它，等下一輪有實際 caller 再評估。
+
+---
+
+## Post-ship change — B4 merge feature 拿掉（2026-05-23）
+
+使用者醒來 review 後決定**拿掉 pet merge 功能**。未提供具體理由（PM 推測：merge 太 destructive / 不直觀 / 想避免「誤合不同隻狗」的 surprise）。
+
+### PM 接受並 surface 的 trade-off
+
+User 之前的需求是「養同一隻狗希望同步資料、不要他那邊一隻我這邊一隻」。拿掉 merge 後：
+- ✅ 家人「加進使用者的家庭」後立刻看到家庭內的寵物（current schema 已 cover，不變）
+- ❌ 兩人各自先建了 Mango 再合家庭時**不會自動合併** — 兩隻並存，split 情境會回來（需要 admin 觸發 #4 dedupe migration 解）
+
+User 已接受 trade-off，rollback 動工。
+
+### Rollback scope（Feature Builder 接手）
+
+採**選項 A：純 UI 層 rollback**（callable 暫保留 dormant，零 production 風險）：
+
+#### 必做
+- [ ] `ImportWizardDialog` 拿掉 merge candidates 偵測 + merge wizard step
+- [ ] Wizard 直接走 import 路徑（呼叫 `importPersonalToFamily`，B3 callable），不再判斷有沒有 merge candidate
+- [ ] i18n 沒被別處用到的 merge wizard 文案（zh-TW + en）刪掉
+- [ ] `npx tsc --noEmit` pass
+- [ ] Chrome MCP 驗證 production：新使用者建立家庭時 import wizard 走純 import flow，不再出現 merge step
+
+#### 暫保留（下個 cleanup sprint 再處理）
+- `functions/src/index.ts` 的 `mergeAndImportToFamily` callable — 留 dormant，無 client caller 就無風險
+- merge 共用函式（搬子集合 + reassign petId + 刪 personal pet doc）— 等 #4 dedupe migration 動工時整體 review，看要不要保留為共用 utility
+
+#### 不做
+- 不 `git revert f450ad0`（會打到既有 B4 已穩定的部分 — schema/index 沒變，只是 UI 行為要拿掉）
+- 不刪 callable 內的邏輯（dormant 即可）
+- 不改 B1/B2/B3 任何東西
+
+### 預估工作量
+
+- UI 改：S（純元件改 + i18n key 清理）
+- 1 commit + push + Chrome MCP 驗證
+
+### 影響到的下游 spec
+
+- **#4 mango-dedupe-migration**：原本標「merge logic 已被 #2 B4 寫成 callable，可直接重用降工作量」— **保持不變**：callable 還在 functions 內，只是沒 client 呼叫；#4 Backend session 動工時仍可重用同一段邏輯
+- **#1 reminder-done-attribution / #1b**：不受影響
+- **#3 family-leaderboard**：不受影響
+- **#5 / #6**：不受影響
