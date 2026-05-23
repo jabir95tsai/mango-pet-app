@@ -309,6 +309,33 @@
       "manualLog": "手動補登",
       "emptyWalksTitle": "尚無遛狗紀錄",
       "emptyWalksDescription": "按下「開始遛狗」即時追蹤，或「手動補登」加入過去的紀錄"
+    },
+    "photo": {
+      "button": "拍照 ({n}/{max})",
+      "limitReached": "已達上限 5 張",
+      "uploading": "上傳中...",
+      "failed": "上傳失敗",
+      "delete": "移除",
+      "viewLightbox": "放大檢視",
+      "recapGridLabel": "本次紀錄 ({n})"
+    },
+    "celebration": {
+      "goalMissedTitle": "今天完成 {percent}%",
+      "goalMissedHint": "再 {min} 分鐘就達標 — 明天加油 💪",
+      "vsAvgLonger": "比本週平均多 {min} 分鐘",
+      "vsAvgShorter": "比本週平均少 {min} 分鐘",
+      "vsAvgSame": "跟本週平均差不多",
+      "calories": "{name} 消耗約 {kcal} 大卡"
+    },
+    "streak": {
+      "labelShort": "{days} 天",
+      "weekTooltip": "連續一週！"
+    },
+    "encouragement": {
+      "noWalksToday": "今天還沒開始 — 走出去吧 ☀️",
+      "streakKeep": "連續 {days} 天！別斷掉 🔥",
+      "petWaiting": "{name} 已經等你 {hours} 小時了 🐶",
+      "lastWalkYesterday": "{name} 上次散步是昨天，今天該動了"
     }
   },
   "Push": {

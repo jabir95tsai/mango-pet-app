@@ -309,6 +309,33 @@
       "manualLog": "Manual log",
       "emptyWalksTitle": "No walks yet",
       "emptyWalksDescription": "Tap Start walking, or use Manual log to backfill"
+    },
+    "photo": {
+      "button": "Photo ({n}/{max})",
+      "limitReached": "Max 5 photos",
+      "uploading": "Uploading...",
+      "failed": "Upload failed",
+      "delete": "Remove",
+      "viewLightbox": "View larger",
+      "recapGridLabel": "This walk ({n})"
+    },
+    "celebration": {
+      "goalMissedTitle": "Today's {percent}%",
+      "goalMissedHint": "{min} more min to goal — try again tomorrow 💪",
+      "vsAvgLonger": "Longer than weekly avg by {min} min",
+      "vsAvgShorter": "Shorter than weekly avg by {min} min",
+      "vsAvgSame": "About average for this week",
+      "calories": "{name} burned ~{kcal} kcal"
+    },
+    "streak": {
+      "labelShort": "{days} d",
+      "weekTooltip": "One-week streak!"
+    },
+    "encouragement": {
+      "noWalksToday": "Nothing yet today — head out ☀️",
+      "streakKeep": "{days}-day streak! Don't break it 🔥",
+      "petWaiting": "{name} has been waiting {hours}h 🐶",
+      "lastWalkYesterday": "{name}'s last walk was yesterday — time to move"
     }
   },
   "Push": {

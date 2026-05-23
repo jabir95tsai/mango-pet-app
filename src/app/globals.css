@@ -59,3 +59,43 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Walk completion confetti — pure CSS, no canvas-confetti dep.
+ * Spec docs/features/walks-photo-and-celebration.md Phase 2 D3.
+ * 20 absolutely-positioned slivers fall + rotate; per-piece delay +
+ * left% are inline-styled in the JSX. The global prefers-reduced-motion
+ * rule above already collapses the animation; this section also hides
+ * the container outright for that audience to avoid a stack of static
+ * coloured rectangles. */
+.walk-confetti {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.walk-confetti-piece {
+  position: absolute;
+  top: -10%;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: walk-confetti-fall 2.4s ease-in forwards;
+  will-change: transform, opacity;
+}
+@keyframes walk-confetti-fall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translate3d(0, 110vh, 0) rotate(720deg); opacity: 0; }
+}
+.walk-streak-pop {
+  animation: walk-streak-pop 0.6s ease-out both;
+}
+@keyframes walk-streak-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .walk-confetti { display: none; }
+}

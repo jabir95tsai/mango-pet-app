@@ -410,3 +410,76 @@ export function getWeekProgress(
   };
 }
 
+/** Average per-walk minutes over the trailing 7 days. Used by the v2
+ *  completion recap "比平均長/短 N 分鐘". Returns 0 when there are no
+ *  past walks in the window — the recap line collapses cleanly. */
+export function getWeeklyAvgMinutes(
+  walks: Walk[],
+  now: Date = new Date(),
+): number {
+  const sevenDaysAgo = now.getTime() - 7 * 86_400_000;
+  let total = 0;
+  let count = 0;
+  for (const w of walks) {
+    if (walkStartMs(w) >= sevenDaysAgo) {
+      total += w.durationMin ?? 0;
+      count++;
+    }
+  }
+  return count > 0 ? total / count : 0;
+}
+
+/** Pet-calorie estimate for the completion recap.
+ *  Heuristic: 1 kcal per kg of body weight per km. Wide error bars but
+ *  the spec frames this as fun trivia rather than coaching data. Returns
+ *  0 when weight is missing — the recap tile then suppresses itself. */
+export function estimatePetCalories(
+  distanceKm: number,
+  petWeightKg: number | null | undefined,
+): number {
+  if (!petWeightKg || petWeightKg <= 0) return 0;
+  return Math.round(distanceKm * petWeightKg * 1.2);
+}
+
+/** Picks the most-relevant Hero encouragement message key. Returns a
+ *  message key under the `Walks.encouragement` i18n namespace plus the
+ *  template variables it needs. The caller does the i18n lookup so the
+ *  helper stays framework-free (and the same logic can be tested
+ *  without next-intl). */
+export type EncouragementHint = {
+  key:
+    | "noWalksToday"
+    | "streakKeep"
+    | "petWaiting"
+    | "lastWalkYesterday";
+  vars: Record<string, string | number>;
+};
+
+export function getEncouragementHint(args: {
+  todayMinutes: number;
+  streakDays: number;
+  /** Most recent walk start across all walks, in ms; null when none. */
+  lastWalkMs: number | null;
+  petName: string | null;
+  now?: Date;
+}): EncouragementHint {
+  const now = (args.now ?? new Date()).getTime();
+  const name = args.petName ?? "🐾";
+  // 1. Streak ≥3 — protect-the-streak framing trumps everything else.
+  if (args.streakDays >= 3) {
+    return { key: "streakKeep", vars: { days: args.streakDays } };
+  }
+  // 2. No walks today AND we know about a previous walk — show "pet is
+  //    waiting" with hours since last walk.
+  if (args.todayMinutes === 0 && args.lastWalkMs) {
+    const hours = Math.max(1, Math.floor((now - args.lastWalkMs) / 3_600_000));
+    // < 36h ago ≈ "yesterday" framing reads more natural than 24h hours
+    if (hours <= 36) {
+      return { key: "lastWalkYesterday", vars: { name } };
+    }
+    return { key: "petWaiting", vars: { name, hours } };
+  }
+  // 3. Default — no walks today, no streak.
+  return { key: "noWalksToday", vars: { name } };
+}
+

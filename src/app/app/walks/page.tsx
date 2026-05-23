@@ -21,7 +21,12 @@ import {
 } from "@/lib/firebase/walks";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { computeStreak } from "@/lib/scoring";
-import { getTodayProgress, getWeekProgress } from "@/lib/walk-tracking";
+import {
+  getEncouragementHint,
+  getTodayProgress,
+  getWeekProgress,
+  getWeeklyAvgMinutes,
+} from "@/lib/walk-tracking";
 import { cn } from "@/lib/utils";
 import type { Pet, Walk, WalkInput } from "@/lib/types";
 import type { Timestamp } from "firebase/firestore";
@@ -38,6 +43,8 @@ const lastPetKey = (uid: string) => `mango.walks.lastPetId.${uid}`;
 export default function WalksPage() {
   const t = useTranslations("Nav");
   const tW = useTranslations("Walks.core");
+  const tS = useTranslations("Walks.streak");
+  const tE = useTranslations("Walks.encouragement");
   const tC = useTranslations("Common");
   const askConfirm = useConfirm();
   const { user } = useAuth();
@@ -118,6 +125,26 @@ export default function WalksPage() {
   const weekProgress = useMemo(
     () => getWeekProgress(walks, WEEK_GOAL_COUNT),
     [walks],
+  );
+
+  // Pre-compute fields the completion recap + Hero encouragement need.
+  // Doing it on the page keeps the WalkTrackingView decoupled from the
+  // walks list query.
+  const weeklyAvgMin = useMemo(() => getWeeklyAvgMinutes(walks), [walks]);
+  const lastWalkMs = useMemo<number | null>(() => {
+    if (walks.length === 0) return null;
+    const ts = walks[0].startedAt as Timestamp;
+    return ts.toMillis();
+  }, [walks]);
+  const encouragement = useMemo(
+    () =>
+      getEncouragementHint({
+        todayMinutes: todayProgress.minutes,
+        streakDays,
+        lastWalkMs,
+        petName: pets.find((p) => p.petId === selectedPetId)?.name ?? null,
+      }),
+    [todayProgress.minutes, streakDays, lastWalkMs, pets, selectedPetId],
   );
 
   // Most-recent pet from the walks list — drives the "Last walk: Mango"
@@ -220,13 +247,38 @@ export default function WalksPage() {
             >
               {todayLabel}
             </p>
-            <p className="shrink-0 text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
-              {tW("todayProgress", {
-                done: Math.round(todayProgress.minutes),
-                goal: TODAY_GOAL_MIN,
-              })}
-            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              {/* Streak badge — spec D4: always visible in Hero.
+                  0-2 days: neutral grey number; ≥3: amber with 🔥;
+                  ≥7: emerald with a tooltip celebrating the week. */}
+              <span
+                title={streakDays >= 7 ? tS("weekTooltip") : undefined}
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
+                  streakDays >= 7
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200"
+                    : streakDays >= 3
+                      ? "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200"
+                      : "text-zinc-500 dark:text-zinc-400",
+                )}
+              >
+                {streakDays >= 3 ? "🔥 " : ""}
+                {tS("labelShort", { days: streakDays })}
+              </span>
+              <p className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+                {tW("todayProgress", {
+                  done: Math.round(todayProgress.minutes),
+                  goal: TODAY_GOAL_MIN,
+                })}
+              </p>
+            </div>
           </div>
+          {/* Encouragement sub-text — pulled from the i18n bank by
+              getEncouragementHint based on (today, streak, last walk,
+              pet name). One line, low-key. */}
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            {tE(encouragement.key, encouragement.vars)}
+          </p>
           <div
             className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800"
             role="progressbar"
@@ -384,6 +436,7 @@ export default function WalksPage() {
         streakDays={streakDays}
         storedTodayMin={todayProgress.minutes}
         goalMin={TODAY_GOAL_MIN}
+        weeklyAvgMin={weeklyAvgMin}
         onComplete={handleCreate}
       />
       <ManualWalkDialog
