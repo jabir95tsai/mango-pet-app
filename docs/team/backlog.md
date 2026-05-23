@@ -129,6 +129,17 @@ _目前沒有條目。下一個 PM session 過 Inbox 時新增。_
   - **Alternative**：把 more icon 放在每頁全局 header 右上角（`route-header.tsx`），
     每頁都是一步 tap，更接近標準 mobile app 慣例（漢堡/overflow menu 通常在頂部）
   - 本條目仍按 user 明確要求「設定的右上角」實作；UX 觀察留給 user 實測後決定要不要 redirect
+- **✅ SHIPPED** `e34640a`（UI/UX session 2026-05-23 ~21:16 push、~21:22 App Hosting build 完成）
+  - 5 files：新增 `src/components/nav/nav-drawer-context.tsx`、改 `app/app/layout.tsx`、
+    `app-nav.tsx`、`route-header.tsx`（加 optional `action` slot）、`app/app/settings/page.tsx`
+  - Drawer state 提升到 `NavDrawerProvider` (context)，AppNav 仍渲染 drawer，trigger 從
+    bottom nav 挪到 settings page header 右上角
+  - 驗證（Chrome MCP DOM probe，window maximized 無法縮 mobile viewport）：mobile 5 links
+    `[/app, /app/pets, /app/walks, /app/leaderboard, /app/settings]`、`mobileButtonCount: 0`、
+    drawer overflow 5 items `[feed, expenses, restaurants, knowledge, friends]` in
+    `grid grid-cols-3`、desktop sidebar 10 links 不變、settings header trigger `aria-label="更多"`
+    `md:hidden`、`dark:` classes 完整保留
+  - Force-show mobile bottom nav 截圖確認 active state（home page → 首頁 amber 高亮）
 
 ---
 
