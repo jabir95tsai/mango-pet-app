@@ -1,19 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Globe } from "lucide-react";
+import { AlertTriangle, Globe, Trash2 } from "lucide-react";
 import { RouteHeader } from "@/components/nav/route-header";
 import { LanguageSwitcher } from "@/components/nav/language-switcher";
 import { PushToggle } from "@/components/settings/push-toggle";
 import { FamilySection } from "@/components/family/family-section";
+import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { signOutCurrent } from "@/lib/firebase/auth";
 
 export default function SettingsPage() {
   const t = useTranslations("Nav");
   const tAuth = useTranslations("Auth");
+  const tDz = useTranslations("Settings.dangerZone");
   const { user } = useAuth();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
     <>
@@ -58,7 +63,38 @@ export default function SettingsPage() {
           </div>
           <LanguageSwitcher />
         </section>
+
+        {/* Danger zone — kept visually distinct (red border + warning icon
+            + red action button) so a hand-of-god mis-tap looks obviously
+            wrong. Sits last in the settings list since it's an end-of-
+            relationship action. */}
+        {user && (
+          <section className="flex flex-col gap-3 rounded-lg border border-red-300/70 bg-red-50/50 p-6 dark:border-red-500/40 dark:bg-red-950/20">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="size-5 text-red-600 dark:text-red-400" />
+              <p className="font-semibold text-red-700 dark:text-red-300">
+                {tDz("title")}
+              </p>
+            </div>
+            <p className="text-sm text-red-900/80 dark:text-red-200/80">
+              {tDz("subtitle")}
+            </p>
+            <Button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="self-start bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500"
+            >
+              <Trash2 className="size-4" />
+              {tDz("deleteAction")}
+            </Button>
+          </section>
+        )}
       </div>
+
+      <DeleteAccountDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+      />
     </>
   );
 }

@@ -219,6 +219,37 @@
     "alreadyInFamily": "你已經在家庭裡了。",
     "goToApp": "前往首頁"
   },
+  "Settings": {
+    "dangerZone": {
+      "title": "危險區",
+      "subtitle": "下方操作不可復原。請確認你了解後果再進行。",
+      "deleteAction": "刪除我的帳號"
+    }
+  },
+  "DeleteAccount": {
+    "dialogTitle": "確認刪除帳號",
+    "warning": "永久刪除你的帳號與相關資料",
+    "cannotUndo": "此操作不可復原。一旦確認，所有資料立即且不可恢復地消失。",
+    "previewLoading": "盤點即將刪除的資料...",
+    "previewFailed": "無法盤點資料，但仍可繼續刪除（伺服器會清乾淨）。",
+    "impactHeader": "將要刪除的內容",
+    "personalDataSection": "個人模式資料",
+    "personalDataCount": "{n} 隻寵物（及其所有遛狗、提醒、開銷）",
+    "familyDataSection": "你建立的家庭寵物",
+    "familyDataCount": "{n} 隻寵物（連同所有人為這些寵物建的紀錄）",
+    "cascadeWarning": "家人為這些寵物建的遛狗、提醒、開銷會一起被刪 — 家人那邊也會看不到。",
+    "myActivitySection": "你在他人寵物上的活動",
+    "myActivityCount": "{walks} 個遛狗、{reminders} 個提醒、{expenses} 個開銷",
+    "socialDataSection": "社群",
+    "socialDataCount": "{n} 篇貼文（含所有回應）；你給別人按的回應、寫的餐廳評論也會一起清掉",
+    "nothingToDelete": "沒有可刪的資料 — 帳號本身仍會被刪除。",
+    "confirmInputLabel": "請輸入你的顯示名稱「{name}」以確認",
+    "confirmInputHint": "需要完全相同才能啟用刪除按鈕",
+    "confirmButton": "永久刪除",
+    "cancelButton": "取消",
+    "deleting": "刪除中...",
+    "errorPrefix": "刪除失敗"
+  },
   "Push": {
     "title": "推播通知",
     "enable": "啟用",

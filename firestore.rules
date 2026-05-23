@@ -317,5 +317,14 @@ service cloud.firestore {
         allow write: if false;
       }
     }
+
+    // ── deletedAccounts audit log (admin/server-only) ──
+    // Written by the deleteUserAccount callable via Admin SDK (rules
+    // bypass). No client read/write — the deleting user is gone before
+    // the doc exists, and nobody else has a legitimate reason to inspect
+    // these records from the client (admin tooling can use the console).
+    match /deletedAccounts/{id} {
+      allow read, write: if false;
+    }
   }
 }

@@ -13,12 +13,14 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import {
   FieldValue,
   getFirestore,
   Timestamp,
 } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
+import { getStorage } from "firebase-admin/storage";
 
 initializeApp();
 
@@ -1119,5 +1121,486 @@ export const mergeAndImportToFamily = onCall(
     );
 
     return { mergedPets, importCounts };
+  },
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// deleteUserAccount — D1 (full hard delete cascade)
+// User-initiated account deletion per docs/features/delete-account.md.
+// Step order matters — see spec Phase 1 §"執行順序很重要".
+// ─────────────────────────────────────────────────────────────────────
+
+type DeleteSummary = {
+  personalPetsHardDeleted: number;
+  personalWalksHardDeleted: number;
+  personalRemindersHardDeleted: number;
+  personalExpensesHardDeleted: number;
+  familyPetsHardDeleted: number;
+  familyPetSubcollectionsCascaded: number;
+  familyWalksHardDeleted: number;
+  familyRemindersHardDeleted: number;
+  familyRemindersDoneByCleared: number;
+  familyExpensesHardDeleted: number;
+  postsHardDeleted: number;
+  reactionsHardDeleted: number;
+  reviewsHardDeleted: number;
+  restaurantsSubmittedByCleared: number;
+  familiesLeft: number;
+  familiesDissolved: number;
+  storagePhotosDeleted: number;
+};
+
+const BATCH_SIZE = 400; // stay safely under Firestore's 500-write cap
+
+/** Commit `mutator` calls in chunked batches so a 5000-doc cleanup
+ *  doesn't blow the 500-write batch limit. Best-effort per chunk —
+ *  if a chunk fails the error propagates and the caller aborts the
+ *  remaining steps. */
+async function deleteIdsInBatches<T>(
+  items: T[],
+  mutator: (b: FirebaseFirestore.WriteBatch, item: T) => void,
+): Promise<void> {
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const slice = items.slice(i, i + BATCH_SIZE);
+    const batch = db.batch();
+    for (const item of slice) mutator(batch, item);
+    await batch.commit();
+  }
+}
+
+export const deleteUserAccount = onCall(
+  {
+    region: FUNCTION_REGION,
+    cors: true,
+    memory: "512MiB",
+    timeoutSeconds: 300,
+  },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+
+    const confirmDisplayName =
+      ((req.data?.confirmDisplayName as string | undefined) ?? "").trim();
+
+    // ─── Step 0: verify displayName matches before anything destructive
+    const userRef = db.doc(`users/${uid}`);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) {
+      throw new HttpsError("not-found", "User profile not found");
+    }
+    const userData = userSnap.data() ?? {};
+    if (userData.displayName !== confirmDisplayName) {
+      throw new HttpsError(
+        "failed-precondition",
+        "displayName confirmation does not match",
+      );
+    }
+
+    const summary: DeleteSummary = {
+      personalPetsHardDeleted: 0,
+      personalWalksHardDeleted: 0,
+      personalRemindersHardDeleted: 0,
+      personalExpensesHardDeleted: 0,
+      familyPetsHardDeleted: 0,
+      familyPetSubcollectionsCascaded: 0,
+      familyWalksHardDeleted: 0,
+      familyRemindersHardDeleted: 0,
+      familyRemindersDoneByCleared: 0,
+      familyExpensesHardDeleted: 0,
+      postsHardDeleted: 0,
+      reactionsHardDeleted: 0,
+      reviewsHardDeleted: 0,
+      restaurantsSubmittedByCleared: 0,
+      familiesLeft: 0,
+      familiesDissolved: 0,
+      storagePhotosDeleted: 0,
+    };
+
+    // ─── Step 1: collect pets where this user is the creator (ownerUid).
+    // These get cascade-deleted along with every sub-doc that references
+    // them. We need their petIds up front so steps 2-3 can scrub
+    // walks/reminders/expenses that pointed at them and avoid double-
+    // counting in step 4.
+    const myPetsSnap = await db
+      .collection("pets")
+      .where("ownerUid", "==", uid)
+      .get();
+    const myPetIds = new Set(myPetsSnap.docs.map((d) => d.id));
+    const personalPetIds = new Set<string>();
+    for (const p of myPetsSnap.docs) {
+      if (p.data().familyId === null) {
+        personalPetIds.add(p.id);
+        summary.personalPetsHardDeleted++;
+      } else {
+        summary.familyPetsHardDeleted++;
+      }
+    }
+
+    // ─── Step 2: per-pet subcollection cleanup (healthRecords + the
+    // top-level walks/reminders/expenses that target each petId).
+    for (const petId of myPetIds) {
+      const isPersonal = personalPetIds.has(petId);
+
+      // 2a. healthRecords subcollection.
+      const hrSnap = await db
+        .collection("pets")
+        .doc(petId)
+        .collection("healthRecords")
+        .get();
+      await deleteIdsInBatches(hrSnap.docs, (b, d) => b.delete(d.ref));
+      if (isPersonal) {
+        // healthRecords don't have a dedicated personal counter — the
+        // spec rolls them into personalPetsHardDeleted's implied cascade;
+        // we silently delete without bumping a counter.
+      } else {
+        summary.familyPetSubcollectionsCascaded += hrSnap.size;
+      }
+
+      // 2b. walks pointing at this pet.
+      const walksSnap = await db
+        .collection("walks")
+        .where("petId", "==", petId)
+        .get();
+      await deleteIdsInBatches(walksSnap.docs, (b, d) => b.delete(d.ref));
+      if (isPersonal) summary.personalWalksHardDeleted += walksSnap.size;
+      else summary.familyPetSubcollectionsCascaded += walksSnap.size;
+
+      // 2c. reminders pointing at this pet.
+      const remSnap = await db
+        .collection("reminders")
+        .where("petId", "==", petId)
+        .get();
+      await deleteIdsInBatches(remSnap.docs, (b, d) => b.delete(d.ref));
+      if (isPersonal) summary.personalRemindersHardDeleted += remSnap.size;
+      else summary.familyPetSubcollectionsCascaded += remSnap.size;
+
+      // 2d. expenses pointing at this pet.
+      const expSnap = await db
+        .collection("expenses")
+        .where("petId", "==", petId)
+        .get();
+      await deleteIdsInBatches(expSnap.docs, (b, d) => b.delete(d.ref));
+      if (isPersonal) summary.personalExpensesHardDeleted += expSnap.size;
+      else summary.familyPetSubcollectionsCascaded += expSnap.size;
+    }
+
+    // ─── Step 3: delete the pet docs themselves.
+    await deleteIdsInBatches(myPetsSnap.docs, (b, d) => b.delete(d.ref));
+
+    // ─── Step 4: walks/reminders/expenses owned by the user under OTHER
+    // people's pets. We query by the per-collection owner field and
+    // exclude anything whose petId was already cascaded in step 2.
+    {
+      const snap = await db
+        .collection("walks")
+        .where("walkerUid", "==", uid)
+        .get();
+      const docs = snap.docs.filter(
+        (d) => !myPetIds.has(d.data().petId as string),
+      );
+      // Only family-mode walks fall here; personal-mode walks have
+      // walkerUid === uid AND petId in personalPetIds → already cascaded.
+      // Defensive: also exclude familyId === null just in case (shouldn't
+      // happen because personal walks ALWAYS reference a personal pet).
+      const familyDocs = docs.filter((d) => d.data().familyId !== null);
+      await deleteIdsInBatches(familyDocs, (b, d) => b.delete(d.ref));
+      summary.familyWalksHardDeleted += familyDocs.length;
+    }
+    {
+      const snap = await db
+        .collection("reminders")
+        .where("createdByUid", "==", uid)
+        .get();
+      const docs = snap.docs.filter(
+        (d) => !myPetIds.has(d.data().petId as string),
+      );
+      const familyDocs = docs.filter((d) => d.data().familyId !== null);
+      await deleteIdsInBatches(familyDocs, (b, d) => b.delete(d.ref));
+      summary.familyRemindersHardDeleted += familyDocs.length;
+    }
+    {
+      const snap = await db
+        .collection("expenses")
+        .where("payerUid", "==", uid)
+        .get();
+      const docs = snap.docs.filter(
+        (d) => !myPetIds.has(d.data().petId as string),
+      );
+      const familyDocs = docs.filter((d) => d.data().familyId !== null);
+      await deleteIdsInBatches(familyDocs, (b, d) => b.delete(d.ref));
+      summary.familyExpensesHardDeleted += familyDocs.length;
+    }
+
+    // ─── Step 5: clear doneByUid/doneAt on reminders this user marked
+    // done but didn't create. The reminder doc stays (it belongs to
+    // someone else); only the attribution gets scrubbed.
+    {
+      const snap = await db
+        .collection("reminders")
+        .where("doneByUid", "==", uid)
+        .get();
+      const docs = snap.docs.filter(
+        (d) => d.data().createdByUid !== uid && !myPetIds.has(d.data().petId as string),
+      );
+      await deleteIdsInBatches(docs, (b, d) =>
+        b.update(d.ref, {
+          doneByUid: FieldValue.delete(),
+          doneAt: FieldValue.delete(),
+        }),
+      );
+      summary.familyRemindersDoneByCleared += docs.length;
+    }
+
+    // ─── Step 6a: clear submittedByUid on restaurants. Restaurants are
+    // community assets — we keep them around with attribution stripped.
+    {
+      const snap = await db
+        .collection("restaurants")
+        .where("submittedByUid", "==", uid)
+        .get();
+      await deleteIdsInBatches(snap.docs, (b, d) =>
+        b.update(d.ref, { submittedByUid: FieldValue.delete() }),
+      );
+      summary.restaurantsSubmittedByCleared += snap.size;
+    }
+
+    // ─── Step 6b: posts authored by this user. Each post has a reactions
+    // subcollection; nuke that first, then the post.
+    {
+      const postsSnap = await db
+        .collection("posts")
+        .where("authorUid", "==", uid)
+        .get();
+      for (const post of postsSnap.docs) {
+        const rxSnap = await post.ref.collection("reactions").get();
+        await deleteIdsInBatches(rxSnap.docs, (b, d) => b.delete(d.ref));
+      }
+      await deleteIdsInBatches(postsSnap.docs, (b, d) => b.delete(d.ref));
+      summary.postsHardDeleted += postsSnap.size;
+    }
+
+    // ─── Step 6c: this user's reactions on OTHER people's posts.
+    // Decrement each post's reactionCounts[emoji] before deleting the
+    // reaction doc. Skip reactions on the user's own posts (already
+    // killed by 6b) — grouped by parent post so we batch one update
+    // per post.
+    {
+      const rxSnap = await db
+        .collectionGroup("reactions")
+        .where("uid", "==", uid)
+        .get();
+      // Group reactions by parent post id, accumulating per-emoji counts.
+      // Skip reactions whose parent post we already deleted in 6b — same
+      // condition: post.authorUid === uid → the post is gone and any
+      // increment update against it would 404.
+      const perPost = new Map<
+        string,
+        {
+          ref: FirebaseFirestore.DocumentReference;
+          emojiCounts: Record<string, number>;
+          reactionRefs: FirebaseFirestore.DocumentReference[];
+        }
+      >();
+      for (const r of rxSnap.docs) {
+        const postRef = r.ref.parent.parent;
+        if (!postRef) continue;
+        const postSnap = await postRef.get();
+        if (!postSnap.exists) continue;
+        if (postSnap.data()?.authorUid === uid) continue;
+        const emoji = (r.data().emoji as string) || "❤️";
+        let entry = perPost.get(postRef.id);
+        if (!entry) {
+          entry = { ref: postRef, emojiCounts: {}, reactionRefs: [] };
+          perPost.set(postRef.id, entry);
+        }
+        entry.emojiCounts[emoji] = (entry.emojiCounts[emoji] ?? 0) + 1;
+        entry.reactionRefs.push(r.ref);
+      }
+      // Apply per-post: decrement counts then delete reaction doc.
+      for (const entry of perPost.values()) {
+        const updates: Record<string, FirebaseFirestore.FieldValue> = {};
+        for (const [emoji, n] of Object.entries(entry.emojiCounts)) {
+          updates[`reactionCounts.${emoji}`] = FieldValue.increment(-n);
+        }
+        const batch = db.batch();
+        batch.update(entry.ref, updates);
+        for (const refToDelete of entry.reactionRefs) batch.delete(refToDelete);
+        await batch.commit();
+        summary.reactionsHardDeleted += entry.reactionRefs.length;
+      }
+    }
+
+    // ─── Step 6d: restaurant reviews authored by this user. Per spec,
+    // recompute averageRating + reviewCount on each affected restaurant.
+    {
+      const reviewsSnap = await db
+        .collectionGroup("reviews")
+        .where("authorUid", "==", uid)
+        .get();
+      // Group by parent restaurant to do one rating recompute per
+      // restaurant instead of per review.
+      const perRestaurant = new Map<
+        string,
+        {
+          ref: FirebaseFirestore.DocumentReference;
+          reviewRefs: FirebaseFirestore.DocumentReference[];
+        }
+      >();
+      for (const rv of reviewsSnap.docs) {
+        const restRef = rv.ref.parent.parent;
+        if (!restRef) continue;
+        let entry = perRestaurant.get(restRef.id);
+        if (!entry) {
+          entry = { ref: restRef, reviewRefs: [] };
+          perRestaurant.set(restRef.id, entry);
+        }
+        entry.reviewRefs.push(rv.ref);
+      }
+      for (const entry of perRestaurant.values()) {
+        // Delete the reviews first.
+        await deleteIdsInBatches(entry.reviewRefs, (b, ref) => b.delete(ref));
+        // Recompute from the surviving review set.
+        const remaining = await entry.ref.collection("reviews").get();
+        let sum = 0;
+        for (const rv of remaining.docs)
+          sum += Number(rv.data().rating) || 0;
+        const newCount = remaining.size;
+        const newAvg = newCount > 0 ? sum / newCount : 0;
+        await entry.ref.update({
+          averageRating: newAvg,
+          reviewCount: newCount,
+        });
+        summary.reviewsHardDeleted += entry.reviewRefs.length;
+      }
+    }
+
+    // ─── Step 7: friends + friendRequests (both directions).
+    {
+      // My friends subcollection — for each entry, also delete the reverse
+      // doc at users/{friendUid}/friends/{myUid}.
+      const friendsSnap = await userRef.collection("friends").get();
+      const friendUids = friendsSnap.docs.map((d) => d.id);
+      await deleteIdsInBatches(friendsSnap.docs, (b, d) => b.delete(d.ref));
+      // Reverse side.
+      await deleteIdsInBatches(friendUids, (b, friendUid) =>
+        b.delete(db.doc(`users/${friendUid}/friends/${uid}`)),
+      );
+
+      // friendRequests TO me: just nuke the subcollection.
+      const incomingReqs = await userRef.collection("friendRequests").get();
+      await deleteIdsInBatches(incomingReqs.docs, (b, d) => b.delete(d.ref));
+
+      // friendRequests FROM me to others: collectionGroup lookup since the
+      // docs live under different users.
+      const outgoingReqs = await db
+        .collectionGroup("friendRequests")
+        .where("fromUid", "==", uid)
+        .get();
+      await deleteIdsInBatches(outgoingReqs.docs, (b, d) => b.delete(d.ref));
+    }
+
+    // ─── Step 8: small per-user subcollections (favorites + bookmarks).
+    {
+      const favSnap = await userRef.collection("favoriteRestaurants").get();
+      await deleteIdsInBatches(favSnap.docs, (b, d) => b.delete(d.ref));
+      const bmSnap = await userRef.collection("knowledgeBookmarks").get();
+      await deleteIdsInBatches(bmSnap.docs, (b, d) => b.delete(d.ref));
+    }
+
+    // ─── Step 9: leaderboard entries (one per period).
+    {
+      const lbSnap = await db
+        .collectionGroup("entries")
+        .where("uid", "==", uid)
+        .get();
+      await deleteIdsInBatches(lbSnap.docs, (b, d) => b.delete(d.ref));
+    }
+
+    // ─── Step 10: families. For each family the user belongs to:
+    //   - if they're the sole member → dissolve (delete family doc)
+    //   - if they're the owner → promote memberUids[1] (next-oldest) to owner
+    //   - always: remove uid from memberUids
+    {
+      const familyIds: string[] =
+        (userData.familyIds as string[] | undefined) ?? [];
+      for (const familyId of familyIds) {
+        const famRef = db.doc(`families/${familyId}`);
+        const famSnap = await famRef.get();
+        if (!famSnap.exists) continue;
+        const fam = famSnap.data() ?? {};
+        const members = (fam.memberUids as string[] | undefined) ?? [];
+        const remaining = members.filter((m) => m !== uid);
+        if (remaining.length === 0) {
+          // Sole member → dissolve.
+          await famRef.delete();
+          summary.familiesDissolved++;
+          continue;
+        }
+        const updates: Record<string, unknown> = {
+          memberUids: FieldValue.arrayRemove(uid),
+        };
+        if (fam.ownerUid === uid) {
+          updates.ownerUid = remaining[0];
+        }
+        await famRef.update(updates);
+        summary.familiesLeft++;
+      }
+    }
+
+    // ─── Step 11: audit doc. Written BEFORE the user doc + auth user
+    // delete so we always have a record even if step 13/14 fail.
+    const isoNow = new Date().toISOString();
+    const auditRef = db.doc(`deletedAccounts/${uid}-${isoNow}`);
+    await auditRef.set({
+      deletedAt: Timestamp.now(),
+      reason: "user-initiated",
+      summary,
+    });
+
+    // ─── Step 12: storage cleanup. Both pet avatars and post photos live
+    // under users/{uid}/ — one prefix-delete covers everything this user
+    // uploaded. Best-effort: failures here don't roll back Firestore (the
+    // orphan files are cheap and not user-visible). We list first for an
+    // accurate count, then delete — `deleteFiles` itself returns void
+    // in the current SDK.
+    try {
+      const bucket = getStorage().bucket();
+      const [files] = await bucket.getFiles({ prefix: `users/${uid}/` });
+      const fileCount = files.length;
+      if (fileCount > 0) {
+        await bucket.deleteFiles({ prefix: `users/${uid}/` });
+      }
+      summary.storagePhotosDeleted = fileCount;
+      await auditRef.update({ "summary.storagePhotosDeleted": fileCount });
+    } catch (err) {
+      logger.warn(`deleteUserAccount: storage cleanup failed for uid=${uid}`, err);
+    }
+
+    // ─── Step 13: delete the user profile doc. (Subcollections already
+    // emptied above — Firestore deletes the doc itself; subcoll docs
+    // would survive but they're already gone.)
+    await userRef.delete();
+
+    // ─── Step 14: nuke the Firebase Auth user. Done last so a failure
+    // here leaves the data already deleted (user could just sign in
+    // again to a clean state) instead of the opposite.
+    try {
+      await getAuth().deleteUser(uid);
+    } catch (err) {
+      logger.error(
+        `deleteUserAccount: auth.deleteUser failed for uid=${uid} ` +
+          `— Firestore already wiped; user may retry sign-in to clean up`,
+        err,
+      );
+      // Don't rethrow — the user's data is gone, they're effectively
+      // deleted from the app's perspective even if the auth record
+      // lingers (it'll re-create an empty user doc on next sign-in).
+    }
+
+    logger.info(
+      `deleteUserAccount: completed uid=${uid} summary=${JSON.stringify(summary)}`,
+    );
+
+    return { summary };
   },
 );

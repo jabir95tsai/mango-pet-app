@@ -219,6 +219,37 @@
     "alreadyInFamily": "You're already in a family.",
     "goToApp": "Go to app"
   },
+  "Settings": {
+    "dangerZone": {
+      "title": "Danger zone",
+      "subtitle": "Actions below cannot be undone. Make sure you understand the consequences first.",
+      "deleteAction": "Delete my account"
+    }
+  },
+  "DeleteAccount": {
+    "dialogTitle": "Confirm account deletion",
+    "warning": "Permanently delete your account and associated data",
+    "cannotUndo": "This action cannot be undone. Once confirmed, all data disappears immediately and irrecoverably.",
+    "previewLoading": "Counting what will be deleted...",
+    "previewFailed": "Could not preview, but deletion can still proceed (the server handles cleanup).",
+    "impactHeader": "What will be deleted",
+    "personalDataSection": "Personal-mode data",
+    "personalDataCount": "{n} pet(s) and all their walks, reminders, and expenses",
+    "familyDataSection": "Family pets you created",
+    "familyDataCount": "{n} pet(s), along with every record anyone added to them",
+    "cascadeWarning": "Walks, reminders, and expenses your family added to these pets will also be deleted — they'll disappear on their side too.",
+    "myActivitySection": "Your activity on others' pets",
+    "myActivityCount": "{walks} walk(s), {reminders} reminder(s), {expenses} expense(s)",
+    "socialDataSection": "Social",
+    "socialDataCount": "{n} post(s) including reactions; your reactions on others' posts and your restaurant reviews are also cleared.",
+    "nothingToDelete": "Nothing extra to delete — the account itself will still be removed.",
+    "confirmInputLabel": "Type your display name \"{name}\" to confirm",
+    "confirmInputHint": "Must match exactly to enable the delete button",
+    "confirmButton": "Delete permanently",
+    "cancelButton": "Cancel",
+    "deleting": "Deleting...",
+    "errorPrefix": "Delete failed"
+  },
   "Push": {
     "title": "Push notifications",
     "enable": "Enable",

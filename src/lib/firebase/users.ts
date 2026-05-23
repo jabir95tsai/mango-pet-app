@@ -1,14 +1,25 @@
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
   Timestamp,
 } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import type { User } from "firebase/auth";
-import { getDb } from "./config";
-import type { AppUser, AuthProviderKind } from "@/lib/types";
+import { getDb, getFirebaseApp } from "./config";
+import type { AppUser, AuthProviderKind, Pet } from "@/lib/types";
+
+const FN_REGION = "asia-east1";
+
+function fns() {
+  return getFunctions(getFirebaseApp(), FN_REGION);
+}
 
 const LAST_SEEN_THROTTLE_MS = 60 * 60 * 1000; // 1 hour
 
@@ -62,4 +73,120 @@ export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<vo
 export async function getAppUser(uid: string): Promise<AppUser | null> {
   const snap = await getDoc(doc(getDb(), "users", uid));
   return snap.exists() ? (snap.data() as AppUser) : null;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Delete account — D1 (full hard delete cascade)
+// ────────────────────────────────────────────────────────────────────
+
+export type DeleteAccountImpact = {
+  /** Personal-mode pets the user created (familyId === null). */
+  personalPets: number;
+  /** Family-mode pets the user created. Each of these cascade-deletes
+   *  every walk/reminder/expense/healthRecord that any family member
+   *  added under it — surface this loud to the user via cascadeWarning. */
+  familyPets: number;
+  /** Walks the user logged where the parent pet was created by someone
+   *  else (so the parent pet itself survives, but the walk is gone). */
+  familyWalks: number;
+  familyReminders: number;
+  familyExpenses: number;
+  /** Posts authored by the user (reactions on those posts ride along). */
+  posts: number;
+};
+
+/** Fetches the current user's "what's about to disappear" counts for the
+ *  delete-account confirmation dialog. Each count is a separate Firestore
+ *  query — total ~5 reads, runs once when the dialog opens.
+ *
+ *  Counts shown to the user are approximations of what the
+ *  deleteUserAccount callable will actually do. Specifically:
+ *  - reactions on others' posts and restaurant reviews aren't queried
+ *    here (would require collection-group single-field indexes we don't
+ *    keep enabled). They still get cleaned up server-side.
+ *  - walks/reminders/expenses owned by the user against their OWN family
+ *    pets are counted under "familyPets" (cascade) rather than
+ *    "familyWalks/Reminders/Expenses" (which means "owned by user, parent
+ *    pet survives"), matching the callable's bookkeeping. */
+export async function previewDeleteAccountImpact(
+  uid: string,
+): Promise<DeleteAccountImpact> {
+  const db = getDb();
+
+  const [petsSnap, walksSnap, remindersSnap, expensesSnap, postsSnap] =
+    await Promise.all([
+      getDocs(query(collection(db, "pets"), where("ownerUid", "==", uid))),
+      getDocs(query(collection(db, "walks"), where("walkerUid", "==", uid))),
+      getDocs(
+        query(collection(db, "reminders"), where("createdByUid", "==", uid)),
+      ),
+      getDocs(
+        query(collection(db, "expenses"), where("payerUid", "==", uid)),
+      ),
+      getDocs(query(collection(db, "posts"), where("authorUid", "==", uid))),
+    ]);
+
+  // Partition pets so the secondary queries can correctly attribute
+  // walks/reminders/expenses to either "cascade" (parent is user's pet)
+  // or "free-standing" (parent is someone else's pet).
+  const myPetIds = new Set<string>(petsSnap.docs.map((d) => d.id));
+  let personalPets = 0;
+  let familyPets = 0;
+  for (const p of petsSnap.docs) {
+    const pet = p.data() as Pet;
+    if (pet.familyId === null) personalPets++;
+    else familyPets++;
+  }
+
+  const countFreeStanding = (
+    snap: { docs: { data: () => { petId?: string } }[] },
+  ) =>
+    snap.docs.filter((d) => {
+      const pid = d.data().petId;
+      return !pid || !myPetIds.has(pid);
+    }).length;
+
+  return {
+    personalPets,
+    familyPets,
+    familyWalks: countFreeStanding(walksSnap),
+    familyReminders: countFreeStanding(remindersSnap),
+    familyExpenses: countFreeStanding(expensesSnap),
+    posts: postsSnap.size,
+  };
+}
+
+export type DeleteAccountSummary = {
+  personalPetsHardDeleted: number;
+  personalWalksHardDeleted: number;
+  personalRemindersHardDeleted: number;
+  personalExpensesHardDeleted: number;
+  familyPetsHardDeleted: number;
+  familyPetSubcollectionsCascaded: number;
+  familyWalksHardDeleted: number;
+  familyRemindersHardDeleted: number;
+  familyRemindersDoneByCleared: number;
+  familyExpensesHardDeleted: number;
+  postsHardDeleted: number;
+  reactionsHardDeleted: number;
+  reviewsHardDeleted: number;
+  restaurantsSubmittedByCleared: number;
+  familiesLeft: number;
+  familiesDissolved: number;
+  storagePhotosDeleted: number;
+};
+
+/** Calls the deleteUserAccount callable. The server verifies
+ *  `confirmDisplayName` matches the user's profile displayName before
+ *  it does anything destructive — so the input mismatch case errors
+ *  out cleanly before any data is touched. */
+export async function deleteAccount(
+  confirmDisplayName: string,
+): Promise<{ summary: DeleteAccountSummary }> {
+  const fn = httpsCallable<
+    { confirmDisplayName: string },
+    { summary: DeleteAccountSummary }
+  >(fns(), "deleteUserAccount");
+  const res = await fn({ confirmDisplayName });
+  return res.data;
 }
