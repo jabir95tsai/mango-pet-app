@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -15,11 +15,11 @@ import {
   Newspaper,
   Wallet,
   Settings,
-  MoreHorizontal,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavDrawer } from "./nav-drawer-context";
 
 type NavKey =
   | "home"
@@ -48,8 +48,17 @@ const ALL_ITEMS: Item[] = [
   { href: "/app/settings", key: "settings", icon: Settings },
 ];
 
-// Mobile bottom bar: 4 primary items + "More" → drawer with the rest.
-const MOBILE_PRIMARY_KEYS: NavKey[] = ["home", "pets", "walks", "expenses"];
+// Mobile bottom bar: 5 primary nav links fill all slots.
+// The overflow drawer (feed / expenses / restaurants / knowledge / friends)
+// is now triggered from the settings page top-right corner — see
+// `src/app/app/settings/page.tsx` and `useNavDrawer()`.
+const MOBILE_PRIMARY_KEYS: NavKey[] = [
+  "home",
+  "pets",
+  "walks",
+  "leaderboard",
+  "settings",
+];
 
 function isActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
@@ -62,16 +71,15 @@ export function AppNav() {
   const t = useTranslations("Nav");
   const tApp = useTranslations("App");
   const tC = useTranslations("Common");
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { open: drawerOpen, setOpen: setDrawerOpen } = useNavDrawer();
 
   // Close drawer when navigating
   useEffect(() => {
     setDrawerOpen(false);
-  }, [pathname]);
+  }, [pathname, setDrawerOpen]);
 
   const primary = ALL_ITEMS.filter((i) => MOBILE_PRIMARY_KEYS.includes(i.key));
   const overflow = ALL_ITEMS.filter((i) => !MOBILE_PRIMARY_KEYS.includes(i.key));
-  const anyOverflowActive = overflow.some((i) => isActive(pathname, i.href));
 
   return (
     <>
@@ -121,7 +129,7 @@ export function AppNav() {
         </ul>
       </nav>
 
-      {/* Mobile bottom tab bar (5 slots: 4 primary + More) */}
+      {/* Mobile bottom tab bar (5 nav links, no More button) */}
       <nav
         aria-label="Primary"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/80 bg-white/95 shadow-[0_-8px_24px_rgba(24,24,27,0.08)] backdrop-blur md:hidden dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-none"
@@ -148,23 +156,6 @@ export function AppNav() {
               </li>
             );
           })}
-          <li>
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              aria-label={t("more")}
-              aria-expanded={drawerOpen}
-              className={cn(
-                "flex h-[3.75rem] w-full min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
-                anyOverflowActive
-                  ? "text-amber-700 dark:text-amber-300"
-                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
-              )}
-            >
-              <MoreHorizontal className="size-5" />
-              <span className="max-w-full truncate">{t("more")}</span>
-            </button>
-          </li>
         </ul>
       </nav>
 
