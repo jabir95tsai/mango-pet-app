@@ -36,13 +36,20 @@ export async function searchUsers(qStr: string): Promise<AppUser[]> {
     return byEmail.docs.map((d) => d.data() as AppUser);
   }
 
-  // Otherwise prefix-match displayName (Firestore doesn't have full text)
-  const high = term + "";
+  // Prefix-match on `displayNameLower`, the lowercase shadow field
+  // backfilled by displayNameLowerBackfills/2026-05-23T14-52-04-246Z
+  // and kept fresh by upsertUser. Lowercasing the query term makes the
+  // match case-insensitive ("jabir"/"Jabir" both hit "蔡智博jabir");
+  // Chinese chars are unaffected by .toLowerCase() so "蔡" still
+  // prefix-matches the same field.  is the Firestore-blessed
+  // high-sentinel for prefix ranges. See spec
+  // docs/features/friends-search-lowercase.md.
+  const qLower = term.toLowerCase();
   const byName = await getDocs(
     query(
       ref,
-      where("displayName", ">=", term),
-      where("displayName", "<=", high),
+      where("displayNameLower", ">=", qLower),
+      where("displayNameLower", "<=", qLower + ""),
       limit(10),
     ),
   );
