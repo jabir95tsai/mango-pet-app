@@ -75,8 +75,8 @@ messaging.onBackgroundMessage((payload) => {
   const title = (payload.notification && payload.notification.title) || "Mango Pet";
   const options = {
     body: (payload.notification && payload.notification.body) || "",
-    icon: (payload.notification && payload.notification.icon) || "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    icon: (payload.notification && payload.notification.icon) || "/web-app-manifest-192x192.png",
+    badge: "/favicon-96x96.png",
     data: payload.data || {},
   };
   self.registration.showNotification(title, options);

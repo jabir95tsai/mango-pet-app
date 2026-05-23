@@ -19,6 +19,7 @@ const geistMono = Geist_Mono({
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mango-pet.app";
 const LOGO_IMAGE = "/icons/mango-pet-logo.png";
+const PWA_ICON_192 = "/web-app-manifest-192x192.png";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
   },
   description:
     "一站式寵物照護與社交平台：紀錄寵物生活、找寵物友善餐廳、參與遛狗排行榜、與其他飼主交流。",
-  manifest: "/manifest.json",
+  manifest: "/manifest.json?v=20260524",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -52,13 +53,17 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/icons/favicon-32x32.png", type: "image/png", sizes: "32x32" },
-      { url: "/icons/favicon-96x96.png", type: "image/png", sizes: "96x96" },
-      { url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+      { url: PWA_ICON_192, type: "image/png", sizes: "192x192" },
     ],
     apple: [
-      { url: "/icons/apple-touch-icon.png", type: "image/png", sizes: "180x180" },
+      { url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" },
     ],
+  },
+  other: {
+    "msapplication-TileColor": "#F59E0B",
+    "msapplication-TileImage": "/mstile-150x150.png",
   },
 };
 

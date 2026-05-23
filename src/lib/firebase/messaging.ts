@@ -212,8 +212,8 @@ export async function setupPushMessageListener(): Promise<() => void> {
     const title = n?.title ?? "Mango Pet";
     await reg.showNotification(title, {
       body: n?.body ?? "",
-      icon: n?.icon ?? "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      icon: n?.icon ?? "/web-app-manifest-192x192.png",
+      badge: "/favicon-96x96.png",
       data: payload.data ?? {},
     });
   });

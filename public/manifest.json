@@ -10,13 +10,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -26,17 +26,17 @@
     {
       "name": "我的寵物",
       "url": "/app/pets",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/web-app-manifest-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "遛狗",
       "url": "/app/walks",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/web-app-manifest-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "餐廳地圖",
       "url": "/app/restaurants",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/web-app-manifest-192x192.png", "sizes": "192x192" }]
     }
   ]
 }
