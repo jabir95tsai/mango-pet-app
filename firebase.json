@@ -29,6 +29,8 @@
     "ignore": [
       "node_modules",
       ".git",
+      ".next",
+      ".codex-npm-cache",
       "firebase-debug.log",
       "firebase-debug.*.log",
       "functions"
