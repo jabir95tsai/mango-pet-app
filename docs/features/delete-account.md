@@ -1,6 +1,6 @@
 # 刪除帳號功能
 
-狀態：READY-FOR-DEV（D1 由 user 確認改為 full hard delete cascade 2026-05-23；D2-D5 沿用 PM 預設；可動工）
+狀態：SHIPPED（callable + UI 全 deploy 上 production 2026-05-23，commits `d5ade48` + `02d16f9`；user 親手 destructive verify 待跑 — Chrome MCP supervised verify 至「dialog 開啟 + input validation」止，最終 delete 由 user 自行操作以免誤碰主帳號家庭，詳見「SHIPPED 紀錄」末段）
 建立日期：2026-05-23
 最後更新：2026-05-23
 規格作者：PM session @ cada71b
@@ -209,3 +209,57 @@ deletedAccounts/{uid}-{ISO}: {
 - [ ] Decision 5 audit：採 PM 預設「永久保留 deletedAccounts」？
 
 （D2-D5 user 未明確 push back 視為接受 PM 預設；FB 動工前若有重大疑慮回 PM 確認）
+
+---
+
+## SHIPPED 紀錄
+
+| Phase / 項目 | Commit | 部署時間 (Asia/Taipei 2026-05-23) | 備註 |
+|---|---|---|---|
+| Phase 1 + 2 + 3 一條龍 | `d5ade48` | ~18:42 | callable `deleteUserAccount` + 客戶端 `deleteAccount` / `previewDeleteAccountImpact` + `DeleteAccountDialog` + Settings Danger zone + i18n (Settings.dangerZone × 3 keys + DeleteAccount × 22 keys, zh-TW + en) |
+| collectionGroup index fix | `02d16f9` | ~19:00 | 4 個 `fieldOverrides` 加進 `firestore.indexes.json`：reactions/uid、reviews/authorUid、friendRequests/fromUid、entries/uid — 全 COLLECTION_GROUP_ASC scope。Live verify 時發現遺漏，補 + 重 deploy indexes（functions 沒變不必重 deploy）|
+
+### 部署順序（如實照 spec 跑）
+
+1. `firebase deploy --only firestore:rules`（加 `deletedAccounts/{id}` allow false 規則）
+2. `firebase deploy --only functions:deleteUserAccount`（callable 新建立成功）
+3. `git push origin main`（App Hosting auto-build）
+4. **發現 missing collectionGroup index** → `firebase deploy --only firestore:indexes` + 補 commit `02d16f9`
+
+### Chrome MCP 驗證結果（partial — supervised）
+
+**已驗（非破壞性）**：
+- 部署後 build 上線時間（~18:55）；test account 蔡智博/hakubokuuri@gmail.com 登入後 `/app/settings` 看到「危險區」section（紅色 border + warning icon + 紅色「刪除我的帳號」button）✓
+- 點 button → `DeleteAccountDialog` 開啟，顯示「永久刪除你的帳號與相關資料」紅色 warning + 「此操作不可復原」副文案 ✓
+- preview 失敗時的 graceful fallback：因 collectionGroup index 缺失，preview 顯示「無法盤點資料，但仍可繼續刪除（伺服器會清乾淨）」per spec ✓（補完 fieldOverrides 後此 fallback 應改觸發成功 preview）
+- displayName 輸入「蔡智博」live validate → confirm button 從 disabled 變紅色 enabled ✓
+
+**未驗（destructive 由 user 親手跑）**：
+- 點「永久刪除」實際刪 flow
+- 刪完登出 + redirect 到 `/`
+- 登入失敗確認（Auth user 已刪）
+- 另一個家庭成員角度看 cascade 影響
+
+### 已知問題與修法（learnings）
+
+1. **collectionGroup 查詢需要明確的 `COLLECTION_GROUP_ASC` field exemption**（不在 default 自動單欄位 index 範圍內）。第一次 live verify 兩次 INTERNAL fail（step 6c `collectionGroup("reactions").where("uid", "==", uid)` 拋 `FAILED_PRECONDITION`）才暴露這個 hole。`02d16f9` 已修。後續類似 callable 動 collectionGroup query 都記得對應 fieldOverride。
+2. **失敗都發生在任何 destructive write 之前**（step 1-5 對 empty 個人模式帳號是 no-op；step 6c 是第一個動 collectionGroup 的步驟），所以**測試帳號 hakubokuuri 應該還在沒被砍** — 你之後手動 verify 時可以拿同一個帳號繼續。
+3. **Browser tab group 切換時 auth session 不一定跟著切**：第一個 MCP tab 拿到了 hakubokuuri 帳號，但用戶關掉新開分頁後，第二個 MCP tab 卻拿到主帳號 jabir95tsai/Mango家 owner 的 session。**及時偵測 + 不點 destructive button**，避免誤刪主帳號家庭。
+
+### Handoff — user 親手 verify SOP
+
+1. **登出主帳號**（jabir95tsai@gmail.com 是 Mango家 owner — 不要刪！）
+2. **登入 hakubokuuri@gmail.com**（test account；目前個人模式無資料）
+3. `/app/settings` → 看到「危險區」+「刪除我的帳號」red button
+4. 點 button → dialog 開
+5. 等 1-2 分鐘讓 collectionGroup indexes BUILT（如果先前 deploy 後 index 還在 BUILDING 狀態，preview 會 fallback 顯示「無法盤點資料」訊息，仍可繼續刪）
+6. 輸入「蔡智博」→「永久刪除」按鈕變紅 enabled
+7. 點「永久刪除」→ 預期：dialog 關閉 → 自動登出 → router redirect 到 `/`
+8. 嘗試重新登入 hakubokuuri@gmail.com → Firebase 會 create 一個全新空 user（uid 一樣 — Google Sign-In 不會給新 uid for same Google account）。看 `/app` 是 personal mode empty state（confirm Firestore data wipe ✓）
+9. 切回主帳號 jabir95tsai：看 Mango 家（你的主家庭）內 pets/walks/reminders/expenses **無變化**（test account 跟主帳號家庭無重疊）
+
+### 與 spec 的 deviations
+
+- **previewDeleteAccountImpact 沒含 reactions/reviews 計數**：spec 說 "資料概況清單 fetch + 顯示" 包括 "你的 posts + reactions + reviews 計數"。實作只放 posts 的 raw count；reactions + reviews 在 preview 跳過（同樣 collectionGroup index 問題，加 fieldOverride 也只是 server-side workable，client preview query 也要 index）。**workaround**：dialog 文案明寫「你給別人按的回應、寫的餐廳評論也會一起清掉」— 用戶被告知會被處理，只是沒給數字。
+- **client wrapper 沒處理 `auth/requires-recent-login`**：Firebase Auth 對 `auth.deleteUser()` 不要求 recent sign-in（Admin SDK 跳過此限制），所以 client 端不需要 re-auth。但這個 callable 是 user-triggered — 如果未來 Firebase 政策改、或我們改用 client-side `currentUser.delete()`（沒用），會需要補 re-auth 流程。目前沒做。
+- **沒做 partial-failure rollback**：spec line 131 「callable 處理一半失敗 → rollback + 顯示 partial-failure error」。實作只做 best-effort chunked batch + 失敗時拋出 — Firestore 沒有跨 batch 的 atomic 機制，多 batch 中間失敗會 leave 部分狀態。重跑大部分 step idempotent（delete by id + clear field 都 OK），所以使用者 retry 通常會 complete cleanup。client 拿到 error 仍可重試。**真正的 rollback 需要 cross-batch transactional**，超出 v1 scope。
