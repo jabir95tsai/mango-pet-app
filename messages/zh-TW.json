@@ -203,7 +203,13 @@
     "skip": "先不要",
     "importN": "搬進來（{n}）",
     "importEmpty": "沒有可搬的",
-    "importing": "搬移中..."
+    "importing": "搬移中...",
+    "mergeSectionTitle": "偵測到可能重複的寵物",
+    "mergeSectionHint": "你的個人寵物跟家庭已有寵物的名字、品種、生日都一樣 — 應該是同一隻嗎？合併後子集合（健康紀錄、遛狗、提醒、開銷）會搬進家庭那隻。",
+    "mergeAction": "合併（保留家庭那隻）",
+    "mergeKeepSeparate": "保持兩隻分開",
+    "importSectionTitle": "其他資料",
+    "mergeAndImportN": "合併 {merges} 隻 + 搬 {n} 筆"
   },
   "Onboarding": {
     "title": "歡迎加入芒果寵物",

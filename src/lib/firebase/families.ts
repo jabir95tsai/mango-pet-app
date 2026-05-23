@@ -163,8 +163,8 @@ export type ImportPersonalCounts = Record<ImportPersonalType, number>;
  *  limit which collections move; omit it to import everything.
  *
  *  Returns the per-collection moved counts. Does NOT detect duplicates —
- *  that's B4's pet-merge wizard, which calls this AFTER its own merge
- *  pass for any matching pets. */
+ *  use {@link mergeAndImportToFamily} when the wizard found matching
+ *  pets that should be folded together first. */
 export async function importPersonalToFamily(
   familyId: string,
   types?: ImportPersonalType[],
@@ -174,6 +174,51 @@ export async function importPersonalToFamily(
     { counts: ImportPersonalCounts }
   >(fns(), "importPersonalToFamily");
   const res = await fn({ familyId, types });
+  return res.data;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Phase B4: merge personal pets into family pets, then import the rest
+// ────────────────────────────────────────────────────────────────────
+
+export type MergePair = {
+  personalPetId: string;
+  familyPetId: string;
+};
+
+export type MergedPetSummary = {
+  personalPetId: string;
+  familyPetId: string;
+  movedHealthRecords: number;
+  reassignedWalks: number;
+  reassignedReminders: number;
+  reassignedExpenses: number;
+  lostFields: Record<string, unknown>;
+};
+
+export type MergeAndImportResult = {
+  mergedPets: MergedPetSummary[];
+  importCounts: ImportPersonalCounts;
+};
+
+/** Calls mergeAndImportToFamily. Each merge pair fully consumes the
+ *  personal pet (sub-collections move, top-level docs reassign, doc
+ *  deletes). The remaining personal-mode docs the caller owns are then
+ *  bulk-imported the same way as {@link importPersonalToFamily}. */
+export async function mergeAndImportToFamily(
+  familyId: string,
+  merges: MergePair[],
+  importTypes?: ImportPersonalType[],
+): Promise<MergeAndImportResult> {
+  const fn = httpsCallable<
+    {
+      familyId: string;
+      merges: MergePair[];
+      importTypes?: ImportPersonalType[];
+    },
+    MergeAndImportResult
+  >(fns(), "mergeAndImportToFamily");
+  const res = await fn({ familyId, merges, importTypes });
   return res.data;
 }
 

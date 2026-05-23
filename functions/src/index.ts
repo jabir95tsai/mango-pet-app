@@ -886,3 +886,238 @@ export const importPersonalToFamily = onCall(
     return { counts };
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// mergeAndImportToFamily — Phase B4 callable
+// Caller-supplied merge map of (personalPetId → familyPetId) pairs to
+// fold into existing family pets, plus the same bulk-import pass
+// importPersonalToFamily does for the rest. The match detection itself
+// runs client-side (cheap, both lists already in memory after B3's
+// ImportWizard render) — the server just executes what was confirmed.
+//
+// Merge semantics per spec:
+//   - Move the personal pet's healthRecords subcollection docs over to
+//     the family pet (read all, batched .set on the new ref, batched
+//     .delete on the old refs — Firestore has no atomic subcoll move).
+//   - Reassign petId on the personal user's walks / reminders / expenses
+//     to the family pet's id. (Other family members' walks/reminders/
+//     expenses are untouched — they already pointed at the family pet.)
+//   - Delete the personal pet doc.
+//   - DO NOT overwrite family pet fields (photoURL / bio / weightKg) —
+//     spec is explicit: family pet wins on every field. The non-canonical
+//     pet's values are logged in the audit doc for forensics.
+// ─────────────────────────────────────────────────────────────────────
+
+type MergePair = { personalPetId: string; familyPetId: string };
+
+export const mergeAndImportToFamily = onCall(
+  { region: FUNCTION_REGION, cors: true, memory: "256MiB" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+
+    const targetFamilyId = ((req.data?.familyId as string | undefined) ?? "").trim();
+    if (!targetFamilyId) {
+      throw new HttpsError("invalid-argument", "familyId required");
+    }
+    const merges = (req.data?.merges as MergePair[] | undefined) ?? [];
+
+    // Membership guard (same as importPersonalToFamily).
+    const familyRef = db.doc(`families/${targetFamilyId}`);
+    const familySnap = await familyRef.get();
+    if (!familySnap.exists) {
+      throw new HttpsError("not-found", "Family not found");
+    }
+    const memberUids =
+      (familySnap.data()?.memberUids as string[] | undefined) ?? [];
+    if (!memberUids.includes(uid)) {
+      throw new HttpsError(
+        "permission-denied",
+        "Caller is not a member of the target family",
+      );
+    }
+
+    const startedAt = Timestamp.now();
+    const mergedPets: Array<{
+      personalPetId: string;
+      familyPetId: string;
+      movedHealthRecords: number;
+      reassignedWalks: number;
+      reassignedReminders: number;
+      reassignedExpenses: number;
+      lostFields: Record<string, unknown>;
+    }> = [];
+
+    // ── Step 1: process each user-confirmed merge ───────────────────
+    for (const pair of merges) {
+      // Sanity: caller must actually own the personal pet AND the family
+      // pet must belong to the target family. We trust the client's
+      // matching, but we double-check ownership here to prevent a
+      // malicious caller from "merging" some other family's pet into
+      // theirs.
+      const personalRef = db.doc(`pets/${pair.personalPetId}`);
+      const familyPetRef = db.doc(`pets/${pair.familyPetId}`);
+      const [personalSnap, familyPetSnap] = await Promise.all([
+        personalRef.get(),
+        familyPetRef.get(),
+      ]);
+      if (!personalSnap.exists || !familyPetSnap.exists) continue;
+
+      const pData = personalSnap.data() ?? {};
+      const fData = familyPetSnap.data() ?? {};
+      if (pData.familyId !== null || pData.ownerUid !== uid) {
+        // Not actually the caller's personal pet — skip silently to keep
+        // the rest of the merge batch from aborting.
+        continue;
+      }
+      if (fData.familyId !== targetFamilyId) {
+        continue;
+      }
+
+      // Move healthRecords subcollection: read personal pet's records,
+      // batched-write to family pet path, batched-delete from old.
+      let movedHealthRecords = 0;
+      const hrSnap = await personalRef.collection("healthRecords").get();
+      if (!hrSnap.empty) {
+        const docs = hrSnap.docs;
+        for (let i = 0; i < docs.length; i += 200) {
+          const slice = docs.slice(i, i + 200);
+          const writeBatch = db.batch();
+          for (const d of slice) {
+            const newRef = familyPetRef
+              .collection("healthRecords")
+              .doc(d.id);
+            writeBatch.set(newRef, { ...d.data(), petId: pair.familyPetId });
+            writeBatch.delete(d.ref);
+          }
+          await writeBatch.commit();
+          movedHealthRecords += slice.length;
+        }
+      }
+
+      // Reassign petId on caller's personal walks/reminders/expenses
+      // that pointed at the personal pet. Note: we DON'T touch other
+      // members' docs (they wouldn't reference a personal pet anyway).
+      const collections = [
+        { col: "walks", owner: "walkerUid" },
+        { col: "reminders", owner: "createdByUid" },
+        { col: "expenses", owner: "payerUid" },
+      ] as const;
+      const reassigned: Record<string, number> = {
+        walks: 0,
+        reminders: 0,
+        expenses: 0,
+      };
+      for (const { col, owner } of collections) {
+        const qSnap = await db
+          .collection(col)
+          .where(owner, "==", uid)
+          .where("familyId", "==", null)
+          .where("petId", "==", pair.personalPetId)
+          .get();
+        if (qSnap.empty) continue;
+        const docs = qSnap.docs;
+        for (let i = 0; i < docs.length; i += 400) {
+          const slice = docs.slice(i, i + 400);
+          const wb = db.batch();
+          for (const d of slice) {
+            // Reassign to the family pet AND switch into the family in
+            // one write so the doc transitions atomically from personal
+            // to family-scoped.
+            wb.update(d.ref, {
+              petId: pair.familyPetId,
+              familyId: targetFamilyId,
+            });
+          }
+          await wb.commit();
+          reassigned[col] += slice.length;
+        }
+      }
+
+      // Capture the values we're about to drop — spec wants them in the
+      // audit log so the user could in principle recover.
+      const lostFields = {
+        photoURL: pData.photoURL ?? null,
+        bio: pData.bio ?? null,
+        weightKg: pData.weightKg ?? null,
+        breed: pData.breed ?? null,
+      };
+
+      // Delete the personal pet doc last — order matters: if anything
+      // above fails, a retry replays the moves idempotently (set/update
+      // by id), but a half-done state still has the personal pet doc
+      // present, which is the right signal that the merge isn't done.
+      await personalRef.delete();
+
+      mergedPets.push({
+        personalPetId: pair.personalPetId,
+        familyPetId: pair.familyPetId,
+        movedHealthRecords,
+        reassignedWalks: reassigned.walks,
+        reassignedReminders: reassigned.reminders,
+        reassignedExpenses: reassigned.expenses,
+        lostFields,
+      });
+    }
+
+    // ── Step 2: bulk import everything remaining ────────────────────
+    // After the merges above, any remaining personal-mode docs the
+    // caller owns get the same flat move importPersonalToFamily does.
+    // We don't filter by type here because the wizard already decided
+    // — if the caller wants no bulk move, they pass merges only and
+    // type-restrict via the existing importPersonalToFamily callable
+    // (server-side honouring the client choice is the wizard's job).
+    const importCounts: ImportCounts = {
+      pets: 0,
+      walks: 0,
+      reminders: 0,
+      expenses: 0,
+    };
+    const requestedTypes = req.data?.importTypes as ImportType[] | undefined;
+    const targets =
+      requestedTypes && requestedTypes.length > 0
+        ? IMPORT_TARGETS.filter((t) => requestedTypes.includes(t.type))
+        : IMPORT_TARGETS;
+
+    for (const target of targets) {
+      const snap = await db
+        .collection(target.collection)
+        .where(target.ownerField, "==", uid)
+        .where("familyId", "==", null)
+        .get();
+      if (snap.empty) continue;
+      const docs = snap.docs;
+      for (let i = 0; i < docs.length; i += 400) {
+        const slice = docs.slice(i, i + 400);
+        const wb = db.batch();
+        for (const d of slice) {
+          wb.update(d.ref, { familyId: targetFamilyId });
+        }
+        await wb.commit();
+        importCounts[target.type] += slice.length;
+      }
+    }
+
+    // ── Step 3: audit ───────────────────────────────────────────────
+    const finishedAt = Timestamp.now();
+    const isoNow = new Date(finishedAt.toMillis()).toISOString();
+    const auditId = `merge-import-from-${uid}-${isoNow}`;
+    await familyRef.collection("migrations").doc(auditId).set({
+      type: "merge-and-import",
+      fromUid: uid,
+      targetFamilyId,
+      startedAt,
+      finishedAt,
+      mergedPets,
+      importCounts,
+      requestedTypes: requestedTypes ?? null,
+    });
+
+    logger.info(
+      `mergeAndImportToFamily: uid=${uid} family=${targetFamilyId} ` +
+        `merged=${mergedPets.length} import=${JSON.stringify(importCounts)}`,
+    );
+
+    return { mergedPets, importCounts };
+  },
+);

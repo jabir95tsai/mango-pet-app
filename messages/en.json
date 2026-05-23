@@ -203,7 +203,13 @@
     "skip": "Not now",
     "importN": "Import ({n})",
     "importEmpty": "Nothing to import",
-    "importing": "Importing..."
+    "importing": "Importing...",
+    "mergeSectionTitle": "Possible duplicate pets",
+    "mergeSectionHint": "Your personal pet matches a family pet by name, species, and birthday — likely the same animal. Merging folds the personal pet's health records, walks, reminders, and expenses into the family one.",
+    "mergeAction": "Merge (keep the family pet)",
+    "mergeKeepSeparate": "Keep them separate",
+    "importSectionTitle": "Other data",
+    "mergeAndImportN": "Merge {merges} + import {n}"
   },
   "Onboarding": {
     "title": "Welcome to Mango Pet",
