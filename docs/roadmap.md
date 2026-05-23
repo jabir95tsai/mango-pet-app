@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-23（#2 B1-B3 SHIPPED；使用者改變主意拿掉 B4 merge → UI rollback in progress；下個動工 = Feature Builder 接 B4 UI rollback）
+最後更新：2026-05-23（#2 B4 UI rollback 進行中；使用者新提「刪除帳號功能」spec 寫好已進「下一個」段，PM 建議家庭 epic 收尾後接手）
 
 ## 進行中
 
@@ -39,9 +39,12 @@
 
 ## 下一個（已規格化，可直接交付）
 
-> 對應角色 session 開起來就能接手實作。家庭 epic 在上方獨立排序，這邊列其他主題的下一步（目前無）。
+> 對應角色 session 開起來就能接手實作。家庭 epic 在上方獨立排序，這邊列其他主題的下一步。
 
-- _家庭 epic 期間，其他主題不另開新 spec。等 epic 收完再排下一波。_
+- **[刪除帳號功能](../features/delete-account.md)** — Feature Builder（整 stack）— 工作量 M
+  - 上架 prerequisite（PRD §6 GDPR / 個資法合規條件）
+  - PM 預設 5 個決策已寫進 spec，等使用者 review 後若無 push back 即可動工
+  - **PM 建議排序**：家庭 epic 收尾後接手（B4 rollback → live test → #1b/#3/#4 → 這個）。理由：家庭 epic 是 in-flight，刪帳號不擋目前使用流程
 
 ## 想做但還沒規格
 
