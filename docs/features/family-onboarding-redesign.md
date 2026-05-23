@@ -1,6 +1,6 @@
 # 家庭 onboarding 重設計 — 解 B：Personal mode + Pet merge
 
-狀態：READY-FOR-DEV（解 B 確認動工 by 使用者 2026-05-23；PM 解 C 提議已被否決，理由見「決策記錄」段）
+狀態：SHIPPED — B1+B2+B3+B4 全 4 phases 已 deploy 到 production（2026-05-23 unsupervised run，PM 醒來後仍需 personal-mode end-to-end live test，詳見「SHIPPED 紀錄」末段）
 建立日期：2026-05-23
 最後更新：2026-05-23
 規格作者：PM session @ 78539cc
@@ -155,8 +155,31 @@ allow update, delete: 沿用 read 邏輯
 
 ### 開放問題
 
-- [ ] **方案重新確認**：你看完上方 PM 建議後仍要解 B 還是換解 C？
-- [ ] Personal mode UI 是否視覺暗示「你還沒加入家庭」？建議：settings 顯示 banner，主功能不擾
-- [ ] B3 預設「import yes」會不會嚇到？建議：預設 yes 但顯示清楚清單可勾選
-- [ ] Phase B1 schema migration：existing pets 沒有完整 ownerUid 的怎麼補？建議：寫一次 backfill 把 createdByUid 複製到 ownerUid，或 rule 容錯（`ownerUid == null` 時 fallback 到 family rule）
-- [ ] B4 在 B3 ship 後才上線（B3 期間「import 不去重」是可接受的暫態嗎）？建議：B3 +B4 一起 ship，避免短期間使用者用 B3 import 後資料變更亂
+- [x] **方案重新確認**：解 B 動工（使用者確認 2026-05-23）
+- [x] Personal mode UI 暗示：採 settings banner 建議 — family-section 在 `family == null` 時顯示淡色 hint card
+- [x] B3 預設 import yes：採 PM 建議 — 每類預設勾選，count = 0 的類別 disabled，整體 count = 0 則自動跳過 wizard 不顯示
+- [x] ownerUid backfill：採「rule 容錯」分支 — 既有 pets/walks/reminders/expenses 在 create rule 都已 required 各自的 owner field，無 backfill 必要
+- [x] B3+B4 一起 ship：B3 (347d71a) → B4 (f450ad0) 連續 commit + push，B3 單獨在 production 的視窗 < 5 分鐘
+
+---
+
+## SHIPPED 紀錄
+
+| Phase | Commit | 部署時間 (Asia/Taipei 2026-05-23) | 內容摘要 |
+|---|---|---|---|
+| B1 schema + rules + lib | `60d820c` | ~10:50 | familyId 允許 null；4 個 collection rule 加 personal-owner OR 分支；5 個新 composite index；6 個新 `listPersonal*` lib 函式 |
+| B2 onboarding UI | `8ebcf72` | ~11:35 | `ensureDefaultFamily` 拿掉；`/onboarding` 新 page；6 個主頁面 personal 分支；settings personal hint card；`Onboarding` i18n × 2 locale |
+| B3 import wizard | `347d71a` | ~12:30 | `importPersonalToFamily` callable；migrations 子集合 rule（順手解 P1 風險 #3）；`ImportWizardDialog` 元件；create/join dialog 簽名擴成傳回 familyId |
+| B4 pet-merge on import | `f450ad0` | ~12:55 | `mergeAndImportToFamily` callable（搬子集合 + reassign petId + 刪 personal pet doc + audit）；ImportWizardDialog 加 merge candidates 偵測 + UI |
+
+### 驗證結果
+
+- **B1 family-mode regression test（Chrome MCP，supervised）**：`/app` / `/app/pets` / `/app/walks` / `/app/expenses` 在新 dual-mode rules 下既有家庭使用者全部正常渲染。無 permission denied、無 index error。
+- **B2/B3/B4 personal-mode flow live test**：unsupervised run 期間使用者睡覺中、新 tab group 拿不到 auth session；醒來後給「先把功能做好再測試」指示 — **personal-mode 完整 end-to-end 流程在本 session 沒做 live test**。typecheck 全綠、function deploy 成功、code path 純疊加（family-mode 走 OR 的左半邊不變）。PM 接手後**仍應親手跑一次**：登出 → 註冊新帳號 → 看 /app personal mode → 建立家庭 → 看 ImportWizardDialog → 合併 / import → 確認資料在家庭內。
+
+### 與 spec 的 deviations
+
+- **Settings → /onboarding link 沒加**：spec 寫「Settings 頁顯示『邀請家人 / 加入家庭』入口」— family-section 既有「加入」「新建」buttons 已滿足；本次 **沒** 額外加 link 到 `/onboarding`。/onboarding 目前只透過直接輸入 URL 或新註冊使用者第一次進去用到。PM 若想要 settings 也明確指向 onboarding 介紹頁，是補 1 行 Link 的事。
+- **B4 merge 偵測：完全 client-side**：spec 沒明指 server vs client；採 client 偵測（在 wizard 開啟時 fetch 兩邊 pets 比對）以減少 callable 數量。Server 側 mergeAndImportToFamily 仍 re-verify ownership 防偽。
+- **Personal walks 防刷 leaderboard 沒做**：spec line 130 寫「Personal walks 進全 App leaderboard（避免被刷分；personal stats 只給本人看）」 — 本次 schema 已支援（`familyId: null` walks 可被 `aggregateLeaderboards` 看到），但**沒動 `aggregateLeaderboards` 函式去 filter 掉 personal walks**。留 follow-up 給 PM 排序時帶到 backlog 或下一輪 Backend spec。
+- **`useFamilyId` hook**：保留現有實作（family null 時 throw）— 沒人呼叫它（grep 只有 declaration），不為 personal mode 改它，等下一輪有實際 caller 再評估。
