@@ -10,7 +10,7 @@ import { RouteHeader } from "@/components/nav/route-header";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { EmptyState } from "@/components/ui/empty-state";
-import { WalkSessionDialog } from "@/components/walks/walk-session-dialog";
+import { WalkTrackingView } from "@/components/walks/walk-tracking-view";
 import { ManualWalkDialog } from "@/components/walks/manual-walk-dialog";
 import { WalkCard } from "@/components/walks/walk-card";
 import {
@@ -345,11 +345,13 @@ export default function WalksPage() {
         </div>
       )}
 
-      <WalkSessionDialog
+      <WalkTrackingView
         open={sessionOpen}
         onClose={() => setSessionOpen(false)}
-        pets={dialogPets}
+        pet={pets.find((p) => p.petId === selectedPetId) ?? null}
         streakDays={streakDays}
+        storedTodayMin={todayProgress.minutes}
+        goalMin={TODAY_GOAL_MIN}
         onComplete={handleCreate}
       />
       <ManualWalkDialog
