@@ -1810,3 +1810,112 @@ export const cleanupLegacyPaths = onCall(
     };
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// backfillDisplayNameLower — admin-only, idempotent
+//
+// One-shot migration to populate `displayNameLower` on every existing
+// users/{uid} doc that's missing it. Phase 1 (commit 07c874d) ensures
+// new writes set the field; this fills in the historical gap so the
+// Phase 3 searchUsers query (will read from displayNameLower) returns
+// the full corpus.
+//
+// Spec: docs/features/friends-search-lowercase.md (Phase 2)
+//
+// Same operational pattern as cleanupLegacyPaths above:
+//   - admin custom claim required at the callable seam
+//   - actual one-off run happens via
+//     functions/scripts/run-backfill-display-name-lower.mjs (Admin SDK,
+//     ADC) to avoid ID-token exchange for an ops run
+//   - audit doc legacy: `displayNameLowerBackfills/{ISO}` with
+//     source: "callable" | "admin-script" to keep both paths
+//     distinguishable
+//
+// Safety:
+//   - default dryRun = true; opt out with `{ dryRun: false }`
+//   - 400-doc batches (Firestore hard cap 500, buffer per backend.md)
+//   - idempotent — skips docs that already have a non-empty value, so
+//     re-running is safe and the next dry run shows missing=0
+// ─────────────────────────────────────────────────────────────────────
+
+type DisplayNameLowerBackfillCounts = {
+  total: number;
+  missing: number;
+  written: number;
+};
+
+const DISPLAY_NAME_BACKFILL_BATCH_LIMIT = 400;
+
+function computeDisplayNameLower(displayName: unknown): string {
+  return String(displayName ?? "").trim().toLowerCase();
+}
+
+export const backfillDisplayNameLower = onCall(
+  {
+    region: FUNCTION_REGION,
+    cors: true,
+    // < 10 min cap. 1k users × 1 read + few-hundred batched writes is
+    // comfortably under, but headroom for future growth doesn't hurt.
+    timeoutSeconds: 540,
+    memory: "512MiB",
+  },
+  async (req) => {
+    if (req.auth?.token?.admin !== true) {
+      throw new HttpsError(
+        "permission-denied",
+        "admin custom claim required",
+      );
+    }
+    const dryRun = req.data?.dryRun !== false;
+
+    const allUsers = await db.collection("users").get();
+    const total = allUsers.size;
+
+    // Identify everyone missing the field. Treat empty string as missing
+    // too — if upsertUser ever wrote `""` for a user with no displayName,
+    // we still want the migration to fix it.
+    const pending: { ref: FirebaseFirestore.DocumentReference; value: string }[] = [];
+    for (const doc of allUsers.docs) {
+      const data = doc.data();
+      const existing = data.displayNameLower;
+      if (typeof existing === "string" && existing.length > 0) continue;
+      pending.push({ ref: doc.ref, value: computeDisplayNameLower(data.displayName) });
+    }
+    const missing = pending.length;
+
+    let written = 0;
+    if (!dryRun) {
+      for (let i = 0; i < pending.length; i += DISPLAY_NAME_BACKFILL_BATCH_LIMIT) {
+        const slice = pending.slice(i, i + DISPLAY_NAME_BACKFILL_BATCH_LIMIT);
+        const batch = db.batch();
+        for (const { ref, value } of slice) {
+          batch.update(ref, { displayNameLower: value });
+        }
+        await batch.commit();
+        written += slice.length;
+      }
+    }
+
+    const counts: DisplayNameLowerBackfillCounts = { total, missing, written };
+    const auditId = new Date().toISOString().replace(/[:.]/g, "-");
+    await db.collection("displayNameLowerBackfills").doc(auditId).set({
+      ranAt: Timestamp.now(),
+      mode: dryRun ? "dryRun" : "real",
+      invokedBy: req.auth.uid,
+      source: "callable",
+      counts,
+    });
+
+    logger.info(
+      `backfillDisplayNameLower done — mode=${dryRun ? "dryRun" : "real"} ` +
+        `counts=${JSON.stringify(counts)} audit=${auditId}`,
+    );
+
+    return {
+      ok: true,
+      mode: dryRun ? "dryRun" : "real",
+      auditId,
+      counts,
+    };
+  },
+);

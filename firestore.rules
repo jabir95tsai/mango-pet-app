@@ -315,5 +315,14 @@ service cloud.firestore {
     match /legacyCleanups/{id} {
       allow read, write: if false;
     }
+
+    // ── displayNameLowerBackfills audit log (admin/server-only) ──
+    // Written by the backfillDisplayNameLower callable + matching admin
+    // script (functions/scripts/run-backfill-display-name-lower.mjs) via
+    // Admin SDK. Same posture as deletedAccounts / legacyCleanups —
+    // admin-only, inspectable via Firebase Console; no client surface.
+    match /displayNameLowerBackfills/{id} {
+      allow read, write: if false;
+    }
   }
 }
