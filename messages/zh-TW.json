@@ -251,6 +251,18 @@
     "deleting": "刪除中...",
     "errorPrefix": "刪除失敗"
   },
+  "Leaderboard": {
+    "scope": {
+      "all": "全 App",
+      "family": "家庭內"
+    },
+    "familyOnlyMe": "目前家庭只有你一人 — 邀請家人來比一比！",
+    "personalEmpty": {
+      "title": "加入家庭看排行榜",
+      "subtitle": "排行榜目前只給家庭內互比 — 自己一個人時看自己 stats 才有意義。",
+      "cta": "建立 / 加入家庭"
+    }
+  },
   "Push": {
     "title": "推播通知",
     "enable": "啟用",

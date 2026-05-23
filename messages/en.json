@@ -251,6 +251,18 @@
     "deleting": "Deleting...",
     "errorPrefix": "Delete failed"
   },
+  "Leaderboard": {
+    "scope": {
+      "all": "All",
+      "family": "Family"
+    },
+    "familyOnlyMe": "You're the only one in this family — invite someone to make it a contest!",
+    "personalEmpty": {
+      "title": "Join a family to see leaderboards",
+      "subtitle": "Leaderboards work within families. For just-yourself stats, your home page already covers it.",
+      "cta": "Create or join a family"
+    }
+  },
   "Push": {
     "title": "Push notifications",
     "enable": "Enable",
