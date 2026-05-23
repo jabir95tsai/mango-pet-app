@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Bell, Newspaper, PawPrint, PenSquare, Plus } from "lucide-react";
+import { Newspaper, PawPrint, PenSquare, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFamily } from "@/components/family/family-provider";
 import { RouteHeader } from "@/components/nav/route-header";
@@ -11,37 +11,16 @@ import { Avatar } from "@/components/ui/avatar";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { ReminderCard } from "@/components/reminders/reminder-card";
-import { ReminderFormDialog } from "@/components/reminders/reminder-form-dialog";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
-import {
-  completeReminder,
-  createReminder,
-  deleteReminder,
-  listOverdueReminders,
-  listPersonalOverdueReminders,
-  listPersonalUpcomingReminders,
-  listRecentlyCompletedReminders,
-  listUpcomingReminders,
-  updateReminder,
-} from "@/lib/firebase/reminders";
-import { listFamilyMembers } from "@/lib/firebase/families";
 import { deletePost, listFeedPosts } from "@/lib/firebase/posts";
 import { listFriends } from "@/lib/firebase/friends";
-import type {
-  FamilyMember,
-  Pet,
-  Post,
-  Reminder,
-  ReminderInput,
-} from "@/lib/types";
+import type { Pet, Post } from "@/lib/types";
 
 export default function AppHome() {
   const tApp = useTranslations("App");
   const tNav = useTranslations("Nav");
-  const tR = useTranslations("Reminder");
   const tPet = useTranslations("Pet");
   const tC = useTranslations("Common");
   const askConfirm = useConfirm();
@@ -49,50 +28,18 @@ export default function AppHome() {
   const { family, loading: familyLoading } = useFamily();
 
   const [pets, setPets] = useState<Pet[]>([]);
-  const [upcoming, setUpcoming] = useState<Reminder[]>([]);
-  const [overdue, setOverdue] = useState<Reminder[]>([]);
-  const [todayDone, setTodayDone] = useState<Reminder[]>([]);
-  const [membersById, setMembersById] = useState<Map<string, FamilyMember>>(
-    () => new Map(),
-  );
   const [feedPosts, setFeedPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addingReminder, setAddingReminder] = useState(false);
-  const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) return;
     try {
-      // Personal mode: the "done attribution" section is family-only
-      // (resolving a single name to "by self" reads awkwardly), so we
-      // skip both todayDone and members lookups; the rest mirror the
-      // family path via personal-namespace queries.
-      const [petR, upR, ovR, doneR, membersR, friendsR] = await Promise.allSettled([
+      const [petR, friendsR] = await Promise.allSettled([
         family ? listPets(family.familyId) : listPersonalPets(user.uid),
-        family
-          ? listUpcomingReminders(family.familyId)
-          : listPersonalUpcomingReminders(user.uid),
-        family
-          ? listOverdueReminders(family.familyId)
-          : listPersonalOverdueReminders(user.uid),
-        family
-          ? listRecentlyCompletedReminders(family.familyId)
-          : Promise.resolve([] as Reminder[]),
-        family
-          ? listFamilyMembers(family)
-          : Promise.resolve([] as FamilyMember[]),
         listFriends(user.uid),
       ]);
       setPets(petR.status === "fulfilled" ? petR.value : []);
-      setUpcoming(upR.status === "fulfilled" ? upR.value : []);
-      setOverdue(ovR.status === "fulfilled" ? ovR.value : []);
-      setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
-      setMembersById(
-        membersR.status === "fulfilled"
-          ? new Map(membersR.value.map((m) => [m.uid, m]))
-          : new Map(),
-      );
       const friends = friendsR.status === "fulfilled" ? friendsR.value : [];
       try {
         const feed = await listFeedPosts(
@@ -109,95 +56,10 @@ export default function AppHome() {
     }
   }, [user, family]);
 
-  const refreshReminders = useCallback(async () => {
-    if (!user) return;
-    const [upR, ovR, doneR] = await Promise.allSettled([
-      family
-        ? listUpcomingReminders(family.familyId)
-        : listPersonalUpcomingReminders(user.uid),
-      family
-        ? listOverdueReminders(family.familyId)
-        : listPersonalOverdueReminders(user.uid),
-      family
-        ? listRecentlyCompletedReminders(family.familyId)
-        : Promise.resolve([] as Reminder[]),
-    ]);
-    setUpcoming(upR.status === "fulfilled" ? upR.value : []);
-    setOverdue(ovR.status === "fulfilled" ? ovR.value : []);
-    setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
-  }, [user, family]);
-
   useEffect(() => {
     if (familyLoading) return;
     refresh();
   }, [familyLoading, refresh]);
-
-  function petById(id?: string) {
-    return id ? pets.find((p) => p.petId === id) : undefined;
-  }
-
-  async function handleAddReminder(input: ReminderInput) {
-    if (!user) return;
-    await createReminder({
-      ...input,
-      familyId: family?.familyId ?? null,
-      createdByUid: user.uid,
-    });
-    await refreshReminders();
-  }
-
-  async function handleUpdateReminder(input: ReminderInput) {
-    if (!editingReminder) return;
-    const scheduleChanged =
-      editingReminder.triggerAt.toMillis() !== input.triggerAt.getTime() ||
-      editingReminder.notifyBeforeMinutes !== input.notifyBeforeMinutes;
-    await updateReminder(
-      editingReminder.reminderId,
-      {
-        title: input.title,
-        description: input.description,
-        petId: input.petId,
-        triggerAt: input.triggerAt,
-        repeat: input.repeat,
-        notifyBeforeMinutes: input.notifyBeforeMinutes,
-      },
-      { resetNotification: scheduleChanged },
-    );
-    setEditingReminder(null);
-    await refreshReminders();
-  }
-
-  async function handleCompleteReminder(reminder: Reminder) {
-    if (!user) return;
-    try {
-      await completeReminder(reminder, user.uid);
-    } catch (err) {
-      console.error("[completeReminder] failed:", err);
-      // Surface to user so silent permission denials don't look like
-      // "button doesn't work".
-      await askConfirm({
-        title: "標記完成失敗",
-        message: err instanceof Error ? err.message : "未知錯誤",
-        confirmText: "知道了",
-        cancelText: tC("cancel"),
-      });
-      return;
-    }
-    await refreshReminders();
-  }
-
-  async function handleDeleteReminder(reminder: Reminder) {
-    const ok = await askConfirm({
-      title: tC("delete"),
-      message: reminder.title,
-      confirmText: tC("delete"),
-      cancelText: tC("cancel"),
-      danger: true,
-    });
-    if (!ok) return;
-    await deleteReminder(reminder.reminderId);
-    await refreshReminders();
-  }
 
   async function handleDeletePost(post: Post) {
     const ok = await askConfirm({
@@ -220,8 +82,7 @@ export default function AppHome() {
     <>
       <RouteHeader title={`🥭 ${tApp("name")}`} subtitle={tApp("tagline")} />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-      <section className="flex flex-col gap-3">
+      <section className="mb-6 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
             {tNav("pets")}
@@ -270,79 +131,7 @@ export default function AppHome() {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 xl:row-span-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-            {tR("title")}
-          </h2>
-          <Button size="sm" onClick={() => setAddingReminder(true)}>
-            <Plus className="size-4" />
-            {tR("add")}
-          </Button>
-        </div>
-
-        {overdue.length === 0 && upcoming.length === 0 && todayDone.length === 0 ? (
-          <EmptyState icon={Bell} title={tR("noReminders")} />
-        ) : (
-          <div className="flex flex-col gap-3">
-            {overdue.length > 0 && (
-              <>
-                <p className="text-xs font-semibold text-red-600">
-                  {tR("overdue")}
-                </p>
-                {overdue.map((r) => (
-                  <ReminderCard
-                    key={r.reminderId}
-                    reminder={r}
-                    pet={petById(r.petId)}
-                    members={membersById}
-                    onComplete={() => handleCompleteReminder(r)}
-                    onDelete={() => handleDeleteReminder(r)}
-                    onEdit={() => setEditingReminder(r)}
-                  />
-                ))}
-              </>
-            )}
-            {upcoming.length > 0 && (
-              <>
-                <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                  {tR("upcoming")}
-                </p>
-                {upcoming.map((r) => (
-                  <ReminderCard
-                    key={r.reminderId}
-                    reminder={r}
-                    pet={petById(r.petId)}
-                    members={membersById}
-                    onComplete={() => handleCompleteReminder(r)}
-                    onDelete={() => handleDeleteReminder(r)}
-                    onEdit={() => setEditingReminder(r)}
-                  />
-                ))}
-              </>
-            )}
-            {todayDone.length > 0 && (
-              <>
-                <p className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                  {tR("todayDone")}
-                </p>
-                {todayDone.map((r) => (
-                  <ReminderCard
-                    key={r.reminderId}
-                    reminder={r}
-                    pet={petById(r.petId)}
-                    members={membersById}
-                    onComplete={() => handleCompleteReminder(r)}
-                    onDelete={() => handleDeleteReminder(r)}
-                  />
-                ))}
-              </>
-            )}
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3 xl:col-span-2">
+      <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
             {tNav("feed")}
@@ -387,22 +176,6 @@ export default function AppHome() {
           </div>
         )}
       </section>
-      </div>
-
-      <ReminderFormDialog
-        open={addingReminder}
-        onClose={() => setAddingReminder(false)}
-        pets={pets}
-        onSubmit={handleAddReminder}
-      />
-
-      <ReminderFormDialog
-        open={editingReminder !== null}
-        onClose={() => setEditingReminder(null)}
-        pets={pets}
-        initial={editingReminder ?? undefined}
-        onSubmit={handleUpdateReminder}
-      />
 
       <PostComposer
         open={composerOpen}

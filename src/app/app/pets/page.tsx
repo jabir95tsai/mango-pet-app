@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { PetCard } from "@/components/pets/pet-card";
 import { PetFormDialog } from "@/components/pets/pet-form-dialog";
+import { RemindersOverviewSection } from "@/components/reminders/reminders-overview-section";
 import {
   createPet,
   deletePet,
@@ -98,6 +99,13 @@ export default function PetsPage() {
           {tPet("addPet")}
         </Button>
       </div>
+
+      {/* Reminders moved here from /app per spec
+          docs/features/reminders-to-pets-page.md (B2). Self-fetching; only
+          needs `pets` for petId→name lookup on the cards. Renders nothing
+          when pets.length === 0 so the "Add your first pet" empty state
+          below stays the only thing on screen. */}
+      <RemindersOverviewSection pets={pets} />
 
       {loading ? (
         <p className="text-sm text-zinc-500">{tCommon("loading")}</p>
