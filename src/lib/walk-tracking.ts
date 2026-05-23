@@ -1,6 +1,7 @@
 "use client";
 
-import type { WalkPathPoint } from "./types";
+import type { Timestamp } from "firebase/firestore";
+import type { Walk, WalkPathPoint } from "./types";
 
 /**
  * Haversine distance in km.
@@ -267,6 +268,24 @@ export class WalkSession {
     this.emit();
   }
 
+  /** Live preview of how the current session's minutes-so-far would shift
+   *  today's progress — useful for the Hero "你今天差 N 分鐘" copy without
+   *  refetching walks. Caller passes the stored today total + this session's
+   *  durationMin. Capped percent at 100%; minutes are NOT capped (so the
+   *  Hero can show "45 / 30 ✓" when goal exceeded). */
+  static blendTodayProgress(
+    storedTodayMin: number,
+    sessionMin: number,
+    goalMin = 30,
+  ): WalkProgress {
+    const total = Math.round((storedTodayMin + sessionMin) * 10) / 10;
+    return {
+      minutes: total,
+      goalMin,
+      percent: Math.min(100, Math.round((total / goalMin) * 100)),
+    };
+  }
+
   private handlePosition(pos: GeolocationPosition) {
     const accuracy = pos.coords.accuracy ?? Infinity;
     if (accuracy > MIN_ACCEPTABLE_ACCURACY_M) return;
@@ -296,3 +315,98 @@ export class WalkSession {
     }
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Progress helpers
+//
+// Pure functions that turn a list of walks into the headline numbers shown
+// on the /app/walks Hero. The component layer should *not* re-implement
+// these — that's how week-start drifts (Mon vs Sun) and timezone bugs creep
+// in. Spec: docs/features/walk-core-redesign.md.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type WalkProgress = {
+  /** Minutes walked so far today (device-local midnight to now). Not capped
+   *  at the goal — over-achievers still see "45 / 30 ✓". */
+  minutes: number;
+  goalMin: number;
+  /** 0-100, capped — drives the progress-bar fill width. */
+  percent: number;
+};
+
+export type WeekProgress = {
+  /** Distinct walks recorded between this week's Monday 00:00 (device-local)
+   *  and now. */
+  count: number;
+  goalCount: number;
+  /** 0-100, capped — drives the progress-bar fill width. */
+  percent: number;
+};
+
+/** Local-day midnight (00:00) for the device's current date. */
+function startOfTodayLocal(now: Date = new Date()): Date {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** ISO 8601 week start — Monday 00:00 in device-local time. PM default; if
+ *  the user later prefers Sunday-start, swap `daysFromMonday` here only. */
+function startOfWeekLocal(now: Date = new Date()): Date {
+  const d = startOfTodayLocal(now);
+  // JS getDay(): 0=Sun, 1=Mon, ... 6=Sat. Normalize so Monday = 0.
+  const daysFromMonday = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - daysFromMonday);
+  return d;
+}
+
+function walkStartMs(walk: Walk): number {
+  const ts = walk.startedAt as Timestamp | undefined;
+  return ts && typeof ts.toMillis === "function" ? ts.toMillis() : 0;
+}
+
+/**
+ * Sum of `durationMin` across walks whose startedAt falls in **today**
+ * (device-local midnight onwards). Drives the Hero "今天還差 N 分鐘"
+ * copy and the today progress bar. Spec decision: 30 min default goal.
+ */
+export function getTodayProgress(
+  walks: Walk[],
+  goalMin = 30,
+  now: Date = new Date(),
+): WalkProgress {
+  const startMs = startOfTodayLocal(now).getTime();
+  const raw = walks.reduce(
+    (sum, w) => (walkStartMs(w) >= startMs ? sum + (w.durationMin ?? 0) : sum),
+    0,
+  );
+  const minutes = Math.round(raw * 10) / 10;
+  return {
+    minutes,
+    goalMin,
+    percent: Math.min(100, Math.round((minutes / goalMin) * 100)),
+  };
+}
+
+/**
+ * Count of walks whose startedAt falls in **this week** (Monday 00:00
+ * device-local onwards). Drives the "本週 N/5 次" card. Spec decision:
+ * count-based goal (not km / not min) because it's most intuitive.
+ */
+export function getWeekProgress(
+  walks: Walk[],
+  goalCount = 5,
+  now: Date = new Date(),
+): WeekProgress {
+  const startMs = startOfWeekLocal(now).getTime();
+  const count = walks.reduce(
+    (c, w) => (walkStartMs(w) >= startMs ? c + 1 : c),
+    0,
+  );
+  return {
+    count,
+    goalCount,
+    percent: Math.min(100, Math.round((count / goalCount) * 100)),
+  };
+}
+
