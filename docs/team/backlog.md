@@ -55,21 +55,9 @@ _2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 
 - **優先級提示**：P2（本 session 已 ship foreground handler、用戶可用「停用→啟用」
   繞過；但每次切裝置都要手動繞，UX 不順）
 
-### Personal walks 不應進全 App leaderboard
-- **發現於**：2026-05-23、Feature Builder unsupervised run #2 收尾（spec deviations 段）
-- **類型**：技術債 / 設計
-- **重現 / 觀察**：B1 把 walks 的 familyId 允許 null（personal mode）後，schema 上
-  personal walks 已可被 `aggregateLeaderboards` collectionGroup query 看到，但
-  `functions/src/index.ts` 的 aggregation 邏輯沒 filter 掉 `familyId == null` 的
-  walks → 理論上單身使用者個人遛狗紀錄會擠進全 App 排行榜，違反 #2 spec line 130
-  「Personal walks 不進全 App leaderboard」
-- **建議交付給**：Backend
-  - 改 `aggregateLeaderboards` 加 `familyId != null` filter
-  - 或在 walks doc 加 `excludeFromLeaderboard: bool` 顯式標記
-- **優先級提示**：P2（目前 personal mode 使用者只有自己 + 0 個其他人，但動
-  leaderboard 邏輯前要做掉，否則未來 personal users 上線會洩漏個人 stats）
-- **PM 排序（2026-05-23）**：#3 family-leaderboard 動工前 prerequisite。可直接寫進
-  #3 spec 升級，或另開短 spec。等下次 PM session 排序
+### Personal walks 不應進全 App leaderboard — ✅ 已升級到 #3 spec
+- **發現於**：2026-05-23、Feature Builder unsupervised run #2 收尾
+- **狀態**：✅ 已升級到 [`docs/features/family-leaderboard.md`](../features/family-leaderboard.md) 的 **Phase 0: Prerequisite** 段（PM 2026-05-23 update）。FB session 接 #3 時會一併處理。本 backlog 條目保留為 audit trail，可在 #3 ship 後刪除
 
 ### B4 merge callable + 共用 code（永久 dormant，不要順手刪）
 - **發現於**：2026-05-23、PM session 接 user「拿掉 merge」決定後
