@@ -119,6 +119,49 @@ export async function subscribeForegroundMessages(
   return onMessage(messaging, cb);
 }
 
+/** Re-cache the previously-registered FCM service worker after a page reload.
+ *  `enablePush()` writes to `cachedRegistration`, but that cache is in-memory
+ *  only — a fresh tab needs to look the registration back up. */
+async function findExistingFcmSwRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (cachedRegistration) return cachedRegistration;
+  if (!("serviceWorker" in navigator)) return null;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration(FCM_SCOPE);
+    if (reg) cachedRegistration = reg;
+    return reg ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Wire up the foreground push handler. When the page is FOREGROUND, the
+ *  Firebase SDK fires `onMessage` in the main thread instead of the SW's
+ *  `onBackgroundMessage`, so without this handler foreground pushes (e.g.
+ *  clicking the "測試" button while sitting on Settings) get silently
+ *  dropped. We show the same OS notification the SW would have shown,
+ *  routed through the existing FCM SW registration so click handling
+ *  (`notificationclick` in `firebase-messaging-sw.js`) still works.
+ *
+ *  Safe to call on every render where `user` is set — it no-ops on
+ *  unsupported browsers and when the SW isn't yet registered (the user
+ *  hasn't enabled push). */
+export async function setupPushMessageListener(): Promise<() => void> {
+  const messaging = await getMessagingInstance();
+  if (!messaging) return () => undefined;
+  return onMessage(messaging, async (payload) => {
+    const reg = await findExistingFcmSwRegistration();
+    if (!reg) return;
+    const n = payload.notification;
+    const title = n?.title ?? "Mango Pet";
+    await reg.showNotification(title, {
+      body: n?.body ?? "",
+      icon: n?.icon ?? "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: payload.data ?? {},
+    });
+  });
+}
+
 export type TestPushResult = {
   ok: boolean;
   sent: number;

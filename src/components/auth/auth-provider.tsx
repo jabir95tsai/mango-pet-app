@@ -11,6 +11,7 @@ import {
 import type { User } from "firebase/auth";
 import { useLocale } from "next-intl";
 import { subscribeAuth } from "@/lib/firebase/auth";
+import { setupPushMessageListener } from "@/lib/firebase/messaging";
 import { upsertUser } from "@/lib/firebase/users";
 
 type AuthContextValue = {
@@ -46,6 +47,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return unsub;
   }, [locale]);
+
+  // Wire up the foreground push handler. Without this, pushes that arrive
+  // while a tab is in focus (e.g. you click "測試" on the Settings page and
+  // wait there) are silently dropped by the Firebase SDK — the SW's
+  // onBackgroundMessage only fires when no foreground tab exists.
+  // Subscribing once per signed-in session is enough; the listener is a
+  // no-op on browsers that don't support push.
+  useEffect(() => {
+    if (!user) return;
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const off = await setupPushMessageListener();
+        if (cancelled) {
+          off();
+        } else {
+          unsubscribe = off;
+        }
+      } catch (err) {
+        console.error("setupPushMessageListener failed:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [user]);
 
   const value = useMemo(() => ({ user, loading }), [user, loading]);
 
