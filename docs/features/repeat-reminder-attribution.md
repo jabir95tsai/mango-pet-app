@@ -1,6 +1,6 @@
 # Repeat reminder 完成歸屬顯示
 
-狀態：READY-FOR-DEV
+狀態：SHIPPED — commit `3282091`，2026-05-23 ~20:24 push 上線；Chrome MCP 驗負向（never-completed repeat 不顯示 sub-text）；正向 case 待 user 自然觸發觀察（見「SHIPPED 紀錄」末段）
 建立日期：2026-05-22
 最後更新：2026-05-22
 規格作者：PM session @ 3298731（接續 reminder-done-attribution.md 的後續觀察）
@@ -57,6 +57,35 @@
 
 ## 開放問題
 
-- [ ] sub-text 位置：卡片 footer 還是 inline 在 title 下？建議 footer（與「✓ 已完成」歸屬視覺對齊）
-- [ ] 若 `doneAt` 很久（>7 天）：仍顯示？建議顯示，repeat 區隔 daily/weekly/monthly，老資料就是 user 隔很久才做一次，仍有資訊量
-- [ ] 多隻 pet 共用同一個 repeat reminder 是否可能？如果 schema 允許，本 spec 不特例化 — 顯示「上次：XX 勾」即可，不顯示「為哪隻 pet」
+- [x] sub-text 位置：採 footer（與「✓ 已完成」視覺對齊）— 卡片 description 區下方、emerald muted 樣式
+- [x] 若 `doneAt` 很久：仍顯示 — formatDistanceToNow 自然會處理（「3 個月前」等）
+- [x] 多隻 pet 共用同一個 reminder：本 spec 不特例化 — 顯示「上次：XX 勾」即可（pet 不影響 attribution 行）
+
+---
+
+## SHIPPED 紀錄
+
+| 項目 | 值 |
+|---|---|
+| Commit | `3282091` |
+| 部署時間 (Asia/Taipei 2026-05-23) | ~20:24 push → App Hosting auto-build live by ~20:35 |
+| 變更檔案 | `src/components/reminders/reminder-card.tsx` + `messages/zh-TW.json` + `messages/en.json`（3 檔，+22 / -0）|
+| 部署順序 | 純 frontend — `git push origin main`（no rules/indexes/functions/lib 改）|
+
+### Chrome MCP 驗證結果
+
+**已驗（negative case）**：
+- 主帳號 jabir95tsai 的 Mango 家「驅蟲藥」每月 reminder 卡片正常顯示（trigger 日期 12 天內 · 2026-06-05 07:00）
+- **無「上次：」sub-text** — 因該 reminder 從未被勾過完成（`doneAt` 不存在），符合 spec edge case「第一次顯示的 repeat reminder：不顯示」
+- repeat reminder 整體 active-card 樣式不受影響（icon、title、pet badge、每月 badge、trigger 時間 行）
+- 無 console errors，無 i18n key missing 警告（lastDoneByLabel 在 zh-TW + en 都查得到）
+
+**未驗（positive case — 需要已勾過至少一次的 repeat reminder）**：
+- 沒有現成的「已被勾過的 repeat reminder」可拿來測 sub-text 正向顯示
+- 不想擅自在主帳號家庭的「驅蟲藥」按完成（會錯誤推進 trigger 日期 06-05 → 07-05 + 假留 attribution record）
+- **由 user 在下次自然完成 repeat reminder 時觀察**：應該會看到「上次：蔡智博Jabir · 少於 1 分鐘內」綠色 muted 文字在卡片下方
+- 若行為不符 spec，回 Bug Hunter session 開條目
+
+### 與 spec 的 deviations
+
+- **無 deviation**。完全照 spec 完成標準實作 — 條件、樣式、i18n key 名、formerMember fallback 都對齊。
