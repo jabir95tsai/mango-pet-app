@@ -31,6 +31,14 @@ function inferProvider(user: User): AuthProviderKind {
   return "google";
 }
 
+/** Canonical form of `displayName` for case-insensitive prefix search.
+ *  Trim first so trailing whitespace doesn't poison the index. Lowercase
+ *  is a no-op on Chinese chars, so "蔡智博Jabir" → "蔡智博jabir" and a
+ *  search for "蔡" or "jabir" both prefix-match the same field. */
+function toDisplayNameLower(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<void> {
   const ref = doc(getDb(), "users", user.uid);
   const snap = await getDoc(ref);
@@ -41,6 +49,7 @@ export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<vo
     await setDoc(ref, {
       uid: user.uid,
       displayName: desiredName,
+      displayNameLower: toDisplayNameLower(desiredName),
       email: user.email,
       photoURL: desiredPhoto,
       authProvider: inferProvider(user),
@@ -57,7 +66,16 @@ export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<vo
   const existing = snap.data() as AppUser;
   const patch: Record<string, unknown> = {};
 
-  if (existing.displayName !== desiredName) patch.displayName = desiredName;
+  if (existing.displayName !== desiredName) {
+    patch.displayName = desiredName;
+    patch.displayNameLower = toDisplayNameLower(desiredName);
+  } else if (existing.displayNameLower === undefined) {
+    // Defensive backfill on the login path: existing users who haven't
+    // logged in since Phase 1 deploy but before the migration runs would
+    // otherwise stay invisible to displayName search. One-shot write at
+    // next login fixes them even without the migration ever firing.
+    patch.displayNameLower = toDisplayNameLower(existing.displayName);
+  }
   if (existing.photoURL !== desiredPhoto) patch.photoURL = desiredPhoto;
 
   const lastSeenMs = (existing.lastSeenAt as Timestamp | undefined)?.toMillis?.() ?? 0;

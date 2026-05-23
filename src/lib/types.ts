@@ -11,6 +11,14 @@ export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 export type AppUser = {
   uid: string;
   displayName: string;
+  /** Lowercase, trimmed mirror of `displayName` for case-insensitive
+   *  prefix search (Firestore range queries are case-sensitive and only
+   *  support prefix-match — Chinese chars are unaffected by lowercase, so
+   *  one field handles "jabir"/"Jabir"/"蔡" alike). Optional until the
+   *  backfillDisplayNameLower migration completes for every existing doc;
+   *  after that all new writes set it. See spec
+   *  docs/features/friends-search-lowercase.md. */
+  displayNameLower?: string;
   email: string | null;
   photoURL: string | null;
   authProvider: AuthProviderKind;
