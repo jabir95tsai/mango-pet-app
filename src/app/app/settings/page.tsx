@@ -2,12 +2,19 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, Globe, MoreHorizontal, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Globe,
+  MoreHorizontal,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { RouteHeader } from "@/components/nav/route-header";
 import { LanguageSwitcher } from "@/components/nav/language-switcher";
 import { PushToggle } from "@/components/settings/push-toggle";
 import { FamilySection } from "@/components/family/family-section";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
+import { ExportDataButton } from "@/components/settings/export-data-button";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -17,6 +24,7 @@ import { useNavDrawer } from "@/components/nav/nav-drawer-context";
 export default function SettingsPage() {
   const t = useTranslations("Nav");
   const tAuth = useTranslations("Auth");
+  const tPd = useTranslations("Settings.privacyData");
   const tDz = useTranslations("Settings.dangerZone");
   const { user } = useAuth();
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -80,6 +88,22 @@ export default function SettingsPage() {
           </div>
           <LanguageSwitcher />
         </section>
+
+        {/* Privacy & Data — read-only data export. Sits above the Danger
+            zone so the order reads: see your data → delete your account.
+            Spec docs/features/data-export.md. */}
+        {user && (
+          <section className="flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="size-5 text-amber-700 dark:text-amber-300" />
+              <p className="font-semibold">{tPd("title")}</p>
+            </div>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              {tPd("subtitle")}
+            </p>
+            <ExportDataButton />
+          </section>
+        )}
 
         {/* Danger zone — kept visually distinct (red border + warning icon
             + red action button) so a hand-of-god mis-tap looks obviously

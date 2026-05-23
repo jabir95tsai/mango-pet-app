@@ -221,6 +221,14 @@
     "goToApp": "前往首頁"
   },
   "Settings": {
+    "privacyData": {
+      "title": "資料與隱私",
+      "subtitle": "下載一份你在 Mango Pet 上的完整資料副本（JSON 格式）。包含寵物、紀錄、家庭關係等；照片以 URL 形式存放。",
+      "downloadAction": "下載我的資料",
+      "downloading": "準備中...",
+      "successToast": "已開始下載",
+      "errorPrefix": "下載失敗"
+    },
     "dangerZone": {
       "title": "危險區",
       "subtitle": "下方操作不可復原。請確認你了解後果再進行。",

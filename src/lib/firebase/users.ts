@@ -194,6 +194,46 @@ export type DeleteAccountSummary = {
   storagePhotosDeleted: number;
 };
 
+// ────────────────────────────────────────────────────────────────────
+// Data export — read-only snapshot of the same scope as delete-account
+// ────────────────────────────────────────────────────────────────────
+
+/** Shape returned by the `exportUserData` callable. Keep flexible — the
+ *  callable is the source of truth and the JSON is also surfaced to
+ *  end users as a download, so adding new fields is non-breaking. */
+export type UserDataExport = {
+  meta: {
+    exportedAt: string;
+    schemaVersion: "v1";
+    uid: string;
+  };
+  user: Record<string, unknown>;
+  friends: Record<string, unknown>[];
+  friendRequests: {
+    received: Record<string, unknown>[];
+    sent: Record<string, unknown>[];
+  };
+  favoriteRestaurants: Record<string, unknown>[];
+  knowledgeBookmarks: Record<string, unknown>[];
+  pets: Record<string, unknown>[];
+  walks: Record<string, unknown>[];
+  reminders: Record<string, unknown>[];
+  expenses: Record<string, unknown>[];
+  posts: Record<string, unknown>[];
+  postReactionsOnOthers: Record<string, unknown>[];
+  restaurantReviews: Record<string, unknown>[];
+  families: Record<string, unknown>[];
+};
+
+/** Calls the exportUserData callable and returns the full JSON object
+ *  for the caller to serialise. Server side only authenticates and
+ *  scopes to req.auth.uid — no other parameters. */
+export async function exportMyData(): Promise<UserDataExport> {
+  const fn = httpsCallable<void, UserDataExport>(fns(), "exportUserData");
+  const res = await fn();
+  return res.data;
+}
+
 /** Calls the deleteUserAccount callable. The server verifies
  *  `confirmDisplayName` matches the user's profile displayName before
  *  it does anything destructive — so the input mismatch case errors

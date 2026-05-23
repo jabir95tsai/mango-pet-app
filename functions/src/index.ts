@@ -1919,3 +1919,199 @@ export const backfillDisplayNameLower = onCall(
     };
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// exportUserData — read-only snapshot of "everything that's mine"
+// Mirrors the SCOPE of deleteUserAccount's cascade (so user sees what
+// would disappear), but read-only and never mutates. JSON returned
+// directly to the client for browser-download. Spec:
+// docs/features/data-export.md.
+// ─────────────────────────────────────────────────────────────────────
+
+export const exportUserData = onCall(
+  {
+    region: FUNCTION_REGION,
+    cors: true,
+    memory: "512MiB",
+    timeoutSeconds: 120,
+  },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+
+    // ── User profile ─────────────────────────────────────────────────
+    const userRef = db.doc(`users/${uid}`);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) {
+      throw new HttpsError("not-found", "User profile not found");
+    }
+    const userData = userSnap.data() ?? {};
+
+    // ── Per-user sub-collections ─────────────────────────────────────
+    const [friendsSnap, incomingReqsSnap, favSnap, bmSnap] = await Promise.all([
+      userRef.collection("friends").get(),
+      userRef.collection("friendRequests").get(),
+      userRef.collection("favoriteRestaurants").get(),
+      userRef.collection("knowledgeBookmarks").get(),
+    ]);
+
+    // friendRequests SENT by me — collection-group lookup since they
+    // live under other users.
+    const outgoingReqsSnap = await db
+      .collectionGroup("friendRequests")
+      .where("fromUid", "==", uid)
+      .get();
+
+    // ── Pets I created (personal + family) + their sub-data ─────────
+    const myPetsSnap = await db
+      .collection("pets")
+      .where("ownerUid", "==", uid)
+      .get();
+    const myPetIds = new Set(myPetsSnap.docs.map((d) => d.id));
+
+    type PetExport = Record<string, unknown> & {
+      petId: string;
+      healthRecords: Record<string, unknown>[];
+      walks: Record<string, unknown>[];
+      reminders: Record<string, unknown>[];
+      expenses: Record<string, unknown>[];
+    };
+
+    const pets: PetExport[] = [];
+    for (const p of myPetsSnap.docs) {
+      const petId = p.id;
+      const [hr, w, r, e] = await Promise.all([
+        db.collection("pets").doc(petId).collection("healthRecords").get(),
+        db.collection("walks").where("petId", "==", petId).get(),
+        db.collection("reminders").where("petId", "==", petId).get(),
+        db.collection("expenses").where("petId", "==", petId).get(),
+      ]);
+      pets.push({
+        ...(p.data() as Record<string, unknown>),
+        petId,
+        healthRecords: hr.docs.map((d) => ({ ...d.data(), recordId: d.id })),
+        walks: w.docs.map((d) => ({ ...d.data(), walkId: d.id })),
+        reminders: r.docs.map((d) => ({ ...d.data(), reminderId: d.id })),
+        expenses: e.docs.map((d) => ({ ...d.data(), expenseId: d.id })),
+      });
+    }
+
+    // ── Free-standing walks/reminders/expenses I own under OTHERS' pets ──
+    // (filter out anything whose parent pet was already exported above)
+    const [allMyWalksSnap, createdRemSnap, doneRemSnap, allMyExpensesSnap] =
+      await Promise.all([
+        db.collection("walks").where("walkerUid", "==", uid).get(),
+        db.collection("reminders").where("createdByUid", "==", uid).get(),
+        db.collection("reminders").where("doneByUid", "==", uid).get(),
+        db.collection("expenses").where("payerUid", "==", uid).get(),
+      ]);
+
+    const freeWalks = allMyWalksSnap.docs
+      .filter((d) => !myPetIds.has(d.data().petId as string))
+      .map((d) => ({ ...d.data(), walkId: d.id }));
+
+    // Union reminders created-by + done-by; dedupe by id. Don't include
+    // those already nested under my own pets.
+    const reminderById = new Map<string, Record<string, unknown>>();
+    for (const d of [...createdRemSnap.docs, ...doneRemSnap.docs]) {
+      if (myPetIds.has(d.data().petId as string)) continue;
+      if (reminderById.has(d.id)) continue;
+      reminderById.set(d.id, { ...d.data(), reminderId: d.id });
+    }
+    const freeReminders = Array.from(reminderById.values());
+
+    const freeExpenses = allMyExpensesSnap.docs
+      .filter((d) => !myPetIds.has(d.data().petId as string))
+      .map((d) => ({ ...d.data(), expenseId: d.id }));
+
+    // ── Posts authored by me + their reactions subcollection ────────
+    const myPostsSnap = await db
+      .collection("posts")
+      .where("authorUid", "==", uid)
+      .get();
+    const posts: Record<string, unknown>[] = [];
+    for (const p of myPostsSnap.docs) {
+      const rx = await p.ref.collection("reactions").get();
+      posts.push({
+        ...(p.data() as Record<string, unknown>),
+        postId: p.id,
+        reactions: rx.docs.map((d) => ({ ...d.data(), uid: d.id })),
+      });
+    }
+
+    // ── My reactions on OTHERS' posts ───────────────────────────────
+    const rxOnOthersSnap = await db
+      .collectionGroup("reactions")
+      .where("uid", "==", uid)
+      .get();
+    const postReactionsOnOthers: Record<string, unknown>[] = [];
+    for (const r of rxOnOthersSnap.docs) {
+      const postRef = r.ref.parent.parent;
+      if (!postRef) continue;
+      // Skip reactions on my own posts — those rode along with `posts` above.
+      const postSnap = await postRef.get();
+      if (postSnap.exists && postSnap.data()?.authorUid === uid) continue;
+      postReactionsOnOthers.push({
+        ...(r.data() as Record<string, unknown>),
+        postId: postRef.id,
+      });
+    }
+
+    // ── Restaurant reviews I wrote ──────────────────────────────────
+    const myReviewsSnap = await db
+      .collectionGroup("reviews")
+      .where("authorUid", "==", uid)
+      .get();
+    const restaurantReviews = myReviewsSnap.docs.map((d) => ({
+      ...(d.data() as Record<string, unknown>),
+      reviewId: d.id,
+      restaurantId: d.ref.parent.parent?.id ?? null,
+    }));
+
+    // ── Families I belong to ────────────────────────────────────────
+    const familyIds = (userData.familyIds as string[] | undefined) ?? [];
+    const families: Record<string, unknown>[] = [];
+    for (const fid of familyIds) {
+      const fSnap = await db.doc(`families/${fid}`).get();
+      if (!fSnap.exists) continue;
+      families.push({ ...(fSnap.data() as Record<string, unknown>), familyId: fid });
+    }
+
+    return {
+      meta: {
+        exportedAt: new Date().toISOString(),
+        schemaVersion: "v1" as const,
+        uid,
+      },
+      user: { ...userData, uid },
+      friends: friendsSnap.docs.map((d) => ({ ...d.data(), uid: d.id })),
+      friendRequests: {
+        received: incomingReqsSnap.docs.map((d) => ({
+          ...d.data(),
+          requestId: d.id,
+        })),
+        sent: outgoingReqsSnap.docs.map((d) => ({
+          ...d.data(),
+          requestId: d.id,
+          toUid: d.ref.parent.parent?.id ?? null,
+        })),
+      },
+      favoriteRestaurants: favSnap.docs.map((d) => ({
+        ...d.data(),
+        restaurantId: d.id,
+      })),
+      knowledgeBookmarks: bmSnap.docs.map((d) => ({
+        ...d.data(),
+        articleId: d.id,
+      })),
+      pets,
+      walks: freeWalks,
+      reminders: freeReminders,
+      expenses: freeExpenses,
+      posts,
+      postReactionsOnOthers,
+      restaurantReviews,
+      families,
+    };
+  },
+);

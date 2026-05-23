@@ -221,6 +221,14 @@
     "goToApp": "Go to app"
   },
   "Settings": {
+    "privacyData": {
+      "title": "Privacy & Data",
+      "subtitle": "Download a full copy of your Mango Pet data as JSON — pets, records, family memberships, and more. Photos are referenced by URL.",
+      "downloadAction": "Download my data",
+      "downloading": "Preparing...",
+      "successToast": "Download started",
+      "errorPrefix": "Download failed"
+    },
     "dangerZone": {
       "title": "Danger zone",
       "subtitle": "Actions below cannot be undone. Make sure you understand the consequences first.",
