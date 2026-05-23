@@ -154,3 +154,64 @@ User 自己提的 product principle（2026-05-23）：
 - [ ] **本週開始定義**：採週一（PM 預設）— 若 user 偏好週日 reset 跟我說
 - [ ] **「查看更多歷史」**：本 spec 不做；未來另開 spec 評估（紀錄列表只顯示最近 5-10 筆）
 - [ ] 追蹤中 reload 後恢復追蹤的處理：本 spec **不解**（PWA 限制延伸問題，另開 spec 評估）
+
+## SHIPPED 紀錄
+
+✅ **SHIPPED** — UI/UX session 2026-05-23 → 2026-05-24（push 2026-05-23 23:28:45 +0800，App Hosting build 完成於 2026-05-24 00:00 ± 06 之間，~12 分 build time）
+
+### 5 個 phase commits
+
+| Phase | Commit | 摘要 |
+|---|---|---|
+| 1 | [`2355c09`](https://github.com/jabir95tsai/mango-pet-app/commit/2355c09) | `walk-tracking.ts` 加 `getTodayProgress` / `getWeekProgress` 純函式 helpers + `WalkSession.blendTodayProgress` static method（live preview） |
+| 2 | [`229361b`](https://github.com/jabir95tsai/mango-pet-app/commit/229361b) | `page.tsx` Hero（today status + horizontal bar + 大 CTA） + 多寵物 segmented chip picker（localStorage `mango.walks.lastPetId.{uid}`）+ 0-pet empty state link 到 `/app/pets` + `Walks.core.*` i18n namespace（10 keys zh-TW + en） |
+| 3 | [`1cf48cc`](https://github.com/jabir95tsai/mango-pet-app/commit/1cf48cc) | 新 `walk-tracking-view.tsx`（full-screen `fixed inset-0` + createPortal + env safe-area padding）取代 `walk-session-dialog.tsx`。Auto-start session on open（no setup phase）；status pill + 大 mm:ss + km + today % + 軟化 GPS error i18n map（10 new keys） |
+| 4 | [`54ee219`](https://github.com/jabir95tsai/mango-pet-app/commit/54ee219) | done phase 改 in-page complete view：Trophy + emerald「完成今日目標！」/ zinc「今天完成 X%」+ recap + collapsed `<details>` 備註 + 兩個 secondary CTA（回到遛狗 / 查看排行榜）。`saveWalkOnce()` idempotent helper，save 在 CTA 點擊時觸發（7 new keys） |
+| 5 | [`63c397c`](https://github.com/jabir95tsai/mango-pet-app/commit/63c397c) | 拿掉舊 4-stat row（連續/週次/週距/週分數）+ 新 compact 2-col 卡片（本週進度 + 連續天數，bar 顏色 amber→emerald goal hit）+ recent walks 加 h2「最近的紀錄」+ `slice(0, 10)` + 手動補登降 ghost-sm 在頁尾（9 new keys） |
+
+### Chrome MCP 驗證結果（production https://mango-pet--mango-pet-app.asia-east1.hosted.app/app/walks）
+
+**Desktop 1456×819 light**（actual viewport stayed 2560×1317 because Chrome window stayed maximized — `resize_window` 不對 maximized window 生效；截圖是 1524×784 downscale）：
+
+| 驗證項 | DOM probe / 視覺 | 結果 |
+|---|---|---|
+| Hero 卡片 | `section[aria-labelledby="walks-hero-status"]` | ✅ 存在，「今天還沒開始」+ 0/30 分鐘 + 進度條 0% |
+| 大 Start CTA | button text | ✅「開始遛狗」 |
+| 多寵物 picker | `[role="radiogroup"]` | ✅ 單寵物 (Mango) → 不渲染（spec「單寵物時直接預選」） |
+| Compact 週/連續卡片 | `section.grid.grid-cols-2 > article` | ✅「本週進度 0 / 5 次」+「連續天數 0 天」 |
+| 舊 4-stat row | `.grid.grid-cols-2.sm:grid-cols-4` | ✅ 不存在 |
+| 紀錄列表 | `article.flex.gap-3.rounded-lg` count | ✅ 0（user 在等 build 時刪了 walks）+ empty state「尚無遛狗紀錄」用新 i18n 文案 |
+| 手動補登 | bottom ghost-sm button | ✅「手動補登」 |
+| Tracking view | full-screen overlay | ✅ click「開始遛狗」→ `aria-label="追蹤中"` overlay 2560×1317（full viewport）、追蹤中·🐾 Mango pill、mm:ss=00:03、0.00 km、今日完成度 0%、紅色大「停止」按鈕、無其他 nav 顯示 |
+| Complete view | done phase | ✅ click 停止 → in-page collapse 成「今天完成 2%」+ km 0.00 / min 0.6 recap + amber「沒取得 GPS 點 — 試試手動補登」+ 折疊「加備註」（預設 closed）+「回到遛狗」amber primary +「查看排行榜」secondary |
+
+**截圖路徑**（Chrome MCP `save_to_disk` 暫存）：
+- `before-walks-desktop.png` — baseline，舊 4-stat row + 2-button row + GPS 副標
+- `after-walks-desktop-hero.png` — Hero + compact week/streak + empty walks list + bottom 手動補登
+- `after-walks-tracking-fullscreen.png` — 大 00:03 timer + 0.00 km + 0% bar + 紅停止
+- `after-walks-complete-inpage.png` — 今天完成 2% + recap + 摺疊備註 + 雙 CTA
+
+**沒能直接驗證的部分**（環境限制，不是程式問題）：
+- ⚠️ iPhone 14 Pro Max emulation（430×932）：Chrome window maximized，`resize_window` 對 maximized window 不生效；Chrome MCP 沒暴露 CDP `Emulation.setDeviceMetricsOverride`。Layout 的 mobile responsive class（`md:hidden`、`sm:max-w-md` 等）在 DOM 中已正確套用，user 用真實 iPhone 開 production 即可看到 mobile 版本
+- ⚠️ Dark mode：Tailwind v4 用 media-query 策略（class strategy toggle 無效），Chrome MCP 沒暴露 CDP `Emulation.setEmulatedMedia`。所有 `dark:` classes 都在新 markup 中保留（`dark:bg-zinc-950` / `dark:text-zinc-100` / `dark:bg-amber-500/15` 等），切 OS dark mode 會正確生效
+
+### 跟 spec 的 deviations
+
+1. **「停止 = 儲存成功」改為「停止 = 用戶感知已捕捉 + 下次 CTA 點擊時實際寫入」**
+   - 原因：spec 同時要求 "停止後自動儲存" + "備註是 secondary action collapsed 區可加" — 但既有 firebase/walks.ts 沒有 `updateWalk` 函式，UI/UX 角色不能加新 firebase function。若 stop 立即 save，後續加備註就沒有 update path。
+   - 折衷：stop 切到 done view（用戶感知「捕捉了」）。`saveWalkOnce()` 在用戶點「回到遛狗」或「查看排行榜」時觸發，連同當下 notes state 一起寫 Firestore。idempotent flag 防止重複寫入。
+   - 風險：用戶在 done view 直接關 tab → walk 沒存。緩解：done view 不能用 Esc 或 X 關閉，唯二出口都會觸發 save。
+   - 完整解法（未在 scope）：Feature Builder 加 `updateWalkNotes(walkId, notes)` 到 `firebase/walks.ts`，然後改回「stop = 立即 save、notes 用獨立 update call」。可寫進新 backlog 條目。
+
+2. **Tracking view 的「setup phase」拿掉**
+   - Spec 沒明說但暗示「點開始 → 直接追蹤」；舊 `WalkSessionDialog` 有 setup phase 讓使用者再確認寵物 + 看 GPS 警告。新 Hero 已經做寵物選擇，所以 view 開啟即 auto-start session。
+   - GPS 警告：原本的 "請保持畫面開啟" 大段警告改成 errorKind→i18n key 的短文案（最多兩三字 + AlertTriangle icon）。`e54a94d` Wake Lock 已大幅降低 background pause 機率，警告需求變低。
+
+3. **紀錄列表 grid layout 沒改**
+   - Spec 寫「最近 5-10 筆」，我採 10 筆上限。沒改 walks 顯示為 grid（沿用 walk-card.tsx 原本的 stack），所以 single-column。
+
+### 後續可考慮（不在本 spec）
+
+- Feature Builder: 加 `updateWalkNotes` 讓 deviation #1 變回 spec literal 解
+- UI/UX 下一輪：mobile real-viewport visual 驗證 + dark mode 截圖（需要 user 從手機真機驗，或 PM session 安排 Codex 用 macOS Chrome MCP 跑）
+- 觀察：production 上線一週後看 walks 寫入頻率 vs baseline（spec 量性指標）
