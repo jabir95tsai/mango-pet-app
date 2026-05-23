@@ -18,7 +18,7 @@
 | 項目 | 工作量 | 角色 | 狀態 |
 |---|---|---|---|
 | **[遛狗體驗 v2 — 拍照 + 結算 celebration + Motivation](../features/walks-photo-and-celebration.md)** | M-L（拆 Phase 1 拍照 + Phase 2 celebration+motivation） | Feature Builder | ✅ READY-FOR-DEV（PM 5 decisions 預設）|
-| **[提醒從首頁搬到「我的寵物」](../features/reminders-to-pets-page.md)** | S | UI/UX | ✅ READY-FOR-DEV |
+| **[Home + Pets 頁 IA 重組](../features/reminders-to-pets-page.md)** — reminders + expenses 搬到 pets / feed 整合首頁 / 更多 drawer 刪 feed | M（從 S 升 — user 2026-05-24 加 2 需求）| UI/UX | ✅ READY-FOR-DEV（含 2 個開放問題：/app/feed + /app/expenses 整頁保留 vs 刪）|
 | **⚠️ 開始按鈕移到下方** | — | — | 🔴 **PM PUSH-BACK** — 違反 walk-core spec「3 秒看到開始」核心 principle，等 user 重評 |
 
 ### 三個項目可並行（無檔案衝突）
