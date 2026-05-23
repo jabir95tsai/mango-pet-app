@@ -271,6 +271,20 @@
       "cta": "Create or join a family"
     }
   },
+  "Walks": {
+    "core": {
+      "todayGoalGap": "{min} more min today",
+      "todayGoalHit": "Goal hit!",
+      "todayProgress": "{done} / {goal} min",
+      "noWalksToday": "No walk yet today",
+      "lastWalkedWith": "Last walk: {name}",
+      "startWalking": "Start walking",
+      "pickPet": "Pet",
+      "needPetTitle": "No pet yet",
+      "needPetDescription": "Add a pet before starting a walk.",
+      "needPetCta": "Add a pet"
+    }
+  },
   "Push": {
     "title": "Push notifications",
     "enable": "Enable",

@@ -271,6 +271,20 @@
       "cta": "建立 / 加入家庭"
     }
   },
+  "Walks": {
+    "core": {
+      "todayGoalGap": "今天還差 {min} 分鐘",
+      "todayGoalHit": "今日目標達成！",
+      "todayProgress": "{done} / {goal} 分鐘",
+      "noWalksToday": "今天還沒開始",
+      "lastWalkedWith": "上次遛的：{name}",
+      "startWalking": "開始遛狗",
+      "pickPet": "選寵物",
+      "needPetTitle": "還沒有寵物",
+      "needPetDescription": "先建立一隻寵物才能開始遛狗",
+      "needPetCta": "去新增寵物"
+    }
+  },
   "Push": {
     "title": "推播通知",
     "enable": "啟用",
