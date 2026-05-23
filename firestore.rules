@@ -102,8 +102,37 @@ service cloud.firestore {
     }
 
     // ── Family-scoped top-level collections ──
-    // All members of `data.familyId` can read/write. Each doc must carry
-    // `familyId` and the actor's uid in the appropriate `*Uid` field.
+    // Two access modes per doc:
+    //   1. FAMILY: `data.familyId != null` — any member of that family.
+    //   2. PERSONAL: `data.familyId == null` — only the doc's owner
+    //      (`ownerUid` / `walkerUid` / `createdByUid` / `payerUid` per
+    //      collection; the canonical field is whatever the matching
+    //      `create` rule already required for that collection).
+    // Personal mode is the no-family default after onboarding; users
+    // can migrate personal docs into a family later via the
+    // `importPersonalToFamily` callable (Phase B3).
+    //
+    // Per-collection personal-owner predicates. We inline the field name
+    // (rather than parameterising) because Firestore rules' dynamic field
+    // access (`data[varName]`) is not documented to work reliably across
+    // SDK versions — explicit predicates compile and behave the same way
+    // every release.
+    function isPersonalPetOwner(d) {
+      return d.familyId == null && request.auth != null
+        && d.ownerUid == request.auth.uid;
+    }
+    function isPersonalWalkOwner(d) {
+      return d.familyId == null && request.auth != null
+        && d.walkerUid == request.auth.uid;
+    }
+    function isPersonalReminderOwner(d) {
+      return d.familyId == null && request.auth != null
+        && d.createdByUid == request.auth.uid;
+    }
+    function isPersonalExpenseOwner(d) {
+      return d.familyId == null && request.auth != null
+        && d.payerUid == request.auth.uid;
+    }
 
     // NOTE on `resource == null` clauses:
     //   The migration helpers call getDoc() to check whether a top-level
@@ -117,62 +146,102 @@ service cloud.firestore {
     //   so non-family members can't enumerate.
 
     match /pets/{petId} {
-      allow read: if resource == null || isFamilyMember(resource.data.familyId);
+      allow read: if resource == null
+        || isPersonalPetOwner(resource.data)
+        || isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
-        && isFamilyMember(request.resource.data.familyId)
-        && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isFamilyMember(resource.data.familyId)
-        && isFamilyMember(request.resource.data.familyId);
-      allow delete: if isFamilyMember(resource.data.familyId);
+        && request.resource.data.ownerUid == request.auth.uid
+        && (
+          request.resource.data.familyId == null
+          || isFamilyMember(request.resource.data.familyId)
+        );
+      allow update: if (
+          isPersonalPetOwner(resource.data)
+          || isFamilyMember(resource.data.familyId)
+        )
+        && (
+          // Post-state must also be accessible to the caller — either
+          // still personal-owned-by-self, or in a family we belong to.
+          isPersonalPetOwner(request.resource.data)
+          || isFamilyMember(request.resource.data.familyId)
+        );
+      allow delete: if isPersonalPetOwner(resource.data)
+        || isFamilyMember(resource.data.familyId);
 
       // Health records flattened to a subcollection of pet at top-level.
-      // Both reads and writes gated by the parent pet's family.
+      // Both reads and writes gated by the parent pet's family — or by
+      // the parent pet's ownerUid in personal mode.
       match /healthRecords/{recordId} {
         allow read, write: if resource == null
+          || isPersonalPetOwner(
+               get(/databases/$(database)/documents/pets/$(petId)).data
+             )
           || isFamilyMember(
-            get(/databases/$(database)/documents/pets/$(petId)).data.familyId
-          );
+               get(/databases/$(database)/documents/pets/$(petId)).data.familyId
+             );
       }
     }
 
     match /walks/{walkId} {
-      allow read: if resource == null || isFamilyMember(resource.data.familyId);
+      allow read: if resource == null
+        || isPersonalWalkOwner(resource.data)
+        || isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
-        && isFamilyMember(request.resource.data.familyId)
-        && request.resource.data.walkerUid == request.auth.uid;
-      // Updates allowed by the walker only (e.g., editing notes). Deletes
-      // allowed by any family member (so anyone can clean up bad data).
+        && request.resource.data.walkerUid == request.auth.uid
+        && (
+          request.resource.data.familyId == null
+          || isFamilyMember(request.resource.data.familyId)
+        );
+      // Updates allowed by the walker only (e.g., editing notes), in
+      // both family and personal modes (walker == self covers both).
       allow update: if request.auth.uid == resource.data.walkerUid;
-      allow delete: if isFamilyMember(resource.data.familyId);
+      allow delete: if isPersonalWalkOwner(resource.data)
+        || isFamilyMember(resource.data.familyId);
     }
 
     match /reminders/{reminderId} {
-      allow read: if resource == null || isFamilyMember(resource.data.familyId);
+      allow read: if resource == null
+        || isPersonalReminderOwner(resource.data)
+        || isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
-        && isFamilyMember(request.resource.data.familyId)
-        && request.resource.data.createdByUid == request.auth.uid;
-      // Any member can mark done / edit / delete reminders — caring for
-      // pets is a shared responsibility. But if this update touches the
-      // `doneByUid` attribution field, it must either be cleared (uncomplete)
-      // or set to the actor's own uid — you can't impersonate another
-      // member's "done" credit.
-      allow update: if isFamilyMember(resource.data.familyId)
+        && request.resource.data.createdByUid == request.auth.uid
+        && (
+          request.resource.data.familyId == null
+          || isFamilyMember(request.resource.data.familyId)
+        );
+      // Any family member can mark done / edit / delete in family mode;
+      // only the owner in personal mode. The doneByUid anti-impersonation
+      // guard applies in both modes — if the update touches doneByUid it
+      // must be cleared or equal request.auth.uid.
+      allow update: if (
+          isPersonalReminderOwner(resource.data)
+          || isFamilyMember(resource.data.familyId)
+        )
         && (
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(["doneByUid"])
           || !("doneByUid" in request.resource.data)
           || request.resource.data.doneByUid == request.auth.uid
         );
-      allow delete: if isFamilyMember(resource.data.familyId);
+      allow delete: if isPersonalReminderOwner(resource.data)
+        || isFamilyMember(resource.data.familyId);
     }
 
     match /expenses/{expenseId} {
-      allow read: if resource == null || isFamilyMember(resource.data.familyId);
+      allow read: if resource == null
+        || isPersonalExpenseOwner(resource.data)
+        || isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
-        && isFamilyMember(request.resource.data.familyId)
-        && request.resource.data.payerUid == request.auth.uid;
-      // Payer edits their own expense, any member can delete bad entries.
+        && request.resource.data.payerUid == request.auth.uid
+        && (
+          request.resource.data.familyId == null
+          || isFamilyMember(request.resource.data.familyId)
+        );
+      // Payer edits their own expense in both modes. Family members
+      // can delete bad entries in family mode; personal owner deletes
+      // in personal mode.
       allow update: if request.auth.uid == resource.data.payerUid;
-      allow delete: if isFamilyMember(resource.data.familyId);
+      allow delete: if isPersonalExpenseOwner(resource.data)
+        || isFamilyMember(resource.data.familyId);
     }
 
     // ── Posts (top-level, author-owned, friend/public visibility) ──

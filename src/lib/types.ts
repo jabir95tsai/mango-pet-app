@@ -49,9 +49,14 @@ export type FamilyMember = {
 
 export type Pet = {
   petId: string;
-  /** Family this pet belongs to. All members of the family can read/write. */
-  familyId: string;
-  /** The user who originally created the pet. Kept for attribution; not a permission boundary. */
+  /** Family this pet belongs to. All members of the family can read/write.
+   *  `null` means **personal mode** — the pet lives in the creator's
+   *  personal namespace; permission gated by `ownerUid == request.auth.uid`
+   *  instead of family membership. Created via `createPet(null, uid, …)`. */
+  familyId: string | null;
+  /** The user who originally created the pet. In family mode this is for
+   *  attribution; in personal mode (`familyId === null`) it is **the
+   *  permission boundary** — only this user can read/write. */
   ownerUid: string;
   name: string;
   species: Species;
@@ -136,8 +141,10 @@ export type HealthRecord = {
   recordId: string;
   /** Family the pet belongs to. Optional during the migration window —
    *  legacy records still under `users/{uid}/pets/.../healthRecords/` won't
-   *  have it; new top-level records always will. */
-  familyId?: string;
+   *  have it; new top-level records always will. `null` for records under
+   *  a personal-mode pet (parent pet's `familyId === null`). Permission is
+   *  resolved via the parent pet, so this field is informational only. */
+  familyId?: string | null;
   petId: string;
   /** User who recorded it (for attribution). Optional for legacy data. */
   recordedByUid?: string;
@@ -160,9 +167,12 @@ export type ReminderRepeat = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
 export type Reminder = {
   reminderId: string;
-  /** Family that this reminder belongs to. Optional during migration window. */
-  familyId?: string;
-  /** User who created the reminder (for attribution). */
+  /** Family that this reminder belongs to. Optional during migration
+   *  window. `null` for personal-mode reminders — permission gated by
+   *  `createdByUid == request.auth.uid` instead. */
+  familyId?: string | null;
+  /** User who created the reminder. In family mode this is for
+   *  attribution; in personal mode it is the permission boundary. */
   createdByUid?: string;
   petId?: string;
   title: string;
@@ -250,8 +260,10 @@ export type WalkPathPoint = { lat: number; lng: number; t: number };
 
 export type Walk = {
   walkId: string;
-  /** Family the pet belongs to. Optional during migration window. */
-  familyId?: string;
+  /** Family the pet belongs to. Optional during migration window.
+   *  `null` for personal-mode walks — permission gated by
+   *  `walkerUid == request.auth.uid` instead of family membership. */
+  familyId?: string | null;
   /** Member of the family who actually did the walk — drives leaderboard
    *  credit. Optional during migration (legacy walks use `ownerUid`). */
   walkerUid?: string;
@@ -351,8 +363,10 @@ export type ExpenseSource = "manual" | "ai_scan";
 
 export type Expense = {
   expenseId: string;
-  /** Family the pet belongs to. Optional during migration window. */
-  familyId?: string;
+  /** Family the pet belongs to. Optional during migration window.
+   *  `null` for personal-mode expenses — permission gated by
+   *  `payerUid == request.auth.uid` instead of family membership. */
+  familyId?: string | null;
   /** Member who paid (for attribution + per-payer breakdowns). */
   payerUid?: string;
   payerName?: string;

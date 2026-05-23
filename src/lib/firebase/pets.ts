@@ -50,29 +50,53 @@ export async function listPets(familyId: string): Promise<Pet[]> {
   return snap.docs.map((d) => ({ ...(d.data() as Pet), petId: d.id }));
 }
 
+/** Personal-mode counterpart of {@link listPets}: returns the signed-in
+ *  user's pets that live outside any family (`familyId === null`).
+ *  Requires the composite index `(ownerUid ASC, familyId ASC, createdAt ASC)`
+ *  in firestore.indexes.json. Used by pages that render the active scope
+ *  when `family === null` after the B2 onboarding redesign. */
+export async function listPersonalPets(ownerUid: string): Promise<Pet[]> {
+  const snap = await getDocs(
+    query(
+      petsCollection(),
+      where("ownerUid", "==", ownerUid),
+      where("familyId", "==", null),
+      orderBy("createdAt", "asc"),
+    ),
+  );
+  return snap.docs.map((d) => ({ ...(d.data() as Pet), petId: d.id }));
+}
+
 export async function getPet(petId: string): Promise<Pet | null> {
   const snap = await getDoc(petDoc(petId));
   return snap.exists() ? ({ ...(snap.data() as Pet), petId: snap.id }) : null;
 }
 
 export async function createPet(
-  familyId: string,
+  /** Pass `null` to create a personal-mode pet (lives in the creator's
+   *  namespace; only the creator can read/write per rules). */
+  familyId: string | null,
   ownerUid: string,
   input: PetInput,
   avatar?: File,
 ): Promise<Pet> {
-  const data = clean({
+  // familyId is preserved explicitly (including `null`) so the field is
+  // queryable via `where("familyId", "==", null)`. The `clean` helper
+  // strips undefined / "" so we splice it back in.
+  const data = {
     familyId,
-    ownerUid,
-    name: input.name,
-    species: input.species,
-    breed: input.breed,
-    gender: input.gender,
-    weightKg: input.weightKg,
-    bio: input.bio,
-    birthday: input.birthday ? Timestamp.fromDate(input.birthday) : undefined,
-    createdAt: serverTimestamp(),
-  });
+    ...clean({
+      ownerUid,
+      name: input.name,
+      species: input.species,
+      breed: input.breed,
+      gender: input.gender,
+      weightKg: input.weightKg,
+      bio: input.bio,
+      birthday: input.birthday ? Timestamp.fromDate(input.birthday) : undefined,
+      createdAt: serverTimestamp(),
+    }),
+  };
 
   const docRef = await addDoc(petsCollection(), data);
 

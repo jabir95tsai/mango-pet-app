@@ -38,7 +38,9 @@ function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
 }
 
 export type CreateExpenseArgs = ExpenseInput & {
-  familyId: string;
+  /** Pass `null` to create a personal-mode expense (lives outside any
+   *  family; permission gated by `payerUid == self`). */
+  familyId: string | null;
   payerUid: string;
   payerName?: string;
 };
@@ -46,25 +48,29 @@ export type CreateExpenseArgs = ExpenseInput & {
 export async function createExpense(
   args: CreateExpenseArgs,
 ): Promise<Expense> {
-  const data = clean({
+  // familyId preserved explicitly (including null) so the field is
+  // queryable as `where("familyId", "==", null)`.
+  const data = {
     familyId: args.familyId,
-    payerUid: args.payerUid,
-    payerName: args.payerName,
-    // Mirror to ownerUid so legacy queries that group by ownerUid still
-    // attribute correctly to the payer.
-    ownerUid: args.payerUid,
-    petId: args.petId,
-    petName: args.petName,
-    amount: args.amount,
-    currency: "TWD" as const,
-    vendor: args.vendor,
-    category: args.category,
-    spentAt: Timestamp.fromDate(args.spentAt),
-    notes: args.notes,
-    items: args.items?.length ? args.items : undefined,
-    source: args.source,
-    createdAt: serverTimestamp(),
-  });
+    ...clean({
+      payerUid: args.payerUid,
+      payerName: args.payerName,
+      // Mirror to ownerUid so legacy queries that group by ownerUid still
+      // attribute correctly to the payer.
+      ownerUid: args.payerUid,
+      petId: args.petId,
+      petName: args.petName,
+      amount: args.amount,
+      currency: "TWD" as const,
+      vendor: args.vendor,
+      category: args.category,
+      spentAt: Timestamp.fromDate(args.spentAt),
+      notes: args.notes,
+      items: args.items?.length ? args.items : undefined,
+      source: args.source,
+      createdAt: serverTimestamp(),
+    }),
+  };
 
   const docRef = await addDoc(expensesCol(), data);
   const snap = await getDoc(docRef);
@@ -85,6 +91,38 @@ export async function listExpenses(
     query(
       expensesCol(),
       where("familyId", "==", familyId),
+      orderBy("spentAt", "desc"),
+      limit(max),
+    ),
+  );
+  let rows = snap.docs.map((d) => ({
+    ...(d.data() as Expense),
+    expenseId: d.id,
+  }));
+  if (opts?.petId) rows = rows.filter((e) => e.petId === opts.petId);
+  if (opts?.category) rows = rows.filter((e) => e.category === opts.category);
+  if (opts?.sinceMs)
+    rows = rows.filter((e) => e.spentAt.toMillis() >= opts.sinceMs!);
+  return rows;
+}
+
+/** Personal-mode counterpart of {@link listExpenses}. Index:
+ *  `(payerUid ASC, familyId ASC, spentAt DESC)`. */
+export async function listPersonalExpenses(
+  payerUid: string,
+  opts?: {
+    petId?: string;
+    category?: ExpenseCategory;
+    sinceMs?: number;
+    max?: number;
+  },
+): Promise<Expense[]> {
+  const max = opts?.max ?? 200;
+  const snap = await getDocs(
+    query(
+      expensesCol(),
+      where("payerUid", "==", payerUid),
+      where("familyId", "==", null),
       orderBy("spentAt", "desc"),
       limit(max),
     ),

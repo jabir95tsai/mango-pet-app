@@ -92,18 +92,92 @@ export async function listOverdueReminders(familyId: string): Promise<Reminder[]
     .filter((r) => !r.done);
 }
 
+// ────────────────────────────────────────────────────────────────────
+// Personal-mode counterparts (familyId === null, createdByUid == self).
+// Indexes:
+//   (createdByUid ASC, familyId ASC, triggerAt ASC)  — listPersonal*
+//   (createdByUid ASC, familyId ASC, triggerAt DESC) — overdue variant
+// ────────────────────────────────────────────────────────────────────
+
+export async function listPersonalReminders(
+  createdByUid: string,
+  opts?: { petId?: string; includeDone?: boolean },
+): Promise<Reminder[]> {
+  const snap = await getDocs(
+    query(
+      remindersCol(),
+      where("createdByUid", "==", createdByUid),
+      where("familyId", "==", null),
+      orderBy("triggerAt", "asc"),
+    ),
+  );
+  let reminders = snap.docs.map((d) => ({
+    ...(d.data() as Reminder),
+    reminderId: d.id,
+  }));
+  if (opts?.petId) {
+    reminders = reminders.filter((r) => r.petId === opts.petId);
+  }
+  if (!opts?.includeDone) {
+    reminders = reminders.filter((r) => !r.done);
+  }
+  return reminders;
+}
+
+export async function listPersonalUpcomingReminders(
+  createdByUid: string,
+  withinDays = 30,
+): Promise<Reminder[]> {
+  const now = Timestamp.now();
+  const cutoff = Timestamp.fromMillis(Date.now() + withinDays * 86400_000);
+  const snap = await getDocs(
+    query(
+      remindersCol(),
+      where("createdByUid", "==", createdByUid),
+      where("familyId", "==", null),
+      where("triggerAt", ">=", now),
+      where("triggerAt", "<=", cutoff),
+      orderBy("triggerAt", "asc"),
+    ),
+  );
+  return snap.docs
+    .map((d) => ({ ...(d.data() as Reminder), reminderId: d.id }))
+    .filter((r) => !r.done);
+}
+
+export async function listPersonalOverdueReminders(
+  createdByUid: string,
+): Promise<Reminder[]> {
+  const now = Timestamp.now();
+  const snap = await getDocs(
+    query(
+      remindersCol(),
+      where("createdByUid", "==", createdByUid),
+      where("familyId", "==", null),
+      where("triggerAt", "<", now),
+      orderBy("triggerAt", "desc"),
+    ),
+  );
+  return snap.docs
+    .map((d) => ({ ...(d.data() as Reminder), reminderId: d.id }))
+    .filter((r) => !r.done);
+}
+
 export type CreateReminderArgs = ReminderInput & {
-  familyId: string;
+  /** Pass `null` to create a personal-mode reminder (lives outside any
+   *  family; permission gated by `createdByUid == self`). */
+  familyId: string | null;
   createdByUid: string;
 };
 
 export async function createReminder(
   args: CreateReminderArgs,
 ): Promise<Reminder> {
-  const docRef = await addDoc(
-    remindersCol(),
-    clean({
-      familyId: args.familyId,
+  // familyId preserved explicitly (including null) so the field is
+  // queryable as `where("familyId", "==", null)`.
+  const docRef = await addDoc(remindersCol(), {
+    familyId: args.familyId,
+    ...clean({
       createdByUid: args.createdByUid,
       petId: args.petId,
       title: args.title,
@@ -115,7 +189,7 @@ export async function createReminder(
       notified: false,
       createdAt: serverTimestamp(),
     }),
-  );
+  });
   const snap = await getDoc(docRef);
   return { ...(snap.data() as Reminder), reminderId: docRef.id };
 }

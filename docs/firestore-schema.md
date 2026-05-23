@@ -4,14 +4,15 @@
 >
 > 真正的型別宣告在 [`src/lib/types.ts`](../src/lib/types.ts)，這個文件不重複它，只解釋**結構、邊界、為什麼**。如果這份 doc 與 `types.ts` / `firestore.rules` / `firestore.indexes.json` 對不上，**code 是對的**，請更新這份 doc（並考慮為什麼會脫鉤）。
 >
-> 最後校對：2026-05-22（Backend session — 起手式重寫）
+> 最後校對：2026-05-23（Feature Builder session — B1 personal mode schema/rules/indexes）
 
 ## TL;DR
 
 - **共享單位是 family，不是 user**。寵物的健康紀錄、遛狗、提醒、開銷都 scope 到 `familyId`，所有家庭成員都能 read/write。
+- **`familyId == null` 是合法狀態 — personal mode**（Phase B1，2026-05-23）。沒家庭時主功能仍能用，docs 寫入 `familyId: null`，權限改用「owner field 等於自己」把關：pets/`ownerUid`、walks/`walkerUid`、reminders/`createdByUid`、expenses/`payerUid`。Phase B3 的 `importPersonalToFamily` callable 之後負責把 personal docs 搬進家庭。
 - **路徑慣例**：產品資料是 **top-level + `familyId` 欄位** 的扁平 collection，**不是** `users/{uid}/...` 巢狀。
 - **legacy `users/{uid}/...` 路徑還在**（pets / reminders / walks / expenses / pets/healthRecords），rules 還開著讀寫，但 client lib 早已不再寫入，只剩 idempotent migration 函式從 legacy 讀資料、寫到新 top-level 路徑。等 [dedupe migration](features/mango-dedupe-migration.md) 跑完才動 cleanup。
-- **每個 family-scoped collection 的 rule pattern 相同**：用 helper `isFamilyMember(familyId)` 把關，read 容許 `resource == null`（migration helper 探測新 doc 存在性用），write 要求 `request.resource.data.familyId` 屬於請求者的家庭。
+- **每個 family-scoped collection 的 rule pattern**：兩條 OR — `isFamilyMember(familyId)` 或對應 collection 的 `isPersonal*Owner(data)`。read 仍容許 `resource == null`（migration helper 探測新 doc 存在性用）。
 - **三個 callable + 兩個 scheduled function** 拿 Admin SDK 做 cross-user 寫入（家庭操作 / 好友配對 / leaderboard 聚合 / push 派送）。
 
 ---
@@ -105,8 +106,8 @@ users/{uid}/expenses/{expenseId}
 
 | 欄位 | 寫入時機 | 備註 |
 |---|---|---|
-| `familyId` | createPet | 對應 active family；rule 用它判 isFamilyMember |
-| `ownerUid` | createPet | 建立者，給 attribution 用；**不是**權限邊界（任何 family 成員都能改） |
+| `familyId` | createPet | 對應 active family；rule 用它判 isFamilyMember。**B1 起允許 `null`**（personal mode；rule fall back 到 ownerUid 等於 self）|
+| `ownerUid` | createPet | 建立者，給 attribution 用；family mode 不是權限邊界（任何 family 成員都能改），**personal mode（`familyId == null`）是權限邊界** |
 | `name`, `species`, `breed?`, `birthday?`, `gender?`, `weightKg?`, `bio?`, `photoURL?` | createPet / updatePet | 一般欄位 |
 | `createdAt` | createPet | serverTimestamp |
 
@@ -129,8 +130,8 @@ rule 透過 parent pet 的 `familyId` 判定權限：`get(/databases/.../pets/{p
 
 | 欄位 | 寫入時機 | 備註 |
 |---|---|---|
-| `familyId` | createReminder | 對應 active family |
-| `createdByUid` | createReminder | 建立者 attribution |
+| `familyId` | createReminder | 對應 active family；**B1 起允許 `null`**（personal mode；rule fall back 到 createdByUid 等於 self）|
+| `createdByUid` | createReminder | 建立者 attribution；**personal mode（`familyId == null`）是權限邊界** |
 | `petId?` | createReminder | optional — 全家通用提醒可不指定 |
 | `title`, `description?`, `triggerAt`, `repeat`, `notifyBeforeMinutes` | createReminder / updateReminder | repeat: `none`/`daily`/`weekly`/`monthly`/`yearly` |
 | `done` | completeReminder（non-repeat 設 true）/ uncompleteReminder（false） | repeat reminder 永遠 false（advance 而非 complete） |
@@ -145,8 +146,8 @@ rule 透過 parent pet 的 `familyId` 判定權限：`get(/databases/.../pets/{p
 
 | 欄位 | 寫入時機 | 備註 |
 |---|---|---|
-| `familyId` | createWalk | 對應 active family |
-| `walkerUid`, `walkerName?`, `walkerPhotoURL?` | createWalk | 實際遛狗的成員 |
+| `familyId` | createWalk | 對應 active family；**B1 起允許 `null`**（personal mode；rule fall back 到 walkerUid 等於 self）|
+| `walkerUid`, `walkerName?`, `walkerPhotoURL?` | createWalk | 實際遛狗的成員；**personal mode（`familyId == null`）是權限邊界**。Personal walks **不計入** leaderboard（防刷分），守在 aggregateLeaderboards |
 | `ownerUid` | createWalk（鏡像 walkerUid） | **legacy 相容**：leaderboard aggregation 仍 group by ownerUid。Legacy 清理 sprint 後可移除 |
 | `petId`, `petName?` | createWalk | petName 冗餘存避免 join |
 | `startedAt`, `endedAt`, `distanceKm`, `durationMin` | createWalk | 距離與時長算好才寫 |
@@ -161,8 +162,8 @@ rule 特別之處：update 只允許 walker 本人（編輯 notes 用，目前 l
 
 | 欄位 | 寫入時機 | 備註 |
 |---|---|---|
-| `familyId` | createExpense | 對應 active family |
-| `payerUid`, `payerName?` | createExpense | 實際付錢的成員 |
+| `familyId` | createExpense | 對應 active family；**B1 起允許 `null`**（personal mode；rule fall back 到 payerUid 等於 self）|
+| `payerUid`, `payerName?` | createExpense | 實際付錢的成員；**personal mode（`familyId == null`）是權限邊界** |
 | `ownerUid` | createExpense（鏡像 payerUid） | **legacy 相容**，同 walks |
 | `petId`, `petName?` | createExpense | |
 | `amount`, `currency: "TWD"` | createExpense | 整數新台幣；currency 預留多幣別未來 |
@@ -277,21 +278,48 @@ function isFamilyMember(familyId) {
 }
 ```
 
-### 標準 family-scoped collection pattern
+### 標準 family-scoped collection pattern（Phase B1 後：dual mode）
 
 ```js
+// Per-collection personal-owner predicates (rules 上方 helper)
+function isPersonalPetOwner(d) {
+  return d.familyId == null && request.auth != null
+    && d.ownerUid == request.auth.uid;
+}
+// 同樣 pattern for walks/walkerUid, reminders/createdByUid, expenses/payerUid
+
 match /pets/{petId} {
-  allow read: if resource == null || isFamilyMember(resource.data.familyId);
+  allow read: if resource == null
+    || isPersonalPetOwner(resource.data)
+    || isFamilyMember(resource.data.familyId);
   allow create: if request.auth != null
-    && isFamilyMember(request.resource.data.familyId)
-    && request.resource.data.ownerUid == request.auth.uid;
-  allow update: if isFamilyMember(resource.data.familyId)
-    && isFamilyMember(request.resource.data.familyId);
-  allow delete: if isFamilyMember(resource.data.familyId);
+    && request.resource.data.ownerUid == request.auth.uid
+    && (
+      request.resource.data.familyId == null
+      || isFamilyMember(request.resource.data.familyId)
+    );
+  allow update: if (isPersonalPetOwner(resource.data)
+                    || isFamilyMember(resource.data.familyId))
+    && (isPersonalPetOwner(request.resource.data)
+        || isFamilyMember(request.resource.data.familyId));
+  allow delete: if isPersonalPetOwner(resource.data)
+    || isFamilyMember(resource.data.familyId);
+
+  match /healthRecords/{recordId} {
+    allow read, write: if resource == null
+      || isPersonalPetOwner(get(/databases/$(database)/documents/pets/$(petId)).data)
+      || isFamilyMember(get(/databases/$(database)/documents/pets/$(petId)).data.familyId);
+  }
 }
 ```
 
+**為什麼 dual mode**：personal mode docs 寫入 `familyId: null`，rule fall through 到 `isPersonal*Owner(data)` 分支（owner field 必須等於 `request.auth.uid`）。family mode docs 寫入 `familyId: "fam_xxx"`，走原本 `isFamilyMember(familyId)` 分支。兩條 OR — 任一條件成立即可。
+
+**update 規則**：兩段 AND — 「**動之前** caller 對 doc 有權限」**且**「**動之後** caller 對 doc 仍有權限」。防止 caller 把 doc 改成自己無法存取的狀態（e.g., 改 `ownerUid` 到別人 uid）。
+
 **`resource == null` 為什麼必要**：migration helper 用 getDoc 探測「同 id 的新 doc 是否已存在」。若 doc 不存在，Firestore 套 rule 時 `resource.data.familyId` undefined → 預設 deny；明確允許 read of non-existing docs 修掉這條（不洩漏資訊 — snapshot 只回「doesn't exist」）。同樣 pattern 套在 walks / reminders / expenses。
+
+**Walks / Expenses 的 update 例外**：兩者 update rule 已限定到 `walker == self` / `payer == self`，本身就把 personal + family 兩種模式都涵蓋（owner 寫自己的東西在兩種模式都成立）。不另寫 personal 分支。
 
 ### families 主檔
 
@@ -348,7 +376,12 @@ allow update: if isFamilyMember(resource.data.familyId)
 | `walks` (COLLECTION_GROUP) | ownerUid ASC, startedAt DESC | legacy 路徑與 leaderboard aggregation |
 | `walks` (COLLECTION) | familyId ASC, startedAt DESC | `listWalks` |
 | `pets` (COLLECTION) | familyId ASC, createdAt ASC | `listPets` |
+| `pets` (COLLECTION) | ownerUid ASC, familyId ASC, createdAt ASC | `listPersonalPets`（B1）|
 | `expenses` (COLLECTION) | familyId ASC, spentAt DESC | `listExpenses`, `listExpensesInRange` |
+| `expenses` (COLLECTION) | payerUid ASC, familyId ASC, spentAt DESC | `listPersonalExpenses`（B1）|
+| `walks` (COLLECTION) | walkerUid ASC, familyId ASC, startedAt DESC | `listPersonalWalks`（B1）|
+| `reminders` (COLLECTION) | createdByUid ASC, familyId ASC, triggerAt ASC | `listPersonalReminders`, `listPersonalUpcomingReminders`（B1）|
+| `reminders` (COLLECTION) | createdByUid ASC, familyId ASC, triggerAt DESC | `listPersonalOverdueReminders`（B1）|
 | `healthRecords` (COLLECTION_GROUP) | type ASC, recordedAt ASC | `listWeightSeries` |
 | `healthRecords` (COLLECTION_GROUP) | type ASC, recordedAt DESC | `listRecords` |
 
