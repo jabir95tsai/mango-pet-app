@@ -29,6 +29,7 @@ import {
 } from "@/lib/firebase/families";
 import type { Family, FamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ImportWizardDialog } from "@/components/family/import-wizard-dialog";
 
 export function FamilySection() {
   const tC = useTranslations("Common");
@@ -43,6 +44,21 @@ export function FamilySection() {
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // After settings-page create/join, drop into the import wizard so
+  // personal-mode docs accumulated before joining can migrate too.
+  const [pendingImportFamilyId, setPendingImportFamilyId] = useState<
+    string | null
+  >(null);
+
+  async function handleCreatedOrJoined(newFamilyId: string) {
+    await refresh();
+    setPendingImportFamilyId(newFamilyId);
+  }
+
+  async function handleImportWizardDone() {
+    setPendingImportFamilyId(null);
+    await refresh();
+  }
 
   const loadMembers = useCallback(async () => {
     if (!family) {
@@ -302,13 +318,22 @@ export function FamilySection() {
       <CreateFamilyDialog
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreated={refresh}
+        onCreated={handleCreatedOrJoined}
       />
       <JoinFamilyDialog
         open={showJoin}
         onClose={() => setShowJoin(false)}
-        onJoined={refresh}
+        onJoined={handleCreatedOrJoined}
       />
+
+      {pendingImportFamilyId && (
+        <ImportWizardDialog
+          open
+          familyId={pendingImportFamilyId}
+          onClose={handleImportWizardDone}
+          onComplete={handleImportWizardDone}
+        />
+      )}
     </div>
   );
 }
@@ -320,7 +345,9 @@ function CreateFamilyDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: () => Promise<void>;
+  /** Receives the just-created familyId so the caller can chain the
+   *  import wizard (see /onboarding) or just pass through to refresh(). */
+  onCreated: (familyId: string) => Promise<void> | void;
 }) {
   const tC = useTranslations("Common");
   const [name, setName] = useState("");
@@ -339,8 +366,8 @@ function CreateFamilyDialog({
     setBusy(true);
     setError(null);
     try {
-      await createFamily(name.trim() || "我的家庭");
-      await onCreated();
+      const res = await createFamily(name.trim() || "我的家庭");
+      await onCreated(res.familyId);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
@@ -388,7 +415,9 @@ function JoinFamilyDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onJoined: () => Promise<void>;
+  /** Receives the just-joined familyId so the caller can chain the
+   *  import wizard (see /onboarding). */
+  onJoined: (familyId: string) => Promise<void> | void;
 }) {
   const tC = useTranslations("Common");
   const [code, setCode] = useState("");
@@ -418,7 +447,7 @@ function JoinFamilyDialog({
         setBusy(false);
         return;
       }
-      await onJoined();
+      await onJoined(res.familyId);
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed";

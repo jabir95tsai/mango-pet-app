@@ -12,6 +12,7 @@ import {
   CreateFamilyDialog,
   JoinFamilyDialog,
 } from "@/components/family/family-section";
+import { ImportWizardDialog } from "@/components/family/import-wizard-dialog";
 
 /** /onboarding — sits between sign-in and the main app for users who
  *  don't have a family yet. Three exits:
@@ -35,10 +36,23 @@ function OnboardingInner() {
   const { family, refresh } = useFamily();
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  // After a successful create/join callable returns we hold the new
+  // familyId here and pop the import wizard. The wizard short-circuits
+  // and calls onComplete itself if the user has no personal data.
+  const [pendingImportFamilyId, setPendingImportFamilyId] = useState<
+    string | null
+  >(null);
 
-  async function handleAfterChoice() {
-    // After a successful create/join, refresh family-provider so the
-    // next page sees the new state, then go to the home tab.
+  async function handleCreatedOrJoined(newFamilyId: string) {
+    // refresh() so the wizard's listPersonal* queries fire against the
+    // current auth state with familyIds populated. (Without this the
+    // FamilyProvider still thinks family === null for a beat.)
+    await refresh();
+    setPendingImportFamilyId(newFamilyId);
+  }
+
+  async function handleImportComplete() {
+    setPendingImportFamilyId(null);
     await refresh();
     router.replace("/app");
   }
@@ -103,13 +117,22 @@ function OnboardingInner() {
       <CreateFamilyDialog
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreated={handleAfterChoice}
+        onCreated={handleCreatedOrJoined}
       />
       <JoinFamilyDialog
         open={showJoin}
         onClose={() => setShowJoin(false)}
-        onJoined={handleAfterChoice}
+        onJoined={handleCreatedOrJoined}
       />
+
+      {pendingImportFamilyId && (
+        <ImportWizardDialog
+          open
+          familyId={pendingImportFamilyId}
+          onClose={handleImportComplete}
+          onComplete={handleImportComplete}
+        />
+      )}
     </div>
   );
 }

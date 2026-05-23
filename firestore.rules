@@ -99,6 +99,17 @@ service cloud.firestore {
       // / removeFamilyMember). This keeps inviteCode generation, member
       // invariants, and last-member cleanup atomic and auditable.
       allow create, update, delete: if false;
+
+      // Audit log for callable-driven family migrations (import-personal in
+      // Phase B3, pet-merge in B4, future dedupe-migration). Members can
+      // read their family's audit trail; writes go only through Admin SDK
+      // in the callables.
+      match /migrations/{migrationId} {
+        allow read: if request.auth != null
+          && request.auth.uid in
+             get(/databases/$(database)/documents/families/$(familyId)).data.memberUids;
+        allow write: if false;
+      }
     }
 
     // ── Family-scoped top-level collections ──

@@ -151,6 +151,33 @@ export async function setCurrentFamily(
 }
 
 // ────────────────────────────────────────────────────────────────────
+// Phase B3: import personal-mode docs into a family
+// ────────────────────────────────────────────────────────────────────
+
+export type ImportPersonalType = "pets" | "walks" | "reminders" | "expenses";
+
+export type ImportPersonalCounts = Record<ImportPersonalType, number>;
+
+/** Calls the importPersonalToFamily callable to bulk-move the signed-in
+ *  user's personal-mode docs into the target family. Pass `types` to
+ *  limit which collections move; omit it to import everything.
+ *
+ *  Returns the per-collection moved counts. Does NOT detect duplicates —
+ *  that's B4's pet-merge wizard, which calls this AFTER its own merge
+ *  pass for any matching pets. */
+export async function importPersonalToFamily(
+  familyId: string,
+  types?: ImportPersonalType[],
+): Promise<{ counts: ImportPersonalCounts }> {
+  const fn = httpsCallable<
+    { familyId: string; types?: ImportPersonalType[] },
+    { counts: ImportPersonalCounts }
+  >(fns(), "importPersonalToFamily");
+  const res = await fn({ familyId, types });
+  return res.data;
+}
+
+// ────────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────────
 

@@ -192,6 +192,19 @@
       "10080": "1 week before"
     }
   },
+  "ImportWizard": {
+    "title": "Bring your personal data into this family?",
+    "subtitle": "Check anything you want to share with family members. You can do this later from Settings → Family.",
+    "loading": "Counting...",
+    "pets": "Pets",
+    "walks": "Walks",
+    "reminders": "Reminders",
+    "expenses": "Expenses",
+    "skip": "Not now",
+    "importN": "Import ({n})",
+    "importEmpty": "Nothing to import",
+    "importing": "Importing..."
+  },
   "Onboarding": {
     "title": "Welcome to Mango Pet",
     "subtitle": "Take care of your pets with family — or solo for now. You can switch anytime.",

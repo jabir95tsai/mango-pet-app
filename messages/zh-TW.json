@@ -192,6 +192,19 @@
       "10080": "提前 1 週"
     }
   },
+  "ImportWizard": {
+    "title": "把個人模式資料搬進家庭？",
+    "subtitle": "勾選你想分享進家庭的資料；可以稍後再來「設定 → 家庭」處理。",
+    "loading": "盤點中...",
+    "pets": "寵物",
+    "walks": "遛狗紀錄",
+    "reminders": "提醒",
+    "expenses": "開銷",
+    "skip": "先不要",
+    "importN": "搬進來（{n}）",
+    "importEmpty": "沒有可搬的",
+    "importing": "搬移中..."
+  },
   "Onboarding": {
     "title": "歡迎加入芒果寵物",
     "subtitle": "你想跟家人一起照顧寵物，還是先一個人開始？兩種模式之後都能切換。",

@@ -771,3 +771,118 @@ export const removeFamilyMember = onCall(
     return { ok: true };
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// importPersonalToFamily — Phase B3 callable
+// Bulk-move the caller's personal-mode docs (familyId == null,
+// per-collection owner field == caller.uid) into a family they belong
+// to. Plain "search and replace familyId" — duplicate detection is
+// deferred to B4 (pet-merge wizard). Writes an audit doc to
+// families/{familyId}/migrations for the family to inspect later.
+// ─────────────────────────────────────────────────────────────────────
+
+/** Per-collection metadata for the bulk import. The owner field is
+ *  the doc field the personal-mode rule checks (see firestore.rules). */
+const IMPORT_TARGETS = [
+  { type: "pets" as const, collection: "pets", ownerField: "ownerUid" },
+  { type: "walks" as const, collection: "walks", ownerField: "walkerUid" },
+  {
+    type: "reminders" as const,
+    collection: "reminders",
+    ownerField: "createdByUid",
+  },
+  { type: "expenses" as const, collection: "expenses", ownerField: "payerUid" },
+] as const;
+
+type ImportType = (typeof IMPORT_TARGETS)[number]["type"];
+type ImportCounts = Record<ImportType, number>;
+
+export const importPersonalToFamily = onCall(
+  { region: FUNCTION_REGION, cors: true, memory: "256MiB" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+
+    const targetFamilyId = ((req.data?.familyId as string | undefined) ?? "").trim();
+    if (!targetFamilyId) {
+      throw new HttpsError("invalid-argument", "familyId required");
+    }
+
+    // Membership guard — caller must be in the target family before they
+    // can flip ownership of any personal docs into it.
+    const familyRef = db.doc(`families/${targetFamilyId}`);
+    const familySnap = await familyRef.get();
+    if (!familySnap.exists) {
+      throw new HttpsError("not-found", "Family not found");
+    }
+    const memberUids =
+      (familySnap.data()?.memberUids as string[] | undefined) ?? [];
+    if (!memberUids.includes(uid)) {
+      throw new HttpsError(
+        "permission-denied",
+        "Caller is not a member of the target family",
+      );
+    }
+
+    // Optional whitelist of types to import. Empty/missing = all 4.
+    const requestedTypes = req.data?.types as ImportType[] | undefined;
+    const targets =
+      requestedTypes && requestedTypes.length > 0
+        ? IMPORT_TARGETS.filter((t) => requestedTypes.includes(t.type))
+        : IMPORT_TARGETS;
+
+    const startedAt = Timestamp.now();
+    const counts: ImportCounts = {
+      pets: 0,
+      walks: 0,
+      reminders: 0,
+      expenses: 0,
+    };
+
+    for (const target of targets) {
+      // Query the caller's personal-mode docs in this collection.
+      const snap = await db
+        .collection(target.collection)
+        .where(target.ownerField, "==", uid)
+        .where("familyId", "==", null)
+        .get();
+      if (snap.empty) continue;
+
+      // Chunk into batches of 400 to stay under Firestore's 500-write limit
+      // (we reserve a few slots for the audit doc + headroom).
+      const docs = snap.docs;
+      for (let i = 0; i < docs.length; i += 400) {
+        const slice = docs.slice(i, i + 400);
+        const batch = db.batch();
+        for (const d of slice) {
+          batch.update(d.ref, { familyId: targetFamilyId });
+        }
+        await batch.commit();
+        counts[target.type] += slice.length;
+      }
+
+      logger.info(
+        `importPersonalToFamily: moved ${counts[target.type]} ${target.type} ` +
+          `for uid=${uid} into family=${targetFamilyId}`,
+      );
+    }
+
+    // Audit doc — one per import event, id sortable by time.
+    const finishedAt = Timestamp.now();
+    const isoNow = new Date(finishedAt.toMillis()).toISOString();
+    const auditId = `import-from-${uid}-${isoNow}`;
+    await familyRef.collection("migrations").doc(auditId).set({
+      type: "import-personal",
+      fromUid: uid,
+      targetFamilyId,
+      startedAt,
+      finishedAt,
+      counts,
+      // Record the type filter so a re-run debate can see whether unchecked
+      // categories were truly empty or just skipped by the caller.
+      requestedTypes: requestedTypes ?? null,
+    });
+
+    return { counts };
+  },
+);
