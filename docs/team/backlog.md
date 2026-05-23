@@ -114,7 +114,33 @@ _目前沒有條目。下一個 PM session 過 Inbox 時新增。_
 
 ## 已分類 — UI/UX 接
 
-_目前沒有條目。下一個 PM session 過 Inbox 時新增。_
+### Mobile bottom nav 重組：開銷→排行榜、更多按鈕→設定 link + 更多 drawer 移到設定右上角
+- **發現於**：2026-05-23、PM session（user 主動要求 UI 小修）
+- **類型**：體驗 / UI 重組
+- **重現 / 觀察**：使用者要 mobile bottom nav 5 個 slot 改為：
+  - 原 `[home, pets, walks, expenses, more (drawer button)]`
+  - 新 `[home, pets, walks, leaderboard, settings]`
+  - 原本 bottom 的「更多」drawer 觸發按鈕**移到 settings page 右上角**
+  - Desktop sidebar 不變（仍 10 items 一字排開）
+- **建議交付給**：UI/UX
+  - 改 `src/components/nav/app-nav.tsx`：
+    - `MOBILE_PRIMARY_KEYS` 從 `["home", "pets", "walks", "expenses"]` 改成
+      `["home", "pets", "walks", "leaderboard", "settings"]`
+    - 拿掉 mobile bottom bar 第 5 個 more button — 5 slots 全是 nav link 一字排
+    - Drawer state + render 邏輯保留，但觸發點挪走（建議拆到共用 component 或 context）
+  - `src/app/app/settings/page.tsx` 或 `src/components/nav/route-header.tsx` 在 settings
+    頁加右上角 MoreHorizontal icon button → 點開既有 drawer
+  - Drawer 內 overflow items（10 - 5 = 5 個）：feed / expenses / restaurants / knowledge / friends
+  - 沒新 i18n key（沿用 Nav.more / Nav.settings / Nav.leaderboard / Nav.expenses 等）
+- **優先級提示**：P1（user 主動要求；非阻擋家庭 epic 但 quick win）
+- **PM 排序（2026-05-23）**：插隊 — UI/UX session 可立即接，不擋 #3/#6 family epic 收尾
+- **⚠️ PM surface UX 觀察**（user 可重新評估）：「更多」drawer 觸發從 bottom nav 移到
+  **settings 頁右上角** = 「進入 feed / expenses / restaurants / knowledge / friends」
+  變**兩步操作**（先 tap settings → 再 tap more icon → 再 tap 目的地）。原本是一步
+  （tap More）。
+  - **Alternative**：把 more icon 放在每頁全局 header 右上角（`route-header.tsx`），
+    每頁都是一步 tap，更接近標準 mobile app 慣例（漢堡/overflow menu 通常在頂部）
+  - 本條目仍按 user 明確要求「設定的右上角」實作；UX 觀察留給 user 實測後決定要不要 redirect
 
 ---
 
