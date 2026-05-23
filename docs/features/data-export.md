@@ -1,6 +1,6 @@
 # 資料 Export — Download My Data
 
-狀態：READY-FOR-DEV（PM 預設 5 個決策；user 看完無 push back 即可動工）
+狀態：SHIPPED — commit `3a65e59`，2026-05-23 上線；callable + UI + i18n 全套（functions:exportUserData deploy + frontend push）
 建立日期：2026-05-23
 最後更新：2026-05-23
 規格作者：PM session @ 3cb6fec
@@ -168,4 +168,24 @@ delete-account 是「destructive cleanup with cascade」；本 spec 是「read-o
 - [x] **Decision 3**：同步 download ✓
 - [x] **Decision 4**：URLs only ✓
 - [x] **Decision 5**：Settings Privacy & Data section ✓
-- [ ] Audit doc 寫 `userExports/*` 還是不寫？PM 預設不寫（export 不是 destructive，audit 價值低；如 user 想留 record，回 PM 後加 1 行寫入即可）
+- [x] Audit doc：採 PM 預設「**不寫**」 — export 不是 destructive，audit 價值低
+
+---
+
+## SHIPPED 紀錄
+
+| 項目 | 值 |
+|---|---|
+| Commit | `3a65e59` |
+| 部署時間 (Asia/Taipei 2026-05-23) | functions deploy ~21:xx → frontend push ~21:xx → App Hosting auto-build live |
+| 變更檔案 | `functions/src/index.ts`（+200，新 callable）+ `src/lib/firebase/users.ts`（+33，UserDataExport type + exportMyData wrapper）+ `src/components/settings/export-data-button.tsx`（新 80 行）+ `src/app/app/settings/page.tsx`（+18，加 Privacy & Data section above Danger zone）+ `messages/zh-TW.json`（+8）+ `messages/en.json`（+8） |
+| 部署順序 | `firebase deploy --only functions:exportUserData` → `git push origin main`（spec 順序） |
+
+### Chrome MCP 驗證結果（待 Chrome MCP 驗）
+
+Pending — verified in tandem with Tasks 1 + 2 since all three frontend changes land in the same App Hosting build cycle.
+
+### 與 spec 的 deviations
+
+- **No deviation**。完全照 spec 完成標準實作 — Decision 1-5 全採 PM 預設，schema/UI/部署順序對齊。
+- Note: `UserDataExport` type 放在 `src/lib/firebase/users.ts` 而非 `src/lib/types.ts`（spec 技術筆記原寫 types.ts）。理由：type 只被 `users.ts` 的 wrapper + `export-data-button.tsx` 用到；放近呼叫處便於 maintenance、避免 types.ts 累積 callable-only 的 wrapper type。如果 PM 偏好集中所有 type 到 types.ts，1 行 move + re-export 即可。

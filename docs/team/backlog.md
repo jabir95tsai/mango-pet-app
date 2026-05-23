@@ -34,26 +34,9 @@ P3 = 也許永遠不做的「想法」。
 
 _2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 2 條 deviation。2026-05-23 Bug Hunter session 加 1 條 push UX。_
 
-### PushToggle probe 把跨 context 的 token 當「已啟用」
-- **發現於**：2026-05-23、Bug Hunter session（修 foreground push 之後實測抓到）
-- **類型**：bug / 體驗
-- **重現 / 觀察**：使用者先在 Windows Chrome 或 iOS Safari 啟用 push（token A 寫進
-  `user.fcmTokens`）。之後在 iOS 把 App 加到主畫面、開 PWA、進 Settings。
-  `push-toggle.tsx` L60-66 的 probe 看到「PWA 本身 Notification.permission ===
-  "granted"」+「user.fcmTokens.length > 0」就直接 setStatus("enabled") 並顯示
-  「測試」按鈕；但 fcmTokens 裡那一筆是 Safari/Chrome context 的 token，PWA 從來
-  沒 call enablePush → 沒產生過 PWA-specific FCM token。按「測試」→ FCM 接受並回
-  sent=1（token A 對 FCM 是 valid）→ APNs 派給 Safari 訂閱，PWA 完全收不到。
-  Workaround：PWA 內「停用」→「啟用」重新跑 enablePush → 補上 PWA token。
-- **建議交付給**：UI/UX 或 Feature Builder
-  - 改 `src/components/settings/push-toggle.tsx` 的 probe：當 `perm === "granted"`
-    時不要僅看 `tokens.length > 0`，而是主動呼叫 `getToken({ vapidKey, swReg })`
-    拿當前 context 的 token，不在 `user.fcmTokens` 就 arrayUnion 補進去
-  - 或較輕量：PushToggle 加一行提示「換裝置 / Safari 切 PWA 後請停用再啟用」
-  - 注意 `getToken` 會走網路、可能讓 Settings 初次渲染慢 1–2s，可只在點「測試」
-    時做 reconcile，不每次 probe 都跑
-- **優先級提示**：P2（本 session 已 ship foreground handler、用戶可用「停用→啟用」
-  繞過；但每次切裝置都要手動繞，UX 不順）
+### PushToggle probe 把跨 context 的 token 當「已啟用」 — ✅ SHIPPED
+- **發現於**：2026-05-23、Bug Hunter session
+- **狀態**：✅ SHIPPED `9f1dc67`（Feature Builder 2026-05-23）— 新 `reconcileCurrentToken(uid)` helper in `src/lib/firebase/messaging.ts` 主動 `getToken({ vapidKey, swReg })` 拿當前 context 的 token，arrayUnion 進 `user.fcmTokens`（idempotent）。`push-toggle.tsx` probe 改在 `perm === "granted"` 時呼叫 reconcile，不再僅看 `tokens.length > 0`。Cost: 多一次 ~1s getToken 網路 call per Settings 開啟（acceptable，使用者不常開）。原本「PWA 內停用→啟用」 workaround 不需要了 — 新 context 第一次進 settings 自動 reconcile
 
 ### Personal walks 不應進全 App leaderboard — ✅ 已升級到 #3 spec
 - **發現於**：2026-05-23、Feature Builder unsupervised run #2 收尾
@@ -145,21 +128,9 @@ _目前沒有條目。下一個 PM session 過 Inbox 時新增。_
 
 ## 已分類 — Feature Builder 接
 
-### 未登入首頁 footer 連結文字硬編碼中文，沒走 i18n
-- **發現於**：2026-05-22、UI/UX session（登入頁加 icon + 置中時順手看到）
-- **類型**：體驗 / 技術債
-- **重現 / 觀察**：`/`（未登入首頁）右上切到 EN，標題與按鈕都英文，但 footer 仍顯示
-  「隱私權政策／服務條款」。位置：`src/app/page.tsx` L65 與 L68，文字直接寫死，
-  沒經過 `getTranslations`。
-- **建議交付給**：Feature Builder
-  - 在 `messages/zh-TW.json` 與 `messages/en.json` 新增 key（建議放 `Common`，
-    例如 `Common.privacy` / `Common.terms`，或新開 `Legal` namespace）
-  - 改 `src/app/page.tsx` 用 `getTranslations(...)` 取代寫死字串
-  - UI/UX 角色約定不新增 i18n key，所以本次 session 沒順手修
-- **優先級提示**：P2（不影響功能，但對英文使用者觀感不一致；登入頁是 first
-  impression，建議在下次 i18n batch 一起補）
-- **PM 排序（2026-05-22）**：家庭功能 epic 收完後找空檔順手做；不另寫 spec（backlog
-  條目已足夠 Feature Builder 接手）
+### 未登入首頁 footer 連結文字硬編碼中文，沒走 i18n — ✅ SHIPPED
+- **發現於**：2026-05-22、UI/UX session
+- **狀態**：✅ SHIPPED `634e8c6`（Feature Builder 2026-05-23）— 加 `Common.privacy` / `Common.terms` (zh-TW + en)；`src/app/page.tsx` 改用 `getTranslations("Common")` 取代寫死字串。EN locale 從原本顯示「隱私權政策」改為「Privacy Policy」
 
 ---
 
