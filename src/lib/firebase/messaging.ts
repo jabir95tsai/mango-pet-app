@@ -111,6 +111,63 @@ export async function disablePush(uid: string, token: string): Promise<void> {
   });
 }
 
+/** Reconcile the in-memory FCM token for the **current browser context**
+ *  with the persisted set in `user.fcmTokens`.
+ *
+ *  Context here means "(browser instance, SW registration) tuple": iOS
+ *  Safari and the same site added to the home screen as a PWA are
+ *  different contexts and produce different FCM tokens, even though
+ *  `Notification.permission` is shared. The same is true for Chrome vs
+ *  Chrome PWA on desktop.
+ *
+ *  Backlog `PushToggle probe 把跨 context 的 token 當「已啟用」` —
+ *  probe used to declare enabled whenever `Notification.permission ===
+ *  "granted"` and any token existed in `user.fcmTokens`; that could be
+ *  a sibling context's token, which sends push to that sibling and
+ *  silently misses the current one. Calling `getToken` here always
+ *  returns *this* context's token (it does NOT prompt the user — if
+ *  permission isn't granted it returns null). We arrayUnion to persist;
+ *  no-op when the token is already in the set, so cheap to re-run.
+ *
+ *  Returns the current context's token, or null when the browser can't
+ *  produce one (unsupported, permission not granted, VAPID missing,
+ *  SW registration failure). Probe code should fall back to "disabled"
+ *  on null. */
+export async function reconcileCurrentToken(
+  uid: string,
+): Promise<string | null> {
+  if (currentPermission() !== "granted") return null;
+  const messaging = await getMessagingInstance();
+  if (!messaging) return null;
+
+  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+  if (!vapidKey) return null;
+
+  // Prefer the already-registered SW (typical case after the user
+  // enabled push at least once). Fall back to a fresh registration so
+  // a brand-new context can still mint a token without the user having
+  // to click "啟用" first — getToken needs a registration regardless.
+  const swReg =
+    (await findExistingFcmSwRegistration()) ?? (await ensureSwRegistration());
+
+  try {
+    const token = await getToken(messaging, {
+      vapidKey,
+      serviceWorkerRegistration: swReg,
+    });
+    if (!token) return null;
+    // arrayUnion is idempotent at the doc level — already-present
+    // tokens make this a no-op write that still updates server time.
+    // Acceptable: probe runs once per Settings page open.
+    await updateDoc(doc(getDb(), "users", uid), {
+      fcmTokens: arrayUnion(token),
+    });
+    return token;
+  } catch {
+    return null;
+  }
+}
+
 export async function subscribeForegroundMessages(
   cb: (payload: MessagePayload) => void,
 ): Promise<() => void> {

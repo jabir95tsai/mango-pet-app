@@ -10,9 +10,9 @@ import {
   disablePush,
   enablePush,
   isPushSupported,
+  reconcileCurrentToken,
   sendTestPush,
 } from "@/lib/firebase/messaging";
-import { getAppUser } from "@/lib/firebase/users";
 
 type Status =
   | { kind: "checking" }
@@ -57,13 +57,24 @@ export function PushToggle() {
         if (!cancelled) setStatus({ kind: "denied" });
         return;
       }
-      const appUser = await getAppUser(user.uid);
-      const tokens = appUser?.fcmTokens ?? [];
-      if (perm === "granted" && tokens.length > 0) {
-        if (!cancelled) setStatus({ kind: "enabled", token: tokens[0] });
-      } else {
-        if (!cancelled) setStatus({ kind: "disabled" });
+      if (perm === "granted") {
+        // Don't trust `user.fcmTokens.length > 0` here — those tokens
+        // could be from a sibling context (iOS Safari vs PWA install,
+        // desktop Chrome vs Chrome PWA) that produced a different FCM
+        // token from the one this context can actually receive. Mint
+        // this context's token via getToken and arrayUnion it into the
+        // persisted set; only declare "enabled" if we got a real token
+        // back. Costs one extra ~1s network call per Settings open —
+        // acceptable for a page the user visits infrequently. Backlog
+        // entry "PushToggle probe 把跨 context 的 token 當「已啟用」".
+        const token = await reconcileCurrentToken(user.uid);
+        if (!cancelled) {
+          setStatus(token ? { kind: "enabled", token } : { kind: "disabled" });
+        }
+        return;
       }
+      // perm === "default" — user hasn't been asked yet
+      if (!cancelled) setStatus({ kind: "disabled" });
     }
 
     probe();
