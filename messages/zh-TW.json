@@ -299,7 +299,16 @@
       "backToWalking": "回到遛狗",
       "viewLeaderboard": "查看排行榜",
       "noPathWarning": "沒取得 GPS 點 — 試試手動補登",
-      "saveFailed": "儲存失敗，請重試"
+      "saveFailed": "儲存失敗，請重試",
+      "weekProgressLabel": "本週進度",
+      "weekProgressCount": "{done} / {goal} 次",
+      "weekGoalHit": "達標 ✓",
+      "streakLabel": "連續天數",
+      "streakDaysCount": "{days} 天",
+      "recentWalks": "最近的紀錄",
+      "manualLog": "手動補登",
+      "emptyWalksTitle": "尚無遛狗紀錄",
+      "emptyWalksDescription": "按下「開始遛狗」即時追蹤，或「手動補登」加入過去的紀錄"
     }
   },
   "Push": {

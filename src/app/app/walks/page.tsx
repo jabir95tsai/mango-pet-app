@@ -21,13 +21,15 @@ import {
 } from "@/lib/firebase/walks";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { computeStreak } from "@/lib/scoring";
-import { getTodayProgress } from "@/lib/walk-tracking";
+import { getTodayProgress, getWeekProgress } from "@/lib/walk-tracking";
 import { cn } from "@/lib/utils";
 import type { Pet, Walk, WalkInput } from "@/lib/types";
 import type { Timestamp } from "firebase/firestore";
 
-// Spec docs/features/walk-core-redesign.md decision: 30-min today goal.
+// Spec docs/features/walk-core-redesign.md decisions:
 const TODAY_GOAL_MIN = 30;
+const WEEK_GOAL_COUNT = 5;
+const RECENT_WALKS_LIMIT = 10;
 
 // Per-uid last-selected-pet so a single-device household reopens to the
 // same pet the user walked yesterday. Spec edge case "多寵物 上次選的".
@@ -113,18 +115,10 @@ export default function WalksPage() {
     [walks],
   );
 
-  const weekTotals = useMemo(() => {
-    const weekAgo = Date.now() - 7 * 86_400_000;
-    const recent = walks.filter(
-      (w) => (w.startedAt as Timestamp).toMillis() > weekAgo,
-    );
-    return {
-      count: recent.length,
-      distanceKm: recent.reduce((s, w) => s + w.distanceKm, 0),
-      durationMin: recent.reduce((s, w) => s + w.durationMin, 0),
-      score: recent.reduce((s, w) => s + w.score, 0),
-    };
-  }, [walks]);
+  const weekProgress = useMemo(
+    () => getWeekProgress(walks, WEEK_GOAL_COUNT),
+    [walks],
+  );
 
   // Most-recent pet from the walks list — drives the "Last walk: Mango"
   // hint shown under the Start CTA when there are 2+ pets.
@@ -302,48 +296,86 @@ export default function WalksPage() {
         )}
       </section>
 
-      {/* Existing weekly stat row — kept here for Phase 2 so the page still
-          shows streak/week info while the Hero lands. Phase 5 replaces this
-          row with a compact week+streak block under the Hero. */}
-      <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg border border-zinc-200/80 bg-white p-4 text-center shadow-sm shadow-zinc-200/40 sm:grid-cols-4 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-        <Stat label="連續天數" value={`${streakDays}`} suffix="天" accent />
-        <Stat label="本週次數" value={`${weekTotals.count}`} />
-        <Stat
-          label="本週距離"
-          value={`${weekTotals.distanceKm.toFixed(1)}`}
-          suffix="km"
-        />
-        <Stat label="本週分數" value={`${weekTotals.score.toFixed(0)}`} />
-      </div>
+      {/* Second screen — week + streak compact cards. Sit just under the
+          Hero so a scroll reveals them; "分數" deliberately dropped per
+          spec (kept on /app/leaderboard where it belongs). */}
+      <section className="mb-6 grid grid-cols-2 gap-3">
+        <article className="flex flex-col gap-2 rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            {tW("weekProgressLabel")}
+          </p>
+          <p className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
+            {tW("weekProgressCount", {
+              done: weekProgress.count,
+              goal: WEEK_GOAL_COUNT,
+            })}
+          </p>
+          <div
+            className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800"
+            role="progressbar"
+            aria-valuenow={weekProgress.percent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className={cn(
+                "h-full rounded-full transition-[width] duration-500",
+                weekProgress.percent >= 100 ? "bg-emerald-500" : "bg-amber-500",
+              )}
+              style={{ width: `${weekProgress.percent}%` }}
+            />
+          </div>
+        </article>
+        <article className="flex flex-col gap-2 rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            {tW("streakLabel")}
+          </p>
+          <p className="text-2xl font-bold tabular-nums text-amber-700 dark:text-amber-300">
+            {tW("streakDaysCount", { days: streakDays })}
+          </p>
+        </article>
+      </section>
 
-      {/* Manual log — ghost variant so it doesn't compete with the Hero CTA.
-          Phase 5 will move this to a real secondary slot at the page bottom. */}
-      <div className="mb-6 flex justify-end">
-        <Button
-          variant="ghost"
-          onClick={() => setManualOpen(true)}
-          disabled={pets.length === 0}
-        >
-          <Hand className="size-4" />
-          補登
-        </Button>
-      </div>
-
+      {/* Recent walks — section header sets expectation that this is a
+          summary, not the full archive. Limited to 10 per spec. */}
       {loading ? (
         <p className="text-sm text-zinc-500">{tC("loading")}</p>
       ) : walks.length === 0 ? (
         <EmptyState
           icon={Footprints}
-          title="尚無遛狗紀錄"
-          description="按下「開始遛狗」即時追蹤，或「補登」手動加入。"
+          title={tW("emptyWalksTitle")}
+          description={tW("emptyWalksDescription")}
         />
       ) : (
-        <div className="flex flex-col gap-3">
-          {walks.map((w) => (
-            <WalkCard key={w.walkId} walk={w} onDelete={() => handleDelete(w)} />
-          ))}
-        </div>
+        <section>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+            {tW("recentWalks")}
+          </h2>
+          <div className="flex flex-col gap-3">
+            {walks.slice(0, RECENT_WALKS_LIMIT).map((w) => (
+              <WalkCard
+                key={w.walkId}
+                walk={w}
+                onDelete={() => handleDelete(w)}
+              />
+            ))}
+          </div>
+        </section>
       )}
+
+      {/* Manual log — secondary action at the very bottom. Ghost variant
+          + small size so it never competes with the Hero CTA. */}
+      <div className="mt-8 flex justify-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setManualOpen(true)}
+          disabled={pets.length === 0}
+        >
+          <Hand className="size-4" />
+          {tW("manualLog")}
+        </Button>
+      </div>
 
       <WalkTrackingView
         open={sessionOpen}
@@ -362,35 +394,5 @@ export default function WalksPage() {
         onSubmit={handleCreate}
       />
     </>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  suffix,
-  accent,
-}: {
-  label: string;
-  value: string;
-  suffix?: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <span className="text-[10px] text-zinc-500">{label}</span>
-      <span
-        className={`text-lg font-bold tabular-nums ${
-          accent ? "text-amber-600 dark:text-amber-400" : ""
-        }`}
-      >
-        {value}
-        {suffix && (
-          <span className="text-xs font-normal text-zinc-500 ml-0.5">
-            {suffix}
-          </span>
-        )}
-      </span>
-    </div>
   );
 }

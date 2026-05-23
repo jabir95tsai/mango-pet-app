@@ -299,7 +299,16 @@
       "backToWalking": "Back to walks",
       "viewLeaderboard": "View leaderboard",
       "noPathWarning": "No GPS points captured — try manual log",
-      "saveFailed": "Save failed — please retry"
+      "saveFailed": "Save failed — please retry",
+      "weekProgressLabel": "This week",
+      "weekProgressCount": "{done} / {goal}",
+      "weekGoalHit": "Hit ✓",
+      "streakLabel": "Streak",
+      "streakDaysCount": "{days} days",
+      "recentWalks": "Recent walks",
+      "manualLog": "Manual log",
+      "emptyWalksTitle": "No walks yet",
+      "emptyWalksDescription": "Tap Start walking, or use Manual log to backfill"
     }
   },
   "Push": {
