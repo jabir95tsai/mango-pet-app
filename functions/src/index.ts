@@ -287,7 +287,16 @@ export const aggregateLeaderboards = onSchedule(
     weekStart.setDate(weekStart.getDate() - 7);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const allWalks = await db.collectionGroup("walks").get();
+    // Phase 0 of family-leaderboard spec: personal-mode walks
+    // (familyId === null) must NOT contribute to the global leaderboard.
+    // The `!=` filter also excludes docs where `familyId` is missing
+    // entirely — correct behaviour for legacy `users/{uid}/walks/`
+    // docs (mirrored to top-level by migration; counting them here
+    // would double-count).
+    const allWalks = await db
+      .collectionGroup("walks")
+      .where("familyId", "!=", null)
+      .get();
     logger.info(`aggregateLeaderboards: walks = ${allWalks.size}`);
 
     const usersById = new Map<string, { displayName: string; photoURL: string | null; city?: string }>();
