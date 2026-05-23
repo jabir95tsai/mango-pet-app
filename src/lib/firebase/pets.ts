@@ -164,50 +164,6 @@ export async function deletePet(petId: string): Promise<void> {
   await deleteDoc(petDoc(petId));
 }
 
-// ────────────────────────────────────────────────────────────────────
-// Legacy migration
-// ────────────────────────────────────────────────────────────────────
-
-/** Copies pets from the legacy `users/{uid}/pets/{petId}` path to the new
- *  top-level `pets/{petId}` collection with `familyId` set. Idempotent —
- *  if the new doc already exists, skips. Source docs are LEFT in place for
- *  safety; a separate cleanup pass can remove them once we're confident.
- *
- *  Returns the number of pets migrated this run (0 if user has none, or
- *  all already moved). */
-export async function migrateLegacyPetsToFamily(
-  legacyUid: string,
-  familyId: string,
-): Promise<number> {
-  const legacyCol = collection(getDb(), "users", legacyUid, "pets");
-  const snap = await getDocs(legacyCol);
-  if (snap.empty) return 0;
-
-  let migrated = 0;
-  const batch = writeBatch(getDb());
-
-  for (const legacyDoc of snap.docs) {
-    const data = legacyDoc.data();
-    // If the new top-level doc with same petId already exists, skip — we
-    // never overwrite to avoid clobbering newer state if the user has
-    // been writing through the new path on a different device.
-    const newRef = doc(getDb(), PETS, legacyDoc.id);
-    const existing = await getDoc(newRef);
-    if (existing.exists()) continue;
-
-    batch.set(newRef, {
-      ...data,
-      familyId,
-      // ownerUid is the original creator. Keep whatever was on the legacy
-      // doc, but fall back to legacyUid for old docs that pre-dated the
-      // ownerUid field.
-      ownerUid: data.ownerUid ?? legacyUid,
-    });
-    migrated++;
-  }
-
-  if (migrated > 0) {
-    await batch.commit();
-  }
-  return migrated;
-}
+// Legacy `users/{uid}/pets/{petId}` migration helper was removed
+// 2026-05-23 along with the legacy data + rules; see
+// docs/features/legacy-path-cleanup.md.

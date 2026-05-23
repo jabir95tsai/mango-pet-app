@@ -111,47 +111,6 @@ export async function listWeightSeries(
     .filter((p) => typeof p.kg === "number" && !Number.isNaN(p.kg));
 }
 
-/** Copy `users/{uid}/pets/{petId}/healthRecords/*` to top-level
- *  `pets/{petId}/healthRecords/*` for every pet a user owns. Idempotent.
- *  Called once when the family is auto-created on first login. */
-export async function migrateLegacyHealthRecordsToFamily(
-  legacyUid: string,
-): Promise<number> {
-  const petsSnap = await getDocs(
-    collection(getDb(), "users", legacyUid, "pets"),
-  );
-  if (petsSnap.empty) return 0;
-
-  let migrated = 0;
-  for (const petDoc of petsSnap.docs) {
-    const petId = petDoc.id;
-    const recsSnap = await getDocs(
-      collection(getDb(), "users", legacyUid, "pets", petId, "healthRecords"),
-    );
-    if (recsSnap.empty) continue;
-
-    const batch = writeBatch(getDb());
-    let batchMigrated = 0;
-    for (const rec of recsSnap.docs) {
-      const newRef = doc(
-        getDb(),
-        "pets",
-        petId,
-        "healthRecords",
-        rec.id,
-      );
-      const existing = await getDoc(newRef);
-      if (existing.exists()) continue;
-      batch.set(newRef, {
-        ...rec.data(),
-        recordedByUid: rec.data().recordedByUid ?? legacyUid,
-      });
-      batchMigrated++;
-    }
-    if (batchMigrated > 0) {
-      await batch.commit();
-      migrated += batchMigrated;
-    }
-  }
-  return migrated;
-}
+// Legacy `users/{uid}/pets/{petId}/healthRecords/*` migration helper
+// was removed 2026-05-23 along with the legacy data + rules; see
+// docs/features/legacy-path-cleanup.md.

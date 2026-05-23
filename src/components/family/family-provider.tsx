@@ -15,11 +15,6 @@ import {
   listMyFamilies,
   setCurrentFamily,
 } from "@/lib/firebase/families";
-import { migrateLegacyPetsToFamily } from "@/lib/firebase/pets";
-import { migrateLegacyWalksToFamily } from "@/lib/firebase/walks";
-import { migrateLegacyRemindersToFamily } from "@/lib/firebase/reminders";
-import { migrateLegacyExpensesToFamily } from "@/lib/firebase/expenses";
-import { migrateLegacyHealthRecordsToFamily } from "@/lib/firebase/health-records";
 import { getAppUser } from "@/lib/firebase/users";
 import type { Family } from "@/lib/types";
 
@@ -79,75 +74,16 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     try {
       const { familyId: currentId } = await resolveCurrentFamily(user.uid);
 
-      // Personal mode: no family means there's nothing to migrate INTO —
-      // legacy `users/{uid}/...` docs stay in legacy paths and just don't
-      // surface in personal-mode lists. Once the user opts into a family
-      // (create or join), the next render will pick currentId up and run
-      // migrations through this same code path.
+      // Personal mode: no family. Nothing to load beyond the empty
+      // family list. (The legacy `users/{uid}/...` → top-level migration
+      // that used to live in this block was retired 2026-05-23 along
+      // with the legacy data + rules; see docs/features/legacy-path-
+      // cleanup.md. Stale `mango.migrated.{uid}.{familyId}` localStorage
+      // keys are harmless no-ops at this point.)
       if (currentId === null) {
         setFamilies([]);
         setFamily(null);
         return;
-      }
-
-      // Migration: idempotently move legacy `users/{uid}/...` data into the
-      // family-scoped collections. We run this whenever localStorage hasn't
-      // yet recorded a successful migration for this (uid, familyId) pair.
-      // Each helper is idempotent (skips top-level docs that already exist),
-      // and a no-op for users with no legacy data, so re-running is safe.
-      const migrationKey = `mango.migrated.${user.uid}.${currentId}`;
-      const alreadyMigrated =
-        typeof localStorage !== "undefined" &&
-        localStorage.getItem(migrationKey) === "1";
-
-      if (!alreadyMigrated) {
-        try {
-          const [pets, walks, reminders, expenses, healthRecords] = await Promise.all([
-            migrateLegacyPetsToFamily(user.uid, currentId).catch((e) => {
-              console.error("[FamilyProvider] pet migration failed:", e);
-              return 0;
-            }),
-            migrateLegacyWalksToFamily(user.uid, currentId).catch((e) => {
-              console.error("[FamilyProvider] walk migration failed:", e);
-              return 0;
-            }),
-            migrateLegacyRemindersToFamily(user.uid, currentId).catch((e) => {
-              console.error("[FamilyProvider] reminder migration failed:", e);
-              return 0;
-            }),
-            migrateLegacyExpensesToFamily(user.uid, currentId).catch((e) => {
-              console.error("[FamilyProvider] expense migration failed:", e);
-              return 0;
-            }),
-            // Health records migration must run AFTER pets are at top-level
-            // because it writes under pets/{petId}/healthRecords. The pets
-            // migration above is the same Promise.all batch — they'll both
-            // see the legacy pets list, so order within the parallel batch
-            // is fine.
-            migrateLegacyHealthRecordsToFamily(user.uid).catch((e) => {
-              console.error("[FamilyProvider] health-record migration failed:", e);
-              return 0;
-            }),
-          ]);
-          const total = pets + walks + reminders + expenses + healthRecords;
-          console.info(
-            `[FamilyProvider] migration done — ` +
-              `${pets} pets, ${walks} walks, ${reminders} reminders, ` +
-              `${expenses} expenses, ${healthRecords} health records`,
-          );
-          // Mark complete so we don't re-run on every page load. This is a
-          // best-effort cache — wiping localStorage just re-runs the
-          // (idempotent) migration on next visit.
-          if (typeof localStorage !== "undefined") {
-            localStorage.setItem(migrationKey, "1");
-          }
-          // Touch unused var so the linter doesn't flag the destructure.
-          void total;
-        } catch (err) {
-          // Outer catch is just defense-in-depth — each .catch above already
-          // swallowed individual failures.
-          console.error("[FamilyProvider] migration outer failure:", err);
-        }
       }
 
       const [all, current] = await Promise.all([

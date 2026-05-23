@@ -1,8 +1,8 @@
 # Legacy 路徑清理
 
-狀態：READY-FOR-DEV
+狀態：✅ SHIPPED 2026-05-23
 建立日期：2026-05-23
-最後更新：2026-05-23
+最後更新：2026-05-23（Backend session SHIPPED）
 規格作者：PM session @ 7f8c97d
 角色：Backend（schema / rules / callable / migration 層）
 
@@ -137,6 +137,38 @@ Phase 2-3 先後順序矛盾 — 解法：兩步部署
 
 ## 開放問題
 
-- [ ] `users/{uid}/pets/{petId}/healthRecords` 子集合**現在還在 top-level 還是 legacy**？schema doc 顯示「pets/{petId}/healthRecords」是 top-level（pets 是 top-level、healthRecords 是 pet 子集合），但 legacy `users/{uid}/pets/{petId}/healthRecords` 也存在（老 schema 殘留）— Phase 1 grep 時要明確區分
-- [ ] admin custom claim 怎麼設？建議：Backend session 第一個任務是設一個 admin 帳號（PM 自己的 uid 或 dedicated admin uid）
-- [ ] `legacyCleanups` audit doc 保留期？建議：永久（合規 + 給未來 debug）
+- [x] `users/{uid}/pets/{petId}/healthRecords` 子集合**現在還在 top-level 還是 legacy**？— Phase 1 grep 顯示 client lib 只透過 `pets/{petId}/healthRecords` (top-level) 讀寫；legacy `users/{uid}/pets/{petId}/healthRecords` 路徑只被 `migrateLegacyHealthRecordsToFamily` 讀取。Phase 2 dryRun 在 6 users 中找到 0 legacy healthRecords — 表示這條路徑歷史殘留為空，但 cleanup callable 仍會掃過去保證乾淨
+- [x] admin custom claim 怎麼設？— **走 Admin SDK script 路徑**（`functions/scripts/run-legacy-cleanup.mjs` 用 `applicationDefault()`）跳過 custom claim 設定。callable 本身仍要求 `req.auth.token.admin === true` 作為未來 programmatic re-run 的閘門；audit doc 用 `source: "callable" | "admin-script"` 區分
+- [ ] `legacyCleanups` audit doc 保留期？— PM 決策；目前無清理機制（建議：永久，rule 已禁 client read/write，僅 admin console 可看）
+
+## SHIPPED — 2026-05-23
+
+### 部署順序（實際執行）
+
+| Step | Action | Result |
+|---|---|---|
+| A | `npx firebase deploy --only functions:cleanupLegacyPaths` | ✅ Successful create operation (asia-east1, nodejs22) |
+| B | `node functions/scripts/run-legacy-cleanup.mjs --dry-run` | ✅ 6 users 掃過 — 2 用戶有 legacy 殘留：`DXWadPVHUkVtdTlJl87zdMp3GaS2`(pets=1, walks=1, reminders=1, expenses=1) + `xKojXDUG1Ph7ANeyDHEuyTk6oVF3`(pets=1)；healthRecords 全 0；audit doc `legacyCleanups/2026-05-23T13-56-17-704Z` |
+| C | `node functions/scripts/run-legacy-cleanup.mjs` | ✅ Real run — 同樣計數刪除完成；audit doc `legacyCleanups/2026-05-23T14-01-53-045Z` |
+| C-verify | dryRun 第二次 | ✅ 全 0；audit doc `legacyCleanups/2026-05-23T14-02-04-551Z` |
+| D | `npx firebase deploy --only firestore:rules` | ✅ 4 legacy match blocks 移除（pets / walks / reminders / expenses 子集合）+ 加 `legacyCleanups/{id}` 防護 rule（admin-only，同 `deletedAccounts` pattern）|
+| E | `git push origin main` | ✅ 後續 App Hosting auto-build；schema doc + 5 lib helpers + family-provider migration 區塊移除 |
+
+### 偏離 spec 的決定
+
+- **callable 部署但實際清理用 Admin SDK script**：spec 寫「跑 callable dryRun / real」，但 callable 需 admin custom claim + ID token exchange，setup 工本身為 one-off 不值得做。改用 `functions/scripts/run-legacy-cleanup.mjs`（ADC）跑同邏輯，audit doc `source: "admin-script"` 標示，callable 本身仍 deploy 作為未來 re-run 入口。Cleanup 邏輯在 callable 與 script 雙份 — 註解互相提醒同步
+- **Script 位置在 `functions/scripts/` 而非 `scripts/`**：firebase-admin 只列在 `functions/package.json`，root `node_modules/firebase-admin` 是 transitive 不被 Node ESM 認；移到 `functions/scripts/` 才解析得到。spec 允許 `functions/scripts/`
+- **Phase 1 grep 多查一輪**：spec 列的可能 legacy 子路徑 `users/{uid}/pets/{petId}/walks` 與 `.../reminders` 從未在 rules 開放，client lib 也沒寫過，dryRun 計數確認為 0 — 已釐清
+- **加了 `legacyCleanups/{id}` rule**：spec 沒列，但既然新建一個 admin-only collection，順手套 `deletedAccounts` 一樣的 `allow read, write: if false` 防護
+- **Phase 4 lib helper 移除留 tombstone 註解**：函式整段刪掉但留一行註解指向本 spec，方便未來 grep / git blame 追溯
+
+### Audit docs（保留）
+
+- `legacyCleanups/2026-05-23T13-56-17-704Z` — pre-cleanup dryRun
+- `legacyCleanups/2026-05-23T14-01-53-045Z` — real cleanup
+- `legacyCleanups/2026-05-23T14-02-04-551Z` — post-cleanup verification dryRun
+
+### 後續
+
+- delete-account 處理表現在簡化（沒有 legacy 路徑要清）— 但 `deleteUserAccount` callable 不需修改（它從來沒處理 legacy 路徑，spec 寫於 legacy 已 deprecated 前提下）
+- 未來若要再做 batch admin operation：callable 已有 `cleanupLegacyPaths` 範本可參考 admin claim 模式

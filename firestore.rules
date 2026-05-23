@@ -27,38 +27,18 @@ service cloud.firestore {
       allow update: if request.auth.uid == uid;
       allow delete: if false;
 
-      match /pets/{petId} {
-        // LEGACY: pets used to be nested under user. New pets go to the
-        // top-level /pets collection. These rules stay for back-compat
-        // until migration is complete.
-        allow read: if request.auth.uid == uid;
-        allow create: if request.auth.uid == uid
-          && request.resource.data.ownerUid == uid;
-        allow update, delete: if request.auth.uid == uid;
-
-        match /healthRecords/{recordId} {
-          allow read, write: if request.auth.uid == uid;
-        }
-      }
-
-      match /reminders/{reminderId} {
-        // LEGACY path — kept readable so the migration helper can copy data
-        // out. Writes blocked once the user has migrated.
-        allow read: if request.auth.uid == uid;
-        allow write: if request.auth.uid == uid;
-      }
-
-      match /walks/{walkId} {
-        // LEGACY path — same migration window as reminders.
-        allow read: if request.auth.uid == uid;
-        allow write: if request.auth.uid == uid;
-      }
-
-      match /expenses/{expenseId} {
-        // LEGACY path — same.
-        allow read: if request.auth.uid == uid;
-        allow write: if request.auth.uid == uid;
-      }
+      // ── Legacy paths removed 2026-05-23 ──
+      // The pre-family schema kept pets/reminders/walks/expenses under
+      // users/{uid}/... . Migration (Phase 3+4, see family-provider.tsx
+      // historical) moved everything to top-level collections with a
+      // `familyId` field. The legacy sub-collections were drained by the
+      // cleanupLegacyPaths callable + admin-script
+      // (legacyCleanups/2026-05-23T14-01-53-045Z audit doc), so the
+      // corresponding match blocks have been removed.
+      //
+      // If you need to add a new sub-collection under users/{uid}, do so
+      // here following the friends/friendRequests/favoriteRestaurants
+      // pattern below, not the deleted legacy pattern.
 
       match /friends/{friendUid} {
         allow read: if request.auth != null
@@ -324,6 +304,15 @@ service cloud.firestore {
     // the doc exists, and nobody else has a legitimate reason to inspect
     // these records from the client (admin tooling can use the console).
     match /deletedAccounts/{id} {
+      allow read, write: if false;
+    }
+
+    // ── legacyCleanups audit log (admin/server-only) ──
+    // Written by the cleanupLegacyPaths callable + matching admin script
+    // (functions/scripts/run-legacy-cleanup.mjs) via Admin SDK. Same
+    // posture as deletedAccounts — admin-only, inspectable via Firebase
+    // Console; no client surface.
+    match /legacyCleanups/{id} {
       allow read, write: if false;
     }
   }

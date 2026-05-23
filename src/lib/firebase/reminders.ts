@@ -331,35 +331,6 @@ export async function deleteReminder(reminderId: string): Promise<void> {
   await deleteDoc(reminderDoc(reminderId));
 }
 
-/** One-shot legacy migration: users/{uid}/reminders/* → top-level reminders/*
- *  Idempotent — won't overwrite existing top-level docs by the same id. */
-export async function migrateLegacyRemindersToFamily(
-  legacyUid: string,
-  familyId: string,
-): Promise<number> {
-  const legacy = await getDocs(
-    collection(getDb(), "users", legacyUid, "reminders"),
-  );
-  if (legacy.empty) return 0;
-
-  let migrated = 0;
-  const docs = legacy.docs;
-  for (let i = 0; i < docs.length; i += 400) {
-    const slice = docs.slice(i, i + 400);
-    const batch = writeBatch(getDb());
-    for (const legacyDoc of slice) {
-      const newRef = doc(getDb(), REMINDERS, legacyDoc.id);
-      const existing = await getDoc(newRef);
-      if (existing.exists()) continue;
-      const data = legacyDoc.data();
-      batch.set(newRef, {
-        ...data,
-        familyId,
-        createdByUid: data.createdByUid ?? legacyUid,
-      });
-      migrated++;
-    }
-    if (migrated > 0) await batch.commit();
-  }
-  return migrated;
-}
+// Legacy `users/{uid}/reminders/*` migration helper was removed
+// 2026-05-23 along with the legacy data + rules; see
+// docs/features/legacy-path-cleanup.md.

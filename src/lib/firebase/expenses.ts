@@ -178,37 +178,9 @@ export async function deleteExpense(expenseId: string): Promise<void> {
   await deleteDoc(expenseDoc(expenseId));
 }
 
-/** One-shot legacy migration: users/{uid}/expenses/* → top-level. */
-export async function migrateLegacyExpensesToFamily(
-  legacyUid: string,
-  familyId: string,
-): Promise<number> {
-  const legacy = await getDocs(
-    collection(getDb(), "users", legacyUid, "expenses"),
-  );
-  if (legacy.empty) return 0;
-
-  let migrated = 0;
-  const docs = legacy.docs;
-  for (let i = 0; i < docs.length; i += 400) {
-    const slice = docs.slice(i, i + 400);
-    const batch = writeBatch(getDb());
-    for (const legacyDoc of slice) {
-      const newRef = doc(getDb(), EXPENSES, legacyDoc.id);
-      const existing = await getDoc(newRef);
-      if (existing.exists()) continue;
-      const data = legacyDoc.data();
-      batch.set(newRef, {
-        ...data,
-        familyId,
-        payerUid: data.ownerUid ?? legacyUid,
-      });
-      migrated++;
-    }
-    if (migrated > 0) await batch.commit();
-  }
-  return migrated;
-}
+// Legacy `users/{uid}/expenses/*` migration helper was removed
+// 2026-05-23 along with the legacy data + rules; see
+// docs/features/legacy-path-cleanup.md.
 
 // ── Aggregations ──
 

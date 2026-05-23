@@ -1613,3 +1613,200 @@ export const deleteUserAccount = onCall(
     return { summary };
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// cleanupLegacyPaths — admin-only, destructive
+//
+// Wipes the frozen legacy `users/{uid}/{pets,walks,reminders,expenses}`
+// sub-collections (and `pets/{petId}/healthRecords` underneath) that the
+// Phase 3+4 family migration left in place. Client lib has not written
+// to these paths for weeks; this just removes the cold storage so we can
+// drop the legacy rule blocks and shrink the schema surface.
+//
+// Spec: docs/features/legacy-path-cleanup.md (Phase 2)
+//
+// Auth: requires Firebase Auth custom claim `admin == true`. The actual
+// one-off cleanup is run from functions/scripts/run-legacy-cleanup.mjs
+// (Admin SDK, no callable round-trip) to avoid setting up custom claims
+// + ID-token exchange for a single ops run. This callable exists for
+// the spec record and any future programmatic re-run; audit docs
+// include `source: "callable" | "admin-script"` so both paths are
+// distinguishable in `legacyCleanups/*`.
+//
+// Safety:
+//   - default dryRun = true (must pass `dryRun: false` explicitly)
+//   - per-uid try/catch — one user's failure doesn't abort the rest
+//   - 400-doc batches (Firestore hard cap 500, buffer per backend.md §⑤)
+//   - audit doc written even on partial failure
+// ─────────────────────────────────────────────────────────────────────
+
+type LegacyCleanupCounts = {
+  uid: string;
+  pets: number;
+  healthRecords: number;
+  walks: number;
+  reminders: number;
+  expenses: number;
+};
+
+const LEGACY_CLEANUP_BATCH_LIMIT = 400;
+
+async function deleteRefsInBatches(
+  refs: FirebaseFirestore.DocumentReference[],
+): Promise<void> {
+  for (let i = 0; i < refs.length; i += LEGACY_CLEANUP_BATCH_LIMIT) {
+    const slice = refs.slice(i, i + LEGACY_CLEANUP_BATCH_LIMIT);
+    const batch = db.batch();
+    for (const ref of slice) batch.delete(ref);
+    await batch.commit();
+  }
+}
+
+/** Per-uid cleanup. The runner script duplicates this logic verbatim —
+ *  keep both in sync if the schema ever grows new legacy paths. */
+async function cleanupLegacyForUid(
+  uid: string,
+  dryRun: boolean,
+): Promise<LegacyCleanupCounts> {
+  const counts: LegacyCleanupCounts = {
+    uid,
+    pets: 0,
+    healthRecords: 0,
+    walks: 0,
+    reminders: 0,
+    expenses: 0,
+  };
+
+  // Order matters when actually deleting: nested healthRecords first so
+  // pet docs disappear after their children, never leaving orphan
+  // sub-collections that would pollute future collectionGroup queries.
+  const petsSnap = await db.collection(`users/${uid}/pets`).get();
+  for (const petDoc of petsSnap.docs) {
+    const hrSnap = await db
+      .collection(`users/${uid}/pets/${petDoc.id}/healthRecords`)
+      .get();
+    if (!dryRun && hrSnap.size > 0) {
+      await deleteRefsInBatches(hrSnap.docs.map((d) => d.ref));
+    }
+    counts.healthRecords += hrSnap.size;
+  }
+
+  if (!dryRun && petsSnap.size > 0) {
+    await deleteRefsInBatches(petsSnap.docs.map((d) => d.ref));
+  }
+  counts.pets = petsSnap.size;
+
+  const walksSnap = await db.collection(`users/${uid}/walks`).get();
+  if (!dryRun && walksSnap.size > 0) {
+    await deleteRefsInBatches(walksSnap.docs.map((d) => d.ref));
+  }
+  counts.walks = walksSnap.size;
+
+  const remindersSnap = await db.collection(`users/${uid}/reminders`).get();
+  if (!dryRun && remindersSnap.size > 0) {
+    await deleteRefsInBatches(remindersSnap.docs.map((d) => d.ref));
+  }
+  counts.reminders = remindersSnap.size;
+
+  const expensesSnap = await db.collection(`users/${uid}/expenses`).get();
+  if (!dryRun && expensesSnap.size > 0) {
+    await deleteRefsInBatches(expensesSnap.docs.map((d) => d.ref));
+  }
+  counts.expenses = expensesSnap.size;
+
+  return counts;
+}
+
+export const cleanupLegacyPaths = onCall(
+  {
+    region: FUNCTION_REGION,
+    cors: true,
+    // 9 min — large user counts × 5 sub-collections each can take a while.
+    timeoutSeconds: 540,
+    memory: "512MiB",
+  },
+  async (req) => {
+    if (req.auth?.token?.admin !== true) {
+      throw new HttpsError(
+        "permission-denied",
+        "admin custom claim required",
+      );
+    }
+    // Default to dryRun unless explicitly disabled — destructive op
+    // should never accidentally fire on a bare `{}` call.
+    const dryRun = req.data?.dryRun !== false;
+    const targetUid =
+      (req.data?.targetUid as string | undefined)?.trim() || undefined;
+
+    let uids: string[];
+    if (targetUid) {
+      uids = [targetUid];
+    } else {
+      const allUsers = await db.collection("users").get();
+      uids = allUsers.docs.map((d) => d.id);
+    }
+
+    logger.info(
+      `cleanupLegacyPaths: mode=${dryRun ? "dryRun" : "REAL"} uids=${uids.length}` +
+        (targetUid ? ` target=${targetUid}` : ""),
+    );
+
+    const counts: LegacyCleanupCounts[] = [];
+    let uidsFailed = 0;
+    for (const uid of uids) {
+      try {
+        counts.push(await cleanupLegacyForUid(uid, dryRun));
+      } catch (err) {
+        uidsFailed++;
+        logger.error(`cleanupLegacyPaths uid=${uid} failed`, err);
+      }
+    }
+
+    const totals = counts.reduce(
+      (acc, c) => ({
+        pets: acc.pets + c.pets,
+        healthRecords: acc.healthRecords + c.healthRecords,
+        walks: acc.walks + c.walks,
+        reminders: acc.reminders + c.reminders,
+        expenses: acc.expenses + c.expenses,
+      }),
+      { pets: 0, healthRecords: 0, walks: 0, reminders: 0, expenses: 0 },
+    );
+
+    // Audit doc id = ISO timestamp with `:` and `.` swapped for `-`
+    // (both are technically valid in Firestore doc ids but awkward in
+    // URLs and CLI usage).
+    const auditId = new Date().toISOString().replace(/[:.]/g, "-");
+    await db.collection("legacyCleanups").doc(auditId).set({
+      cleanedAt: Timestamp.now(),
+      reason: "schema-cleanup",
+      mode: dryRun ? "dryRun" : "real",
+      invokedBy: req.auth.uid,
+      source: "callable",
+      targetUid: targetUid ?? null,
+      uidsProcessed: uids.length,
+      uidsFailed,
+      totals,
+      // Keep only uids that had something to report; a 200-row audit
+      // doc full of zeros is just noise.
+      counts: counts.filter(
+        (c) =>
+          c.pets + c.healthRecords + c.walks + c.reminders + c.expenses > 0,
+      ),
+    });
+
+    logger.info(
+      `cleanupLegacyPaths done — mode=${dryRun ? "dryRun" : "real"} ` +
+        `totals=${JSON.stringify(totals)} failed=${uidsFailed} audit=${auditId}`,
+    );
+
+    return {
+      ok: true,
+      mode: dryRun ? "dryRun" : "real",
+      auditId,
+      uidsProcessed: uids.length,
+      uidsFailed,
+      totals,
+    };
+  },
+);
