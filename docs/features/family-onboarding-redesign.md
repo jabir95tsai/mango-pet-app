@@ -1,6 +1,6 @@
 # 家庭 onboarding 重設計 — 解 B：Personal mode + Pet merge
 
-狀態：SHIPPED — B1+B2+B3 全部，B4 merge feature **使用者醒來後決定拿掉**，UI 層 rollback 待 Feature Builder session 接手（見「Post-ship change」段）
+狀態：SHIPPED — B1+B2+B3 全部 + B4 merge UI rollback 已完成（commit `1a49653`，2026-05-23 ~17:47 部署）；callable + helper 暫保留 dormant 等下個 cleanup sprint。詳見「Post-ship change」段
 建立日期：2026-05-23
 最後更新：2026-05-23
 規格作者：PM session @ 78539cc
@@ -235,3 +235,29 @@ User 已接受 trade-off，rollback 動工。
 - **#1 reminder-done-attribution / #1b**：不受影響
 - **#3 family-leaderboard**：不受影響
 - **#5 / #6**：不受影響
+
+### Rollback SHIPPED 紀錄
+
+| 項目 | 值 |
+|---|---|
+| Commit | `1a49653` |
+| 部署時間 (Asia/Taipei 2026-05-23) | ~17:47（push → App Hosting auto-build → 新 build 上線） |
+| 變更檔案 | `src/components/family/import-wizard-dialog.tsx` + `messages/zh-TW.json` + `messages/en.json`（3 檔，63+ / 248−）|
+| 部署順序 | 純 frontend，無 rules/indexes/functions 改動 — 直接 `git push origin main` |
+
+#### Chrome MCP 驗證結果
+
+**機緣加碼**：驗證當下使用者剛好已切到 personal mode（無家庭），所以**順帶完整驗到了 B2/B3 personal-mode UI 全流程**：
+
+| 驗證項 | 結果 |
+|---|---|
+| Production HTML 不再含 merge 字串（curl `Possible duplicate pets` / `偵測到可能重複的寵物`） | ✓ count=0 |
+| `/onboarding` 渲染 3-option screen（建立家庭 / 加入家庭 / 先用個人模式 → ），無 merge 區段 | ✓ 截圖 |
+| `/app` personal mode empty state（「還沒有寵物」+「尚無提醒」+ feed 仍正常）| ✓ 截圖 |
+| `/app/settings` personal hint card 顯示 + 加入/新建 buttons 顯示 | ✓ JS check |
+| Console 無 permission denied / index error / FirebaseError | ✓ |
+
+#### 已知 deviation 對應狀態
+
+- **End-to-end wizard 觸發**：本次沒主動點「建立家庭」→ submit → 看 ImportWizardDialog 跳出來，因為那是 destructive op（會建一個真實的家庭 doc 在 production）— 但 build 內已**無 merge 任何字串/code path**（curl + 截圖 + bundle 解析三重確認），wizard 開啟時必定走純 import flow。
+- **Dormant callable 保留**：`mergeAndImportToFamily` 還在 `functions/src/index.ts`（沒 client 呼叫）；client wrapper `mergeAndImportToFamily` / `MergePair` / `MergedPetSummary` / `MergeAndImportResult` 還在 `src/lib/firebase/families.ts`（沒人 import）— 兩邊都等下一輪 cleanup sprint。
