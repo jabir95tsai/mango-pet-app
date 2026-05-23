@@ -2,22 +2,26 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-23（#2 B4 UI rollback 進行中；使用者新提「刪除帳號功能」spec 寫好已進「下一個」段，PM 建議家庭 epic 收尾後接手）
+最後更新：2026-05-23（delete-account 插隊家庭 epic — D1 改 full hard delete cascade，B4 UI rollback ship 後立刻接手）
 
 ## 進行中
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- **#2 B4 UI rollback** — 拿掉 ImportWizardDialog 的 merge candidates 偵測 + merge step，wizard 直接走純 import 路徑。指示在 [family-onboarding-redesign.md 末尾「Post-ship change」段](../features/family-onboarding-redesign.md)
-  - 👉 **下個動工**：Feature Builder session（工作量 S，純 UI 改 + i18n 清理 + 1 commit）
+- **#2 B4 UI rollback** — 拿掉 ImportWizardDialog 的 merge candidates 偵測 + merge step。指示在 [family-onboarding-redesign.md 末尾「Post-ship change」段](../features/family-onboarding-redesign.md)
+  - 👉 **當前動工**：Feature Builder session（工作量 S，純 UI 改）
+- **🚨 插隊 — [刪除帳號功能](../features/delete-account.md)**（user 要求插隊，2026-05-23）
+  - 👉 **B4 UI rollback ship 完立刻接手**：Feature Builder（整 stack，工作量 M）
+  - D1 user 確認 full hard delete cascade；D2-D5 沿用 PM 預設
 
 ## 家庭功能 epic — 收尾順序
 
-> 使用者明確要求「先把家庭功能做完，一個一個」。下面是執行順序與當前狀態。
+> 使用者明確要求「先把家庭功能做完，一個一個」— 但 **delete-account 已插隊到 #1b 之前**。
 
 | # | 項目 | 工作量 | 角色 | 狀態 |
 |---|---|---|---|---|
 | 1 | [Reminder 完成歸屬顯示](../features/reminder-done-attribution.md) | S | Feature Builder | ✅ **SHIPPED** @ `ec8c6fd`(spec-gap ACCEPTED by PM)|
+| **🚨 insert** | **[刪除帳號功能](../features/delete-account.md)** | M | Feature Builder | 🟡 **READY-FOR-DEV — 插隊，B4 UI rollback ship 後接手** |
 | 1b | [Repeat reminder 歸屬顯示](../features/repeat-reminder-attribution.md) | S | Feature Builder | ✅ 已規格化（使用者排序：#3 #4 ship 後重評）|
 | 2 | [家庭 onboarding 重設計（解 B）](../features/family-onboarding-redesign.md) | L → 部分 rollback | Feature Builder | 🟡 **B1+B2+B3 SHIPPED / B4 UI rollback in progress** — `60d820c` / `8ebcf72` / `347d71a` / `f450ad0`(B4 dormant) / `bfd1360`(docs) / `fe5f9ab`(PM bookkeeping) |
 | 3 | [家庭 leaderboard 切換](../features/family-leaderboard.md) | M | Feature Builder | ✅ 已規格化（動工前 PM 需處理 prereq：personal walks 防刷 — 見 backlog Inbox）|
@@ -28,10 +32,11 @@
 **為什麼這個順序**（給使用者一個一個做）：
 
 - **#1 Reminder 完成歸屬**：✅ SHIPPED
+- **🚨 插隊 delete-account（PM 排序 2026-05-23）**：使用者明確要求「插隊家庭 epic」。上架 prerequisite（PRD §6 GDPR）。D1 採 full hard delete cascade（user 主動刪帳號 = 完整消失），D2-D5 沿用 PM 預設。**B4 UI rollback 仍要先 ship**（in flight 工作量 S 不該留 production debt），ship 完立刻接手 delete-account
 - **#1b Repeat reminder 歸屬**：data 已就緒，工作量 S。**使用者排序**：等 #3 #4 ship 後重評
-- **#2 家庭 onboarding 重設計**：B1+B2+B3 SHIPPED。**B4 merge feature 使用者醒來後決定拿掉** — PM surface trade-off（「他那邊一隻我這邊一隻」split 情境會回來，需靠 #4 dedupe 處理），使用者接受。UI 層 rollback in progress，callable 暫保留 dormant 等下個 cleanup sprint。**Personal-mode live test 仍待跑**
+- **#2 家庭 onboarding 重設計**：B1+B2+B3 SHIPPED。B4 merge feature 使用者拿掉，UI rollback in progress
 - **#3 家庭 leaderboard**：spec 已 ready；動工前處理 backlog 內 personal walks 防刷條目
-- **#4 Mango dedupe**：merge logic 已在 dormant callable，Backend session 動工時可重用；工作量仍估 M（trigger 機制不同：admin 觸發 vs B4 是 join 時觸發）
+- **#4 Mango dedupe**：merge logic 已在 dormant callable，Backend session 動工時可重用
 - **#5 Payer 分析**：純前端，等 #1b/#3/#4 做完後規格化
 - **#6 Legacy 清理**：必須在 #4 完成且 family 路徑穩定後才動
 
@@ -39,12 +44,9 @@
 
 ## 下一個（已規格化，可直接交付）
 
-> 對應角色 session 開起來就能接手實作。家庭 epic 在上方獨立排序，這邊列其他主題的下一步。
+> 對應角色 session 開起來就能接手實作。
 
-- **[刪除帳號功能](../features/delete-account.md)** — Feature Builder（整 stack）— 工作量 M
-  - 上架 prerequisite（PRD §6 GDPR / 個資法合規條件）
-  - PM 預設 5 個決策已寫進 spec，等使用者 review 後若無 push back 即可動工
-  - **PM 建議排序**：家庭 epic 收尾後接手（B4 rollback → live test → #1b/#3/#4 → 這個）。理由：家庭 epic 是 in-flight，刪帳號不擋目前使用流程
+- _delete-account 已升到「進行中」插隊位置，本段目前無其他項目_
 
 ## 想做但還沒規格
 
@@ -52,6 +54,7 @@
 
 - **開銷 payer 分析卡**（屬家庭 epic #5，等 #1b/#3/#4 完成後規格化）
 - **Legacy 路徑清理**（屬家庭 epic #6，等 #4 完成後規格化）
+- **資料 export（download my data）**：delete-account 上線後同樣是 GDPR 要求，但獨立 spec
 - **餐廳 Google Places 整合**：目前餐廳僅手動建。Places API 可大幅擴大資料庫，但成本與審核機制要先想
 - **知識庫持續產出**：目前只 seed 5 篇。要每月持續產出 1–2 篇還是放著？需要 PM 決策
 - **Analytics / 北極星指標接線**：定性觀察不夠，要決定接 GA4 / Firebase Analytics / 自己開 minimal events collection
@@ -66,6 +69,7 @@
 - **訂閱付費 / 廣告**（PRD §5 已排除）— 在 DAU 上百之前不討論。免費 + Firebase 額度是現階段 thesis。
 - **強迫所有使用者必須建立家庭才能使用主功能**（PM 解 C 提議 2026-05-23 已被使用者否決）— 違反「家庭是 optional feature」principle；單身飼主應該能正常用 App
 - **加入家庭時自動 pet merge wizard**（#2 B4 ship 後使用者 2026-05-23 反悔拿掉）— 使用者原話：「不直觀，因為一般不太有這種狀況」。實際使用流程是「一人先建家庭 + 寵物 → 邀請家人加入」，家人是被邀請的不會先自己建寵物，所以「兩人各自 personal mode 建 Mango 後合家庭撞名」這個 edge case 太罕見，不值做整套 wizard。若罕見 split 情境真發生，靠 #4 dedupe migration 處理
+- **刪帳號時 anonymize 共用資料**（user 2026-05-23 改變主意）— 原 PM 預設「共用 anonymize」改為「full hard delete cascade」。user 要求刪帳號 = 連帶其建立的家庭資料全刪（包含家人為這些 pet 建的子集合）。對齊「forget me」原則，但對家人會是 surprise — confirmation dialog 會明確列 cascade 影響
 
 ## 北極星指標（每月看一次）
 
