@@ -160,6 +160,7 @@
     "doneLabel": "已完成",
     "doneTimeLabel": "已完成 · {time}",
     "doneByLabel": "已完成 — by {name} · {time}",
+    "lastDoneByLabel": "上次：{name} · {time}",
     "formerMember": "（已離開的成員）",
     "placeholders": {
       "title": "疫苗追加 / 餵藥..."

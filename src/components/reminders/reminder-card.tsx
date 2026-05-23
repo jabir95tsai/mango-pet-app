@@ -152,6 +152,26 @@ export function ReminderCard({
             {reminder.description}
           </p>
         )}
+        {/* Repeat-reminder last-done attribution (spec #1b). Only renders
+            when this is a repeat reminder AND it's been completed at
+            least once (doneAt present) AND we have an attribution uid.
+            Hidden for one-shot reminders (their attribution surfaces in
+            the "今日已完成" section instead, via the done-state branch
+            above) and for fresh repeats that have never been completed
+            yet (no doneAt → no "Last:" info to surface). */}
+        {reminder.repeat !== "none" && reminder.doneAt && reminder.doneByUid && (
+          <p className="text-xs mt-1 text-emerald-700 dark:text-emerald-400">
+            {tR("lastDoneByLabel", {
+              name:
+                members?.get(reminder.doneByUid)?.displayName ??
+                tR("formerMember"),
+              time: formatDistanceToNow(
+                new Date((reminder.doneAt as Timestamp).toMillis()),
+                { addSuffix: true, locale: dateLocale },
+              ),
+            })}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1 shrink-0">

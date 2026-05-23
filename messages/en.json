@@ -160,6 +160,7 @@
     "doneLabel": "Done",
     "doneTimeLabel": "Done · {time}",
     "doneByLabel": "Done by {name} · {time}",
+    "lastDoneByLabel": "Last: {name} · {time}",
     "formerMember": "(former member)",
     "placeholders": {
       "title": "Vaccination booster / medication..."
