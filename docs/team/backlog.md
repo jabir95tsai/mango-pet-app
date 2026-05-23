@@ -50,17 +50,15 @@ _2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 
 - **PM 排序（2026-05-23）**：#3 family-leaderboard 動工前 prerequisite。可直接寫進
   #3 spec 升級，或另開短 spec。等下次 PM session 排序
 
-### B4 merge callable + 共用 code cleanup（dormant 待刪）
+### B4 merge callable + 共用 code（永久 dormant，不要順手刪）
 - **發現於**：2026-05-23、PM session 接 user「拿掉 merge」決定後
-- **類型**：技術債 / cleanup
-- **重現 / 觀察**：使用者拿掉 #2 B4 merge feature 後，PM 採「UI 層 rollback + callable 暫留 dormant」策略避免動 deploy 已穩定的 functions。dormant code 包括：
+- **類型**：技術債 / dormant code（不是真的「待清理」）
+- **重現 / 觀察**：B4 ship + rollback 後 production 還留：
   - `functions/src/index.ts` 的 `mergeAndImportToFamily` callable（無 client caller）
   - 內部搬子集合 + reassign petId + 刪 personal pet doc 的共用 helper
-- **建議交付給**：Backend
-  - 等 #4 mango-dedupe-migration 動工時整體 review
-  - 決定是把 mergeAndImportToFamily 完全刪掉，還是把共用 helper 拆成 utility 給 #4 dedupe 用
-- **優先級提示**：P3（無 client caller = 零 production 風險；可永久 dormant 也沒事）
-- **PM 排序（2026-05-23）**：併入 #4 dedupe 動工 session 處理；單獨不必開 cleanup sprint
+- **建議交付給**：無（不要動）
+- **優先級提示**：P3（無 client caller = 零 production 風險）
+- **PM 排序（2026-05-23 update）**：**永久 dormant**。原本規劃「併入 #4 dedupe 動工 session 處理」— 但 #4 已被 user 取消（見 `docs/features/mango-dedupe-migration.md`）。Backend session 之後若動 functions/src/index.ts 看到那段 dormant code，**不要順手刪**（保留供未來如真需要 dedupe 時 reactivate）
 
 ### Settings 沒加直接到 /onboarding 的 link
 - **發現於**：2026-05-23、Feature Builder unsupervised run #2 收尾（spec deviations 段）

@@ -1,10 +1,29 @@
 # 寵物去重 migration
 
-狀態：READY-FOR-DEV
+狀態：❌ **NOT DOING**（user 2026-05-23 取消；spec 保留供未來參考）
 建立日期：2026-05-22
-最後更新：2026-05-22
+最後更新：2026-05-23
 規格作者：PM session @ 3298731
 交付角色：**Backend**（非 Feature Builder — 這是 schema/migration 層工作）
+
+---
+
+## ❌ 取消紀錄（2026-05-23）
+
+**使用者決定不做**。同期取消 #5 開銷 payer 分析卡，理由類似 B4 merge wizard（「不直觀，因為一般不太有這種狀況」）— 同 family 內重複 pet 的情境太罕見，不值得寫整套 admin migration tool。
+
+**dormant code 處理**：
+- `functions/src/index.ts` 的 `mergeAndImportToFamily` callable（B4 ship 時加的，B4 rollback 時保留 dormant）— **繼續 dormant**，無 client caller = 零 production 風險
+- 內部搬子集合 + reassign petId + 刪 personal pet doc 的共用 helper — 同上
+- 若未來情境真發生需要 dedupe，可重啟此 spec + wire up dormant callable
+
+**Backlog 條目「B4 dormant code cleanup」**：原本規劃「併入 #4 動工 session 處理」— #4 取消後改為「**永久 dormant**」狀態，不另開 cleanup sprint。Backend session 之後若動 functions/src/index.ts 看到那段 dormant code，**不要順手刪**（保留供未來 reactivate）。
+
+---
+
+> 以下內容為原 spec 保留，供未來如重啟此功能時 reference。
+
+
 
 ## User Story
 
