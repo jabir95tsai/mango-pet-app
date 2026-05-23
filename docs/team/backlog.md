@@ -165,24 +165,10 @@ _目前沒有條目。下一個 PM session 過 Inbox 時新增。_
 
 ## 已分類 — Backend 接
 
-### 好友搜尋無法 case-insensitive / 中段 match
-- **發現於**：2026-05-22、Bug Hunter session（「無法加好友」修完之後留的限制）
-- **類型**：技術債 / 體驗
-- **重現 / 觀察**：`/app/friends` → 搜尋 → 輸入「jabir」（小寫）找不到 displayName
-  是「蔡智博Jabir」的人；輸入「Jabir」也找不到，因為 Firestore range query 是
-  case-sensitive 且只能 prefix-match，「蔡智博Jabir」prefix 是「蔡」不是「Jabir」。
-  Bug Hunter 已修最明顯的 bug（強制 .toLowerCase() 讓任何含大寫字母的名字都搜
-  不到 — 見 commit），但完整的 case-insensitive + 中段 match 需要 schema 改動。
-- **建議交付給**：Backend
-  - 加 `displayNameLower` shadow field 到 `users/*`
-  - upsertUser 寫入時同步寫 lowercase 版本
-  - 寫一次 backfill migration 補齊 existing docs
-  - 改 `searchUsers` 改打 `displayNameLower` 欄位
-- **優先級提示**：P2（社群人數還小、QR + 完整 displayName prefix 搜尋已 cover
-  大多數使用情境）
-- **PM 排序（2026-05-22）**：家庭功能 epic 之後排序；屬 PRD §3.6 social 區。
-  動工前 PM session 需把這條升級為 `docs/features/friends-search-lowercase.md` spec
-  （含 backfill 步驟 + schema 影響面）。目前不擋家庭 epic。
+### 好友搜尋無法 case-insensitive / 中段 match — ✅ 已升級到 spec
+- **發現於**：2026-05-22、Bug Hunter session
+- **狀態**：✅ 已升級到 [`docs/features/friends-search-lowercase.md`](../features/friends-search-lowercase.md)（PM 2026-05-23）。
+  動工順序見 roadmap「上架收尾 + backlog P2 epic」表 #5。中段 match 仍不在 spec 範圍（需 Algolia/Typesense）— 留 backlog 級觀察
 
 _其他 Backend 項目見 `docs/roadmap.md` 的「下一個」與 `docs/features/mango-dedupe-migration.md`。_
 

@@ -2,13 +2,50 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-23（🎉 **家庭 epic 全部完工** — 8/8 含 cancellation；下個 sprint 等使用者選方向）
+最後更新：2026-05-23（家庭 epic CLOSED；開新 epic「上架收尾 + backlog P2」5 項全部 ready-for-dev）
 
 ## 進行中
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- **無 in-flight 項目** — 家庭 epic 100% closed，等使用者決定下個 epic
+- **上架收尾 + backlog P2 epic** — 5 項，2 條 spec 新寫好，3 條沿用既有 backlog 條目
+  - 👉 **下個動工**：見「Handoff 順序」（下方）
+
+## 上架收尾 + backlog P2 epic
+
+> User 主動選定（2026-05-23）：「『資料 export』+『PWA icons』並處理 backlog 殘留 P2」
+
+| # | 項目 | 工作量 | 角色 | 狀態 | Spec / Backlog ref |
+|---|---|---|---|---|---|
+| 1 | **PWA icons** | S | User / UI/UX | 📝 ready-to-do | 用 [realfavicongenerator.net](https://realfavicongenerator.net) 從 SVG 生成 PNG 完整套組 → 放對應 public/ 路徑（無 spec — 純 asset 生成）|
+| 2 | **Footer i18n 硬編碼** | XS | Feature Builder | 📝 ready-to-do | 既有 backlog 條目（`/app/page.tsx` L65/L68 寫死中文，加 i18n key + getTranslations 即可）|
+| 3 | **PushToggle cross-context token bug** | S | UI/UX or FB | 📝 ready-to-do | 既有 backlog 條目（push-toggle.tsx probe 主動 getToken 補當前 context FCM token）|
+| 4 | **[資料 Export — Download my data](../features/data-export.md)** | M | Feature Builder | ✅ **READY-FOR-DEV**（PM 寫好 5 個決策預設）| 新 spec |
+| 5 | **[好友搜尋 lowercase / prefix match](../features/friends-search-lowercase.md)** | M | Backend | ✅ **READY-FOR-DEV**（PM 升級 backlog 條目）| 新 spec |
+
+**為什麼這個 epic**：
+
+- **PWA icons + Footer i18n + PushToggle bug** — 3 個 quick wins，total 工作量 < 半天，是上架前/體驗 polish
+- **資料 Export** — 對稱於 delete-account（forget me ↔ give me my data），GDPR 平行條件
+- **好友搜尋 lowercase** — backlog 條目從 2026-05-22 拖到現在，user 願意做了；社群人數還小 schema migration 成本最低
+
+## Handoff 順序建議
+
+```
+User 自己做 PWA icons (5 分鐘 asset 工作)
+  ↓
+Feature Builder session #1: footer i18n + PushToggle bug + data-export (一條龍 ~半天)
+  ↓
+Backend session: friends-search-lowercase
+```
+
+或更激進的並行：
+- User: PWA icons
+- FB session A: footer i18n + PushToggle bug (S+S = 2 small)
+- FB session B: data-export (M, standalone)
+- Backend session: friends-search-lowercase (M, standalone)
+
+4 個 session 平行不衝突（不同檔案範圍）。
 
 ## 🎉 家庭功能 epic — 完整收尾紀錄（2026-05-22 → 2026-05-23）
 
@@ -26,49 +63,28 @@
 
 **結算**：6 ship + 2 cancel + 2 insert = **8/8 有明確結局**
 
-**Epic 期間 PM 觀察 / 學到的事**：
-- **「不要把 edge case 當核心 user story 推導」** — B4 merge wizard、#4 dedupe 都因此被拿掉
-- **「家庭是 optional feature」product principle** — 解 B personal mode 上線後讓單身飼主可正常用 App
-- **「Push back when user choice mismatches description」** — B vs C / D1 anonymize vs hard delete cascade 都是 PM 義務 surface trade-off 的例子
-- **Spec deviation 記錄文化**：每個 Feature Builder ship 後在 spec 末尾寫 deviations，回 PM 可一眼看到實作跟 spec 差在哪
-- **Insert / 插隊管理**：delete-account 插隊家庭 epic、Mobile nav 重組從 backlog 升 P1，兩種都按使用者明確要求做，但 PM 都 surface 過 sequencing trade-off
+Epic 期間 PM 觀察 / 學到的事（5 點）：
+1. 不要把 edge case 當核心 user story 推導（B4 merge / #4 dedupe）
+2. 「家庭是 optional feature」product principle（解 B personal mode）
+3. PM 義務 push back 當 user choice 跟 description 對不上
+4. Spec deviation 記錄文化
+5. Insert / 插隊管理（surface trade-off 再做）
 
-## 下一個（候選 epic — 等使用者選方向）
+## 下一個（已規格化，可直接交付）
 
-### Option A: 上架 prerequisite epic（PRD §6 收尾）
-
-PRD §6 列的上架條件未完成項目：
-
-| 條目 | 工作量 | 角色 | 描述 |
-|---|---|---|---|
-| PWA icons | S | UI/UX | sprint 6 標 PWA SVG 完成但 PNG 用 realfavicongenerator.net 生成 — 沒做 |
-| 自訂網域 | S | Backend / ops | 買 mango-pet.app 之類 + DNS + App Hosting 設定 |
-| Lighthouse audit > 90 | M | Feature Builder | PWA / Perf / SEO 三軸都要 > 90，可能要 polish |
-| App Check（防 API key 盜用） | M | Backend | 防爬 + 防 abuse |
-| 資料 export（download my data）| M | Feature Builder | GDPR 平行於 delete-account 的「我的資料權」|
-| 隱私 / 服務條款內容審查 | S | PM | 目前是 sprint 6 placeholder，需要實際內容 |
-
-### Option B: 處理 backlog 殘留 P2 條目（quick wins）
-
-| 條目 | 工作量 | 角色 | 描述 |
-|---|---|---|---|
-| PushToggle cross-context token bug | S | UI/UX or Feature Builder | 跨裝置切 PWA 時 fcmTokens 顯示為已啟用但 PWA 收不到推播 |
-| Footer i18n 硬編碼 | XS | Feature Builder | 登入頁 footer「隱私權政策／服務條款」沒走 i18n |
-| 好友搜尋 lowercase / 中段 match | M | Backend | 需要 schema 改（displayNameLower shadow field + backfill）|
-
-### Option C: 新功能 / idea section
-
-PM 之前列過：家庭 social push / 家庭活動 timeline / 家庭 leaderboard 週冠軍推播 / 餐廳 Google Places 整合 / 知識庫持續產出 / Analytics 接線
+> 上架收尾 epic 進行中，此段目前無 backlog 項目。
 
 ## 想做但還沒規格
 
-> 想法階段。等下個 PM session 規格化或拒絕。
+> 想法階段。上架收尾 epic 完工後決定。
 
-- **資料 export（download my data）**：上面 Option A 列了；GDPR 平行於 delete-account
-- **餐廳 Google Places 整合**
-- **知識庫持續產出**
-- **Analytics / 北極星指標接線**
-- **上架 prerequisite 收尾**（Option A 整套）
+- **餐廳 Google Places 整合**：目前餐廳僅手動建。Places API 可大幅擴大資料庫，但成本與審核機制要先想
+- **知識庫持續產出**：目前只 seed 5 篇。要每月持續產出 1–2 篇還是放著？需要 PM 決策
+- **Analytics / 北極星指標接線**：定性觀察不夠，要決定接 GA4 / Firebase Analytics / 自己開 minimal events collection
+- **自訂網域 + DNS**（PRD §6）：要花錢買網域，user 決定後再 spec
+- **App Check 防 API key 盜用**（PRD §6）：上架後續，等使用者數成長再做
+- **Lighthouse audit > 90**（PRD §6）：PWA / Perf / SEO 三軸 polish
+- **隱私 / 服務條款內容審查**（PRD §6）：PM 寫內容
 
 ## 不做（拒絕清單）
 
