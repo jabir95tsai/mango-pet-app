@@ -188,7 +188,13 @@ allow update, delete: 沿用 read 邏輯
 
 ## Post-ship change — B4 merge feature 拿掉（2026-05-23）
 
-使用者醒來 review 後決定**拿掉 pet merge 功能**。未提供具體理由（PM 推測：merge 太 destructive / 不直觀 / 想避免「誤合不同隻狗」的 surprise）。
+使用者醒來 review 後決定**拿掉 pet merge 功能**。
+
+**使用者實際理由**（PM 補充於拿掉決定之後）：
+
+> 「不直觀，因為一般不太有這種狀況」
+
+亦即「兩人各自先在 personal mode 建 Mango，後來合家庭時撞名」這個情境**太罕見**，不值得做整套 merge wizard UI — 是 over-engineering。原 spec 把這個 edge case 當成核心 user story 推導出 B4 — 但實際上一般使用流程是「一人先建家庭 + 寵物 → 邀請家人加入」，家人是被邀請的不會先自己建，所以根本不會撞。
 
 ### PM 接受並 surface 的 trade-off
 

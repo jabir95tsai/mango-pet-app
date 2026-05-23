@@ -62,7 +62,7 @@
 - **私訊系統**（PRD §3.6、§5 已排除）— 飼主社交目標已被 Emoji 反應 + 動態牆覆蓋 80%。私訊會帶來 moderation / 通報 / 騷擾處理整套包袱，CP 值低。
 - **訂閱付費 / 廣告**（PRD §5 已排除）— 在 DAU 上百之前不討論。免費 + Firebase 額度是現階段 thesis。
 - **強迫所有使用者必須建立家庭才能使用主功能**（PM 解 C 提議 2026-05-23 已被使用者否決）— 違反「家庭是 optional feature」principle；單身飼主應該能正常用 App
-- **加入家庭時自動 pet merge wizard**（#2 B4 ship 後使用者 2026-05-23 反悔拿掉）— 太黑魔法 / 不直觀 / 怕誤合不同隻寵物。trade-off：split 情境回來，靠 #4 dedupe 處理
+- **加入家庭時自動 pet merge wizard**（#2 B4 ship 後使用者 2026-05-23 反悔拿掉）— 使用者原話：「不直觀，因為一般不太有這種狀況」。實際使用流程是「一人先建家庭 + 寵物 → 邀請家人加入」，家人是被邀請的不會先自己建寵物，所以「兩人各自 personal mode 建 Mango 後合家庭撞名」這個 edge case 太罕見，不值做整套 wizard。若罕見 split 情境真發生，靠 #4 dedupe migration 處理
 
 ## 北極星指標（每月看一次）
 
