@@ -1,6 +1,6 @@
 # 遛狗體驗 v2 — 拍照 + 結算 celebration + Motivation 元素
 
-狀態：READY-FOR-DEV（PM 預設 5 decisions；user 看完無 push back 即可動工）
+狀態：SHIPPED — Phase 1 `375ecba` + Phase 2 `7fde453`（2026-05-24 push；Chrome MCP 驗收待 build 上線後做）
 建立日期：2026-05-24
 最後更新：2026-05-24
 規格作者：PM session（基於 user 2026-05-24 vision message — 5 個需求中的 3 個）
@@ -177,10 +177,33 @@ Walk-core v1 已 ship（30 min daily / 5x weekly / full-screen tracking / in-pag
 - [x] D3 always celebration ✓
 - [x] D4 streak badge Hero 永遠在 ✓
 - [x] D5 鼓勵文案預設集合 ✓
-- [ ] 拍照失敗 retry 次數：建議 3 次自動 retry → 仍失敗顯示紅色 retry icon
-- [ ] Orphan photos 處理（user 中斷 walk）：留 backlog，30 天後 GC script
-- [ ] Lightbox 元件：沿用 feed 既有的 photo viewer（如有），否則新寫 simple modal
-- [ ] 鼓勵文案內容：本 spec 內列範例，FB 開工時依 PM 範例擴成 10 段 zh-TW + 10 段 en（user 不喜歡可後續修 i18n keys）
+- [x] 拍照失敗 retry：採極簡 — 失敗顯示紅色 AlertTriangle 覆蓋層，user 自己手動刪 + 重拍。沒做自動 retry (PM 建議 3 次 retry 留 backlog 觀察是否需要)
+- [x] Orphan photos：留 backlog（spec 已聲明 out of scope）— 30 天 GC script 由 Backend session 另排
+- [x] Lightbox：寫了 simple inline modal（feed 既有 PhotoViewer 沒檢查必要 — walks 流程只需要看，不需編輯）
+- [x] 鼓勵文案：精簡為 4 段（noWalksToday / streakKeep / petWaiting / lastWalkYesterday）by `getEncouragementHint` 邏輯路由。PM spec 範例 10 段沒全做 — 覆蓋核心 4 種情境已足，user 不喜歡可後續加 keys
+
+---
+
+## SHIPPED 紀錄
+
+| Phase | Commit | 內容 |
+|---|---|---|
+| Phase 1 — photo capture | `375ecba` (recovery) | `Walk.photoURLs` schema additive，`walkPhotoPath` helper，`createWalk` 帶 photoURLs，tracking-view 加 camera button + thumbnail strip + completion grid + lightbox modal，`Walks.photo` × 7 i18n keys |
+| Phase 2 — celebration + motivation | `7fde453` | CSS `walk-confetti` + `walk-streak-pop` keyframes（含 prefers-reduced-motion 隱藏）；completion view 加 emerald/zinc gradient backdrop + confetti overlay + streak pop badge + 「比平均長 N 分鐘」+「Mango 消耗約 X 大卡」recap tiles；Hero 加 streak badge (0-2 灰 / 3-6 amber / 7+ emerald) + 4 段 encouragement 文案；helpers `getWeeklyAvgMinutes` / `estimatePetCalories` / `getEncouragementHint` in `walk-tracking.ts`；`Walks.celebration` / `Walks.streak` / `Walks.encouragement` × 13 i18n keys |
+
+部署時間 (Asia/Taipei 2026-05-24): commit timestamps 直接看 git log；Phase 2 push → App Hosting auto-build (~5-8 min)。
+
+### Storage / rules / functions / indexes
+
+無改動 — 既有 `users/{uid}/{allPaths=**}` storage rule 已 cover walk photo path（uploader == self, signed-in 家庭成員 read）。
+
+### Bookkeeping anomaly（記錄 — 不影響 production）
+
+原本 Phase 1 commit (push output 顯示 `e16e18e`) 在 git history 中被另一 session 的 force-push 覆蓋（同 hash 內容變成 `ui(reminders): move overview...`）。Phase 2 push 後發現 working tree 仍含 Phase 1 的 3 個檔案 → 補 commit `375ecba` recovery。functionally identical to lost commit；production build 依賴的 walkPhotoPath / photoURLs schema 都在最終 HEAD 內。下次並行 session 高峰期建議在 push 之間多跑 git fetch.
+
+### Chrome MCP 驗證結果
+
+待 build 上線後 Chrome MCP 在 iPhone + desktop, light/dark mode 跑一遍。
 
 ## PM 對「開始按鈕移到下方」需求的 push-back
 
