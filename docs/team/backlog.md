@@ -32,7 +32,28 @@ P3 = 也許永遠不做的「想法」。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 
-_2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 2 條 deviation。_
+_2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 2 條 deviation。2026-05-23 Bug Hunter session 加 1 條 push UX。_
+
+### PushToggle probe 把跨 context 的 token 當「已啟用」
+- **發現於**：2026-05-23、Bug Hunter session（修 foreground push 之後實測抓到）
+- **類型**：bug / 體驗
+- **重現 / 觀察**：使用者先在 Windows Chrome 或 iOS Safari 啟用 push（token A 寫進
+  `user.fcmTokens`）。之後在 iOS 把 App 加到主畫面、開 PWA、進 Settings。
+  `push-toggle.tsx` L60-66 的 probe 看到「PWA 本身 Notification.permission ===
+  "granted"」+「user.fcmTokens.length > 0」就直接 setStatus("enabled") 並顯示
+  「測試」按鈕；但 fcmTokens 裡那一筆是 Safari/Chrome context 的 token，PWA 從來
+  沒 call enablePush → 沒產生過 PWA-specific FCM token。按「測試」→ FCM 接受並回
+  sent=1（token A 對 FCM 是 valid）→ APNs 派給 Safari 訂閱，PWA 完全收不到。
+  Workaround：PWA 內「停用」→「啟用」重新跑 enablePush → 補上 PWA token。
+- **建議交付給**：UI/UX 或 Feature Builder
+  - 改 `src/components/settings/push-toggle.tsx` 的 probe：當 `perm === "granted"`
+    時不要僅看 `tokens.length > 0`，而是主動呼叫 `getToken({ vapidKey, swReg })`
+    拿當前 context 的 token，不在 `user.fcmTokens` 就 arrayUnion 補進去
+  - 或較輕量：PushToggle 加一行提示「換裝置 / Safari 切 PWA 後請停用再啟用」
+  - 注意 `getToken` 會走網路、可能讓 Settings 初次渲染慢 1–2s，可只在點「測試」
+    時做 reconcile，不每次 probe 都跑
+- **優先級提示**：P2（本 session 已 ship foreground handler、用戶可用「停用→啟用」
+  繞過；但每次切裝置都要手動繞，UX 不順）
 
 ### Personal walks 不應進全 App leaderboard
 - **發現於**：2026-05-23、Feature Builder unsupervised run #2 收尾（spec deviations 段）
