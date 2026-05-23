@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
-import { Copy, Check, QrCode } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth/auth-provider";
 
 type Props = {
@@ -81,16 +81,14 @@ export function MyQrDialog({ open, onClose }: Props) {
                 className="size-full"
               />
               {/* Centre logo overlay — survives the H-level error correction. */}
-              <div className="absolute grid place-items-center rounded-full bg-white p-1 shadow ring-2 ring-amber-500">
-                {user ? (
-                  <Avatar
-                    src={user.photoURL}
-                    name={user.displayName ?? "Me"}
-                    size={48}
-                  />
-                ) : (
-                  <QrCode className="size-12 text-amber-600" />
-                )}
+              <div className="absolute grid size-14 place-items-center overflow-hidden rounded-2xl bg-white shadow ring-2 ring-amber-500">
+                <Image
+                  src="/icons/mango-pet-logo.png"
+                  alt="Mango Pet"
+                  width={56}
+                  height={56}
+                  className="size-full object-cover"
+                />
               </div>
             </>
           ) : (

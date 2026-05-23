@@ -18,6 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mango-pet.app";
+const LOGO_IMAGE = "/icons/mango-pet-logo.png";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -40,16 +41,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "zh_TW",
     siteName: "Mango Pet",
-    images: [{ url: "/icons/icon-512.png", width: 512, height: 512 }],
+    images: [{ url: LOGO_IMAGE, width: 1254, height: 1254, alt: "Mango Pet" }],
   },
   twitter: {
     card: "summary",
     title: "Mango Pet — 芒果寵物",
     description: "Your pet life companion.",
+    images: [LOGO_IMAGE],
   },
   icons: {
-    icon: [{ url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" }],
-    apple: [{ url: "/icons/icon-192.png" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icons/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icons/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+      { url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", type: "image/png", sizes: "180x180" },
+    ],
   },
 };
 

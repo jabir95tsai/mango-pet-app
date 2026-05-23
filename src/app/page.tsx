@@ -33,7 +33,7 @@ export default async function Home({ searchParams }: Props) {
       <section className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-8 py-10 text-center">
         <div className="flex flex-col items-center gap-4">
           <Image
-            src="/icons/icon-192.png"
+            src="/icons/mango-pet-logo.png"
             alt=""
             width={84}
             height={84}
