@@ -156,7 +156,7 @@ export function FamilySection() {
           <div>
             <p className="font-medium text-sm">家庭</p>
             <p className="text-xs text-zinc-500">
-              {family ? family.name : "尚未加入任何家庭"}
+              {family ? family.name : "個人模式 · 尚未加入家庭"}
             </p>
           </div>
         </div>
@@ -170,6 +170,15 @@ export function FamilySection() {
           </Button>
         </div>
       </div>
+
+      {!family && (
+        <div className="rounded-lg border border-amber-200/70 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <p>
+            你目前以「個人模式」使用，寵物、遛狗、提醒、開銷只有你自己看得到。
+            建立或加入家庭後，可以把已建立的資料一起搬進家庭分享。
+          </p>
+        </div>
+      )}
 
       {/* Multi-family switcher (only shown if user belongs to more than one). */}
       {families.length > 1 && (

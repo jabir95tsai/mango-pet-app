@@ -15,12 +15,14 @@ import { ReminderCard } from "@/components/reminders/reminder-card";
 import { ReminderFormDialog } from "@/components/reminders/reminder-form-dialog";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
-import { listPets } from "@/lib/firebase/pets";
+import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import {
   completeReminder,
   createReminder,
   deleteReminder,
   listOverdueReminders,
+  listPersonalOverdueReminders,
+  listPersonalUpcomingReminders,
   listRecentlyCompletedReminders,
   listUpcomingReminders,
   updateReminder,
@@ -60,16 +62,26 @@ export default function AppHome() {
   const [composerOpen, setComposerOpen] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user || !family) return;
+    if (!user) return;
     try {
-      // allSettled so one failure (e.g. an index still building) doesn't
-      // blank the whole page. Each section degrades independently.
+      // Personal mode: the "done attribution" section is family-only
+      // (resolving a single name to "by self" reads awkwardly), so we
+      // skip both todayDone and members lookups; the rest mirror the
+      // family path via personal-namespace queries.
       const [petR, upR, ovR, doneR, membersR, friendsR] = await Promise.allSettled([
-        listPets(family.familyId),
-        listUpcomingReminders(family.familyId),
-        listOverdueReminders(family.familyId),
-        listRecentlyCompletedReminders(family.familyId),
-        listFamilyMembers(family),
+        family ? listPets(family.familyId) : listPersonalPets(user.uid),
+        family
+          ? listUpcomingReminders(family.familyId)
+          : listPersonalUpcomingReminders(user.uid),
+        family
+          ? listOverdueReminders(family.familyId)
+          : listPersonalOverdueReminders(user.uid),
+        family
+          ? listRecentlyCompletedReminders(family.familyId)
+          : Promise.resolve([] as Reminder[]),
+        family
+          ? listFamilyMembers(family)
+          : Promise.resolve([] as FamilyMember[]),
         listFriends(user.uid),
       ]);
       setPets(petR.status === "fulfilled" ? petR.value : []);
@@ -98,16 +110,22 @@ export default function AppHome() {
   }, [user, family]);
 
   const refreshReminders = useCallback(async () => {
-    if (!family) return;
+    if (!user) return;
     const [upR, ovR, doneR] = await Promise.allSettled([
-      listUpcomingReminders(family.familyId),
-      listOverdueReminders(family.familyId),
-      listRecentlyCompletedReminders(family.familyId),
+      family
+        ? listUpcomingReminders(family.familyId)
+        : listPersonalUpcomingReminders(user.uid),
+      family
+        ? listOverdueReminders(family.familyId)
+        : listPersonalOverdueReminders(user.uid),
+      family
+        ? listRecentlyCompletedReminders(family.familyId)
+        : Promise.resolve([] as Reminder[]),
     ]);
     setUpcoming(upR.status === "fulfilled" ? upR.value : []);
     setOverdue(ovR.status === "fulfilled" ? ovR.value : []);
     setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
-  }, [family]);
+  }, [user, family]);
 
   useEffect(() => {
     if (familyLoading) return;
@@ -119,10 +137,10 @@ export default function AppHome() {
   }
 
   async function handleAddReminder(input: ReminderInput) {
-    if (!user || !family) return;
+    if (!user) return;
     await createReminder({
       ...input,
-      familyId: family.familyId,
+      familyId: family?.familyId ?? null,
       createdByUid: user.uid,
     });
     await refreshReminders();

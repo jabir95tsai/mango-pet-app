@@ -192,6 +192,20 @@
       "10080": "1 week before"
     }
   },
+  "Onboarding": {
+    "title": "Welcome to Mango Pet",
+    "subtitle": "Take care of your pets with family — or solo for now. You can switch anytime.",
+    "createTitle": "Create a family",
+    "createDescription": "Start your own family and invite people to share pet care.",
+    "createAction": "Create",
+    "joinTitle": "Join a family",
+    "joinDescription": "Enter the 6-digit invite code your family shared with you.",
+    "joinAction": "Join",
+    "skipAction": "Use personal mode →",
+    "footerHint": "Personal mode supports every feature; you can create or join a family anytime from Settings.",
+    "alreadyInFamily": "You're already in a family.",
+    "goToApp": "Go to app"
+  },
   "Push": {
     "title": "Push notifications",
     "enable": "Enable",

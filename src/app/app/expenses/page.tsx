@@ -19,9 +19,10 @@ import {
   createExpense,
   deleteExpense,
   listExpenses,
+  listPersonalExpenses,
   updateExpense,
 } from "@/lib/firebase/expenses";
-import { listPets } from "@/lib/firebase/pets";
+import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { cn } from "@/lib/utils";
 import type {
   Expense,
@@ -65,14 +66,16 @@ export default function ExpensesPage() {
   const [prefill, setPrefill] = useState<ExtractedReceipt | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!user || !family) return;
+    if (!user) return;
     setLoading(true);
     try {
       // allSettled so an index-still-building expense query doesn't
       // also blank the pet picker.
       const [petR, exR] = await Promise.allSettled([
-        listPets(family.familyId),
-        listExpenses(family.familyId),
+        family ? listPets(family.familyId) : listPersonalPets(user.uid),
+        family
+          ? listExpenses(family.familyId)
+          : listPersonalExpenses(user.uid),
       ]);
       setPets(petR.status === "fulfilled" ? petR.value : []);
       setExpenses(exR.status === "fulfilled" ? exR.value : []);
@@ -125,13 +128,13 @@ export default function ExpensesPage() {
   }
 
   async function handleSubmit(input: ExpenseInput) {
-    if (!user || !family) return;
+    if (!user) return;
     if (editing) {
       await updateExpense(editing.expenseId, input);
     } else {
       await createExpense({
         ...input,
-        familyId: family.familyId,
+        familyId: family?.familyId ?? null,
         payerUid: user.uid,
         payerName: user.displayName ?? undefined,
       });

@@ -12,7 +12,7 @@ import { useConfirm } from "@/components/ui/confirm-provider";
 import { PostComposer } from "@/components/feed/post-composer";
 import { PostCard } from "@/components/feed/post-card";
 import { deletePost, listFeedPosts } from "@/lib/firebase/posts";
-import { listPets } from "@/lib/firebase/pets";
+import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { listFriends } from "@/lib/firebase/friends";
 import type { Pet, Post } from "@/lib/types";
 
@@ -29,11 +29,11 @@ export default function FeedPage() {
   const [composerOpen, setComposerOpen] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user || !family) return;
+    if (!user) return;
     setLoading(true);
     try {
       const [petR, friendsR] = await Promise.allSettled([
-        listPets(family.familyId),
+        family ? listPets(family.familyId) : listPersonalPets(user.uid),
         listFriends(user.uid),
       ]);
       const friends = friendsR.status === "fulfilled" ? friendsR.value : [];

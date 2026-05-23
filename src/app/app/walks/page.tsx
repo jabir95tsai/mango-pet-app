@@ -12,8 +12,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { WalkSessionDialog } from "@/components/walks/walk-session-dialog";
 import { ManualWalkDialog } from "@/components/walks/manual-walk-dialog";
 import { WalkCard } from "@/components/walks/walk-card";
-import { createWalk, deleteWalk, listWalks } from "@/lib/firebase/walks";
-import { listPets } from "@/lib/firebase/pets";
+import {
+  createWalk,
+  deleteWalk,
+  listPersonalWalks,
+  listWalks,
+} from "@/lib/firebase/walks";
+import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { computeStreak } from "@/lib/scoring";
 import type { Pet, Walk, WalkInput } from "@/lib/types";
 import type { Timestamp } from "firebase/firestore";
@@ -32,12 +37,12 @@ export default function WalksPage() {
   const [manualOpen, setManualOpen] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user || !family) return;
+    if (!user) return;
     setLoading(true);
     try {
       const [petR, walkR] = await Promise.allSettled([
-        listPets(family.familyId),
-        listWalks(family.familyId),
+        family ? listPets(family.familyId) : listPersonalPets(user.uid),
+        family ? listWalks(family.familyId) : listPersonalWalks(user.uid),
       ]);
       setPets(petR.status === "fulfilled" ? petR.value : []);
       setWalks(walkR.status === "fulfilled" ? walkR.value : []);
@@ -73,11 +78,12 @@ export default function WalksPage() {
   }, [walks]);
 
   async function handleCreate(input: WalkInput & { score: number }) {
-    if (!user || !family) return;
+    if (!user) return;
     const { score, ...rest } = input;
     await createWalk({
       ...rest,
-      familyId: family.familyId,
+      // family === null → personal walk (not on leaderboard, anti-farm).
+      familyId: family?.familyId ?? null,
       walkerUid: user.uid,
       walkerName: user.displayName ?? undefined,
       walkerPhotoURL: user.photoURL,

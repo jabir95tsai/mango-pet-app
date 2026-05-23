@@ -28,6 +28,7 @@ import {
   completeReminder,
   createReminder,
   deleteReminder,
+  listPersonalReminders,
   listRecentlyCompletedReminders,
   listReminders,
   updateReminder,
@@ -80,16 +81,24 @@ export default function PetDetailPage() {
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!family) return;
+    if (!user) return;
     try {
       // allSettled so one slow query doesn't blank the whole page.
+      // Personal mode skips done-attribution + members lookups (same
+      // reasoning as the home page — single-owner attribution is noise).
       const [petR, recsR, wR, remR, doneR, membersR] = await Promise.allSettled([
         getPet(petId),
         listRecords(petId),
         listWeightSeries(petId),
-        listReminders(family.familyId, { petId }),
-        listRecentlyCompletedReminders(family.familyId, { petId }),
-        listFamilyMembers(family),
+        family
+          ? listReminders(family.familyId, { petId })
+          : listPersonalReminders(user.uid, { petId }),
+        family
+          ? listRecentlyCompletedReminders(family.familyId, { petId })
+          : Promise.resolve([] as Reminder[]),
+        family
+          ? listFamilyMembers(family)
+          : Promise.resolve([] as FamilyMember[]),
       ]);
       setPet(petR.status === "fulfilled" ? petR.value : null);
       setRecords(recsR.status === "fulfilled" ? recsR.value : []);
@@ -104,17 +113,21 @@ export default function PetDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [family, petId]);
+  }, [user, family, petId]);
 
   const refreshReminders = useCallback(async () => {
-    if (!family) return;
+    if (!user) return;
     const [remR, doneR] = await Promise.allSettled([
-      listReminders(family.familyId, { petId }),
-      listRecentlyCompletedReminders(family.familyId, { petId }),
+      family
+        ? listReminders(family.familyId, { petId })
+        : listPersonalReminders(user.uid, { petId }),
+      family
+        ? listRecentlyCompletedReminders(family.familyId, { petId })
+        : Promise.resolve([] as Reminder[]),
     ]);
     setReminders(remR.status === "fulfilled" ? remR.value : []);
     setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
-  }, [family, petId]);
+  }, [user, family, petId]);
 
   useEffect(() => {
     refresh();
@@ -146,11 +159,11 @@ export default function PetDetailPage() {
   }
 
   async function handleAddReminder(input: ReminderInput) {
-    if (!user || !family) return;
+    if (!user) return;
     await createReminder({
       ...input,
       petId,
-      familyId: family.familyId,
+      familyId: family?.familyId ?? null,
       createdByUid: user.uid,
     });
     await refreshReminders();

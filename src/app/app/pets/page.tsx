@@ -11,7 +11,13 @@ import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { PetCard } from "@/components/pets/pet-card";
 import { PetFormDialog } from "@/components/pets/pet-form-dialog";
-import { createPet, deletePet, listPets, updatePet } from "@/lib/firebase/pets";
+import {
+  createPet,
+  deletePet,
+  listPersonalPets,
+  listPets,
+  updatePet,
+} from "@/lib/firebase/pets";
 import type { Pet, PetInput } from "@/lib/types";
 
 export default function PetsPage() {
@@ -27,14 +33,21 @@ export default function PetsPage() {
   const [editing, setEditing] = useState<Pet | undefined>();
 
   const refresh = useCallback(async () => {
-    if (!family) return;
+    if (!user) return;
     setLoading(true);
     try {
-      setPets(await listPets(family.familyId));
+      // Personal mode (family === null) reads from the user's own
+      // namespace via the ownerUid-indexed query; family mode reads
+      // family-scoped pets as before.
+      setPets(
+        family
+          ? await listPets(family.familyId)
+          : await listPersonalPets(user.uid),
+      );
     } finally {
       setLoading(false);
     }
-  }, [family]);
+  }, [family, user]);
 
   useEffect(() => {
     if (familyLoading) return;
@@ -65,11 +78,13 @@ export default function PetsPage() {
   }
 
   async function handleSubmit(input: PetInput, avatar?: File) {
-    if (!user || !family) return;
+    if (!user) return;
     if (editing) {
       await updatePet(editing.petId, input, user.uid, avatar);
     } else {
-      await createPet(family.familyId, user.uid, input, avatar);
+      // family === null → personal mode (passes null, write goes to the
+      // creator's personal namespace; permission gated by ownerUid).
+      await createPet(family?.familyId ?? null, user.uid, input, avatar);
     }
     await refresh();
   }

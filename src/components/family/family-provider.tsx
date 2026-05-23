@@ -11,7 +11,6 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import {
-  createFamily as callCreateFamily,
   getFamily,
   listMyFamilies,
   setCurrentFamily,
@@ -45,26 +44,22 @@ const FamilyContext = createContext<FamilyContextValue>({
   switchFamily: async () => {},
 });
 
-/** Auto-creates a default family for users who don't have one yet. This
- *  bootstraps existing users (who pre-date the family feature) and new
- *  signups on a first login — every user ends up with at least one family,
- *  so all data reads/writes can unconditionally assume `family != null`. */
-async function ensureDefaultFamily(uid: string): Promise<{
-  familyId: string;
-  justCreated: boolean;
+/** Resolve the user's current family — or `null` if they don't have one.
+ *  Phase B2: stopped auto-creating "我的家庭" because that violates the
+ *  "family is optional" product principle. Users with no family fall into
+ *  **personal mode** (familyId === null on docs they create); they can
+ *  opt into a family later from settings or /onboarding. */
+async function resolveCurrentFamily(uid: string): Promise<{
+  familyId: string | null;
 }> {
   const appUser = await getAppUser(uid);
   const existing = appUser?.familyIds ?? [];
-  if (existing.length > 0) {
-    return {
-      familyId: appUser?.currentFamilyId ?? existing[0],
-      justCreated: false,
-    };
+  if (existing.length === 0) {
+    return { familyId: null };
   }
-  // No family yet — create one via the callable. Name defaults to 我的家庭
-  // on the server; user can rename later from settings.
-  const { familyId } = await callCreateFamily("我的家庭");
-  return { familyId, justCreated: true };
+  return {
+    familyId: appUser?.currentFamilyId ?? existing[0],
+  };
 }
 
 export function FamilyProvider({ children }: { children: ReactNode }) {
@@ -82,20 +77,22 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     }
     setLoading(true);
     try {
-      // Ensure user has at least one family (auto-creates if none).
-      const { familyId: currentId, justCreated } = await ensureDefaultFamily(
-        user.uid,
-      );
+      const { familyId: currentId } = await resolveCurrentFamily(user.uid);
+
+      // Personal mode: no family means there's nothing to migrate INTO —
+      // legacy `users/{uid}/...` docs stay in legacy paths and just don't
+      // surface in personal-mode lists. Once the user opts into a family
+      // (create or join), the next render will pick currentId up and run
+      // migrations through this same code path.
+      if (currentId === null) {
+        setFamilies([]);
+        setFamily(null);
+        return;
+      }
 
       // Migration: idempotently move legacy `users/{uid}/...` data into the
       // family-scoped collections. We run this whenever localStorage hasn't
-      // yet recorded a successful migration for this (uid, familyId) pair,
-      // NOT just on `justCreated`. The original `justCreated`-gated version
-      // had a bug: users whose family was auto-created in Phase 1 (before
-      // Phase 2 added migration logic) had `justCreated=false` on every
-      // subsequent visit, so their legacy pets/walks/etc. never migrated
-      // and the new family-scoped queries returned empty.
-      //
+      // yet recorded a successful migration for this (uid, familyId) pair.
       // Each helper is idempotent (skips top-level docs that already exist),
       // and a no-op for users with no legacy data, so re-running is safe.
       const migrationKey = `mango.migrated.${user.uid}.${currentId}`;
@@ -136,8 +133,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
           console.info(
             `[FamilyProvider] migration done — ` +
               `${pets} pets, ${walks} walks, ${reminders} reminders, ` +
-              `${expenses} expenses, ${healthRecords} health records ` +
-              `(justCreated=${justCreated})`,
+              `${expenses} expenses, ${healthRecords} health records`,
           );
           // Mark complete so we don't re-run on every page load. This is a
           // best-effort cache — wiping localStorage just re-runs the
@@ -145,7 +141,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
           if (typeof localStorage !== "undefined") {
             localStorage.setItem(migrationKey, "1");
           }
-          // Touch unused var to keep `justCreated` referenced for now.
+          // Touch unused var so the linter doesn't flag the destructure.
           void total;
         } catch (err) {
           // Outer catch is just defense-in-depth — each .catch above already

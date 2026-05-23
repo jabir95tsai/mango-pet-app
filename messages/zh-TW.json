@@ -192,6 +192,20 @@
       "10080": "提前 1 週"
     }
   },
+  "Onboarding": {
+    "title": "歡迎加入芒果寵物",
+    "subtitle": "你想跟家人一起照顧寵物，還是先一個人開始？兩種模式之後都能切換。",
+    "createTitle": "建立家庭",
+    "createDescription": "建立你自己的家庭，邀請家人共同照顧寵物與紀錄。",
+    "createAction": "建立",
+    "joinTitle": "加入家庭",
+    "joinDescription": "輸入家人分享的 6 位數邀請碼加入既有家庭。",
+    "joinAction": "加入",
+    "skipAction": "先用個人模式 →",
+    "footerHint": "選個人模式仍能正常用所有功能；之後在「設定」隨時可以建立或加入家庭。",
+    "alreadyInFamily": "你已經在家庭裡了。",
+    "goToApp": "前往首頁"
+  },
   "Push": {
     "title": "推播通知",
     "enable": "啟用",
