@@ -72,6 +72,14 @@ export class WalkSession {
   /** Timestamp (ms) when tab was last hidden, or null if visible. */
   private hiddenSince: number | null = null;
   private visibilityHandler: (() => void) | null = null;
+  /** Screen Wake Lock — keeps the device from auto-locking during a walk.
+   *  Without this, phones sleep after their idle timeout (~30s default on
+   *  iOS), the browser suspends the tab, and `watchPosition` stops firing
+   *  → walks silently lose path / distance for the duration of the lock.
+   *  The OS-level lock auto-releases when the tab is hidden, so we
+   *  re-acquire on visibilitychange. Falls back to the existing
+   *  "請保持畫面開啟" warning on browsers without the Wake Lock API. */
+  private wakeLock: WakeLockSentinel | null = null;
 
   on(listener: WalkSessionListener): () => void {
     this.listeners.add(listener);
@@ -128,6 +136,44 @@ export class WalkSession {
       this.visibilityHandler = () => this.handleVisibilityChange();
       document.addEventListener("visibilitychange", this.visibilityHandler);
     }
+
+    // Request screen wake lock so the phone stays awake for the whole walk.
+    // Best-effort: unsupported browsers (iOS < 16.4, older Android) fall
+    // through to the existing background-pause warning. Fire-and-forget
+    // — we don't want to delay start() if this races.
+    void this.requestWakeLock();
+  }
+
+  private async requestWakeLock(): Promise<void> {
+    if (typeof navigator === "undefined" || !("wakeLock" in navigator)) return;
+    if (this.wakeLock) return;
+    try {
+      this.wakeLock = await navigator.wakeLock.request("screen");
+      // The OS releases the lock automatically when the tab is hidden,
+      // when the page is unloaded, or when the user dismisses it via
+      // system UI. Clearing the field so the next visibilitychange
+      // re-acquire path runs cleanly.
+      this.wakeLock.addEventListener("release", () => {
+        this.wakeLock = null;
+      });
+    } catch (err) {
+      // Most likely: user agent disallowed (e.g. fullscreen-only policy)
+      // or document not visible at request time. Not fatal — the walk
+      // tracking still runs while screen is on; user just won't be
+      // protected from auto-lock.
+      console.warn("[walk] wake lock request failed:", err);
+    }
+  }
+
+  private async releaseWakeLock(): Promise<void> {
+    const lock = this.wakeLock;
+    if (!lock) return;
+    this.wakeLock = null;
+    try {
+      await lock.release();
+    } catch {
+      /* lock may already be released by the OS — ignore */
+    }
   }
 
   private handleGeoError(err: GeolocationPositionError) {
@@ -183,6 +229,9 @@ export class WalkSession {
         lastError: null,
         errorKind: null,
       });
+      // Wake Lock auto-releases on hide; re-acquire so a second auto-lock
+      // attempt during the same walk is also blocked.
+      void this.requestWakeLock();
     }
   }
 
@@ -199,6 +248,9 @@ export class WalkSession {
       document.removeEventListener("visibilitychange", this.visibilityHandler);
       this.visibilityHandler = null;
     }
+    // Release the wake lock so the phone can sleep normally again
+    // after the walk ends. Fire-and-forget — caller doesn't await stop().
+    void this.releaseWakeLock();
     // Flush any in-progress hidden interval into hiddenMs so duration is final.
     if (this.hiddenSince !== null) {
       const delta = Date.now() - this.hiddenSince;
