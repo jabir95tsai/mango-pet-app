@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, Square } from "lucide-react";
+import { AlertTriangle, ChevronDown, Square, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FieldLabel } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   WalkSession,
@@ -79,13 +79,15 @@ export function WalkTrackingView({
   onComplete,
 }: Props) {
   const tW = useTranslations("Walks.core");
-  const tC = useTranslations("Common");
+  const router = useRouter();
   const sessionRef = useRef<WalkSession | null>(null);
   const [state, setState] = useState<WalkSessionState | null>(null);
   const [phase, setPhase] = useState<"tracking" | "done">("tracking");
   const [notes, setNotes] = useState("");
+  const [notesOpen, setNotesOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   // Open → spin up session, auto-start. Close → tear down + release wake lock
   // (handled inside session.stop()).
@@ -97,7 +99,9 @@ export function WalkTrackingView({
     const unsub = session.on(setState);
     setPhase("tracking");
     setNotes("");
+    setNotesOpen(false);
     setSaveError(null);
+    setSaved(false);
     session.start();
     return () => {
       unsub();
@@ -121,8 +125,19 @@ export function WalkTrackingView({
     setPhase("done");
   }
 
-  async function handleSave() {
-    if (!sessionRef.current || !state || !state.startedAt || !pet) return;
+  /**
+   * Save the walk exactly once. Notes are taken from current state so the
+   * user can add them after stopping but before tapping a CTA. The spec
+   * says "停止 = 儲存成功" — from the user's POV the walk is captured at
+   * stop; the actual Firestore write is deferred ~one click later to the
+   * CTA so notes can ride along without a separate updateWalk path (UI/UX
+   * role doesn't add Firebase functions).
+   */
+  async function saveWalkOnce(): Promise<boolean> {
+    if (saved) return true;
+    if (!sessionRef.current || !state || !state.startedAt || !pet) {
+      return false;
+    }
     setSaving(true);
     setSaveError(null);
     try {
@@ -144,11 +159,26 @@ export function WalkTrackingView({
         notes: notes.trim() || undefined,
         score,
       });
-      onClose();
+      setSaved(true);
+      return true;
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "save failed");
+      setSaveError(err instanceof Error ? err.message : tW("saveFailed"));
+      return false;
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleBackToWalking() {
+    const ok = await saveWalkOnce();
+    if (ok) onClose();
+  }
+
+  async function handleViewLeaderboard() {
+    const ok = await saveWalkOnce();
+    if (ok) {
+      onClose();
+      router.push("/app/leaderboard");
     }
   }
 
@@ -162,6 +192,11 @@ export function WalkTrackingView({
         goalMin,
         percent: Math.min(100, Math.round((storedTodayMin / goalMin) * 100)),
       };
+
+  // At stop time `state.durationMin` freezes, so the same `blended` value
+  // also drives the done-view headline ("Goal hit!" vs "Today's X%").
+  const finalBlended = blended;
+  const finalGoalHit = finalBlended.percent >= 100;
 
   const { mm, ss } = fmtMmSs(state?.durationMin ?? 0);
   const errKey = errorKindToKey(state?.errorKind ?? null);
@@ -254,16 +289,40 @@ export function WalkTrackingView({
       )}
 
       {phase === "done" && state && (
-        <div className="mx-auto flex w-full flex-1 flex-col gap-5 px-6 py-8 sm:max-w-md">
-          <div className="grid grid-cols-2 gap-3 rounded-lg border border-zinc-200/80 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mx-auto flex w-full flex-1 flex-col items-center justify-center gap-6 px-6 py-8 sm:max-w-md">
+          {/* Completion headline. Emerald + Trophy when the goal was hit
+              today (stored + this session ≥ goalMin), amber percent line
+              otherwise. Both copy variants stay short and warm — no
+              "scoring" detail (spec: 分數 not in main visual). */}
+          {finalGoalHit ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="grid size-16 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                <Trophy className="size-8" />
+              </div>
+              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 sm:text-3xl">
+                {tW("goalHitTitle")}
+              </p>
+            </div>
+          ) : (
+            <p className="text-center text-2xl font-bold text-zinc-900 dark:text-zinc-100 sm:text-3xl">
+              {tW("todayPercentLabel", { percent: finalBlended.percent })}
+            </p>
+          )}
+
+          {/* This-session recap */}
+          <div className="grid w-full max-w-xs grid-cols-2 gap-3 rounded-xl border border-zinc-200/80 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-zinc-500">km</span>
+              <span className="text-[10px] uppercase tracking-wide text-zinc-500">
+                km
+              </span>
               <span className="text-2xl font-bold tabular-nums">
                 {state.totalDistanceKm.toFixed(2)}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-zinc-500">min</span>
+              <span className="text-[10px] uppercase tracking-wide text-zinc-500">
+                min
+              </span>
               <span className="text-2xl font-bold tabular-nums">
                 {state.durationMin.toFixed(1)}
               </span>
@@ -271,31 +330,65 @@ export function WalkTrackingView({
           </div>
 
           {state.path.length === 0 && (
-            <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
+            <div className="flex w-full max-w-xs items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-              <span>{tW("errDenied")}</span>
+              <span>{tW("noPathWarning")}</span>
             </div>
           )}
 
-          <div className="flex flex-col gap-1">
-            <FieldLabel>{tW("noteOptional")}</FieldLabel>
+          {/* Notes — secondary, collapsed by default. Expanding it doesn't
+              hold up the save: notes ride along on whichever CTA the user
+              taps next (saveWalkOnce reads `notes` state at click time). */}
+          <details
+            open={notesOpen}
+            onToggle={(e) =>
+              setNotesOpen((e.currentTarget as HTMLDetailsElement).open)
+            }
+            className="w-full max-w-xs"
+          >
+            <summary className="flex cursor-pointer items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-sm text-zinc-500 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:text-zinc-400 dark:hover:text-zinc-200 [&::-webkit-details-marker]:hidden">
+              <ChevronDown
+                className={cn(
+                  "size-4 transition-transform",
+                  notesOpen && "rotate-180",
+                )}
+              />
+              {tW("addNote")}
+            </summary>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              className="mt-2"
+              aria-label={tW("noteOptional")}
             />
-          </div>
+          </details>
 
-          {saveError && <p className="text-sm text-red-600">{saveError}</p>}
+          {saveError && (
+            <p className="text-center text-sm text-red-600 dark:text-red-400">
+              {saveError}
+            </p>
+          )}
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={onClose} disabled={saving}>
-              {tC("cancel")}
+          {/* Two secondary CTAs. Both trigger save (saveWalkOnce is
+              idempotent). 回到遛狗 = stay on Mango, 查看排行榜 = celebrate
+              the streak / family compare. */}
+          <div className="flex w-full max-w-xs flex-col gap-2">
+            <Button
+              onClick={handleBackToWalking}
+              size="lg"
+              disabled={saving}
+              className="w-full"
+            >
+              {saving && !saved ? "..." : tW("backToWalking")}
             </Button>
             <Button
-              onClick={handleSave}
-              disabled={saving || state.path.length === 0}
+              variant="secondary"
+              onClick={handleViewLeaderboard}
+              size="lg"
+              disabled={saving}
+              className="w-full"
             >
-              {saving ? "..." : tC("save")}
+              {tW("viewLeaderboard")}
             </Button>
           </div>
         </div>

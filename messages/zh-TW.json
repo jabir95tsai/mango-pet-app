@@ -292,7 +292,14 @@
       "errRetrying": "重新定位中",
       "errDenied": "未授權定位 — 請在瀏覽器設定中允許",
       "errUnsupported": "瀏覽器不支援定位",
-      "errBackground": "請保持畫面開啟"
+      "errBackground": "請保持畫面開啟",
+      "goalHitTitle": "完成今日目標！",
+      "todayPercentLabel": "今天完成 {percent}%",
+      "addNote": "加備註",
+      "backToWalking": "回到遛狗",
+      "viewLeaderboard": "查看排行榜",
+      "noPathWarning": "沒取得 GPS 點 — 試試手動補登",
+      "saveFailed": "儲存失敗，請重試"
     }
   },
   "Push": {

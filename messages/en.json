@@ -292,7 +292,14 @@
       "errRetrying": "Retrying location",
       "errDenied": "Location blocked — allow it in browser settings",
       "errUnsupported": "Geolocation not supported",
-      "errBackground": "Keep screen on"
+      "errBackground": "Keep screen on",
+      "goalHitTitle": "Goal hit!",
+      "todayPercentLabel": "Today's {percent}%",
+      "addNote": "Add a note",
+      "backToWalking": "Back to walks",
+      "viewLeaderboard": "View leaderboard",
+      "noPathWarning": "No GPS points captured — try manual log",
+      "saveFailed": "Save failed — please retry"
     }
   },
   "Push": {
