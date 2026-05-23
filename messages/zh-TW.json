@@ -310,6 +310,8 @@
     "close": "關閉",
     "confirm": "確認",
     "back": "返回",
-    "none": "無"
+    "none": "無",
+    "privacy": "隱私權政策",
+    "terms": "服務條款"
   }
 }

@@ -21,6 +21,7 @@ function getNextPath(next: string | string[] | undefined): string {
 export default async function Home({ searchParams }: Props) {
   const tApp = await getTranslations("App");
   const tAuth = await getTranslations("Auth");
+  const tC = await getTranslations("Common");
   const nextPath = getNextPath((await searchParams).next);
 
   return (
@@ -62,10 +63,10 @@ export default async function Home({ searchParams }: Props) {
 
       <footer className="flex justify-center gap-4 pb-2 text-xs text-zinc-400">
         <Link href="/privacy" className="hover:text-amber-700">
-          隱私權政策
+          {tC("privacy")}
         </Link>
         <Link href="/terms" className="hover:text-amber-700">
-          服務條款
+          {tC("terms")}
         </Link>
       </footer>
     </main>
