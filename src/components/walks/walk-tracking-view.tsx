@@ -361,41 +361,46 @@ export function WalkTrackingView({
       }}
     >
       {phase === "tracking" && state && (
+        /* Phase 1 (visual-redesign-mango v2): palette swap scoped to this
+           subtree only. The phase === "done" celebration screen below is
+           locked (walks-v2 SHIPPED — confetti, emerald wash, Trophy, recap
+           tiles all untouched). Confetti palette and animation untouched
+           per spec. */
         <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-8">
           {/* Status pill — animated dot doubles as "still recording" signal */}
-          <div className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+          <div className="flex items-center gap-2 rounded-full bg-mango-brand-tint px-3 py-1.5 text-xs font-medium text-mango-brand-deep dark:bg-amber-500/10 dark:text-amber-200">
             <span
               className={cn(
-                "inline-block size-1.5 rounded-full bg-amber-500",
+                "inline-block size-1.5 rounded-full bg-mango-brand",
                 !state.isPaused && "animate-pulse",
               )}
             />
             {state.isPaused ? tW("paused") : tW("tracking")}
-            <span className="text-zinc-500 dark:text-zinc-400">
+            <span className="text-mango-ink-2 dark:text-zinc-400">
               · 🐾 {pet.name}
             </span>
           </div>
 
-          <p className="font-bold tabular-nums text-7xl text-zinc-900 dark:text-zinc-100 sm:text-8xl">
+          <p className="font-bold tabular-nums text-7xl text-mango-ink dark:text-zinc-100 sm:text-8xl">
             {mm}:{ss}
           </p>
 
-          <p className="text-3xl font-semibold tabular-nums text-zinc-700 dark:text-zinc-300 sm:text-4xl">
+          <p className="text-3xl font-semibold tabular-nums text-mango-ink dark:text-zinc-300 sm:text-4xl">
             {state.totalDistanceKm.toFixed(2)}
-            <span className="ml-1 text-base font-normal text-zinc-500">km</span>
+            <span className="ml-1 text-base font-normal text-mango-ink-2">km</span>
           </p>
 
           <div className="w-full max-w-xs">
             <div className="mb-1.5 flex items-baseline justify-between">
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-mango-ink-2">
                 {tW("todayPercent", { percent: blended.percent })}
               </p>
-              <p className="text-xs font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+              <p className="text-xs font-semibold tabular-nums text-mango-ink dark:text-zinc-300">
                 {Math.round(blended.minutes)} / {goalMin} min
               </p>
             </div>
             <div
-              className="h-2 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800"
+              className="h-2 w-full overflow-hidden rounded-full bg-mango-hairline dark:bg-zinc-800"
               role="progressbar"
               aria-valuenow={blended.percent}
               aria-valuemin={0}
@@ -404,7 +409,7 @@ export function WalkTrackingView({
               <div
                 className={cn(
                   "h-full rounded-full transition-[width] duration-500",
-                  blended.percent >= 100 ? "bg-emerald-500" : "bg-amber-500",
+                  blended.percent >= 100 ? "bg-mango-leaf" : "bg-mango-amber",
                 )}
                 style={{ width: `${blended.percent}%` }}
               />
@@ -417,7 +422,7 @@ export function WalkTrackingView({
                 "flex items-center gap-1.5 text-xs font-medium",
                 state.errorKind === "permission_denied"
                   ? "text-red-600 dark:text-red-400"
-                  : "text-amber-700 dark:text-amber-300",
+                  : "text-mango-brand-deep dark:text-amber-300",
               )}
             >
               <AlertTriangle className="size-3.5" />
@@ -443,10 +448,10 @@ export function WalkTrackingView({
               onClick={() => fileInputRef.current?.click()}
               disabled={photos.length >= PHOTO_LIMIT}
               className={cn(
-                "inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
+                "inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep",
                 photos.length >= PHOTO_LIMIT
-                  ? "cursor-not-allowed border-zinc-200 text-zinc-400 dark:border-zinc-800 dark:text-zinc-600"
-                  : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20",
+                  ? "cursor-not-allowed border-mango-hairline text-mango-ink-3 dark:border-zinc-800 dark:text-zinc-600"
+                  : "border-mango-brand bg-mango-brand-tint text-mango-ink hover:bg-mango-brand-tint/70 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20",
               )}
             >
               <Camera className="size-4" />
@@ -466,7 +471,7 @@ export function WalkTrackingView({
                       src={p.previewUrl}
                       alt=""
                       className={cn(
-                        "size-16 rounded-lg object-cover ring-1 ring-zinc-200 dark:ring-zinc-700",
+                        "size-16 rounded-lg object-cover ring-1 ring-mango-hairline dark:ring-zinc-700",
                         p.status === "uploading" && "opacity-50",
                         p.status === "failed" && "ring-red-400",
                       )}

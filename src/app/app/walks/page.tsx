@@ -40,6 +40,17 @@ const RECENT_WALKS_LIMIT = 10;
 // same pet the user walked yesterday. Spec edge case "多寵物 上次選的".
 const lastPetKey = (uid: string) => `mango.walks.lastPetId.${uid}`;
 
+// Phase 1 (visual-redesign-mango v2) — palette swap to mango.* tokens.
+// Structure / logic / state machine untouched. Per-instance className
+// overrides on the shared <Button> because Button.tsx is out of scope
+// (it would change every CTA across the app — Phase 6 polish).
+//
+// CTA family used across this page:
+//   bg-mango-brand text-mango-ink hover:bg-mango-brand-deep shadow-mango
+//   ↑ ink on brand = 7.6:1 AAA (white-on-brand would be 2.6:1, fails AA)
+const CTA_MANGO =
+  "bg-mango-brand text-mango-ink hover:bg-mango-brand-deep shadow-mango";
+
 export default function WalksPage() {
   const t = useTranslations("Nav");
   const tW = useTranslations("Walks.core");
@@ -206,7 +217,12 @@ export default function WalksPage() {
           action={
             <Link
               href="/app/pets"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 text-sm font-medium text-white transition-colors hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:text-zinc-950"
+              className={cn(
+                // Mini-Button styled inline (Button component is out of
+                // scope for Phase 1). Same CTA family as the Hero.
+                "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                CTA_MANGO,
+              )}
             >
               <Plus className="size-4" />
               {tW("needPetCta")}
@@ -237,35 +253,36 @@ export default function WalksPage() {
           user's eye in one read. */}
       <section
         aria-labelledby="walks-hero-status"
-        className="mb-6 flex flex-col gap-5 rounded-xl border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none"
+        className="mb-6 flex flex-col gap-5 rounded-xl border border-mango-hairline bg-mango-card p-6 shadow-card dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none"
       >
         <div className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between gap-3">
             <p
               id="walks-hero-status"
-              className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 sm:text-xl"
+              className="text-lg font-semibold text-mango-ink dark:text-zinc-100 sm:text-xl"
             >
               {todayLabel}
             </p>
             <div className="flex shrink-0 items-center gap-2">
               {/* Streak badge — spec D4: always visible in Hero.
-                  0-2 days: neutral grey number; ≥3: amber with 🔥;
-                  ≥7: emerald with a tooltip celebrating the week. */}
+                  0-2 days: muted ink-2 number; ≥3: brand-tint chip with 🔥;
+                  ≥7: leaf-tint chip with 🔥 (text-green-800 here is a
+                  deliberate one-off — see patches/README.md "Deviations"). */}
               <span
                 title={streakDays >= 7 ? tS("weekTooltip") : undefined}
                 className={cn(
                   "rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
                   streakDays >= 7
-                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200"
+                    ? "bg-mango-leaf-tint text-green-800 dark:bg-emerald-500/15 dark:text-emerald-200"
                     : streakDays >= 3
-                      ? "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200"
-                      : "text-zinc-500 dark:text-zinc-400",
+                      ? "bg-mango-brand-tint text-mango-brand-deep dark:bg-amber-500/15 dark:text-amber-200"
+                      : "text-mango-ink-2 dark:text-zinc-400",
                 )}
               >
                 {streakDays >= 3 ? "🔥 " : ""}
                 {tS("labelShort", { days: streakDays })}
               </span>
-              <p className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+              <p className="text-xs tabular-nums text-mango-ink-2 dark:text-zinc-400">
                 {tW("todayProgress", {
                   done: Math.round(todayProgress.minutes),
                   goal: TODAY_GOAL_MIN,
@@ -276,11 +293,11 @@ export default function WalksPage() {
           {/* Encouragement sub-text — pulled from the i18n bank by
               getEncouragementHint based on (today, streak, last walk,
               pet name). One line, low-key. */}
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-mango-ink-2 dark:text-zinc-400">
             {tE(encouragement.key, encouragement.vars)}
           </p>
           <div
-            className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800"
+            className="h-2.5 w-full overflow-hidden rounded-full bg-mango-hairline dark:bg-zinc-800"
             role="progressbar"
             aria-valuenow={todayProgress.percent}
             aria-valuemin={0}
@@ -293,7 +310,7 @@ export default function WalksPage() {
             <div
               className={cn(
                 "h-full rounded-full transition-[width] duration-500",
-                goalHit ? "bg-emerald-500" : "bg-amber-500",
+                goalHit ? "bg-mango-leaf" : "bg-mango-amber",
               )}
               style={{ width: `${todayProgress.percent}%` }}
             />
@@ -302,7 +319,12 @@ export default function WalksPage() {
 
         {/* Multi-pet picker. Single-pet households skip the chips entirely
             (spec: "單寵物時直接預選"). Segmented chips beat a select because
-            tapping a chip is one step, not two. */}
+            tapping a chip is one step, not two.
+            Phase 1 palette:
+              unselected → brand-tint bg, brand-deep text
+              selected   → brand bg, ink text, soft mango shadow
+            (mirrors the CTA hierarchy — picked pet visually feeds the
+            big orange Start button below.) */}
         {pets.length > 1 && (
           <div
             className="flex flex-wrap gap-2"
@@ -319,10 +341,10 @@ export default function WalksPage() {
                   aria-checked={active}
                   onClick={() => handlePickPet(p.petId)}
                   className={cn(
-                    "h-9 rounded-full border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
+                    "h-9 rounded-full border px-3 text-sm font-medium transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep",
                     active
-                      ? "border-amber-500 bg-amber-100 text-amber-900 dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-200"
-                      : "border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900",
+                      ? "border-transparent bg-mango-brand text-mango-ink shadow-[0_6px_14px_-6px_rgba(243,152,0,0.45)] dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-200"
+                      : "border-transparent bg-mango-brand-tint text-mango-brand-deep hover:bg-mango-brand-tint/80 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800",
                   )}
                 >
                   🐾 {p.name}
@@ -335,18 +357,21 @@ export default function WalksPage() {
         {/* Hero CTA — desktop only. Mobile relies on the sticky bottom CTA
             (renders below) so the user only sees one Start button at a time.
             Desktop has no sticky (md:hidden there) so the Hero CTA stays
-            as the start button. */}
+            as the start button. Per-instance mango override on Button. */}
         <Button
           onClick={() => setSessionOpen(true)}
           size="lg"
-          className="hidden h-14 w-full text-base font-semibold sm:text-lg md:inline-flex"
+          className={cn(
+            "hidden h-14 w-full text-base font-bold sm:text-lg md:inline-flex",
+            CTA_MANGO,
+          )}
         >
           <Play className="size-5" />
           {tW("startWalking")}
         </Button>
 
         {pets.length > 1 && lastWalkedName && (
-          <p className="hidden text-center text-xs text-zinc-500 md:block dark:text-zinc-400">
+          <p className="hidden text-center text-xs text-mango-ink-2 md:block dark:text-zinc-400">
             {tW("lastWalkedWith", { name: lastWalkedName })}
           </p>
         )}
@@ -356,18 +381,18 @@ export default function WalksPage() {
           Hero so a scroll reveals them; "分數" deliberately dropped per
           spec (kept on /app/leaderboard where it belongs). */}
       <section className="mb-6 grid grid-cols-2 gap-3">
-        <article className="flex flex-col gap-2 rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <article className="flex flex-col gap-2 rounded-xl border border-mango-hairline bg-mango-card p-4 shadow-card dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-mango-ink-2 dark:text-zinc-400">
             {tW("weekProgressLabel")}
           </p>
-          <p className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
+          <p className="text-2xl font-bold tabular-nums text-mango-ink dark:text-zinc-100">
             {tW("weekProgressCount", {
               done: weekProgress.count,
               goal: WEEK_GOAL_COUNT,
             })}
           </p>
           <div
-            className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800"
+            className="h-1.5 w-full overflow-hidden rounded-full bg-mango-hairline dark:bg-zinc-800"
             role="progressbar"
             aria-valuenow={weekProgress.percent}
             aria-valuemin={0}
@@ -376,17 +401,19 @@ export default function WalksPage() {
             <div
               className={cn(
                 "h-full rounded-full transition-[width] duration-500",
-                weekProgress.percent >= 100 ? "bg-emerald-500" : "bg-amber-500",
+                weekProgress.percent >= 100
+                  ? "bg-mango-leaf"
+                  : "bg-mango-amber",
               )}
               style={{ width: `${weekProgress.percent}%` }}
             />
           </div>
         </article>
-        <article className="flex flex-col gap-2 rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <article className="flex flex-col gap-2 rounded-xl border border-mango-hairline bg-mango-card p-4 shadow-card dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-mango-ink-2 dark:text-zinc-400">
             {tW("streakLabel")}
           </p>
-          <p className="text-2xl font-bold tabular-nums text-amber-700 dark:text-amber-300">
+          <p className="text-2xl font-bold tabular-nums text-mango-brand-deep dark:text-amber-300">
             {tW("streakDaysCount", { days: streakDays })}
           </p>
         </article>
@@ -395,7 +422,7 @@ export default function WalksPage() {
       {/* Recent walks — section header sets expectation that this is a
           summary, not the full archive. Limited to 10 per spec. */}
       {loading ? (
-        <p className="text-sm text-zinc-500">{tC("loading")}</p>
+        <p className="text-sm text-mango-ink-2">{tC("loading")}</p>
       ) : walks.length === 0 ? (
         <EmptyState
           icon={Footprints}
@@ -404,7 +431,7 @@ export default function WalksPage() {
         />
       ) : (
         <section>
-          <h2 className="mb-3 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+          <h2 className="mb-3 text-sm font-semibold text-mango-ink-2 dark:text-zinc-300">
             {tW("recentWalks")}
           </h2>
           <div className="flex flex-col gap-3">
@@ -427,6 +454,7 @@ export default function WalksPage() {
           size="sm"
           onClick={() => setManualOpen(true)}
           disabled={pets.length === 0}
+          className="text-mango-ink-2 hover:bg-mango-bg-alt hover:text-mango-ink"
         >
           <Hand className="size-4" />
           {tW("manualLog")}
@@ -443,10 +471,12 @@ export default function WalksPage() {
           walking" is always within iPhone thumb reach without scrolling
           back up. Hidden when the tracking view is open (already
           full-screen) and hidden on desktop (Hero is in view alongside
-          the sidebar there, sticky would be redundant). */}
+          the sidebar there, sticky would be redundant).
+          Phase 1 palette: matches the warm cream + blur nav surface from
+          Phase 0.5 so the bottom band reads as a continuous warm strip. */}
       {!sessionOpen && (
         <div
-          className="fixed inset-x-0 z-20 border-t border-zinc-200/80 bg-white/95 px-4 py-3 backdrop-blur md:hidden dark:border-zinc-800 dark:bg-zinc-950/95"
+          className="fixed inset-x-0 z-20 border-t border-mango-hairline bg-mango-card-soft/92 px-4 py-3 backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-950/95"
           style={{
             bottom: "calc(env(safe-area-inset-bottom) + 3.75rem)",
           }}
@@ -454,7 +484,10 @@ export default function WalksPage() {
           <Button
             onClick={() => setSessionOpen(true)}
             size="lg"
-            className="h-12 w-full text-base font-semibold"
+            className={cn(
+              "h-12 w-full text-base font-bold",
+              CTA_MANGO,
+            )}
           >
             <Play className="size-5" />
             {tW("startWalking")}
