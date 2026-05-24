@@ -12,6 +12,7 @@ import { useConfirm } from "@/components/ui/confirm-provider";
 import { PetCard } from "@/components/pets/pet-card";
 import { PetFormDialog } from "@/components/pets/pet-form-dialog";
 import { RemindersOverviewSection } from "@/components/reminders/reminders-overview-section";
+import { ExpensesOverviewSection } from "@/components/expenses/expenses-overview-section";
 import {
   createPet,
   deletePet,
@@ -106,6 +107,12 @@ export default function PetsPage() {
           when pets.length === 0 so the "Add your first pet" empty state
           below stays the only thing on screen. */}
       <RemindersOverviewSection pets={pets} />
+
+      {/* Expenses overview (spec B2, 2026-05-24 update). Latest 10 across
+          pets — full archive + scanner + monthly summary stay at
+          /app/expenses via the "查看更多" link. Same hide-when-no-pets
+          guard as reminders. */}
+      <ExpensesOverviewSection pets={pets} />
 
       {loading ? (
         <p className="text-sm text-zinc-500">{tCommon("loading")}</p>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Bell, Pencil, Plus, PawPrint } from "lucide-react";
+import { ArrowLeft, Bell, Pencil, Plus, PawPrint, Wallet } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFamily } from "@/components/family/family-provider";
 import { Avatar } from "@/components/ui/avatar";
@@ -17,6 +17,8 @@ import { HealthRecordCard } from "@/components/health/health-record-card";
 import { WeightChart } from "@/components/health/weight-chart";
 import { ReminderFormDialog } from "@/components/reminders/reminder-form-dialog";
 import { ReminderCard } from "@/components/reminders/reminder-card";
+import { ExpenseCard } from "@/components/expenses/expense-card";
+import { ExpenseFormDialog } from "@/components/expenses/expense-form-dialog";
 import { getPet, updatePet } from "@/lib/firebase/pets";
 import {
   createRecord,
@@ -33,8 +35,17 @@ import {
   listReminders,
   updateReminder,
 } from "@/lib/firebase/reminders";
+import {
+  createExpense,
+  deleteExpense,
+  listExpenses,
+  listPersonalExpenses,
+  updateExpense,
+} from "@/lib/firebase/expenses";
 import { listFamilyMembers } from "@/lib/firebase/families";
 import type {
+  Expense,
+  ExpenseInput,
   FamilyMember,
   HealthRecord,
   HealthRecordInput,
@@ -46,7 +57,7 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Tab = "health" | "reminders";
+type Tab = "health" | "reminders" | "expenses";
 type TypeFilter = HealthRecordType | "all";
 const FILTER_TYPES: TypeFilter[] = ["all", "weight", "feeding", "vaccine", "vet", "medication"];
 
@@ -59,6 +70,7 @@ export default function PetDetailPage() {
 
   const tH = useTranslations("Health");
   const tR = useTranslations("Reminder");
+  const tE = useTranslations("Expense");
   const tC = useTranslations("Common");
   const tPet = useTranslations("Pet");
   const askConfirm = useConfirm();
@@ -68,6 +80,7 @@ export default function PetDetailPage() {
   const [weights, setWeights] = useState<{ date: number; kg: number }[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [todayDone, setTodayDone] = useState<Reminder[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [membersById, setMembersById] = useState<Map<string, FamilyMember>>(
     () => new Map(),
   );
@@ -79,6 +92,10 @@ export default function PetDetailPage() {
   const [addingRecord, setAddingRecord] = useState(false);
   const [addingReminder, setAddingReminder] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
+  const [addingExpense, setAddingExpense] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | undefined>(
+    undefined,
+  );
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -86,25 +103,30 @@ export default function PetDetailPage() {
       // allSettled so one slow query doesn't blank the whole page.
       // Personal mode skips done-attribution + members lookups (same
       // reasoning as the home page — single-owner attribution is noise).
-      const [petR, recsR, wR, remR, doneR, membersR] = await Promise.allSettled([
-        getPet(petId),
-        listRecords(petId),
-        listWeightSeries(petId),
-        family
-          ? listReminders(family.familyId, { petId })
-          : listPersonalReminders(user.uid, { petId }),
-        family
-          ? listRecentlyCompletedReminders(family.familyId, { petId })
-          : Promise.resolve([] as Reminder[]),
-        family
-          ? listFamilyMembers(family)
-          : Promise.resolve([] as FamilyMember[]),
-      ]);
+      const [petR, recsR, wR, remR, doneR, exR, membersR] =
+        await Promise.allSettled([
+          getPet(petId),
+          listRecords(petId),
+          listWeightSeries(petId),
+          family
+            ? listReminders(family.familyId, { petId })
+            : listPersonalReminders(user.uid, { petId }),
+          family
+            ? listRecentlyCompletedReminders(family.familyId, { petId })
+            : Promise.resolve([] as Reminder[]),
+          family
+            ? listExpenses(family.familyId, { petId })
+            : listPersonalExpenses(user.uid, { petId }),
+          family
+            ? listFamilyMembers(family)
+            : Promise.resolve([] as FamilyMember[]),
+        ]);
       setPet(petR.status === "fulfilled" ? petR.value : null);
       setRecords(recsR.status === "fulfilled" ? recsR.value : []);
       setWeights(wR.status === "fulfilled" ? wR.value : []);
       setReminders(remR.status === "fulfilled" ? remR.value : []);
       setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
+      setExpenses(exR.status === "fulfilled" ? exR.value : []);
       setMembersById(
         membersR.status === "fulfilled"
           ? new Map(membersR.value.map((m) => [m.uid, m]))
@@ -220,6 +242,40 @@ export default function PetDetailPage() {
     await refreshReminders();
   }
 
+  async function handleAddExpense(input: ExpenseInput) {
+    if (!user) return;
+    // Force petId — even if the form lets you change it, this page is
+    // scoped to one pet.
+    await createExpense({
+      ...input,
+      petId,
+      familyId: family?.familyId ?? null,
+      payerUid: user.uid,
+      payerName: user.displayName ?? undefined,
+    });
+    await refresh();
+  }
+
+  async function handleUpdateExpense(input: ExpenseInput) {
+    if (!editingExpense) return;
+    await updateExpense(editingExpense.expenseId, input);
+    setEditingExpense(undefined);
+    await refresh();
+  }
+
+  async function handleDeleteExpense(expense: Expense) {
+    const ok = await askConfirm({
+      title: tC("delete"),
+      message: `${expense.vendor || tE(`categories.${expense.category}`)} · NT$ ${expense.amount.toLocaleString()}`,
+      confirmText: tC("delete"),
+      cancelText: tC("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
+    await deleteExpense(expense.expenseId);
+    await refresh();
+  }
+
   if (loading) {
     return <p className="text-sm text-zinc-500">{tC("loading")}</p>;
   }
@@ -282,6 +338,7 @@ export default function PetDetailPage() {
           options={[
             { value: "health", label: tH("title") },
             { value: "reminders", label: tR("title") },
+            { value: "expenses", label: tE("title") },
           ]}
         />
         {tab === "health" ? (
@@ -289,10 +346,15 @@ export default function PetDetailPage() {
             <Plus className="size-4" />
             {tH("addRecord")}
           </Button>
-        ) : (
+        ) : tab === "reminders" ? (
           <Button onClick={() => setAddingReminder(true)} size="sm">
             <Plus className="size-4" />
             {tR("add")}
+          </Button>
+        ) : (
+          <Button onClick={() => setAddingExpense(true)} size="sm">
+            <Plus className="size-4" />
+            {tE("add")}
           </Button>
         )}
       </div>
@@ -346,7 +408,7 @@ export default function PetDetailPage() {
             </div>
           )}
         </div>
-      ) : (
+      ) : tab === "reminders" ? (
         <div className="flex flex-col gap-3">
           {reminders.length === 0 && todayDone.length === 0 ? (
             <EmptyState
@@ -387,6 +449,31 @@ export default function PetDetailPage() {
             </>
           )}
         </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {expenses.length === 0 ? (
+            <EmptyState
+              icon={Wallet}
+              title={tE("title")}
+              description="目前沒有開銷紀錄"
+              action={
+                <Button size="sm" onClick={() => setAddingExpense(true)}>
+                  <Plus className="size-4" />
+                  {tE("add")}
+                </Button>
+              }
+            />
+          ) : (
+            expenses.map((e) => (
+              <ExpenseCard
+                key={e.expenseId}
+                expense={e}
+                onEdit={() => setEditingExpense(e)}
+                onDelete={() => handleDeleteExpense(e)}
+              />
+            ))
+          )}
+        </div>
       )}
 
       <PetFormDialog
@@ -413,6 +500,19 @@ export default function PetDetailPage() {
         pets={pet ? [pet] : []}
         initial={editingReminder ?? undefined}
         onSubmit={handleUpdateReminder}
+      />
+      <ExpenseFormDialog
+        open={addingExpense}
+        onClose={() => setAddingExpense(false)}
+        pets={pet ? [pet] : []}
+        onSubmit={handleAddExpense}
+      />
+      <ExpenseFormDialog
+        open={editingExpense !== undefined}
+        onClose={() => setEditingExpense(undefined)}
+        pets={pet ? [pet] : []}
+        initial={editingExpense}
+        onSubmit={handleUpdateExpense}
       />
     </>
   );

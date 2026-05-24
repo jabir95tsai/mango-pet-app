@@ -49,9 +49,8 @@ const ALL_ITEMS: Item[] = [
 ];
 
 // Mobile bottom bar: 5 primary nav links fill all slots.
-// The overflow drawer (feed / expenses / restaurants / knowledge / friends)
-// is now triggered from the settings page top-right corner — see
-// `src/app/app/settings/page.tsx` and `useNavDrawer()`.
+// The overflow drawer is now triggered from the settings page top-right
+// corner — see `src/app/app/settings/page.tsx` and `useNavDrawer()`.
 const MOBILE_PRIMARY_KEYS: NavKey[] = [
   "home",
   "pets",
@@ -59,6 +58,13 @@ const MOBILE_PRIMARY_KEYS: NavKey[] = [
   "leaderboard",
   "settings",
 ];
+
+// Items deliberately HIDDEN from the mobile overflow drawer (still listed
+// in the desktop sidebar). Feed left the drawer per spec
+// docs/features/reminders-to-pets-page.md (Home + Pets IA reorg, C
+// section) because the home page now IS the feed — the drawer entry
+// duplicated the destination.
+const MOBILE_DRAWER_EXCLUDE: NavKey[] = ["feed"];
 
 function isActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
@@ -79,7 +85,11 @@ export function AppNav() {
   }, [pathname, setDrawerOpen]);
 
   const primary = ALL_ITEMS.filter((i) => MOBILE_PRIMARY_KEYS.includes(i.key));
-  const overflow = ALL_ITEMS.filter((i) => !MOBILE_PRIMARY_KEYS.includes(i.key));
+  const overflow = ALL_ITEMS.filter(
+    (i) =>
+      !MOBILE_PRIMARY_KEYS.includes(i.key) &&
+      !MOBILE_DRAWER_EXCLUDE.includes(i.key),
+  );
 
   return (
     <>

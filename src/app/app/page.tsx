@@ -42,12 +42,15 @@ export default function AppHome() {
       setPets(petR.status === "fulfilled" ? petR.value : []);
       const friends = friendsR.status === "fulfilled" ? friendsR.value : [];
       try {
+        // Spec docs/features/reminders-to-pets-page.md D2: home page now
+        // surfaces the latest 10 posts (family + friends + public mixed),
+        // with a "查看更多" CTA into /app/feed for the full timeline.
         const feed = await listFeedPosts(
           user.uid,
           friends.map((f) => f.uid),
-          5,
+          10,
         );
-        setFeedPosts(feed.slice(0, 3));
+        setFeedPosts(feed.slice(0, 10));
       } catch {
         setFeedPosts([]);
       }
@@ -145,7 +148,7 @@ export default function AppHome() {
               href="/app/feed"
               className="text-xs font-medium text-amber-700 hover:underline dark:text-amber-300"
             >
-              更多 →
+              查看更多 →
             </Link>
           </div>
         </div>
