@@ -429,6 +429,35 @@ export default function WalksPage() {
         </Button>
       </div>
 
+      {/* Mobile-only spacer so the sticky bottom CTA below can't cover
+          the manual-log button when the user scrolls to the very end of
+          the page. Desktop has no sticky CTA so no spacer needed. */}
+      <div className="h-16 md:hidden" aria-hidden="true" />
+
+      {/* Sticky bottom CTA — backlog "walks 頁加 sticky bottom CTA"
+          (user 2026-05-24 解 A). Duplicates the Hero CTA so "Start
+          walking" is always within iPhone thumb reach without scrolling
+          back up. Hidden when the tracking view is open (already
+          full-screen) and hidden on desktop (Hero is in view alongside
+          the sidebar there, sticky would be redundant). */}
+      {!sessionOpen && (
+        <div
+          className="fixed inset-x-0 z-20 border-t border-zinc-200/80 bg-white/95 px-4 py-3 backdrop-blur md:hidden dark:border-zinc-800 dark:bg-zinc-950/95"
+          style={{
+            bottom: "calc(env(safe-area-inset-bottom) + 3.75rem)",
+          }}
+        >
+          <Button
+            onClick={() => setSessionOpen(true)}
+            size="lg"
+            className="h-12 w-full text-base font-semibold"
+          >
+            <Play className="size-5" />
+            {tW("startWalking")}
+          </Button>
+        </div>
+      )}
+
       <WalkTrackingView
         open={sessionOpen}
         onClose={() => setSessionOpen(false)}
