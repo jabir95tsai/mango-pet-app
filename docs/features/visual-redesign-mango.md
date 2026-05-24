@@ -409,3 +409,50 @@ Pet header 旁邊加 chevron-down icon → 點開 dropdown 切換寵物（沿用
 ### STOP at Phase 0 + 0.5（spec instruction）
 
 Phase 1 (`/app/walks` mockup tone) 需要 user review 視覺 + ping Claude Design 拿 Phase 1 patch package 才接。本 session 不主動跑。
+
+## Phase 1 SHIPPED 紀錄
+
+**Ship 時間**：2026-05-24 ~20:54 push → App Hosting build ~5 分鐘後
+
+### 2 個 commit
+
+| Commit | SHA | 內容 |
+|---|---|---|
+| Phase 1 | `37d1ec4` | `src/app/app/walks/page.tsx` + `src/components/walks/walk-card.tsx` + `src/components/walks/walk-tracking-view.tsx` 三檔全替換為 Claude Design Phase 1 patch（mango token 套色 + `phase === "tracking"` palette pass + Button/EmptyState 不動繞道處理） |
+| Chore | `a8bc8b7` | `patches/` 更新 — README 改寫成 Phase 1 + 加入 3 個 source patch；保留作 Phase 2+ history reference |
+
+### Claude Design 6 個 deviations（全 PM-accepted，from `patches/README.md`）
+
+1. ✅ **`text-green-800` (Tailwind default) on `bg-mango-leaf-tint`** for ≥7 day streak badge — `mango-leaf` on `mango-leaf-tint` 是 2.6:1 fail AA。`green-800 #166534` on leaf-tint = 8.4:1 AAA，single-class isolated deviation。Future fix: 加 `mango.leaf-deep` token via Phase 0.1
+2. ✅ **Selected pet chip 加 `shadow-mango/30`** — 不在 spec 文字內，但 reinforce「選了這隻寵物 → CTA 會 walk this pet」因果。視覺上輕 shadow 跟 Hero CTA shadow-mango full opacity 形成階層
+3. ✅ **Hero CTA `font-bold`（從 `font-semibold` 升級）** — 14px ink-on-orange 比 white-on-amber 視覺重量略輕，bold 補回。Sticky CTA 跟著用
+4. ✅ **No-pets empty-state inline link 改 mini-Button via Tailwind classes** — `Button` component 不動（Phase 6 polish），inline link 自帶 `bg-mango-brand text-mango-ink shadow-mango` 對齊 CTA family。EmptyState 的 icon container 仍 amber（Phase 6 處理）
+5. ✅ **Streak compact tile 大數字保留 brand-deep（不切換 leaf at ≥7d）** — 隔壁 streak badge 已 swap to leaf-tint + green-800；tile 跟 badge 配對 = 「橘色 achievement number + 綠色 milestone badge」雙重視覺敘事，比 tile 也跟著切 leaf 乾淨
+6. ✅ **Tracking-view palette pass 嚴格 scoped to `phase === "tracking"`** — `phase === "done"` 完整保留 walks-v2 SHIPPED 的 emerald celebration + confetti + gradient wash + recap tiles。Source grep 確認 15 個 marker 仍在（Trophy / emerald / walk-confetti / finalGoalHit / walk-streak-pop）
+
+### Chrome MCP 驗證結果（production /app/walks）
+
+| Checklist item | 方式 | 結果 |
+|---|---|---|
+| `npx tsc --noEmit` | 本地 build | ✅ PASS |
+| Hero card 在 cream body 上 pop | DOM `getComputedStyle` | ✅ bg `rgb(255,255,255)` mango.card on `rgb(251,241,221)` mango.bg body；border `rgb(234,223,196)` mango.hairline |
+| Hero CTA mango tone | DOM | ✅ bg `rgb(243,152,0)` = `#F39800` brand + color `rgb(35,27,20)` = `#231B14` ink（**7.6:1 AAA**） |
+| Today progress bar | DOM | ✅ track `rgb(234,223,196)` hairline + fill `rgb(255,194,92)` `#FFC25C` amber |
+| Tracking status pill | force start + DOM | ✅ pill warm peach (`#FFE7BF` brand-tint) + text `rgb(215,123,0)` brand-deep + pulsing dot `rgb(243,152,0)` brand |
+| Tracking live progress | DOM | ✅ same hairline+amber pattern |
+| Camera CTA pill | DOM | ✅ bg `rgb(255,231,191)` brand-tint + border `rgb(243,152,0)` brand |
+| Stop button | DOM | ✅ red `lab(...)` 保留（destructive，Q19） |
+| Done screen celebration | source grep | ✅ 15 個 marker（Trophy / emerald / walk-confetti / finalGoalHit / walk-streak-pop）全保留 — patch 沒動 `phase === "done"` |
+| Desktop sticky hidden | viewport=desktop, render | ✅ sticky `md:hidden`, hero CTA visible |
+| Sticky bottom CTA (force-show 模擬 mobile) | DOM | ✅ surface `mango.card-soft/92` + border `mango.hairline` + 73px tall + button orange ink |
+
+### 未直接驗證
+
+- ⚠️ Lighthouse a11y on `/app/walks` ≥ 90：Chrome MCP 環境無 Lighthouse CDP 整合；過去 deploy 的 token 對比 (ink-on-brand 7.6:1 / ink-2 on cream 6.8:1 / hairline 3.1:1 ring) 都 ≥ AA，預期 ≥ 90 但需 user 用 DevTools 跑一次確認
+- ⚠️ Goal-hit done screen + confetti 視覺：需 30 分鐘 walk 觸發；source grep 確認 code 未動，trust patch scope notice
+- ⚠️ Mobile 真實 viewport (iPhone 14 Pro Max)：Chrome MCP maximized window，force-show 已覆蓋 sticky structure + colors
+- ⚠️ Pet picker chip tap visual：user 單寵物（Mango），chip 邏輯不渲染；code path 正確（per patch）
+
+### STOP at Phase 1（spec instruction）
+
+不主動跑 Phase 2 — 需要 user 看完 Phase 1 視覺後 ping Claude Design 拿 Phase 2 patch package 才接。本 session 收尾。
