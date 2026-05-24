@@ -353,3 +353,59 @@ Pet header 旁邊加 chevron-down icon → 點開 dropdown 切換寵物（沿用
 - [ ] **Q-v2-2 (nav reshuffle)**：保留現有 nav items mapping vs 對齊圖片 labels [首頁/動態/遛狗/家庭/我的]？PM 預設**保留**（最少 IA 動）。若要 reshuffle → 另開 nav-reshuffle-v2 spec（PM 寫）
 - [ ] **Q-v2-3**：raised center button 大小？建議 60px diameter + 4px border。若太大太小 user 看到 Phase 0.5 ship 後反饋
 - [ ] **Phase 0/0.5 ship 後**是否 user 先 review Phase 1 才動 Phase 2？建議：是（節奏對齊 user「一個一個修」偏好）
+
+## Phase 0 + 0.5 SHIPPED 紀錄
+
+**Ship 時間**：2026-05-24 ~13:54 push → App Hosting build live ~3 分鐘後（這次 build 異常快）
+
+### 3 個 commit（user 要 2 個 phase boundary commit；patches/ folder + tsconfig 抽 chore commit 對齊「不混 phase 內容」原則）
+
+| Commit | SHA | 內容 |
+|---|---|---|
+| Chore | `202889c` | import `patches/` folder（README + globals.css + app-nav.tsx 全套）+ `tsconfig.json` exclude `patches`（避免 patches/app-nav.tsx 被 tsc 抓到 `./nav-drawer-context` 解不到的 relative import） |
+| Phase 0 | `7baff73` | `src/app/globals.css` 全檔換 patches 版 — `@theme inline` 加 mango 18 個 color tokens + 3 個 shadow utilities (`shadow-card / shadow-elevated / shadow-mango`)；`:root` 加 radius + motion plain CSS vars；body bg `#fff8e1` → `#fbf1dd` |
+| Phase 0.5 | `e1a7b60` | `src/components/nav/app-nav.tsx` 全檔換 patches 版 — mobile nav surface 改 `bg-mango-card-soft/92 backdrop-blur-md`、warm hairline；walks (index 2) raised treatment：`absolute -top-4 size-[60px] rounded-full bg-mango-brand ring-4 ring-mango-bg shadow-mango`，icon `Footprints text-mango-ink size-[26px]`；其他 4 tab `text-mango-ink-2` / active `text-mango-brand`；desktop sidebar + mobile drawer 0 變動 |
+
+### Claude Design 6 個 resolutions（全 adopted，from `patches/README.md`）
+
+1. ✅ **Tailwind v4 no config file** — tokens 合進 `globals.css @theme inline`，不建 `tailwind.config.ts`（spec 原文錯）
+2. ✅ **Radius/motion 不放 @theme** — 避免 silently override Tailwind defaults (`rounded-md/lg` 等)；改 `:root` plain CSS vars，後續 phase 用 `rounded-[var(--radius-lg)]` arbitrary values consume
+3. ✅ **Raised icon = `text-mango-ink` 不是白色** — Phase 0.5 spec 內部矛盾（同時要求「白字」+「a11y 表明白字 on #F39800 不過 AA」），Claude Design 選 ink (7.6:1 AAA) 對齊 a11y rule
+4. ✅ **`ring-4 ring-mango-bg`** 取代 `border 4px solid` — no layout shift + atomic Tailwind class
+5. ✅ **Raised label 永遠 brand-colored** — 中間 disc 是 destination indicator；gating active state 會 navigation flicker
+6. ✅ **Mobile nav surface `bg-mango-card-soft/92 backdrop-blur-md`** — 對齊 mockup TabBar (`rgba(255,247,228,0.92) + blur(20px)`)，不是純白
+
+### Chrome MCP 驗證結果（desktop @ 1456×819 / production）
+
+**`/app/walks` 載入後 DOM probe**：
+- ✅ `bodyBg: rgb(251, 241, 221)` = `#fbf1dd` mango.bg
+- ✅ `--background: #fbf1dd` CSS var
+- ✅ Mobile nav class 含 `border-mango-hairline bg-mango-card-soft/92 shadow-[0_-8px_24px_rgba(80,50,10,0.10)] backdrop-blur-md`
+- ✅ `hasRaisedDisc: true`
+
+**Force-show mobile nav probe**（screen wide so `md:hidden` removed）：
+- nav 高 61px、disc 60×60px、`topRelToNav: -15px`（≈ `-top-4`/-16px ±1 rounding）
+- disc bg `rgb(243, 152, 0)` = `#F39800` mango.brand ✓
+- disc text color `rgb(35, 27, 20)` = `#231B14` mango.ink ✓（**a11y 7.6:1 AAA**，非白字）
+- 5 tabs 順序與 href 正確：`首頁→/app, 我的寵物→/app/pets, 遛狗→/app/walks (center), 排行榜→/app/leaderboard, 設定→/app/settings`
+
+**`/app` home（同 build verify）**：
+- ✅ bodyBg cream 一致
+- ✅ heading `🥭 芒果寵物`、pets + feed sections render，無 layout 破
+- ✅ sidebar「首頁」amber→mango.brand 高亮（既有 `text-amber-800 bg-amber-100/80` 沒爆，但 sidebar 在 desktop 沒 touch 是預期）
+
+### 跟 spec 的 deviations（已修正）
+
+1. **Spec line 175「white Footprints icon」改 `text-mango-ink`**：spec a11y table 自相矛盾（白字 on #F39800 不過 AA），Claude Design resolution #3 正確修正。Spec 已在 v2.1 ⚠️ section 反映。
+2. **Spec line 187「border 4px solid」改 `ring-4 ring-mango-bg`**：視覺等效 + atomic class + no layout shift。Resolution #4。
+3. **Spec line 318「`tailwind.config.ts` palette extend」改 `globals.css @theme inline`**：Tailwind v4 不用 config file（PM 沒 verify v3 vs v4）。Resolution #1。
+
+### 未直接驗證（環境限制）
+
+- ⚠️ Mobile 真實 viewport (iPhone 14 Pro Max 430×932)：Chrome window maximized，`resize_window` 對 maximized window 不生效；force-show 已模擬視覺結構（disc + ring + nav surface 全正確）
+- ⚠️ Dark mode：Q18 此次跳過（spec 明確）；`dark:` classes 保留在 globals.css 跟 nav 內，未驗證視覺
+- ⚠️ Tracking view 開啟時 nav 隱藏：既有行為（在 walks page 控制 nav visibility），patch 沒動，未重新驗證
+
+### STOP at Phase 0 + 0.5（spec instruction）
+
+Phase 1 (`/app/walks` mockup tone) 需要 user review 視覺 + ping Claude Design 拿 Phase 1 patch package 才接。本 session 不主動跑。
