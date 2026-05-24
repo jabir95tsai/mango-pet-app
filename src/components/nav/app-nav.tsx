@@ -51,6 +51,11 @@ const ALL_ITEMS: Item[] = [
 // Mobile bottom bar: 5 primary nav links fill all slots.
 // The overflow drawer is now triggered from the settings page top-right
 // corner — see `src/app/app/settings/page.tsx` and `useNavDrawer()`.
+//
+// Phase 0.5 (visual-redesign-mango v2): the middle slot ("walks") is
+// rendered as a RAISED circular button that pops above the bar's top
+// edge. Order is unchanged so existing pathname → tab mapping still
+// works; only the middle item's rendering branches.
 const MOBILE_PRIMARY_KEYS: NavKey[] = [
   "home",
   "pets",
@@ -93,7 +98,7 @@ export function AppNav() {
 
   return (
     <>
-      {/* Desktop sidebar (all items) */}
+      {/* Desktop sidebar (all items) — UNCHANGED in Phase 0.5 */}
       <nav
         aria-label="Primary"
         className="hidden border-r border-zinc-200/80 bg-white/90 backdrop-blur md:sticky md:top-0 md:flex md:h-dvh md:w-64 md:shrink-0 md:flex-col dark:border-zinc-800 dark:bg-zinc-950/90"
@@ -139,25 +144,67 @@ export function AppNav() {
         </ul>
       </nav>
 
-      {/* Mobile bottom tab bar (5 nav links, no More button) */}
+      {/* Mobile bottom tab bar — Phase 0.5 raised center treatment.
+       *  - Surface: warm soft-card tint + backdrop-blur (matches mockup TabBar)
+       *  - Hairline: mango.hairline (warmer than zinc-200)
+       *  - Walks (index 2) renders a raised circular brand button
+       *    bursting above the bar's top edge via absolute -top-4 + a
+       *    4px ring of mango.bg that visually "cuts" through the bar.
+       *  - Other 4 slots keep the column layout; active/inactive map
+       *    to mango.brand / mango.ink-2 (AA passes against cream bg).
+       *  - Desktop sidebar above untouched.
+       */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/80 bg-white/95 shadow-[0_-8px_24px_rgba(24,24,27,0.08)] backdrop-blur md:hidden dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-none"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-mango-hairline bg-mango-card-soft/92 shadow-[0_-8px_24px_rgba(80,50,10,0.10)] backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-none"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ul className="grid grid-cols-5">
           {primary.map(({ href, key, icon: Icon }) => {
             const active = isActive(pathname, href);
+            const isRaised = key === "walks";
+
+            if (isRaised) {
+              // ── Raised center: walks ────────────────────────
+              // <li> is the grid cell — relative so the button can
+              // pop upward. <Link> spans the cell; the raised disc
+              // is an absolutely-positioned span inside the link so
+              // the entire surface (disc + label) is the tap target.
+              return (
+                <li key={href} className="relative">
+                  <Link
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    aria-label={t(key)}
+                    className="relative flex h-[3.75rem] flex-col items-center justify-end pb-2 text-[10px] font-semibold text-mango-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="absolute -top-4 grid size-[60px] place-items-center rounded-full bg-mango-brand text-mango-ink shadow-mango ring-4 ring-mango-bg transition-transform duration-200 ease-out active:scale-95"
+                    >
+                      <Icon
+                        className="size-[26px]"
+                        strokeWidth={2.4}
+                        aria-hidden="true"
+                      />
+                    </span>
+                    <span className="max-w-full truncate">{t(key)}</span>
+                  </Link>
+                </li>
+              );
+            }
+
+            // ── Standard slots: home / pets / leaderboard / settings ──
             return (
               <li key={href}>
                 <Link
                   href={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex h-[3.75rem] min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
+                    "flex h-[3.75rem] min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep",
                     active
-                      ? "text-amber-700 dark:text-amber-300"
-                      : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
+                      ? "text-mango-brand dark:text-amber-300"
+                      : "text-mango-ink-2 hover:text-mango-ink dark:text-zinc-400 dark:hover:text-zinc-100",
                   )}
                 >
                   <Icon className="size-5" />
@@ -169,7 +216,7 @@ export function AppNav() {
         </ul>
       </nav>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — UNCHANGED in Phase 0.5 */}
       {drawerOpen && (
         <div
           className="fixed inset-0 z-40 flex items-end bg-black/40 md:hidden"
