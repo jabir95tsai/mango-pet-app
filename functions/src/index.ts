@@ -2115,3 +2115,213 @@ export const exportUserData = onCall(
     };
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// Engagement push helpers (Epic 5)
+// ─────────────────────────────────────────────────────────────────────
+
+/** Start-of-day in Asia/Taipei as a UTC Date. Taipei has no DST so a
+ *  fixed +08:00 offset is safe here. Cheaper than pulling Intl.DateTimeFormat
+ *  + parsing back. */
+function startOfTaipeiDay(now: Date): Date {
+  const TPE_OFFSET_MS = 8 * 60 * 60 * 1000;
+  const taipeiNow = now.getTime() + TPE_OFFSET_MS;
+  const dayStartTaipei = Math.floor(taipeiNow / 86_400_000) * 86_400_000;
+  return new Date(dayStartTaipei - TPE_OFFSET_MS);
+}
+
+type EngagementBody = { title: string; body: string };
+
+/** Send a push to one user, with the same token-cleanup pattern as
+ *  scanReminders (arrayRemove invalid tokens). Returns whether at least
+ *  one delivery succeeded. */
+async function sendEngagementPush(args: {
+  uid: string;
+  tokens: string[];
+  body: EngagementBody;
+  data?: Record<string, string>;
+  link?: string;
+}): Promise<{ ok: boolean; invalidCount: number }> {
+  const { uid, tokens, body, data, link } = args;
+  if (tokens.length === 0) return { ok: false, invalidCount: 0 };
+  const response = await messaging.sendEachForMulticast({
+    tokens,
+    notification: { title: body.title, body: body.body },
+    data: { ...(data ?? {}), ...(link ? { url: link } : {}) },
+    webpush: link ? { fcmOptions: { link } } : undefined,
+  });
+  const invalidTokens: string[] = [];
+  response.responses.forEach((r, idx) => {
+    if (!r.success && r.error) {
+      const code = r.error.code;
+      if (
+        code === "messaging/invalid-registration-token" ||
+        code === "messaging/registration-token-not-registered"
+      ) {
+        invalidTokens.push(tokens[idx]);
+      }
+    }
+  });
+  if (invalidTokens.length > 0) {
+    await db
+      .doc(`users/${uid}`)
+      .update({ fcmTokens: FieldValue.arrayRemove(...invalidTokens) });
+  }
+  return { ok: response.successCount > 0, invalidCount: invalidTokens.length };
+}
+
+/** Pick i18n copy for an engagement push based on user.locale. The
+ *  message bank lives here (server-side) — frontend doesn't render
+ *  these strings, only the Settings toggles read the i18n labels for
+ *  the section. Keys mirror messages/{locale}.json `Push.*` so wording
+ *  stays in sync (manual sync at edit time). */
+function pushCopy(
+  locale: string | undefined,
+  vars: Record<string, string | number>,
+  zh: { title: string; body: string },
+  en: { title: string; body: string },
+): EngagementBody {
+  const pick = locale === "en" ? en : zh;
+  const interp = (s: string) =>
+    s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ""));
+  return { title: interp(pick.title), body: interp(pick.body) };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// eveningWalkReminder — Phase 1 A1
+// Cron 20:00 Asia/Taipei. For each user with FCM tokens + at least one
+// pet + not opted out: if today's walk minutes < 30, push a nudge.
+// ─────────────────────────────────────────────────────────────────────
+
+const EVENING_WALK_REMINDER_TYPE = "evening-walk-reminder";
+const TODAY_GOAL_MIN = 30;
+
+export const eveningWalkReminder = onSchedule(
+  {
+    schedule: "0 20 * * *",
+    timeZone: "Asia/Taipei",
+    region: FUNCTION_REGION,
+    retryCount: 1,
+    memory: "256MiB",
+  },
+  async () => {
+    const now = new Date();
+    const startOfToday = startOfTaipeiDay(now);
+
+    // Pre-aggregate today's walk minutes per walker. One global query
+    // (cheap — `startedAt >=` over a day's worth of walks) beats N
+    // per-user queries.
+    const todaysWalksSnap = await db
+      .collectionGroup("walks")
+      .where("startedAt", ">=", Timestamp.fromMillis(startOfToday.getTime()))
+      .get();
+    const minutesByUid = new Map<string, number>();
+    for (const d of todaysWalksSnap.docs) {
+      const w = d.data();
+      // Prefer walkerUid (new schema); fall back to ownerUid for legacy
+      // docs migrated from the pre-family era.
+      const uid = (w.walkerUid as string) || (w.ownerUid as string);
+      if (!uid) continue;
+      const min = Number(w.durationMin) || 0;
+      minutesByUid.set(uid, (minutesByUid.get(uid) ?? 0) + min);
+    }
+
+    // Iterate every user — we have to read pushPrefs + a pet name per
+    // user anyway, so a single `users` scan is fine. Realistic user
+    // counts (low thousands) easily fit in memory.
+    const usersSnap = await db.collection("users").get();
+    let sent = 0;
+    let skippedNoToken = 0;
+    let skippedOptOut = 0;
+    let skippedAlreadyHit = 0;
+    let skippedNoPet = 0;
+    let failed = 0;
+
+    for (const userDoc of usersSnap.docs) {
+      const uid = userDoc.id;
+      const u = userDoc.data();
+      const tokens = ((u.fcmTokens ?? []) as string[]).filter(Boolean);
+      if (tokens.length === 0) {
+        skippedNoToken++;
+        continue;
+      }
+      const optOut = (u.pushPrefs?.engagementOptOut ?? []) as string[];
+      if (optOut.includes(EVENING_WALK_REMINDER_TYPE)) {
+        skippedOptOut++;
+        continue;
+      }
+      const todayMin = minutesByUid.get(uid) ?? 0;
+      if (todayMin >= TODAY_GOAL_MIN) {
+        skippedAlreadyHit++;
+        continue;
+      }
+
+      // Cheapest pet lookup: filter the user's pets in memory rather
+      // than asking Firestore to sort (avoids needing a composite index
+      // we don't currently have). Pet counts per user are tiny.
+      const petsSnap = await db
+        .collection("pets")
+        .where("ownerUid", "==", uid)
+        .get();
+      if (petsSnap.empty) {
+        skippedNoPet++;
+        continue;
+      }
+      const earliestPet = petsSnap.docs
+        .map((d) => d.data() as Record<string, unknown>)
+        .sort((a, b) => {
+          const ax = (a.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
+          const bx = (b.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
+          return ax - bx;
+        })[0];
+      const petName = (earliestPet?.name as string) || "Pet";
+
+      const copy = pushCopy(
+        u.locale as string | undefined,
+        { petName },
+        { title: "晚上遛狗提醒", body: "{petName} 今天還沒走滿 30 分鐘 🐶" },
+        { title: "Time to walk", body: "{petName} hasn't hit 30 min today 🐶" },
+      );
+
+      try {
+        const res = await sendEngagementPush({
+          uid,
+          tokens,
+          body: copy,
+          data: { type: EVENING_WALK_REMINDER_TYPE },
+          link: "/app/walks",
+        });
+        if (res.ok) sent++;
+        else failed++;
+      } catch (err) {
+        failed++;
+        logger.error(
+          `eveningWalkReminder: send failed for uid=${uid}`,
+          err,
+        );
+      }
+    }
+
+    // Audit doc — flat path under engagementPushes/{type}/waves/{ISO}.
+    const isoNow = now.toISOString();
+    await db
+      .doc(`engagementPushes/${EVENING_WALK_REMINDER_TYPE}/waves/${isoNow}`)
+      .set({
+        type: EVENING_WALK_REMINDER_TYPE,
+        ranAt: Timestamp.now(),
+        sentCount: sent,
+        failedCount: failed,
+        skippedNoToken,
+        skippedOptOut,
+        skippedAlreadyHit,
+        skippedNoPet,
+        userCount: usersSnap.size,
+      });
+
+    logger.info(
+      `eveningWalkReminder done — sent=${sent} failed=${failed} ` +
+        `optOut=${skippedOptOut} alreadyHit=${skippedAlreadyHit} ` +
+        `noPet=${skippedNoPet} noToken=${skippedNoToken}`,
+    );
+  },
+);

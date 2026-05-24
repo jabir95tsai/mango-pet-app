@@ -333,10 +333,7 @@ service cloud.firestore {
     // received what. Same client-locked posture as the other audit
     // collections above. Spec docs/features/
     // engagement-push-notifications.md Phase 4.
-    match /engagementPushes/{type}/{waveId}/{doc=**} {
-      allow read, write: if false;
-    }
-    match /engagementPushes/{type} {
+    match /engagementPushes/{document=**} {
       allow read, write: if false;
     }
 
