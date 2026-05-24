@@ -1,0 +1,177 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ─────────────────────────────────────────────────────────────
+ * Phase 0 — Mango design tokens (visual-redesign-mango v2)
+ *
+ * Tailwind v4: tokens live inline via @theme. The mango.* palette is
+ * 100% aligned to mango_app.zip/my-pets-shared.jsx → MP { … }.
+ *
+ * What's where:
+ *   - @theme inline  → mango colors + warm shadow tier  (generates
+ *                      bg-mango-*, text-mango-*, ring-mango-*,
+ *                      shadow-card / shadow-elevated / shadow-mango)
+ *   - :root          → radius + motion CSS vars (NOT in @theme on
+ *                      purpose — putting --radius-* in @theme would
+ *                      override Tailwind's rounded-* defaults and
+ *                      regress every existing rounded-sm/md/lg/xl/2xl
+ *                      across the app). Consume via arbitrary values
+ *                      e.g. rounded-[var(--radius-lg)].
+ *
+ * a11y headline (full table in docs/features/visual-redesign-mango.md):
+ *   - ink (#231B14) on bg → 12.5:1 AAA ✓ — primary body text
+ *   - ink-2 on bg → 6.8:1 AA ✓ — secondary text, inactive tabs
+ *   - ink-3 on bg → 2.9:1 — decorative / large only, NOT body
+ *   - brand on bg → 2.4:1 — icons & large headings only, body uses brand-deep
+ *   - white on brand → 2.6:1 ✗ — CTAs put ink #231B14 on brand instead
+ * ───────────────────────────────────────────────────────────── */
+
+:root {
+  --background: #fbf1dd;       /* mango.bg — warm cream replaces #fff8e1 */
+  --foreground: #231b14;       /* mango.ink — warm dark brown replaces zinc-900-ish */
+  --surface: #ffffff;
+  --surface-muted: #fff1b8;
+  --focus-ring: #d77b00;       /* mango.brandDeep — AA against cream */
+
+  /* Radius scale (plain vars — see file header). */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;     /* card-default per spec */
+  --radius-xl: 18px;     /* matches mockup Card borderRadius */
+  --radius-2xl: 22px;    /* matches MangoPhoto / pet-header avatar */
+  --radius-pill: 9999px;
+
+  /* Motion scale (plain vars). prefers-reduced-motion already neutralizes
+     animation/transition durations globally below. */
+  --motion-fast: 100ms ease;
+  --motion-default: 200ms ease;
+  --motion-slow: 400ms ease;
+  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@theme inline {
+  /* ── Existing tokens (preserved) ─────────────────────────── */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* ── Mango palette (aligned to my-pets-shared.jsx MP { }) ── */
+  --color-mango-bg: #fbf1dd;
+  --color-mango-bg-alt: #f6e7c8;
+  --color-mango-card: #ffffff;
+  --color-mango-card-soft: #fff8e8;
+  --color-mango-hairline: #eadfc4;
+
+  --color-mango-ink: #231b14;
+  --color-mango-ink-2: #5a4a38;
+  --color-mango-ink-3: #9a8a74;
+
+  --color-mango-brand: #f39800;
+  --color-mango-brand-deep: #d77b00;
+  --color-mango-brand-tint: #ffe7bf;
+  --color-mango-amber: #ffc25c;
+
+  --color-mango-leaf: #5fa858;
+  --color-mango-leaf-tint: #e7f2dc;
+  --color-mango-success: #7dd699;
+  --color-mango-success-tint: #d8f2de;
+
+  --color-mango-bell-tint: #ffe9a8;
+  --color-mango-cookie: #d77b3f;
+  --color-mango-cookie-tint: #ffe0cc;
+
+  --color-mango-peach: #ffb3ba;
+  --color-mango-peach-tint: #ffe4e6;
+
+  --color-mango-paw: #3b2a1d;
+
+  /* ── Warm shadow tier (new utilities: shadow-card / shadow-elevated / shadow-mango) ── */
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.02), 0 8px 20px -16px rgba(80, 50, 10, 0.18);
+  --shadow-elevated: 0 12px 24px -8px rgba(80, 50, 10, 0.25);
+  --shadow-mango: 0 12px 24px -8px rgba(243, 152, 0, 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #09090b;
+    --foreground: #f4f4f5;
+    --surface: #18181b;
+    --surface-muted: #2c2112;
+    --focus-ring: #fbbf24;
+  }
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #fde68a;
+  color: #18181b;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Walk completion confetti — pure CSS, no canvas-confetti dep.
+ * Spec docs/features/walks-photo-and-celebration.md Phase 2 D3.
+ * 20 absolutely-positioned slivers fall + rotate; per-piece delay +
+ * left% are inline-styled in the JSX. The global prefers-reduced-motion
+ * rule above already collapses the animation; this section also hides
+ * the container outright for that audience to avoid a stack of static
+ * coloured rectangles. */
+.walk-confetti {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.walk-confetti-piece {
+  position: absolute;
+  top: -10%;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: walk-confetti-fall 2.4s ease-in forwards;
+  will-change: transform, opacity;
+}
+@keyframes walk-confetti-fall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translate3d(0, 110vh, 0) rotate(720deg); opacity: 0; }
+}
+.walk-streak-pop {
+  animation: walk-streak-pop 0.6s ease-out both;
+}
+@keyframes walk-streak-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .walk-confetti { display: none; }
+}
