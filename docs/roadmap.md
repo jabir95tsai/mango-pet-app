@@ -9,8 +9,11 @@
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
 - **Epic 4: 視覺重設計（芒果主題）** — Phase 0 + 0.5 + 1 ✅ SHIPPED；**暫停**（user 切到推播設定工作）
-- **Epic 5: 推播通知設定**（新）— [`docs/features/push-notification-settings.md`](../features/push-notification-settings.md) DRAFT，5 decisions 等 user confirm
-  - 👉 **下個動作（user）**：confirm 5 decisions（或全採 PM 預設）→ PM 給對應 launch prompt
+- **Epic 5: 主動推播 — 提升用戶活躍**（新）— [`docs/features/engagement-push-notifications.md`](../features/engagement-push-notifications.md) **GO**
+  - 第一波 4 push types：A1 晚上遛狗提醒（20:00）+ A2 斷 streak 警告（22:00）+ B1 排名被超越 + B2 家人達標
+  - 5 decisions confirmed（user 加碼 A2 + B2），per-type opt-out 預設 ON，i18n zh/en
+  - PM 自我修正：上一輪 push-notification-settings.md 誤讀為「settings polish」已刪；本 spec 取代
+  - 👉 **下個動作（user）**：開新 Feature Builder session 用 PM 寫好的 launch prompt 動工，拆 phase ship（先 schema+UI → A1 → A2 → B1 → B2）
 
 ## Epic 4: 視覺重設計 — 芒果主題（user 2026-05-24 vision + 20 個答案）
 
