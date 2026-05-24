@@ -100,6 +100,16 @@ _目前沒有條目。下一個 PM session 過 Inbox 時新增。_
   - 沿用既有 i18n key `Walks.core.startWalk`（不新增）
 - **優先級提示**：P2（user 主動要求；不擋其他工作；純 UI 加 layer）
 - **PM 排序（2026-05-24）**：walks-v2 已 ship 完，這條接著做收尾 user 的「按鈕位置」需求；UI/UX session 可立即接，工作量 S
+- **✅ SHIPPED** `5c1429e`（UI/UX session 2026-05-24 ~11:19 push，App Hosting build 完成 ~11:30）
+  - 單檔改 `src/app/app/walks/page.tsx`：加 `<div className="fixed inset-x-0 z-20 border-t bg-white/95 backdrop-blur md:hidden ..." style={{bottom: "calc(env(safe-area-inset-bottom) + 3.75rem)"}}>` 包住一顆 `<Button>` 重用 Hero 的 `setSessionOpen(true)` handler；以 `{!sessionOpen && ...}` 守 tracking view 開啟時 unmount
+  - 配 `h-16 md:hidden` aria-hidden 的 spacer 避免 sticky 蓋住底部「手動補登」
+  - 沿用 `Walks.core.startWalking` i18n key（無新增）
+  - 0-寵物 自動跟著 Hero 同 path：page 早 `return <EmptyState />`，sticky 連同 Hero 都不渲染
+  - 驗證（Chrome MCP DOM probe + 視覺）：
+    - Desktop @ 2560×1317：`stickyFound: true`、`position: fixed`、`bottom: 60px`、**`md:hidden` → `display: none`**、`rect: 0×0`（正確隱藏，截圖無 sticky 視覺）
+    - Force-show（移除 md:hidden 模擬 mobile）：sticky bar 浮在 viewport 底部 73px 高、border-top + bg-white/95 + 橘色「開始遛狗」全寬，與既有 bottom nav 視覺一致
+    - Click Hero CTA → `trackingViewOpen: true`、`stickyStillInDom: false`，tracking view 接管全屏，sticky 自 DOM 完全 unmount（不只 hide）
+  - **未直接驗證**：mobile 真實 viewport 視覺（resize_window 對 maximized Chrome window 不生效，跟 walk-core / nav-reshuffle session 同環境限制）— DOM + force-show 已覆蓋結構與樣式
 
 ### Mobile bottom nav 重組：開銷→排行榜、更多按鈕→設定 link + 更多 drawer 移到設定右上角
 - **發現於**：2026-05-23、PM session（user 主動要求 UI 小修）
