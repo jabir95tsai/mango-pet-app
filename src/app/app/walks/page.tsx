@@ -463,8 +463,9 @@ export default function WalksPage() {
 
       {/* Mobile-only spacer so the sticky bottom CTA below can't cover
           the manual-log button when the user scrolls to the very end of
-          the page. Desktop has no sticky CTA so no spacer needed. */}
-      <div className="h-16 md:hidden" aria-hidden="true" />
+          the page. Grown from h-16 → h-24 alongside the sticky bottom
+          bump (3.75rem → 5.75rem) so the raised nav disc has clearance. */}
+      <div className="h-24 md:hidden" aria-hidden="true" />
 
       {/* Sticky bottom CTA — backlog "walks 頁加 sticky bottom CTA"
           (user 2026-05-24 解 A). Duplicates the Hero CTA so "Start
@@ -478,7 +479,9 @@ export default function WalksPage() {
         <div
           className="fixed inset-x-0 z-20 border-t border-mango-hairline bg-mango-card-soft/92 px-4 py-3 backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-950/95"
           style={{
-            bottom: "calc(env(safe-area-inset-bottom) + 3.75rem)",
+            // 3.75rem nav + 2rem so the sticky bar clears the raised
+            // walks-disc's 1rem protrusion + leaves a 1rem visual gap.
+            bottom: "calc(env(safe-area-inset-bottom) + 5.75rem)",
           }}
         >
           <Button

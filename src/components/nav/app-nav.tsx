@@ -176,11 +176,11 @@ export function AppNav() {
                     href={href}
                     aria-current={active ? "page" : undefined}
                     aria-label={t(key)}
-                    className="relative flex h-[3.75rem] flex-col items-center justify-end pb-2 text-[10px] font-semibold text-mango-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2"
+                    className="relative block h-[3.75rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2"
                   >
                     <span
                       aria-hidden="true"
-                      className="absolute -top-4 grid size-[60px] place-items-center rounded-full bg-mango-brand text-mango-ink shadow-mango ring-4 ring-mango-bg transition-transform duration-200 ease-out active:scale-95"
+                      className="absolute left-1/2 -top-4 grid size-[60px] -translate-x-1/2 place-items-center rounded-full bg-mango-brand text-mango-ink shadow-mango ring-4 ring-mango-bg transition-transform duration-200 ease-out active:scale-95"
                     >
                       <Icon
                         className="size-[26px]"
@@ -188,7 +188,6 @@ export function AppNav() {
                         aria-hidden="true"
                       />
                     </span>
-                    <span className="max-w-full truncate">{t(key)}</span>
                   </Link>
                 </li>
               );
