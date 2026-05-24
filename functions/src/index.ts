@@ -11,6 +11,7 @@
 
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
@@ -2686,6 +2687,195 @@ export const streakBreakWarning = onSchedule(
         `optOut=${skippedOptOut} walkedToday=${skippedAlreadyWalkedToday} ` +
         `shortStreak=${skippedShortStreak} noPet=${skippedNoPet} ` +
         `noToken=${skippedNoToken}`,
+    );
+  },
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// familyGoalMilestone — Phase 2.5 B2
+// onCreate(walks/{walkId}) trigger. When the walking user's today
+// minutes first crosses the 30-min daily goal AND they're in a
+// multi-member family, push a 🎉 to every OTHER family member.
+// Dedupe: userDailyStats/{uid}_{YYYY-MM-DD}.goalHitNotifiedAt — set
+// inside a transaction so a flurry of walks racing across the threshold
+// only ever fires one push wave.
+// ─────────────────────────────────────────────────────────────────────
+
+const FAMILY_MILESTONE_TYPE = "family-milestone";
+const FAMILY_MILESTONE_GOAL_MIN = 30;
+
+/** YYYY-MM-DD in Asia/Taipei wall-clock. Used as the daily-stats doc
+ *  id suffix; matches the Hero "today" semantics walk-tracking.ts uses
+ *  on the client. */
+function taipeiDateStamp(now: Date): string {
+  const TPE_OFFSET_MS = 8 * 60 * 60 * 1000;
+  const taipei = new Date(now.getTime() + TPE_OFFSET_MS);
+  // toISOString gives a UTC YYYY-MM-DD; after the offset shift, the
+  // UTC date matches the Taipei wall-clock date.
+  return taipei.toISOString().slice(0, 10);
+}
+
+export const familyGoalMilestone = onDocumentCreated(
+  {
+    document: "walks/{walkId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const walk = event.data?.data();
+    if (!walk) return;
+    const achieverUid = (walk.walkerUid as string) || (walk.ownerUid as string);
+    if (!achieverUid) return;
+    const familyId = walk.familyId as string | null | undefined;
+    // Spec: skip personal-mode walks outright (no family to notify).
+    if (!familyId) return;
+
+    // 1. Sum today's minutes for this user across all walks. Done
+    //    inside the trigger so we know whether the just-written walk
+    //    is the one that crossed the line.
+    const now = new Date();
+    const startOfToday = startOfTaipeiDay(now);
+    const todaysWalksSnap = await db
+      .collection("walks")
+      .where("walkerUid", "==", achieverUid)
+      .where("startedAt", ">=", Timestamp.fromMillis(startOfToday.getTime()))
+      .get();
+    let todayMin = 0;
+    for (const d of todaysWalksSnap.docs) {
+      todayMin += Number(d.data().durationMin) || 0;
+    }
+    if (todayMin < FAMILY_MILESTONE_GOAL_MIN) return;
+
+    // 2. Family membership lookup — bail if we're the only member.
+    const famSnap = await db.doc(`families/${familyId}`).get();
+    if (!famSnap.exists) return;
+    const memberUids =
+      ((famSnap.data()?.memberUids ?? []) as string[]).filter(Boolean);
+    const recipients = memberUids.filter((m) => m !== achieverUid);
+    if (recipients.length === 0) return;
+
+    // 3. Dedupe in a transaction — first writer wins, everyone else
+    //    bails before sending push. Doc id format matches the spec
+    //    (`{uid}_{YYYY-MM-DD}`) so a daily-stats client read is one
+    //    getDoc by id.
+    const statId = `${achieverUid}_${taipeiDateStamp(now)}`;
+    const statRef = db.doc(`userDailyStats/${statId}`);
+    const claimed = await db.runTransaction(async (tx) => {
+      const s = await tx.get(statRef);
+      if (s.exists && s.data()?.goalHitNotifiedAt) return false;
+      tx.set(
+        statRef,
+        { goalHitNotifiedAt: Timestamp.now(), achieverUid },
+        { merge: true },
+      );
+      return true;
+    });
+    if (!claimed) return;
+
+    // 4. Achiever profile (display name) + earliest pet (the name in
+    //    the copy). Same pattern as A1/A2.
+    const achieverDoc = await db.doc(`users/${achieverUid}`).get();
+    const achieverName =
+      (achieverDoc.data()?.displayName as string | undefined) || "Someone";
+    const petsSnap = await db
+      .collection("pets")
+      .where("ownerUid", "==", achieverUid)
+      .get();
+    const earliestPet = petsSnap.empty
+      ? null
+      : petsSnap.docs
+          .map((d) => d.data() as Record<string, unknown>)
+          .sort((a, b) => {
+            const ax =
+              (a.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
+            const bx =
+              (b.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
+            return ax - bx;
+          })[0];
+    const petName = (earliestPet?.name as string) || "Pet";
+
+    // 5. Push to each recipient (with per-recipient opt-out + token
+    //    cleanup).
+    let sent = 0;
+    let failed = 0;
+    let skippedNoToken = 0;
+    let skippedOptOut = 0;
+    const sentTo: string[] = [];
+
+    for (const recipientUid of recipients) {
+      const rDoc = await db.doc(`users/${recipientUid}`).get();
+      if (!rDoc.exists) continue;
+      const r = rDoc.data() ?? {};
+      const tokens = ((r.fcmTokens ?? []) as string[]).filter(Boolean);
+      if (tokens.length === 0) {
+        skippedNoToken++;
+        continue;
+      }
+      const optOut = (r.pushPrefs?.engagementOptOut ?? []) as string[];
+      if (optOut.includes(FAMILY_MILESTONE_TYPE)) {
+        skippedOptOut++;
+        continue;
+      }
+      const copy = pushCopy(
+        r.locale as string | undefined,
+        { achieverName, petName },
+        {
+          title: "家人達成今日目標 🎉",
+          body: "{achieverName} 完成 {petName} 今日目標了",
+        },
+        {
+          title: "Family hit today's goal 🎉",
+          body: "{achieverName} just hit today's goal for {petName}",
+        },
+      );
+      try {
+        const res = await sendEngagementPush({
+          uid: recipientUid,
+          tokens,
+          body: copy,
+          data: {
+            type: FAMILY_MILESTONE_TYPE,
+            achieverUid,
+            familyId,
+          },
+          link: "/app/leaderboard",
+        });
+        if (res.ok) {
+          sent++;
+          sentTo.push(recipientUid);
+        } else {
+          failed++;
+        }
+      } catch (err) {
+        failed++;
+        logger.error(
+          `familyGoalMilestone: send failed for recipient=${recipientUid}`,
+          err,
+        );
+      }
+    }
+
+    const isoNow = now.toISOString();
+    await db
+      .doc(`engagementPushes/${FAMILY_MILESTONE_TYPE}/waves/${isoNow}`)
+      .set({
+        type: FAMILY_MILESTONE_TYPE,
+        ranAt: Timestamp.now(),
+        achieverUid,
+        familyId,
+        recipientCount: recipients.length,
+        sentTo,
+        sentCount: sent,
+        failedCount: failed,
+        skippedNoToken,
+        skippedOptOut,
+      });
+
+    logger.info(
+      `familyGoalMilestone done — achiever=${achieverUid} family=${familyId} ` +
+        `recipients=${recipients.length} sent=${sent} failed=${failed} ` +
+        `optOut=${skippedOptOut} noToken=${skippedNoToken}`,
     );
   },
 );
