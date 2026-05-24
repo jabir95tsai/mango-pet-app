@@ -108,6 +108,18 @@ _目前沒有條目。下一個 PM session 過 Inbox 時新增。_
   - 改 desktop sidebar order
 - **優先級提示**：P1（user 主動要 + 對齊 product vision）
 - **PM 排序（2026-05-24）**：UI/UX session 可立即接，工作量 S。獨立工作，不擋其他
+- **✅ SHIPPED** `5856e18`（UI/UX session 2026-05-24）— 4 個 touchpoint 全翻 `/app/walks`：
+  - `src/app/page.tsx` `getNextPath` default fallback（無 `?next=` query 時的 fresh sign-in 路徑）
+  - `src/components/auth/sign-in-buttons.tsx` Props default（belt-and-suspenders）
+  - `src/app/onboarding/page.tsx` 3 處：skip / 完成 import / already-in-family fallback Link
+  - `public/manifest.json` `start_url`
+  - **未動**（spec 明確要求保留）：`app-nav.tsx` 的 home icon `href="/app"`；`/app` 頁本身（不 redirect）；`RequireAuth` 的 `?next=` 保留邏輯
+  - **Chrome MCP 驗證 production**：
+    - `/manifest.json` curl → `"start_url": "/app/walks"` ✓
+    - 已登入 user 訪問 `/` → finalUrl `/app/walks`（SignInButtons useEffect 用新 nextPath default）✓
+    - 訪問 `/app` → finalUrl `/app`、`didNotRedirect: true`、heading「🥭 芒果寵物」、feed + pets sections render ✓
+    - 確認 nav home icon 仍 `/app`：sidebar `href="/app"` + bottomBar `href="/app"` ✓
+  - **未直接驗證**（環境限制）：實際 sign-out + OAuth sign-in flow（需要使用者互動）+ PWA add-to-home-screen install（需要 OS）— 但已透過已登入 user 訪問 `/` 走 SignInButtons useEffect 同條 redirect path 證明 default landing 正確
 
 ### walks 頁加 sticky bottom CTA（解 A — user 2026-05-24 確認）
 - **發現於**：2026-05-24、PM session push-back of user「按鈕移到下方」原始需求 → user 選解 A
