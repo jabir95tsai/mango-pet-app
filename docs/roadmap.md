@@ -8,8 +8,9 @@
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- **Epic 4: 視覺重設計（芒果主題）** — Phase 0 + 0.5 + 1 ✅ SHIPPED；等 user review production + Phase 2 起改用 prototype-first workflow
-  - 👉 **下個動作（user）**：Chrome / iPhone 看 production walks 視覺 → 視覺 OK → PM 給 Claude Design Phase 2 pets prototype-first ping prompt
+- **Epic 4: 視覺重設計（芒果主題）** — Phase 0 + 0.5 + 1 ✅ SHIPPED；**暫停**（user 切到推播設定工作）
+- **Epic 5: 推播通知設定**（新）— [`docs/features/push-notification-settings.md`](../features/push-notification-settings.md) DRAFT，5 decisions 等 user confirm
+  - 👉 **下個動作（user）**：confirm 5 decisions（或全採 PM 預設）→ PM 給對應 launch prompt
 
 ## Epic 4: 視覺重設計 — 芒果主題（user 2026-05-24 vision + 20 個答案）
 
