@@ -8,8 +8,8 @@
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- **無 in-flight production 實作** — Epic 3 兩個主 spec 都 SHIPPED
-- 👉 **下個動工**：backlog「walks 頁加 sticky bottom CTA」（UI/UX, S）
+- **無 in-flight production 實作** — Epic 3 兩個主 spec + sticky CTA 都 SHIPPED
+- 👉 **下個動工**：backlog「Default landing → /app/walks」（UI/UX, S；最後一條 v2 backlog）
 
 ## ✅ Epic 3: 核心體驗 v2（user 2026-05-24 vision — 5 個需求結算）
 
@@ -19,9 +19,10 @@
 | 4. 吸引人元素（hero motivation） | ✅ SHIPPED | `7fde453` Phase 2（celebration + streak + encouragement）|
 | 5. 結算成就感 | ✅ SHIPPED | `7fde453`（同上 Phase 2）|
 | 2. 提醒搬家（+ 開銷搬家 + 動態整合首頁 + drawer 刪 feed） | ✅ SHIPPED | `e16e18e`(reminders 早期) + `9ff561d`(完整 IA reorg：feed 10 / expenses / drawer)|
-| 3. 開始按鈕移下方 → PM push-back → user 選解 A | 📝 backlog 條目（待 UI/UX 接）| — |
+| 3. 開始按鈕移下方 → PM push-back → user 選解 A → sticky bottom CTA | ✅ SHIPPED | `5c1429e` ui(walks): mobile sticky bottom Start CTA |
+| **6. Default landing 改為 /app/walks**（user 2026-05-24 加 — 對齊 walk-core vision）| 📝 backlog 條目（待 UI/UX 接）| — |
 
-**結算**：4/5 SHIPPED + 1 backlog 條目（解 A：sticky bottom CTA + 保留 Hero 大按鈕）
+**結算**：5/6 SHIPPED + 1 backlog 條目（default landing）
 
 **User 確認的 product decisions（PM 開放問題收尾）**：
 - D4 `/app/feed` 整頁：**保留**（drawer 沒入口，首頁「查看更多」連進去）✓
@@ -35,7 +36,7 @@
 | 家庭功能 | 2026-05-22 → 2026-05-23 | 6 ship + 2 cancel + 2 insert = 8/8 |
 | 核心體驗 v1（walk-core）| 2026-05-23 → 2026-05-24 | 1/1 ship + Screen Wake Lock fix |
 | 上架收尾 + backlog P2 | 2026-05-23 | 5/5 ship |
-| **核心體驗 v2（user 2026-05-24 vision）** | **2026-05-24** | **4/5 ship + 1 backlog（sticky CTA）** |
+| **核心體驗 v2（user 2026-05-24 vision）** | **2026-05-24** | **5/6 ship + 1 backlog（default landing）** |
 
 **累計**：4 epic / ~17 work items / ~40+ commits / 3 天 clock time
 

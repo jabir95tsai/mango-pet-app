@@ -85,6 +85,30 @@ _目前沒有條目。下一個 PM session 過 Inbox 時新增。_
 
 ## 已分類 — UI/UX 接
 
+### Default landing 改為 /app/walks（剛打開 app 直接到遛狗頁）
+- **發現於**：2026-05-24、user 主動要求
+- **類型**：UI 體驗 / routing
+- **重現 / 觀察**：User 原話「我想要剛打開 app 就是遛狗那一頁」。對齊 walks-core
+  principle「Mango Pet 的核心是遛狗」。目前登入後 default landing 是 `/app`
+  （home），但 walks 是核心動作 — 應該直接打開就到遛狗頁
+- **建議交付給**：UI/UX（routing 改動 + PWA manifest）
+- **改到的檔案**：
+  - 登入 callback / `(auth)` 路徑：redirect target 從 `/app` 改為 `/app/walks`
+    （grep `redirect.*\/app` 看實際 in 哪個 file — 通常在 sign-in callback / router push 處）
+  - `public/manifest.json`：`start_url` 從 `/app` 改 `/app/walks`（PWA 加主畫面 → 開啟直接 walks）
+  - `src/components/auth/require-auth.tsx`（如有 default route logic）
+- **PM 預設**：
+  - 登入後 default landing → `/app/walks`
+  - PWA `start_url` → `/app/walks`
+  - `/app` 直接訪問 **不 redirect**（user 從 nav 點 home icon 仍能進去看 feed timeline）
+  - Mobile bottom nav 第一個 **仍是 home icon → /app**（不破壞既有導航習慣）
+- **不在範圍**：
+  - 重組 mobile bottom nav primary slots
+  - 改 /app home page 內容（feed timeline 不變）
+  - 改 desktop sidebar order
+- **優先級提示**：P1（user 主動要 + 對齊 product vision）
+- **PM 排序（2026-05-24）**：UI/UX session 可立即接，工作量 S。獨立工作，不擋其他
+
 ### walks 頁加 sticky bottom CTA（解 A — user 2026-05-24 確認）
 - **發現於**：2026-05-24、PM session push-back of user「按鈕移到下方」原始需求 → user 選解 A
 - **類型**：體驗 / UI
