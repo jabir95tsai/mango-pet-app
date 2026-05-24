@@ -8,15 +8,16 @@
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- **Epic 4: 視覺重設計（芒果主題）** — 6 phases，Phase 0 design tokens 必先 ship
-  - 👉 **下個動工**：[視覺重設計 Phase 0 — design tokens](../features/visual-redesign-mango.md)（UI/UX, S）
+- **Epic 4: 視覺重設計（芒果主題）** — Phase 0 + 0.5 ✅ SHIPPED；等 user review production + ping Claude Design 拿 Phase 1 patch
+  - 👉 **下個動作（user）**：Chrome / iPhone 看 production 視覺確認 → 回 PM 一句「視覺 OK」→ PM 給 Claude Design ping 訊息拿 Phase 1 walks patch
 
 ## Epic 4: 視覺重設計 — 芒果主題（user 2026-05-24 vision + 20 個答案）
 
 | Phase | 內容 | 工作量 | 狀態 |
 |---|---|---|---|
-| **0** | Design tokens（tailwind config + globals.css mango / peach palette + radius / shadow / motion）| S | ✅ READY-FOR-DEV |
-| 1 | `/app/walks`（最高優先 — vision aligned）| S | 等 Phase 0 ship |
+| **0** | Design tokens（globals.css @theme inline mango palette + :root radius/motion vars — Tailwind v4 collapsed from spec's tailwind.config.ts plan）| S | ✅ **SHIPPED** `7baff73` |
+| **0.5** | Raised center walks tab + bg-mango-card-soft nav surface | S | ✅ **SHIPPED** `e1a7b60` |
+| 1 | `/app/walks` 套 mockup tone（warm cream bg + brand CTA + leaf success）| S | 📝 等 user review + Claude Design 給 patch |
 | 2 | `/app` + `/app/pets` + `/app/pets/[petId]` | M | 等 Phase 0 |
 | 3 | `/onboarding` + Landing + sign-in | M | 等 Phase 0 |
 | 4 | `/app/settings` + `/app/leaderboard` | M | 等 Phase 0 |
