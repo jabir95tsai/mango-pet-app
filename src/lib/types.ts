@@ -33,7 +33,30 @@ export type AppUser = {
   familyIds?: string[];
   /** Active family for filtering reads/writes. Falls back to familyIds[0]. */
   currentFamilyId?: string;
+  /** Engagement-push prefs. Namespace reserved so future additions
+   *  (quietHours, perPetOptOut, etc.) don't break existing reads.
+   *  See docs/features/engagement-push-notifications.md Phase 4. */
+  pushPrefs?: {
+    /** Push-type ids the user has opted OUT of. Absent / empty array =
+     *  all engagement pushes enabled. Strings, NOT enums, so adding a
+     *  new push type doesn't require a schema migration — the new id
+     *  just defaults to "ON" for everyone until they opt out. Current
+     *  values: "evening-walk-reminder", "streak-warning",
+     *  "rank-overtake", "family-milestone". */
+    engagementOptOut?: string[];
+  };
 };
+
+/** Engagement push type ids, kept in sync with cron / event-trigger
+ *  function names in functions/src/index.ts. Used as the value space
+ *  for `AppUser.pushPrefs.engagementOptOut`. */
+export const ENGAGEMENT_PUSH_TYPES = [
+  "evening-walk-reminder",
+  "streak-warning",
+  "rank-overtake",
+  "family-milestone",
+] as const;
+export type EngagementPushType = (typeof ENGAGEMENT_PUSH_TYPES)[number];
 
 // ── Families ──
 export type Family = {
@@ -329,6 +352,10 @@ export type LeaderboardEntry = {
   walkCount: number;
   streakDays: number;
   updatedAt: Timestamp;
+  /** Rank in the same period the previous aggregation produced. Used
+   *  by the rank-overtake engagement push (Phase 2 B1) to detect
+   *  yesterday-vs-today regressions. Absent on first aggregation. */
+  previousRank?: number;
 };
 
 // ── Knowledge ──

@@ -324,5 +324,35 @@ service cloud.firestore {
     match /displayNameLowerBackfills/{id} {
       allow read, write: if false;
     }
+
+    // ── engagementPushes audit log (admin/server-only) ──
+    // Written by the scheduled engagement-push functions
+    // (eveningWalkReminder / streakBreakWarning / aggregateLeaderboards
+    // rank-overtake branch / familyGoalMilestone) via Admin SDK. One
+    // doc per push wave keyed by {type}/{ISO} so we can audit who
+    // received what. Same client-locked posture as the other audit
+    // collections above. Spec docs/features/
+    // engagement-push-notifications.md Phase 4.
+    match /engagementPushes/{type}/{waveId}/{doc=**} {
+      allow read, write: if false;
+    }
+    match /engagementPushes/{type} {
+      allow read, write: if false;
+    }
+
+    // ── userDailyStats — per-user per-day flags (server writes only) ──
+    // Currently holds the `goalHitNotifiedAt` field used by the B2
+    // family-milestone push to dedupe (one push per achiever per day).
+    // Doc id format: `{uid}_{YYYY-MM-DD}` so the lookup is a single
+    // get() inside the trigger. Users can READ their own day to power
+    // future client-side stats; writes are admin-only.
+    match /userDailyStats/{statId} {
+      // statId is "{uid}_{YYYY-MM-DD}". A safe id-prefix match keeps
+      // user A from peeking at user B's stats while still allowing
+      // simple client `getDoc()` reads of their own.
+      allow read: if request.auth != null
+        && statId.matches("^" + request.auth.uid + "_.*$");
+      allow write: if false;
+    }
   }
 }

@@ -93,6 +93,31 @@ export async function getAppUser(uid: string): Promise<AppUser | null> {
   return snap.exists() ? (snap.data() as AppUser) : null;
 }
 
+/** Toggle one engagement-push type. ON ⇒ ensure the id is NOT in
+ *  `pushPrefs.engagementOptOut`; OFF ⇒ ensure it IS. We use
+ *  arrayUnion/arrayRemove so concurrent writes (two tabs flipping
+ *  different toggles) don't clobber each other. Spec
+ *  docs/features/engagement-push-notifications.md Phase 4. */
+export async function updateEngagementOptOut(
+  uid: string,
+  pushType: string,
+  optOut: boolean,
+): Promise<void> {
+  const { arrayRemove, arrayUnion, setDoc } = await import(
+    "firebase/firestore"
+  );
+  const ref = doc(getDb(), "users", uid);
+  await setDoc(
+    ref,
+    {
+      pushPrefs: {
+        engagementOptOut: optOut ? arrayUnion(pushType) : arrayRemove(pushType),
+      },
+    },
+    { merge: true },
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Delete account — D1 (full hard delete cascade)
 // ────────────────────────────────────────────────────────────────────

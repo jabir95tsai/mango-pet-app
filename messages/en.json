@@ -229,6 +229,28 @@
       "successToast": "Download started",
       "errorPrefix": "Download failed"
     },
+    "engagementPush": {
+      "title": "Engagement notifications",
+      "subtitle": "Let Mango Pet nudge you at the right moments — each type can be turned off independently.",
+      "loading": "Loading...",
+      "familyOnlyHint": "Join a family to receive family achievement alerts.",
+      "evening-walk-reminder": {
+        "label": "Evening walk reminder",
+        "hint": "8 PM, if today's walks are still under 30 minutes."
+      },
+      "streak-warning": {
+        "label": "Streak break warning",
+        "hint": "10 PM, when you have a 3+ day streak but haven't walked yet today."
+      },
+      "rank-overtake": {
+        "label": "Leaderboard overtake",
+        "hint": "After the nightly leaderboard refresh, if a family member just passed you."
+      },
+      "family-milestone": {
+        "label": "Family member hit today's goal",
+        "hint": "The moment a family member completes their 30-minute daily goal."
+      }
+    },
     "dangerZone": {
       "title": "Danger zone",
       "subtitle": "Actions below cannot be undone. Make sure you understand the consequences first.",
@@ -348,6 +370,22 @@
       "disabled": "Not enabled yet",
       "denied": "Blocked — re-enable notifications in your browser settings",
       "enabled": "Active — you'll get a push when reminders fire"
+    },
+    "eveningWalkReminder": {
+      "title": "Time to walk",
+      "body": "{petName} hasn't hit 30 min today 🐶"
+    },
+    "streakWarning": {
+      "title": "Don't break your streak 🔥",
+      "body": "Walk {petName} now or lose your {streak}-day streak"
+    },
+    "rankOvertake": {
+      "title": "You've been passed",
+      "body": "{overtakerName} just passed you on the leaderboard — keep going 💪"
+    },
+    "familyMilestone": {
+      "title": "Family hit today's goal 🎉",
+      "body": "{achieverName} just hit today's goal for {petName}"
     }
   },
   "Expense": {

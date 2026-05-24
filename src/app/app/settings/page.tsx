@@ -12,6 +12,7 @@ import {
 import { RouteHeader } from "@/components/nav/route-header";
 import { LanguageSwitcher } from "@/components/nav/language-switcher";
 import { PushToggle } from "@/components/settings/push-toggle";
+import { EngagementPushSection } from "@/components/settings/engagement-push-section";
 import { FamilySection } from "@/components/family/family-section";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ExportDataButton } from "@/components/settings/export-data-button";
@@ -80,6 +81,15 @@ export default function SettingsPage() {
         <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
           <PushToggle />
         </section>
+
+        {/* Engagement push opt-outs (spec Phase 3). Sits just below
+            the global PushToggle so the relationship is obvious — that
+            switch kills ALL push, this section narrows by type. */}
+        {user && (
+          <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+            <EngagementPushSection />
+          </section>
+        )}
 
         <section className="flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
           <div className="flex items-center gap-3">

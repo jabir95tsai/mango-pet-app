@@ -229,6 +229,28 @@
       "successToast": "已開始下載",
       "errorPrefix": "下載失敗"
     },
+    "engagementPush": {
+      "title": "主動推播",
+      "subtitle": "讓 Mango Pet 在重要時刻提醒你 — 每種類型都能單獨關閉。",
+      "loading": "載入中...",
+      "familyOnlyHint": "加入家庭後才能收到家人達標通知。",
+      "evening-walk-reminder": {
+        "label": "每天晚上遛狗提醒",
+        "hint": "晚上 20:00，如今日還沒走滿 30 分鐘。"
+      },
+      "streak-warning": {
+        "label": "斷 streak 警告",
+        "hint": "晚上 22:00，連續紀錄 3 天以上且今天還沒遛。"
+      },
+      "rank-overtake": {
+        "label": "排名被超越時通知",
+        "hint": "每日凌晨排行榜更新後，若有家人超越你。"
+      },
+      "family-milestone": {
+        "label": "家人達成今日目標",
+        "hint": "家庭成員完成今日 30 分鐘目標的當下通知你。"
+      }
+    },
     "dangerZone": {
       "title": "危險區",
       "subtitle": "下方操作不可復原。請確認你了解後果再進行。",
@@ -348,6 +370,22 @@
       "disabled": "尚未啟用",
       "denied": "瀏覽器已拒絕，請到瀏覽器設定開啟通知權限",
       "enabled": "已啟用，提醒到時會推播"
+    },
+    "eveningWalkReminder": {
+      "title": "晚上遛狗提醒",
+      "body": "{petName} 今天還沒走滿 30 分鐘 🐶"
+    },
+    "streakWarning": {
+      "title": "別斷掉 streak 🔥",
+      "body": "再不遛 {petName} 就斷 {streak} 天紀錄了"
+    },
+    "rankOvertake": {
+      "title": "你被超越了",
+      "body": "{overtakerName} 超越你了，加把勁追上吧 💪"
+    },
+    "familyMilestone": {
+      "title": "家人達成今日目標 🎉",
+      "body": "{achieverName} 完成 {petName} 今日目標了"
     }
   },
   "Expense": {
