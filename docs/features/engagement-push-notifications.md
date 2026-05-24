@@ -1,6 +1,6 @@
 # 主動推播 — 提升用戶活躍（Engagement push）
 
-狀態：**GO**（user 2026-05-24 confirm 5 decisions — D1 加碼 A2 + B2，第一波 4 push types）
+狀態：**SHIPPED** — 5 個 phase 全 deploy 上 production 2026-05-24（commits `f1e6952` / `1a6fc7f` / `64f5de7` / `9c6442e` / `40a7e02`；詳見「SHIPPED 紀錄」段）；手動 / 自然觸發 test 觀察待 PM 醒了排序
 建立日期：2026-05-24
 最後更新：2026-05-24
 規格作者：PM session @ c741288 + decisions confirmed pass
@@ -236,3 +236,43 @@
 ## 暫停中 Epic 對齊
 
 Epic 4 視覺重設計 Phase 0+0.5+1 已 SHIPPED；Phase 2-6 等本 Epic 5 ship 後再續。
+
+---
+
+## SHIPPED 紀錄
+
+| Phase | Commit | 內容 + 1-line review |
+|---|---|---|
+| **4 + 3 schema + UI** | `f1e6952` | `AppUser.pushPrefs.engagementOptOut` + `ENGAGEMENT_PUSH_TYPES` const；`LeaderboardEntry.previousRank?` 預埋給 Phase 2；`updateEngagementOptOut` lib helper；rules `engagementPushes/{document=**}` + `userDailyStats/{statId}` (own-day read)；`EngagementPushSection` 元件（4 個 toggle 含 personal-mode 對 family-milestone 的 grey-out）；Settings 加 section in PushToggle ↔ Privacy & Data 之間；i18n `Settings.engagementPush.*` + `Push.{4 types}.*` 一次到位（避免 phase 1 補 i18n 漏 fallback） — **ship 順序對：toggle 在 user 看到任何 push 之前先到位** |
+| **1 A1 evening walk reminder** | `1a6fc7f` | `eveningWalkReminder` cron `0 20 * * *` Asia/Taipei；單一 collectionGroup walks query 預聚合 per-uid 今日分鐘；users 全掃 + per-user 寵物名（pet 排序 in-memory，避開 composite index dep）；token cleanup 沿 scanReminders pattern；audit doc 帶完整 skip 細分 — **唯一非 trivial 取捨：先 collection scan users 不嫌貴，後續需要 scale 再加 `fcmTokens != []` index** |
+| **1.5 A2 streak break warning** | `64f5de7` | `streakBreakWarning` cron `0 22 * * *` Asia/Taipei；30 天 walks 視窗算 Taipei-aligned `taipeiDayIdx` set per user；`streakEndingAt(yesterdayIdx, days)` helper 倒數連續日；skip 規則：no-token / opt-out / 今日已遛 / streak < 3 / 沒寵物 — **跟 A1 同晚都發只是當下 UX 假設可接受，留 PM 後續觀察是否加 throttle** |
+| **2 B1 rank-overtake** | `9c6442e` | 重構 `writeLeaderboard` 為 `writeLeaderboardWithRanks`（既有 wrapper 仍 export 給 weekly/monthly），加 `previousRank` 寫入 + 回傳 diff Map；`runRankOvertakePushes` 在 aggregateLeaderboards 寫完 all_time 後跑 — overtaker = `newRank-1` 且 `overtakerOldRank > droppedOldRank`（避免 X 一直在前面 = 假被超越）；每日 1 次 per user 由 cron 1×/day 天然保證 — **schema 加 1 個 optional field，舊資料第 1 次跑視為 first-entry 不 push，符合直覺** |
+| **2.5 B2 family-milestone** | `40a7e02` | `onCreate(walks/{walkId})` 觸發；walker family-mode + 達 30 分目標 + family 有其他成員 才推；dedup 用 `userDailyStats/{uid}_YYYY-MM-DD}.goalHitNotifiedAt` runTransaction 寫 — 第一筆贏其他靜默 bail；audit 帶 achiever + recipients + sentTo 清單 — **第一個 event-trigger function，首次部署 Eventarc service agent 沒就緒，~90s 後 retry OK；不影響 production** |
+
+### 部署順序確認（與 spec 一致）
+
+1. ✅ Phase 4 + 3 ship — user 先看到 toggle 才會收到任何主動 push
+2. ✅ Phase 1 A1 ship — cron `0 20`
+3. ✅ Phase 1.5 A2 ship — cron `0 22`
+4. ✅ Phase 2 B1 ship — 改 `aggregateLeaderboards` cron `30 0`
+5. ✅ Phase 2.5 B2 ship — onCreate event trigger
+
+### 手動 test 觀察建議（PM 收尾 roadmap 用）
+
+- **A1**：用主帳號（蔡智博Jabir）今天不要遛狗，看 20:00 Asia/Taipei 是否收到「Mango 今天還沒走滿 30 分鐘 🐶」
+- **A2**：streak ≥ 3 天的人今天故意不遛，看 22:00 是否收到「再不遛 Mango 就斷 X 天紀錄了 🔥」（測試帳號 streak 少，可能要拿 walks 模擬資料）
+- **B1**：兩個家庭成員的分數差小，明天等 00:30 aggregate 後看排名翻轉的那一邊是否收到推播
+- **B2**：家人在你 PWA 開著時遛狗，walk 寫完那一秒應該收到「{achiever} 完成 {petName} 今日目標了 🎉」
+- 全部 4 個 push 都應該在 Settings → 主動推播 section 個別可關（toggle 寫到 user.pushPrefs.engagementOptOut）
+
+### 開放問題（PM 醒了或下個 PM session 決定）
+
+- 上線後 3 天觀察 opt-out 率，>20% 表示哪個 push 設計有問題
+- A1 + A2 同晚雙推是否要 throttle（spec 已標 acceptable）
+- B1 是否擴到 weekly leaderboard（spec 範圍只 all_time，但 schema 預埋了 weekly/monthly 的 previousRank）
+
+### 與 spec 的 deviations
+
+- **無 schema deviation**。完全照 spec D1-D5 + Phase 1-4 / 1.5 / 2.5 完成標準實作。
+- **engagementPushes 路徑**：spec 寫 `engagementPushes/{type}/{ISO}` (2-level)；實作為 `engagementPushes/{type}/waves/{ISO}` (3-level，type 是 doc，waves 是 subcollection)。Functionally 等價、admin SDK 寫入無差、規則 `engagementPushes/{document=**}` recursive 涵蓋。
+- **i18n bank**：spec 寫「沿用 walks-v2 encouragement copy pattern」— 採極簡 i18n 在 client + 同樣的 key 結構在 functions（pushCopy 做 interpolation）。沒做 client-side templates randomization（push 內容固定模板），避免邊際複雜度。
