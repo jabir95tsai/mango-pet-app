@@ -2,64 +2,69 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-24（user 2026-05-24 提 5 個新需求 → 開新 epic「核心體驗 v2」；含 PM push-back on 開始按鈕位置）
+最後更新：2026-05-24（Epic 3 核心體驗 v2 — walks-photo-and-celebration ✅ + Home+Pets IA reorg ✅；剩 sticky bottom CTA 一條 backlog 級工作）
 
 ## 進行中
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- **核心體驗 v2 epic**（新）— 2 個 spec ready，1 個 PM push-back 等 user 重評
-- 👉 **下個動工選擇**：見「Handoff 順序」（下方）
+- **無 in-flight production 實作** — Epic 3 兩個主 spec 都 SHIPPED
+- 👉 **下個動工**：backlog「walks 頁加 sticky bottom CTA」（UI/UX, S）
 
-## Epic 3: 核心體驗 v2（user 2026-05-24 vision）
+## ✅ Epic 3: 核心體驗 v2（user 2026-05-24 vision — 5 個需求結算）
 
-> User 主動提 5 個需求：拍照功能 / 提醒搬家 / 開始按鈕位置 / 吸引人元素 / 結算成就感
+| User 需求 | 結局 | Ship commit |
+|---|---|---|
+| 1. 拍照功能 | ✅ SHIPPED | `375ecba` Phase 1（schema/storage/lib）|
+| 4. 吸引人元素（hero motivation） | ✅ SHIPPED | `7fde453` Phase 2（celebration + streak + encouragement）|
+| 5. 結算成就感 | ✅ SHIPPED | `7fde453`（同上 Phase 2）|
+| 2. 提醒搬家（+ 開銷搬家 + 動態整合首頁 + drawer 刪 feed） | ✅ SHIPPED | `e16e18e`(reminders 早期) + `9ff561d`(完整 IA reorg：feed 10 / expenses / drawer)|
+| 3. 開始按鈕移下方 → PM push-back → user 選解 A | 📝 backlog 條目（待 UI/UX 接）| — |
 
-| 項目 | 工作量 | 角色 | 狀態 |
-|---|---|---|---|
-| **[遛狗體驗 v2 — 拍照 + 結算 celebration + Motivation](../features/walks-photo-and-celebration.md)** | M-L（拆 Phase 1 拍照 + Phase 2 celebration+motivation） | Feature Builder | ✅ READY-FOR-DEV（PM 5 decisions 預設）|
-| **[Home + Pets 頁 IA 重組](../features/reminders-to-pets-page.md)** — reminders + expenses 搬到 pets / feed 整合首頁 / 更多 drawer 刪 feed | M（從 S 升 — user 2026-05-24 加 2 需求）| UI/UX | ✅ READY-FOR-DEV（含 2 個開放問題：/app/feed + /app/expenses 整頁保留 vs 刪）|
-| **⚠️ 開始按鈕移到下方** | — | — | 🔴 **PM PUSH-BACK** — 違反 walk-core spec「3 秒看到開始」核心 principle，等 user 重評 |
+**結算**：4/5 SHIPPED + 1 backlog 條目（解 A：sticky bottom CTA + 保留 Hero 大按鈕）
 
-### 三個項目可並行（無檔案衝突）
-
-- walks-photo-and-celebration: `src/lib/types.ts`, `walks.ts`, `walk-tracking-view.tsx`, `walks/page.tsx`, `globals.css`
-- reminders-to-pets-page: `src/app/app/page.tsx`, `pets/page.tsx`, `pets/[petId]/page.tsx`
-- 兩者皆碰 `messages/*.json` 但 namespace 不同（`Walks.*` vs `Reminders.*`），不衝突
+**User 確認的 product decisions（PM 開放問題收尾）**：
+- D4 `/app/feed` 整頁：**保留**（drawer 沒入口，首頁「查看更多」連進去）✓
+- D5 `/app/expenses` 整頁：**保留**（drawer 仍有入口，當跨寵物總覽）✓
+- 開始按鈕位置：**解 A**（sticky bottom CTA + 上方 Hero 大按鈕都在）✓
 
 ## 🎉 已收尾 epic 速覽
 
 | Epic | 期間 | 結算 |
 |---|---|---|
 | 家庭功能 | 2026-05-22 → 2026-05-23 | 6 ship + 2 cancel + 2 insert = 8/8 |
-| 核心體驗 v1（walk-core）| 2026-05-23 → 2026-05-24 | 1/1 ship + 1 順手 fix（Wake Lock）|
+| 核心體驗 v1（walk-core）| 2026-05-23 → 2026-05-24 | 1/1 ship + Screen Wake Lock fix |
 | 上架收尾 + backlog P2 | 2026-05-23 | 5/5 ship |
+| **核心體驗 v2（user 2026-05-24 vision）** | **2026-05-24** | **4/5 ship + 1 backlog（sticky CTA）** |
 
-**累計**：3 epic / 13 work items / ~30+ commits / 2-3 天 clock time
+**累計**：4 epic / ~17 work items / ~40+ commits / 3 天 clock time
 
-（詳細 commit 對應表見 git log 跟既有 spec 末尾 SHIPPED 段）
+## 下個方向候選（sticky CTA 收完後）
 
-## 下個方向候選（核心體驗 v2 收完後）
-
-### Option A: PRD §6 上架條件剩下
+### Option A: PRD §6 上架條件剩下（PM 主推）
 
 - 隱私 / 服務條款內容審查（PM 寫內容）
 - 自訂網域 + DNS（要花錢買網域）
 - App Check 防 API key 盜用
 - Lighthouse audit > 90
 
-### Option B: walk-core follow-ups（之前 user 提過）
+### Option B: walks 延伸 follow-ups
 
-- 遛狗推播提醒「今天還沒遛」（跨 reminders / push）
+- 遛狗推播提醒「今天還沒遛」
 - 追蹤中 reload 恢復 tracking state
 - 歷史紀錄分頁查看更多
 - Family mode 加總 walk 進度
+- Orphan walk photos GC（walks-v2 ship 後 user 中斷 walk 留下 Storage 殘留）
 
 ### Option C: 新方向
 
 - 餐廳 Google Places 整合
 - 知識庫持續產出
 - Analytics / 北極星指標接線
+
+### Option D: 休息觀察 1-2 天（PM 上次推薦的）
+
+3 個 epic 加 v2 = 大量 production 變動。實測一下看是否有 bug。
 
 ## 想做但還沒規格
 
@@ -74,7 +79,7 @@
 - 追蹤中 reload 恢復 tracking state
 - 歷史紀錄分頁查看更多
 - Family mode 加總 walk 進度
-- Orphan walk photos GC（walk-experience-v2 ship 後若 user 中斷 walk 留下 Storage 殘留）
+- Orphan walk photos GC
 
 ## 不做（拒絕清單）
 
@@ -89,8 +94,11 @@
 - **開銷 payer 分析卡**（2026-05-23 取消）
 - **walk-core 內把分數作為核心目標**（2026-05-23 拿掉）
 - **walk-core 內把公里數當主要進度條目標**（2026-05-23 拿掉）
-- **walks-photo-and-celebration 內加影片錄製 / 即時定位分享 / 路徑回放 / 天氣 API 整合 / 季節主題 / 競爭性元素**（2026-05-24 spec 排除）
-- **walks-photo-and-celebration 內加自訂鼓勵文案**（2026-05-24 — over-engineering，預設 i18n 集合就好）
+- **walks-v2 內加影片錄製 / 即時定位分享 / 路徑回放 / 天氣 API 整合 / 季節主題 / 競爭性元素**（2026-05-24 排除）
+- **walks-v2 內加自訂鼓勵文案**（2026-05-24 — over-engineering）
+- **開始遛狗按鈕真的移到下方（沒上方 hero CTA）**（2026-05-24 PM push-back，user 選解 A 改 sticky bottom + 保留 hero）— 違反 walk-core spec「3 秒看到開始」原則
+- **首頁 feed 只顯示家庭內 posts**（2026-05-24 IA reorg 採 D2 預設：家庭 + friends + public 混合）— 弱化 social
+- **/app/feed 或 /app/expenses 整頁刪除**（2026-05-24 user 確認 D4/D5 都保留）
 
 ## 北極星指標
 
@@ -99,6 +107,6 @@
 - AI 收據掃描成功率
 - 推播 opt-in 率
 - 每日遛狗完成率（達標 30 分鐘 user / 活躍 user）
-- **新**：walks doc 內 `photoURLs.length > 0` 的比例（walk-experience-v2 ship 後）
+- walks doc 內 `photoURLs.length > 0` 的比例（walks-v2 ship 後）
 
 > 還沒接 analytics — 目前只能定性觀察。

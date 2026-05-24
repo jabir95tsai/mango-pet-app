@@ -85,6 +85,22 @@ _目前沒有條目。下一個 PM session 過 Inbox 時新增。_
 
 ## 已分類 — UI/UX 接
 
+### walks 頁加 sticky bottom CTA（解 A — user 2026-05-24 確認）
+- **發現於**：2026-05-24、PM session push-back of user「按鈕移到下方」原始需求 → user 選解 A
+- **類型**：體驗 / UI
+- **重現 / 觀察**：User 原本想「把開始遛狗按鈕移到下方」，PM push-back 因為違反 walk-core spec 的「3 秒看到開始」核心 principle。User 選**解 A**：
+  - **上方仍是 Hero 大按鈕「開始遛狗」**（保留 walk-core v1 設計，不動）
+  - **新增 sticky bottom CTA「開始遛狗」**固定在 mobile viewport 底部，符合 iPhone thumb reach
+  - Desktop 不顯示 sticky bottom（sidebar 已含 walks link，沒必要）
+- **建議交付給**：UI/UX
+  - 改 `src/app/app/walks/page.tsx`：加 sticky bottom button container（`fixed bottom-0 left-0 right-0 md:hidden` + safe-area-inset-bottom）
+  - 按鈕跟既有 Hero 按鈕點擊行為相同（都觸發 walk-tracking-view 開啟）
+  - 追蹤中 (tracking-view 開啟) 時 sticky bottom **隱藏**（已是 full-screen tracking）
+  - 完成畫面 / 0-pet empty state / 0-寵物 disabled 狀態都對齊既有 Hero 按鈕邏輯
+  - 沿用既有 i18n key `Walks.core.startWalk`（不新增）
+- **優先級提示**：P2（user 主動要求；不擋其他工作；純 UI 加 layer）
+- **PM 排序（2026-05-24）**：walks-v2 已 ship 完，這條接著做收尾 user 的「按鈕位置」需求；UI/UX session 可立即接，工作量 S
+
 ### Mobile bottom nav 重組：開銷→排行榜、更多按鈕→設定 link + 更多 drawer 移到設定右上角
 - **發現於**：2026-05-23、PM session（user 主動要求 UI 小修）
 - **類型**：體驗 / UI 重組
