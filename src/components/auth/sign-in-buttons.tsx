@@ -129,7 +129,7 @@ type Props = {
   nextPath?: string;
 };
 
-export function SignInButtons({ nextPath = "/app" }: Props) {
+export function SignInButtons({ nextPath = "/app/walks" }: Props) {
   const t = useTranslations("Auth");
   const router = useRouter();
   const { user } = useAuth();

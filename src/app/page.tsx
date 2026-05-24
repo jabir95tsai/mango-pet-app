@@ -11,11 +11,18 @@ type Props = {
 function getNextPath(next: string | string[] | undefined): string {
   const value = Array.isArray(next) ? next[0] : next;
 
+  // Honour the original requested path when RequireAuth bounced the user
+  // through here (?next=/app/...) — they explicitly tried to reach that
+  // page, so post-sign-in we should deliver them there.
   if (value === "/app" || value?.startsWith("/app/")) {
     return value;
   }
 
-  return "/app";
+  // Default landing for fresh sign-ins (no ?next= query) — spec
+  // docs/team/backlog.md "Default landing 改為 /app/walks":
+  // walks is the product's core action ("Mango Pet 的核心是遛狗"), so
+  // opening the app should drop the user there, not on the overview.
+  return "/app/walks";
 }
 
 export default async function Home({ searchParams }: Props) {

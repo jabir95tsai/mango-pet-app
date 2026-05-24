@@ -54,7 +54,7 @@ function OnboardingInner() {
   async function handleImportComplete() {
     setPendingImportFamilyId(null);
     await refresh();
-    router.replace("/app");
+    router.replace("/app/walks");
   }
 
   // If the user already has a family, this page isn't relevant — send
@@ -65,7 +65,7 @@ function OnboardingInner() {
       <div className="mx-auto max-w-md p-6 text-center text-sm text-zinc-500">
         <p>{t("alreadyInFamily")}</p>
         <Link
-          href="/app"
+          href="/app/walks"
           className="mt-4 inline-flex items-center gap-1 text-amber-700 hover:underline dark:text-amber-300"
         >
           {t("goToApp")} <ArrowRight className="size-4" />
@@ -103,7 +103,7 @@ function OnboardingInner() {
         />
         <button
           type="button"
-          onClick={() => router.replace("/app")}
+          onClick={() => router.replace("/app/walks")}
           className="mt-2 self-center text-sm text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
         >
           {t("skipAction")}

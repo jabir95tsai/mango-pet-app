@@ -2,7 +2,7 @@
   "name": "Mango Pet — 芒果寵物",
   "short_name": "Mango Pet",
   "description": "Track, share, and discover life with your pets.",
-  "start_url": "/app",
+  "start_url": "/app/walks",
   "scope": "/",
   "display": "standalone",
   "background_color": "#FFF6E5",
