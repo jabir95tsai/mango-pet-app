@@ -242,18 +242,57 @@ async function writeLeaderboard(
   periodKey: string,
   accums: Map<string, UserAccum>,
 ): Promise<void> {
+  await writeLeaderboardWithRanks(periodKey, accums);
+}
+
+/** Writes a leaderboard period AND tracks per-uid rank diffs. The
+ *  written `previousRank` field is THIS run's rank — next run reads
+ *  it back as "the rank you had a moment ago" for the B1 (Phase 2)
+ *  rank-overtake push. Returns the diff so the caller can wire push
+ *  logic without re-querying. */
+async function writeLeaderboardWithRanks(
+  periodKey: string,
+  accums: Map<string, UserAccum>,
+): Promise<{
+  /** Each uid → rank as stored on the existing entry (i.e., the rank
+   *  written by the *previous* aggregation run). Missing = first time
+   *  we're seeing this uid on this leaderboard. */
+  oldPreviousRanks: Map<string, number>;
+  /** Each uid → rank we're about to write (1-indexed). */
+  newRanks: Map<string, number>;
+}> {
   const now = Timestamp.now();
   const collection = db.collection(`leaderboards/${periodKey}/entries`);
 
-  // Clear stale entries (anyone no longer in top scores)
+  // 1. Read existing entries — both for the cleanup pass below AND
+  //    to capture each uid's `previousRank` for the diff.
   const existing = await collection.get();
+  const oldPreviousRanks = new Map<string, number>();
+  for (const doc of existing.docs) {
+    const prev = doc.data().previousRank;
+    if (typeof prev === "number") oldPreviousRanks.set(doc.id, prev);
+  }
+
+  // 2. Compute today's rank (1-indexed, totalScore DESC, ties broken
+  //    by uid for determinism).
+  const sortedUids = [...accums.entries()]
+    .sort(([uidA, a], [uidB, b]) => {
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+      return uidA < uidB ? -1 : uidA > uidB ? 1 : 0;
+    })
+    .map(([uid]) => uid);
+  const newRanks = new Map<string, number>();
+  sortedUids.forEach((uid, i) => newRanks.set(uid, i + 1));
+
+  // 3. Same write pattern as before, plus the `previousRank` field
+  //    (this run's rank — next run reads it back as "previous").
   const currentUids = new Set(accums.keys());
   const batch = db.batch();
   for (const doc of existing.docs) {
     if (!currentUids.has(doc.id)) batch.delete(doc.ref);
   }
-
   for (const a of accums.values()) {
+    const rank = newRanks.get(a.uid) ?? 0;
     batch.set(collection.doc(a.uid), {
       uid: a.uid,
       displayName: a.displayName,
@@ -265,10 +304,12 @@ async function writeLeaderboard(
       walkCount: a.walkCount,
       streakDays: streakFromDays(a.walkDays),
       updatedAt: now,
+      previousRank: rank,
     });
   }
-
   await batch.commit();
+
+  return { oldPreviousRanks, newRanks };
 }
 
 export const aggregateLeaderboards = onSchedule(
@@ -380,17 +421,156 @@ export const aggregateLeaderboards = onSchedule(
       }
     }
 
-    await Promise.all([
+    // Weekly + monthly use the same writer (they need previousRank
+    // stored too if we ever want per-period overtake push, but Phase 2
+    // B1 only acts on all_time per spec). all_time goes through the
+    // diff-returning variant so we can push to anyone who dropped.
+    const [, , allTimeResult] = await Promise.all([
       writeLeaderboard(weekKey, weekly),
       writeLeaderboard(monthKey, monthly),
-      writeLeaderboard("all_time", allTime),
+      writeLeaderboardWithRanks("all_time", allTime),
     ]);
 
     logger.info(
       `aggregateLeaderboards done — weekly=${weekly.size}, monthly=${monthly.size}, all=${allTime.size}`,
     );
+
+    // Phase 2 B1 — rank-overtake push. Runs against all_time only.
+    await runRankOvertakePushes(allTimeResult, allTime);
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// rank-overtake push helper — Phase 2 B1
+// ─────────────────────────────────────────────────────────────────────
+
+const RANK_OVERTAKE_TYPE = "rank-overtake";
+
+/** For each user who dropped in rank since the previous aggregation
+ *  run, push "{overtakerName} 超越你了". One push per dropped user per
+ *  day (naturally enforced — aggregateLeaderboards runs once per day).
+ *
+ *  Overtaker = whoever currently sits at `newRank - 1` (the rank
+ *  immediately above the dropped user) AND was behind them in the
+ *  previous aggregation. If nobody fits that pattern (e.g., dropped
+ *  user is rank 1 → there's no `newRank-1`) we skip — the push only
+ *  fires when we have a real name to attribute the overtake to. */
+async function runRankOvertakePushes(
+  result: {
+    oldPreviousRanks: Map<string, number>;
+    newRanks: Map<string, number>;
+  },
+  accums: Map<string, UserAccum>,
+): Promise<void> {
+  const newRankToUid = new Map<number, string>();
+  for (const [uid, rank] of result.newRanks) newRankToUid.set(rank, uid);
+
+  let sent = 0;
+  let failed = 0;
+  let skippedNoToken = 0;
+  let skippedOptOut = 0;
+  let skippedNoDrop = 0;
+  let skippedNoOvertaker = 0;
+  let skippedNewEntry = 0;
+
+  for (const [uid, newRank] of result.newRanks) {
+    const oldRank = result.oldPreviousRanks.get(uid);
+    if (oldRank == null) {
+      skippedNewEntry++;
+      continue;
+    }
+    if (newRank <= oldRank) {
+      skippedNoDrop++;
+      continue;
+    }
+
+    // Overtaker = user at the rank immediately above the dropped user.
+    const overtakerUid = newRankToUid.get(newRank - 1);
+    if (!overtakerUid) {
+      skippedNoOvertaker++;
+      continue;
+    }
+    // …who must have been BEHIND this user previously (otherwise they
+    // didn't "overtake" — they just stayed ahead or both moved).
+    const overtakerOldRank = result.oldPreviousRanks.get(overtakerUid);
+    if (overtakerOldRank != null && overtakerOldRank <= oldRank) {
+      skippedNoOvertaker++;
+      continue;
+    }
+
+    const userDoc = await db.doc(`users/${uid}`).get();
+    if (!userDoc.exists) continue;
+    const u = userDoc.data() ?? {};
+    const tokens = ((u.fcmTokens ?? []) as string[]).filter(Boolean);
+    if (tokens.length === 0) {
+      skippedNoToken++;
+      continue;
+    }
+    const optOut = (u.pushPrefs?.engagementOptOut ?? []) as string[];
+    if (optOut.includes(RANK_OVERTAKE_TYPE)) {
+      skippedOptOut++;
+      continue;
+    }
+
+    const overtakerName = accums.get(overtakerUid)?.displayName || "Someone";
+
+    const copy = pushCopy(
+      u.locale as string | undefined,
+      { overtakerName },
+      {
+        title: "你被超越了",
+        body: "{overtakerName} 超越你了，加把勁追上吧 💪",
+      },
+      {
+        title: "You've been passed",
+        body: "{overtakerName} just passed you on the leaderboard — keep going 💪",
+      },
+    );
+
+    try {
+      const res = await sendEngagementPush({
+        uid,
+        tokens,
+        body: copy,
+        data: {
+          type: RANK_OVERTAKE_TYPE,
+          overtakerUid,
+          oldRank: String(oldRank),
+          newRank: String(newRank),
+        },
+        link: "/app/leaderboard",
+      });
+      if (res.ok) sent++;
+      else failed++;
+    } catch (err) {
+      failed++;
+      logger.error(`rankOvertake: send failed for uid=${uid}`, err);
+    }
+  }
+
+  const isoNow = new Date().toISOString();
+  await db
+    .doc(`engagementPushes/${RANK_OVERTAKE_TYPE}/waves/${isoNow}`)
+    .set({
+      type: RANK_OVERTAKE_TYPE,
+      ranAt: Timestamp.now(),
+      sentCount: sent,
+      failedCount: failed,
+      skippedNoToken,
+      skippedOptOut,
+      skippedNoDrop,
+      skippedNoOvertaker,
+      skippedNewEntry,
+      candidateUserCount: result.newRanks.size,
+    });
+
+  logger.info(
+    `rankOvertake done — sent=${sent} failed=${failed} ` +
+      `optOut=${skippedOptOut} noDrop=${skippedNoDrop} ` +
+      `noOvertaker=${skippedNoOvertaker} newEntry=${skippedNewEntry} ` +
+      `noToken=${skippedNoToken}`,
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // Friend operations — callable (need cross-user writes)
