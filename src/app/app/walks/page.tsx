@@ -332,17 +332,21 @@ export default function WalksPage() {
           </div>
         )}
 
+        {/* Hero CTA — desktop only. Mobile relies on the sticky bottom CTA
+            (renders below) so the user only sees one Start button at a time.
+            Desktop has no sticky (md:hidden there) so the Hero CTA stays
+            as the start button. */}
         <Button
           onClick={() => setSessionOpen(true)}
           size="lg"
-          className="h-14 w-full text-base font-semibold sm:text-lg"
+          className="hidden h-14 w-full text-base font-semibold sm:text-lg md:inline-flex"
         >
           <Play className="size-5" />
           {tW("startWalking")}
         </Button>
 
         {pets.length > 1 && lastWalkedName && (
-          <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="hidden text-center text-xs text-zinc-500 md:block dark:text-zinc-400">
             {tW("lastWalkedWith", { name: lastWalkedName })}
           </p>
         )}
