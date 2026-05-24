@@ -1,8 +1,19 @@
 # 視覺重設計 — 芒果主題（Mango Visual Redesign）
 
-狀態：READY-FOR-DEV（user 2026-05-24 提供 ZIP mockup + 「喜歡 Variant B」+「底部中間凸顯」→ PM v2 重寫）
+狀態：READY-FOR-DEV（user 2026-05-24 提供 ZIP mockup + 「喜歡 Variant B」+「底部中間凸顯」→ PM v2 重寫；Claude Design 2026-05-24 產 Phase 0+0.5 patch in `patches/` 含 6 個 PM-accepted resolutions）
 建立日期：2026-05-24
-最後更新：2026-05-24（v2 — palette 改用 ZIP mockup tone + 加 raised center tab + Variant B pet page pattern）
+最後更新：2026-05-24（v2.1 — Claude Design adapt notes 加進 spec 反映 6 resolutions）
+
+## ⚠️ Claude Design 2026-05-24 的 6 個 resolutions（PM 全接受）
+
+Claude Design 環境讀 patches/ 三檔（README.md / globals.css / app-nav.tsx）時做了 6 個 design decisions / spec 修正，PM 全接受。Spec 原文有以下需修正：
+
+1. **Tailwind v4，沒 tailwind.config.ts** — Phase 0 tokens 合進 `globals.css @theme inline`，不另建 config file。Spec 原寫「tailwind.config.ts theme.extend.colors」是錯的（PM 沒 verify v3 vs v4）
+2. **Radius/motion 不放 @theme** — 避免 silently override Tailwind defaults (rounded-md/lg etc) 全 app 視覺漂移。改用 `:root` plain CSS vars + 後續 phase 用 `rounded-[var(--radius-lg)]` arbitrary values consume
+3. **Raised button icon = `text-mango-ink` (#231B14) 不是白色** — Spec a11y table 明確說「白字 on #F39800 不過 AA」，但 Phase 0.5 描述卻寫「white Footprints icon」自相矛盾。Claude Design 抓到並選 a11y 一致（ink-on-brand 7.6:1 AAA）
+4. **Border 4px → `ring-4 ring-mango-bg`** — Tailwind atomic ring 取代 `border 4px solid mango.bg`；no layout shift + 視覺等效
+5. **Raised label 永遠 brand-colored 不跟 active state 切換** — 中間 disc 本身是 destination indicator；gating label color 會 navigation 時 flicker。其他 4 tab 仍 respect active 狀態
+6. **Mobile nav surface = `bg-mango-card-soft/92 backdrop-blur-md`** — 對齊 mockup TabBar 1:1 (`rgba(255,247,228,0.92) + blur(20px)`)，不是純白
 規格作者：PM session @ d6e9955
 角色：UI/UX 工程師（主，整 stack 視覺範圍）— 可動 `src/app/**/*.tsx`、`src/components/**`、`src/app/globals.css`、`tailwind.config.ts`、`messages/*`；**不碰** `src/lib/firebase/*` / `functions/` / `firestore.rules` / schema / indexes
 工作量：**XL**（6 phases，可獨立 ship per phase）
