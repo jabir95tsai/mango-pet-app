@@ -2325,3 +2325,187 @@ export const eveningWalkReminder = onSchedule(
     );
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// streakBreakWarning — Phase 1.5 A2
+// Cron 22:00 Asia/Taipei. For each user with streak ≥ 3 days (as of
+// yesterday) AND zero walks today: nudge them with "你 X 天 streak
+// 即將斷". Uses Taipei-aligned day buckets so a user walking at Taipei
+// 23:00 still counts as "today" instead of leaking into the next UTC
+// day.
+// ─────────────────────────────────────────────────────────────────────
+
+const STREAK_WARNING_TYPE = "streak-warning";
+const STREAK_MIN_DAYS = 3;
+/** Trailing window we pull walks from to compute streak. A 30-day
+ *  window covers the longest realistic streak — users with 30+ day
+ *  streaks are vanishingly rare and the worst-case wrong answer is
+ *  "we under-counted your streak", which only ever makes the nudge
+ *  LESS likely to fire. Cheap enough to not bother widening. */
+const STREAK_LOOKBACK_DAYS = 30;
+
+/** Day bucket aligned to Asia/Taipei wall-clock days. +08:00 offset
+ *  is constant (no DST) so a simple shift works. */
+function taipeiDayIdx(ms: number): number {
+  return Math.floor((ms + 8 * 3_600_000) / 86_400_000);
+}
+
+/** Counts consecutive walk-days ending at `lastIdx` (inclusive), going
+ *  backwards through the supplied set of day indices. Returns 0 if
+ *  `lastIdx` itself isn't a walk-day — used by A2 to read "streak as
+ *  of yesterday", which is 0 when the user didn't actually walk
+ *  yesterday either. */
+function streakEndingAt(lastIdx: number, walkDays: Set<number>): number {
+  if (!walkDays.has(lastIdx)) return 0;
+  let streak = 1;
+  let day = lastIdx - 1;
+  while (walkDays.has(day)) {
+    streak++;
+    day--;
+  }
+  return streak;
+}
+
+export const streakBreakWarning = onSchedule(
+  {
+    schedule: "0 22 * * *",
+    timeZone: "Asia/Taipei",
+    region: FUNCTION_REGION,
+    retryCount: 1,
+    memory: "256MiB",
+  },
+  async () => {
+    const now = new Date();
+    const todayIdx = taipeiDayIdx(now.getTime());
+    const yesterdayIdx = todayIdx - 1;
+    const since = new Date(
+      now.getTime() - STREAK_LOOKBACK_DAYS * 86_400_000,
+    );
+
+    // Pre-aggregate walk days per uid — once per uid, regardless of
+    // walk count. We index by Taipei day-bucket so per-user `walkDays`
+    // sets feed both checks cleanly: "did they walk today?" and
+    // "streak as of yesterday".
+    const walksSnap = await db
+      .collectionGroup("walks")
+      .where("startedAt", ">=", Timestamp.fromMillis(since.getTime()))
+      .get();
+    const daysByUid = new Map<string, Set<number>>();
+    for (const d of walksSnap.docs) {
+      const w = d.data();
+      const uid = (w.walkerUid as string) || (w.ownerUid as string);
+      if (!uid) continue;
+      const startedMs = (w.startedAt as Timestamp).toMillis();
+      const idx = taipeiDayIdx(startedMs);
+      let set = daysByUid.get(uid);
+      if (!set) {
+        set = new Set();
+        daysByUid.set(uid, set);
+      }
+      set.add(idx);
+    }
+
+    const usersSnap = await db.collection("users").get();
+    let sent = 0;
+    let failed = 0;
+    let skippedNoToken = 0;
+    let skippedOptOut = 0;
+    let skippedAlreadyWalkedToday = 0;
+    let skippedShortStreak = 0;
+    let skippedNoPet = 0;
+
+    for (const userDoc of usersSnap.docs) {
+      const uid = userDoc.id;
+      const u = userDoc.data();
+      const tokens = ((u.fcmTokens ?? []) as string[]).filter(Boolean);
+      if (tokens.length === 0) {
+        skippedNoToken++;
+        continue;
+      }
+      const optOut = (u.pushPrefs?.engagementOptOut ?? []) as string[];
+      if (optOut.includes(STREAK_WARNING_TYPE)) {
+        skippedOptOut++;
+        continue;
+      }
+      const days = daysByUid.get(uid);
+      if (days && days.has(todayIdx)) {
+        // They've already walked today — streak isn't about to break.
+        skippedAlreadyWalkedToday++;
+        continue;
+      }
+      const streak = days ? streakEndingAt(yesterdayIdx, days) : 0;
+      if (streak < STREAK_MIN_DAYS) {
+        skippedShortStreak++;
+        continue;
+      }
+
+      const petsSnap = await db
+        .collection("pets")
+        .where("ownerUid", "==", uid)
+        .get();
+      if (petsSnap.empty) {
+        skippedNoPet++;
+        continue;
+      }
+      const earliestPet = petsSnap.docs
+        .map((d) => d.data() as Record<string, unknown>)
+        .sort((a, b) => {
+          const ax = (a.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
+          const bx = (b.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
+          return ax - bx;
+        })[0];
+      const petName = (earliestPet?.name as string) || "Pet";
+
+      const copy = pushCopy(
+        u.locale as string | undefined,
+        { petName, streak },
+        {
+          title: "別斷掉 streak 🔥",
+          body: "再不遛 {petName} 就斷 {streak} 天紀錄了",
+        },
+        {
+          title: "Don't break your streak 🔥",
+          body: "Walk {petName} now or lose your {streak}-day streak",
+        },
+      );
+
+      try {
+        const res = await sendEngagementPush({
+          uid,
+          tokens,
+          body: copy,
+          data: { type: STREAK_WARNING_TYPE, streak: String(streak) },
+          link: "/app/walks",
+        });
+        if (res.ok) sent++;
+        else failed++;
+      } catch (err) {
+        failed++;
+        logger.error(`streakBreakWarning: send failed for uid=${uid}`, err);
+      }
+    }
+
+    const isoNow = now.toISOString();
+    await db
+      .doc(`engagementPushes/${STREAK_WARNING_TYPE}/waves/${isoNow}`)
+      .set({
+        type: STREAK_WARNING_TYPE,
+        ranAt: Timestamp.now(),
+        sentCount: sent,
+        failedCount: failed,
+        skippedNoToken,
+        skippedOptOut,
+        skippedAlreadyWalkedToday,
+        skippedShortStreak,
+        skippedNoPet,
+        userCount: usersSnap.size,
+      });
+
+    logger.info(
+      `streakBreakWarning done — sent=${sent} failed=${failed} ` +
+        `optOut=${skippedOptOut} walkedToday=${skippedAlreadyWalkedToday} ` +
+        `shortStreak=${skippedShortStreak} noPet=${skippedNoPet} ` +
+        `noToken=${skippedNoToken}`,
+    );
+  },
+);
