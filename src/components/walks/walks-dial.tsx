@@ -97,9 +97,12 @@ export function WalksDial({ percent, complete, doneMin, goalMin }: Props) {
         />
       </svg>
 
-      {/* Center disc with walking dog */}
+      {/* Center disc with walking dog. `overflow-hidden` deliberately
+          dropped so the goal-hit check badge can pop OUTSIDE the disc's
+          circular edge — the dog SVG itself is bounded (85×65 inside a
+          176px disc) so nothing else escapes. */}
       <div
-        className="absolute inset-7 grid place-items-center overflow-hidden rounded-full"
+        className="absolute inset-7 grid place-items-center rounded-full"
         style={{
           background: complete
             ? "linear-gradient(180deg, #fff7e0 0%, #ffeec2 100%)"
@@ -109,19 +112,24 @@ export function WalksDial({ percent, complete, doneMin, goalMin }: Props) {
         }}
       >
         <WalksPetWalking complete={complete} />
-        {complete && (
-          <div
-            aria-hidden="true"
-            className="absolute right-2 bottom-2 grid h-[38px] w-[38px] place-items-center rounded-full bg-mango-leaf text-white"
-            style={{
-              boxShadow:
-                "0 6px 14px -4px rgba(63,138,58,0.55), 0 0 0 4px #ffffff",
-            }}
-          >
-            <Check className="size-5" strokeWidth={3} />
-          </div>
-        )}
       </div>
+
+      {/* Goal-hit check badge — sibling of the inner disc, positioned
+          relative to the outer 232px container so it can sit on the
+          disc's bottom-right edge without being clipped by the disc's
+          rounded-full mask. */}
+      {complete && (
+        <div
+          aria-hidden="true"
+          className="absolute right-[18px] bottom-[18px] z-10 grid h-[38px] w-[38px] place-items-center rounded-full bg-mango-leaf text-white"
+          style={{
+            boxShadow:
+              "0 6px 14px -4px rgba(63,138,58,0.55), 0 0 0 4px #ffffff",
+          }}
+        >
+          <Check className="size-5" strokeWidth={3} />
+        </div>
+      )}
 
       {/* Numeric pill overlapping the ring at the bottom */}
       <div className="absolute -bottom-1.5 left-0 right-0 text-center">

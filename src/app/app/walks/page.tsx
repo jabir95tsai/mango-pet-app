@@ -116,6 +116,10 @@ export default function WalksPage() {
   const [loading, setLoading] = useState(true);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  // Confetti decor — fires a brief celebration then auto-hides so it
+  // doesn't camp at the top of the page forever (user feedback
+  // 2026-05-25 "彩帶動畫完後不要留在頁面上").
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -232,6 +236,20 @@ export default function WalksPage() {
     TODAY_GOAL_MIN - Math.round(todayProgress.minutes),
   );
   const goalHit = todayProgress.percent >= 100;
+
+  // Brief confetti celebration: show on every page mount when the user
+  // is already at goal-hit, then auto-hide after 4 seconds. Re-runs
+  // when goalHit transitions (e.g. user finishes a walk that pushes
+  // them over the line) so the moment-of-celebration is captured.
+  useEffect(() => {
+    if (!goalHit) {
+      setShowConfetti(false);
+      return;
+    }
+    setShowConfetti(true);
+    const t = setTimeout(() => setShowConfetti(false), 4000);
+    return () => clearTimeout(t);
+  }, [goalHit]);
   const doneMin = Math.round(todayProgress.minutes);
   const petName = primaryPet?.name ?? "";
 
@@ -247,9 +265,10 @@ export default function WalksPage() {
 
   return (
     <>
-      {/* Confetti decor — only when today's goal is met. Sits at -z-0
-          behind the top section so it doesn't intercept taps. */}
-      {goalHit && (
+      {/* Confetti decor — brief celebration that auto-hides after 4s
+          (user feedback). `showConfetti` is driven by the useEffect
+          above which watches goalHit and runs the timer. */}
+      {showConfetti && (
         <div className="relative">
           <WalksConfettiDecor />
         </div>
@@ -403,56 +422,35 @@ export default function WalksPage() {
           gap), spacer h-24 keeps the tail content above it. */}
       <div className="h-24 md:hidden" aria-hidden="true" />
 
-      {/* Sticky bottom CTA — variant swap on goalHit:
-            incomplete  → orange gradient pill ▶ 開始遛狗
-            complete    → white pill with brand border + 「再遛一次」 */}
+      {/* Sticky bottom CTA — always orange-gradient「開始遛狗」regardless
+          of goal-hit state (user feedback 2026-05-25: dropped the
+          white-pill "再遛一次" variant + the surrounding cream dock so
+          the bar reads as a single floating pill, matching prototype's
+          "solo floating pill, no dock wrapper"). */}
       {!sessionOpen && (
         <div
-          className="fixed inset-x-0 z-20 border-t border-mango-hairline bg-mango-card-soft/92 px-4 py-3 backdrop-blur-md md:hidden"
+          className="fixed inset-x-0 z-20 px-4 py-3 md:hidden"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 5.75rem)" }}
         >
           <button
             type="button"
             onClick={() => setSessionOpen(true)}
             disabled={pets.length === 0}
-            className={cn(
-              "flex h-12 w-full items-center justify-center gap-2 rounded-full text-base font-bold transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60",
-              goalHit
-                ? "border-[1.5px] border-mango-brand bg-mango-card text-mango-ink"
-                : "border-0 text-mango-ink",
-            )}
-            style={
-              goalHit
-                ? {
-                    boxShadow:
-                      "0 10px 24px -8px rgba(80,50,10,0.22)",
-                  }
-                : {
-                    background:
-                      "linear-gradient(180deg, #f39800 0%, #d77b00 100%)",
-                    boxShadow:
-                      "0 16px 32px -8px rgba(243,152,0,0.60), 0 4px 10px -4px rgba(180,100,0,0.35), 0 1px 0 rgba(255,255,255,0.3) inset",
-                  }
-            }
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-0 text-base font-bold text-mango-ink transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
+            style={{
+              background:
+                "linear-gradient(180deg, #f39800 0%, #d77b00 100%)",
+              boxShadow:
+                "0 16px 32px -8px rgba(243,152,0,0.60), 0 4px 10px -4px rgba(180,100,0,0.35), 0 1px 0 rgba(255,255,255,0.3) inset",
+            }}
           >
-            {goalHit ? (
-              <>
-                <Plus className="size-5 text-mango-brand-deep" strokeWidth={2.5} />
-                {tP("walkAgain")}
-              </>
-            ) : (
-              <>
-                <Play className="size-5" />
-                {tW("startWalking")}
-              </>
-            )}
+            <Play className="size-5" />
+            {tW("startWalking")}
           </button>
         </div>
       )}
 
-      {/* Desktop Hero CTA — sticky is md:hidden so desktop needs its own
-          start button. Lives below the manual log row visually but only
-          renders on md+. */}
+      {/* Desktop CTA — same label as the sticky (no variant swap). */}
       <div className="mt-4 hidden justify-center md:flex">
         <Button
           onClick={() => setSessionOpen(true)}
@@ -463,17 +461,8 @@ export default function WalksPage() {
             CTA_MANGO,
           )}
         >
-          {goalHit ? (
-            <>
-              <Plus className="size-5" />
-              {tP("walkAgain")}
-            </>
-          ) : (
-            <>
-              <Play className="size-5" />
-              {tW("startWalking")}
-            </>
-          )}
+          <Play className="size-5" />
+          {tW("startWalking")}
         </Button>
       </div>
 
