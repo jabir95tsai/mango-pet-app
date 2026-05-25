@@ -291,6 +291,10 @@ async function writeLeaderboardWithRanks(
       walkCount: a.walkCount,
       streakDays: streakFromDays(a.walkDays),
       updatedAt: now,
+      // lastUpdatedAt tracks the *score-changing* write — both cron
+      // reconciliation and realtime trigger set it. Client glow hook
+      // compares this across snapshots to detect a fresh write.
+      lastUpdatedAt: now,
       previousRank: rank,
     });
   }
@@ -372,6 +376,134 @@ export const aggregateLeaderboards = onSchedule(
     await runRankOvertakePushes(allTimeResult, allTime);
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// recomputeWalkerLeaderboards — onCreate(walks/{walkId}) realtime
+// Spec: docs/features/family-leaderboard-realtime.md
+//
+// When a walk doc is created, recompute the walker's three leaderboard
+// entries (weekly / monthly / all_time) so family members watching the
+// leaderboard see the score update within 1-2s instead of next-day.
+// Personal-mode walks (`familyId == null`) short-circuit — they're
+// not on the leaderboard at all (cron applies the same filter).
+//
+// Does NOT recompute other family members — each member's own onCreate
+// trigger fires when THEY walk. Does NOT touch ranks or push (B1 keeps
+// its daily-throttled cadence; this trigger is pure score writeback +
+// `lastUpdatedAt` bump for the client glow).
+// ─────────────────────────────────────────────────────────────────────
+
+export const recomputeWalkerLeaderboards = onDocumentCreated(
+  {
+    document: "walks/{walkId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const walk = event.data?.data();
+    if (!walk) return;
+    const walkerUid = (walk.walkerUid as string) || (walk.ownerUid as string);
+    if (!walkerUid) return;
+    // Personal-mode walks never reach the leaderboard — bail before
+    // doing any reads. Same filter the cron applies via
+    // `where("familyId", "!=", null)`.
+    if (walk.familyId == null) return;
+
+    const now = new Date();
+    const weekKey = isoWeekLabel(now);
+    const monthKey = monthLabel(now);
+
+    // Recompute all 3 periods in parallel. Helper returns null when
+    // the walker has no qualifying walks for that period (shouldn't
+    // happen here — the just-created walk qualifies for all 3 — but
+    // we guard so we never write a zero-score entry by accident).
+    const [w, m, a] = await Promise.all([
+      computeWalkerPeriodScore(walkerUid, "weekly", db, now),
+      computeWalkerPeriodScore(walkerUid, "monthly", db, now),
+      computeWalkerPeriodScore(walkerUid, "all_time", db, now),
+    ]);
+
+    const writes: Array<Promise<unknown>> = [];
+    const wrote: Record<string, boolean> = {
+      weekly: false,
+      monthly: false,
+      all_time: false,
+    };
+    if (w) {
+      writes.push(writeSingleLeaderboardEntry(weekKey, w));
+      wrote.weekly = true;
+    }
+    if (m) {
+      writes.push(writeSingleLeaderboardEntry(monthKey, m));
+      wrote.monthly = true;
+    }
+    if (a) {
+      writes.push(writeSingleLeaderboardEntry("all_time", a));
+      wrote.all_time = true;
+    }
+    await Promise.all(writes);
+
+    // Audit doc — one per trigger fire, so we can spot-check that
+    // realtime writes ran for a given walk and grep for anomalies.
+    // Id format mirrors engagementPushes/{type}/waves/{ISO}: stable,
+    // sortable, no collisions even for rapid back-to-back walks.
+    const isoNow = now.toISOString();
+    await db
+      .doc(`realtimeLeaderboardUpdates/${walkerUid}_${isoNow}`)
+      .set({
+        walkerUid,
+        walkId: event.params.walkId,
+        familyId: walk.familyId,
+        ranAt: Timestamp.now(),
+        weekly: w
+          ? { totalScore: Math.round(w.totalScore * 10) / 10, walkCount: w.walkCount }
+          : null,
+        monthly: m
+          ? { totalScore: Math.round(m.totalScore * 10) / 10, walkCount: m.walkCount }
+          : null,
+        allTime: a
+          ? { totalScore: Math.round(a.totalScore * 10) / 10, walkCount: a.walkCount }
+          : null,
+        wrote,
+      });
+
+    logger.info(
+      `recomputeWalkerLeaderboards: walker=${walkerUid} ` +
+        `walk=${event.params.walkId} wrote=${JSON.stringify(wrote)}`,
+    );
+  },
+);
+
+/** Write/merge a SINGLE leaderboard entry — used by the realtime
+ *  trigger to bump one walker without touching the rest of the
+ *  period's entries (ranks recomputed by the daily cron). `merge:true`
+ *  so we don't clobber `previousRank` written by the last cron run —
+ *  B1 rank-overtake push reads it back on the next aggregation. */
+async function writeSingleLeaderboardEntry(
+  periodKey: string,
+  a: UserAccum,
+): Promise<void> {
+  const now = Timestamp.now();
+  await db
+    .doc(`leaderboards/${periodKey}/entries/${a.uid}`)
+    .set(
+      {
+        uid: a.uid,
+        displayName: a.displayName,
+        photoURL: a.photoURL,
+        city: a.city,
+        totalScore: Math.round(a.totalScore * 10) / 10,
+        totalDistanceKm: Math.round(a.totalDistanceKm * 100) / 100,
+        totalDurationMin: Math.round(a.totalDurationMin),
+        walkCount: a.walkCount,
+        streakDays: streakFromDays(a.walkDays),
+        updatedAt: now,
+        lastUpdatedAt: now,
+      },
+      { merge: true },
+    );
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // rank-overtake push helper — Phase 2 B1

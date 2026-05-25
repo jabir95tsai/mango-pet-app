@@ -356,6 +356,13 @@ export type LeaderboardEntry = {
    *  by the rank-overtake engagement push (Phase 2 B1) to detect
    *  yesterday-vs-today regressions. Absent on first aggregation. */
   previousRank?: number;
+  /** Wall-clock stamp on the last score-changing write — set by both
+   *  the daily cron AND the realtime recomputeWalkerLeaderboards
+   *  trigger. Frontend `useLeaderboardEntryGlow` diffs this across
+   *  Firestore snapshots to flash a brand-color highlight on the row
+   *  when a family member's score just jumped. Optional so legacy
+   *  entries written before this field existed don't trip the diff. */
+  lastUpdatedAt?: Timestamp;
 };
 
 // ── Knowledge ──

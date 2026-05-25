@@ -337,6 +337,16 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ── realtimeLeaderboardUpdates audit log (admin/server-only) ──
+    // Written by the recomputeWalkerLeaderboards onCreate(walks/{walkId})
+    // trigger via Admin SDK. One doc per trigger fire keyed by
+    // {walkerUid}_{ISO} so we can spot-check that a given walk
+    // triggered the expected score recompute. Spec docs/features/
+    // family-leaderboard-realtime.md.
+    match /realtimeLeaderboardUpdates/{document=**} {
+      allow read, write: if false;
+    }
+
     // ── userDailyStats — per-user per-day flags (server writes only) ──
     // Currently holds the `goalHitNotifiedAt` field used by the B2
     // family-milestone push to dedupe (one push per achiever per day).
