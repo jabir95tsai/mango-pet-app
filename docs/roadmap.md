@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 早上（🎉 Phase 1 v2 walks 全頁重建 SHIPPED — UI/UX session 5/25 ~09:15 push，App Hosting 6 分鐘 build 完，desktop Chrome MCP 12 項驗收全過；Epic 5 主動推播觀察至 2026-05-27；Q11 寵物動效 retracted — 圈內限定 OK）
+最後更新：2026-05-25 早上（🎉 Phase 1 v2 walks 全頁重建 SHIPPED；Epic 5 主動推播觀察至 2026-05-27；Phase 2 pets prototype 開 Claude Design 中；**Photo Lightbox spec GO**（feed + walks 點圖放大，UI/UX 直接寫）；Q11 寵物動效 retracted — 圈內限定 OK）
 
 ## 進行中
 
@@ -25,6 +25,12 @@
     - 即時：手動 test 觀察清單跑一輪（spec 內 4 個 test 步驟）
     - **觀察至 2026-05-27（3 天）**：每 push opt-out 率 < 20% / A1 開啟率 ≥ 20% / A2 補遛率 ≥ 15% / B1 追上率 ≥ 10% / B2 family 開啟率 ≥ 30% / 同晚 A1+A2 雙推不擾人
     - 觀察過關 → 收尾移到已收尾速覽；不過關 → 寫 follow-up（throttle / 文案調整 / 時段微調）
+- **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) **GO**（spec ready，UI/UX 直接寫）
+  - User vision：「動態的照片點一下可以放大預覽」
+  - 3 decisions confirmed：scope = feed + walks（餐廳 backlog）/ multi-photo = carousel swipe + dots / 關閉 = 點背景 + X + swipe-down 三招
+  - 新 reusable 元件 `src/components/ui/photo-lightbox.tsx` + 接入 post-card / walk-row / walk-tracking-view done screen + i18n
+  - 工作量 S-M（1 session 內可收），預估 3-4 個 commit 拆解
+  - 👉 **下個動作（user）**：開 UI/UX session 用 spec 末段 launch prompt 動工
 
 ## Epic 4: 視覺重設計 — 芒果主題（user 2026-05-24 vision + 20 個答案）
 
@@ -97,6 +103,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 
 - Quiet hours / per-pet opt-out push 設定（Epic 5 follow-up，pushPrefs namespace 已預埋）
 - 多 pet picker UX（walks 頁 Phase 1 v2 ship 後 follow-up — 目前 top-bar Mango pill chevron no-op）
+- **餐廳照片 lightbox**（Photo Lightbox ship 後接 restaurants page，sharing same 元件）
 - Push throttle（A1 + A2 同晚雙推觀察後決定）
 - walks 頁「全部 →」link 對應的 walks history 頁（Phase 1 v2 留下的 UX gap — 純標籤無 href）
 - Dark mode follow-up（Epic 4 後評估）
