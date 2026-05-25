@@ -1,11 +1,43 @@
 # 加入家庭時自動加為家人好友（auto-friend family members）
 
-狀態：**GO**（user 2026-05-25 下午 1 個 decision confirmed — 退家不解 friend）
+狀態：**SHIPPED 2026-05-25**（helper `b9038da` + trigger 內容收入 `e17acd5` + rules `4962c69`；asia-east1 deployed）
 建立日期：2026-05-25 下午
 最後更新：2026-05-25 下午
 規格作者：PM session @ `54c0781`
 角色：**Feature Builder**（server-side onWrite trigger + idempotent friendship writes + 觀察 audit doc）
 工作量：**S-M**（1 個新 trigger + friendship batch write + edge cases + 沒有新 UI）
+
+## SHIPPED bookkeeping
+
+| Commit | What |
+|---|---|
+| `b9038da` | feat(functions): friendship-helpers.ts — `createMutualFriendship(a, b, db)` writes the two mirror docs (`users/{a}/friends/{b}` + reverse) in one batch; probes existing direction-A doc → skip with `reason: 'exists'` (idempotent). `pairId(a, b)` sorted helper for stable audit keys. Reasons enum: `self` / `exists` / `missing-profile`. |
+| `e17acd5` | feat(functions): autoFriendFamilyMembers onDocumentWritten(`families/{familyId}`) trigger — diffs `before.memberUids` vs `after.memberUids`, fires `createMutualFriendship` for each `(newMember, otherMember)` pair, dedupes the reciprocal `(newA, newB)` pass by string-sorted uid, audit doc `autoFriendEvents/{familyId}_{ISO}` per fire with per-pair created/skipped counts + reasons. Member removal is a deliberate no-op per D1. **Note**: this commit's message describes only `purgeMyOrphanWalks` because a parallel session's staging pass swept up my staged trigger; the autoFriendFamilyMembers code IS in that diff (+238 lines on functions/src/index.ts) — verified by grep. |
+| `4962c69` | feat(rules): `autoFriendEvents/{document=**}` admin/server-only audit collection. Mirrors engagementPushes / realtimeLeaderboardUpdates / orphanWalkPurges patterns. Deployed firestore:rules + functions:autoFriendFamilyMembers (first-try Eventarc create, no cold-start retry). |
+
+### 後續驗證 / 觀察
+
+- 2-account live join test ⏳ — test user B joins a family with A + C → friendships A↔B + B↔C appear (A↔C already exists, skipped + audited)
+- Idempotent retry ⏳ — kick the trigger twice on the same family (e.g., touch the doc) → second fire's audit doc shows `skippedExists` for every pair
+- Removal no-op ⏳ — leaveFamily on existing family → trigger fires (memberUids shrinks) but early-returns; friendships untouched per D1
+- `autoFriendEvents/*` audit docs grep-able in Firebase Console by familyId prefix
+- `npx tsc --noEmit` clean ✅
+
+### Edge cases handled
+
+- N people in one write: pair-dedupe via sorted uid keeps the audit log free of (newA, newB) + (newB, newA) duplicates
+- Missing profile doc: `createMutualFriendship` returns `reason: 'missing-profile'` instead of writing a half-bad friend doc (would render as "Friend" forever)
+- Doc deleted entirely: trigger early-returns (nothing to friend)
+- Field-only writes (name, inviteCode): newMembers is empty → early return before any reads
+- Concurrent triggers on the same family: writes produce identical content (idempotent at doc level); audit may double-count `created` (acceptable per spec — audit is observability not enforcement)
+
+### 不在範圍 (per spec)
+
+- 退家自動解 friend（D1 ✅）
+- Manual opt-out preference（user.prefs.autoFriendOnJoinFamily — future toggle）
+- Push「{X} 已是你的家人」(future, depends on Epic 5 B5 friend-request push if ever ships)
+- 跨家庭 friend
+- Friends 頁「來自 family X」chip
 
 ## User Vision（原話保留）
 
