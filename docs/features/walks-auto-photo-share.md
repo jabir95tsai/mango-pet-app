@@ -1,11 +1,52 @@
 # 遛狗自動拍照 + 自動發動態（walks auto-photo share）
 
-狀態：**GO**（user 2026-05-25 早上 3 個 decisions confirmed）
+狀態：**SHIPPED 2026-05-25**（6 commits `5ecbe38` → `a03caf9`；無 functions / 無 rules 改動；frontend 一個 push）
 建立日期：2026-05-25
 最後更新：2026-05-25
 規格作者：PM session @ `6fddd19`
 角色：**Feature Builder**（整 stack — UI prompt sheet + camera reuse + post composer reuse + Firebase Storage + Firestore writes + Settings toggle + i18n）
 工作量：**M**
+
+## SHIPPED bookkeeping
+
+| Commit | What |
+|---|---|
+| `5ecbe38` | feat(types): schema — `AppUser.walkPrefs.autoPhotoShare` (optional; absent = ON) + `Post.walkId` (optional). Helpers: `updateWalkAutoPhotoShare(uid, enabled)`, `mintWalkId()`, and `createWalk` gains optional pre-minted `walkId` (setDoc path) so START post can cross-link before the walk doc exists. **firestore.rules unchanged** — existing user-update + posts-create rules already cover walkPrefs / walkId writes (no field gating). |
+| `f0fdd61` | feat(walks): `PhotoPromptSheet` bottom-sheet component + i18n. z-60 stacks above walk-tracking-view's z-40 + confetti. Slide-up keyframe in globals.css; collapses under `prefers-reduced-motion`. Backdrop + Esc both route to onSkip. i18n: `WalksPhotoPrompt.*` + `Settings.walkAutoPhoto.*` (both locales). |
+| `22801f9` | feat(composer): `PostComposer` gains 3 optional props (`initialPhoto`, `initialCaption`, `walkId`). Open-state seed effect handles both initial-* in one place. Freehand path unchanged (all props optional). |
+| `9e8f7ae` | feat(walks): start-photo flow on walks page. `handleStartWalking` mints walkId → reads pref → sheet or direct-to-tracking. Camera input dismissal == Skip. Widens `WalkTrackingView.onComplete` + `ManualWalkDialog.onSubmit` return to `Promise<{walkId} \| null \| void>` so the end-flow can read the walkId. |
+| `94135f5` | feat(walks): end-photo flow inside walk-tracking-view. 1s delay after `phase === "done"` (don't interrupt confetti); reads autoPhotoShare pref + loads composer pets list inside view; saveWalkOnce captures walkId from onComplete result for the END post cross-link. |
+| `a03caf9` | feat(settings): `WalkAutoPhotoSection` toggle — Tailwind switch matching EngagementPushSection. Default ON via absent-fallback; only explicit `false` opts out. Optimistic update + rollback. |
+
+### 後續驗證 / 觀察
+
+- iOS PWA real-device test (4 flows, the only environment that exercises capture="environment"):
+  - START prompt → 拍照 → composer → publish → /app/feed ⏳
+  - START prompt → 跳過 → tracking ⏳
+  - END prompt (1s after confetti) → 拍照 → composer → publish → /app/feed ⏳
+  - END prompt → 跳過 → done screen interactive ⏳
+- Settings toggle OFF → next walk: zero prompts at either phase ⏳
+- Camera permission denied: OS dismissed file picker → treated as Skip, tracking starts (start) / done screen stays interactive (end) ⏳
+- Two posts in feed with same `walkId` (pre-minted on START, used by createWalk on save, used by END composer) ⏳
+- reduced-motion users: sheet snap-appears (no slide-up) per global rule ⏳
+- `npx tsc --noEmit` clean ✅
+
+### Edge cases handled
+
+- User skips start photo but takes end photo: independent flows; start's pendingWalkId still used by `createWalk` so end post still cross-links correctly
+- User cancels composer (no publish): photo not uploaded to Storage (composer never reaches `createPost`); pendingWalkId still drives the eventual `createWalk` for cross-link
+- Walk cancelled (GPS fails): START post already published with walkId pointing at a walk doc that never gets created — acceptable per spec edge case ("walkId reference 還在指向 cancelled walk")
+- Concurrent walks (multiple tabs): each tab mints its own walkId; no collision
+- Personal-mode user: composer's selectedPets defaults work; post writes with `familyId: null` and renders in own-feed
+- Confetti not broken: end prompt z-60 sits above z-40 screen and confetti overlay, sheet itself doesn't unmount the done screen
+
+### 已知 quirks / future spec candidates
+
+- START post's walkId points to a doc that's STILL not committed when published (createWalk fires only on saveWalkOnce at done-screen exit). Feed clients reading `post.walkId` need to tolerate missing referent — already does, since no surface dereferences it yet
+- Composer pets list duplicates a query that the walks page already runs — could share via context, but tracking-view's self-contained shape kept simpler
+- No "Just sent ✓" toast after auto-photo post publishes; user sees the composer close and trusts the post landed in feed (consistent with freehand composer)
+- A2 streak push, leaderboard, B2 family-milestone all unchanged — auto-photo posts ride independently from those signals
+- "Save to album" SaveToAlbumButton (separate spec) is already wired into the composer's per-photo preview, so users can also save the auto-photo to Photos before publishing — no extra wiring needed
 
 ## User Vision（原話保留）
 
