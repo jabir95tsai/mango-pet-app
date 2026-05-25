@@ -1,10 +1,36 @@
 # 拍照後選擇性存到手機相簿
 
-狀態：**GO**（user 2026-05-25 下午 confirm 3 開放問題：Q1 改「4 入口一次做」/ Q2/Q3 全採 PM 預設）
+狀態：**SHIPPED 2026-05-25**（6 commits `c106d74` → `224829d`；無 functions / 無 schema 改動；4 個拍照 entry 全接 SaveToAlbumButton）
 建立日期：2026-05-25
 最後更新：2026-05-25 下午
 規格作者：Bug Hunter session（user 2026-05-25 詢問「拍照後檔案是否有儲存到手機相簿」確認非 bug 後，PM 預設轉 feature spec）；PM `f5a5b33` 接手鎖 GO
 角色：Feature Builder（UI + 一支 helper + i18n）
+
+## SHIPPED bookkeeping
+
+| Commit | What |
+|---|---|
+| `c106d74` | feat(ui): save-to-album helper — `canSaveToAlbum(file?)` sync, `saveToAlbum(file, title?)` async; AbortError → `dismissed` (not error). Web Share API only, no `<a download>` fallback per D1. |
+| `ff5e26d` | feat(ui): SaveToAlbumButton shared component + Common.saveToAlbum.{label,saved,failed} i18n (both locales). Hides outright on unsupported browsers per D3; 2s inline icon swap (Download → ✓) feedback per Q2; failed state shows red for the same 2s window. |
+| `c6aa3b5` | feat(pets): pet-form-dialog avatar preview — gated on `avatar` being non-null (legacy edit without new pick has no File handle). Title forwarded as pet name. |
+| `76f7fbb` | feat(walks): walk-tracking-view photo strip — PhotoSlot gains optional `file: File` set together with `status: 'done'`. Button at bottom-right corner of each thumbnail, only when upload complete. |
+| `fb0a120` | feat(expenses): receipt-scanner preview — bottom-right (close X stays top-right). Most natural entry for save (tax / warranty record-keeping). |
+| `224829d` | feat(feed): post-composer per-photo — multi-pick composer gives each thumbnail its own button; per-photo granularity matches the Web Share one-file-at-a-time API and the spec's "no batch save" exclusion. |
+
+### 後續驗證 / 觀察
+
+- iOS Safari/PWA real-device test (the only audience that sees the button) — 4 entries → share sheet → "Save Image" → Photos.app 出現 ⏳
+- Android Chrome: share sheet should also offer "Save to Photos" ⏳
+- Desktop Chrome: button不渲染（canShare returns false for files）— typecheck passes; render-gate proven by spec D3 logic ✅
+- npx tsc --noEmit clean ✅
+- Lighthouse a11y: button has aria-label + title + visible focus ring ✅ (no real check run, but the shape is conventional)
+
+### 已知 caveats / future spec 候選
+
+- iOS 15- / Android Chrome 84- 用戶 button 不渲染（無 noise — spec D3 預期行為）
+- Pet form 「載入既有 pet 但沒重拍」不顯示 button（無 File handle；要 download → re-File 才能 share — out of scope）
+- Walk photo 上傳失敗時不顯示 button（intentional — failed photo 沒人想存）
+- Batch save 多照片一次 share（feed multi-pick）— Web Share API 一次一個檔案體驗較好，明確排除
 
 ## User Story
 
