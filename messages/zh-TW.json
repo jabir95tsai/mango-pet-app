@@ -247,6 +247,7 @@
     "goToApp": "前往首頁"
   },
   "Settings": {
+    "friendsLink": "好友",
     "privacyData": {
       "title": "資料與隱私",
       "subtitle": "下載一份你在 Mango Pet 上的完整資料副本（JSON 格式）。包含寵物、紀錄、家庭關係等；照片以 URL 形式存放。",
@@ -313,6 +314,7 @@
       "family": "家庭內"
     },
     "familyOnlyMe": "目前家庭只有你一人 — 邀請家人來比一比！",
+    "refreshButton": "刷新排行榜",
     "personalEmpty": {
       "title": "加入家庭看排行榜",
       "subtitle": "排行榜目前只給家庭內互比 — 自己一個人時看自己 stats 才有意義。",

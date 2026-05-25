@@ -247,6 +247,7 @@
     "goToApp": "Go to app"
   },
   "Settings": {
+    "friendsLink": "Friends",
     "privacyData": {
       "title": "Privacy & Data",
       "subtitle": "Download a full copy of your Mango Pet data as JSON — pets, records, family memberships, and more. Photos are referenced by URL.",
@@ -313,6 +314,7 @@
       "family": "Family"
     },
     "familyOnlyMe": "You're the only one in this family — invite someone to make it a contest!",
+    "refreshButton": "Refresh leaderboard",
     "personalEmpty": {
       "title": "Join a family to see leaderboards",
       "subtitle": "Leaderboards work within families. For just-yourself stats, your home page already covers it.",
