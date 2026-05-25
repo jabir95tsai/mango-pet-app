@@ -455,5 +455,11 @@
     "none": "None",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service"
+  },
+  "PhotoLightbox": {
+    "close": "Close",
+    "prev": "Previous",
+    "next": "Next",
+    "counter": "{current} / {total}"
   }
 }

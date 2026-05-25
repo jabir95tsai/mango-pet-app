@@ -455,5 +455,11 @@
     "none": "無",
     "privacy": "隱私權政策",
     "terms": "服務條款"
+  },
+  "PhotoLightbox": {
+    "close": "關閉",
+    "prev": "上一張",
+    "next": "下一張",
+    "counter": "{current} / {total}"
   }
 }
