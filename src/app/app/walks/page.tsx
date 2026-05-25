@@ -308,7 +308,10 @@ export default function WalksPage() {
           the pill but no chevron — the button is non-interactive in
           that case to keep the UX uncluttered. */}
       <div className="relative z-10 mb-3 flex items-center gap-2.5">
-        <h1 className="text-[22px] font-bold tracking-tight text-mango-ink">
+        {/* Topic size aligned with PetsTopBar (我的寵物) + family-aligned
+            pages — 26px extrabold, -0.5px tracking. User feedback
+            2026-05-25: previous 22px read smaller than 我的寵物 + 排行榜. */}
+        <h1 className="text-[26px] font-extrabold tracking-[-0.5px] text-mango-ink">
           {t("walks")}
         </h1>
         {activePet && (
