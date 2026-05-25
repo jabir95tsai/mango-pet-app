@@ -11,7 +11,10 @@
 
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import {
+  onDocumentCreated,
+  onDocumentDeleted,
+} from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
@@ -484,6 +487,111 @@ export const recomputeWalkerLeaderboards = onDocumentCreated(
     );
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// recomputeWalkerLeaderboardsOnDelete — paired onDelete(walks/{walkId})
+//
+// Companion to recomputeWalkerLeaderboards. Without this, deleting a
+// walk leaves the leaderboard entry stuck at the inflated total — the
+// onCreate trigger added the walk's score but nothing ever subtracts
+// it back. UI looks frozen ("排行榜沒有即時更新,我已經把遛狗紀錄刪掉了").
+//
+// Same recompute path as create (re-reads ALL of the walker's
+// qualifying walks per period via the shared helper) so deletes are
+// idempotent and exactly mirror what the daily cron would compute.
+// Edge case: if this delete removed the walker's last qualifying walk
+// in a period, computeWalkerPeriodScore returns null — we delete the
+// entry doc entirely so the row vanishes from the leaderboard instead
+// of lingering as a zero-score ghost.
+// ─────────────────────────────────────────────────────────────────────
+
+export const recomputeWalkerLeaderboardsOnDelete = onDocumentDeleted(
+  {
+    document: "walks/{walkId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const walk = event.data?.data();
+    if (!walk) return;
+    const walkerUid = (walk.walkerUid as string) || (walk.ownerUid as string);
+    if (!walkerUid) return;
+    // Personal-mode walks never touched the leaderboard, so deleting
+    // one shouldn't either. Same gate as the onCreate companion.
+    if (walk.familyId == null) return;
+
+    const now = new Date();
+    const weekKey = isoWeekLabel(now);
+    const monthKey = monthLabel(now);
+
+    const [w, m, a] = await Promise.all([
+      computeWalkerPeriodScore(walkerUid, "weekly", db, now),
+      computeWalkerPeriodScore(walkerUid, "monthly", db, now),
+      computeWalkerPeriodScore(walkerUid, "all_time", db, now),
+    ]);
+
+    const ops: Array<Promise<unknown>> = [];
+    const result: Record<string, "rewrote" | "deleted"> = {};
+    if (w) {
+      ops.push(writeSingleLeaderboardEntry(weekKey, w));
+      result.weekly = "rewrote";
+    } else {
+      ops.push(deleteLeaderboardEntryIfPresent(weekKey, walkerUid));
+      result.weekly = "deleted";
+    }
+    if (m) {
+      ops.push(writeSingleLeaderboardEntry(monthKey, m));
+      result.monthly = "rewrote";
+    } else {
+      ops.push(deleteLeaderboardEntryIfPresent(monthKey, walkerUid));
+      result.monthly = "deleted";
+    }
+    if (a) {
+      ops.push(writeSingleLeaderboardEntry("all_time", a));
+      result.all_time = "rewrote";
+    } else {
+      ops.push(deleteLeaderboardEntryIfPresent("all_time", walkerUid));
+      result.all_time = "deleted";
+    }
+    await Promise.all(ops);
+
+    // Audit doc — mirrors the onCreate companion so we can spot-check
+    // a delete actually ran the recompute. Same id shape so they sort
+    // together by walker + time.
+    const isoNow = now.toISOString();
+    await db
+      .doc(`realtimeLeaderboardUpdates/${walkerUid}_${isoNow}_del`)
+      .set({
+        walkerUid,
+        walkId: event.params.walkId,
+        familyId: walk.familyId,
+        ranAt: Timestamp.now(),
+        kind: "delete",
+        result,
+      });
+
+    logger.info(
+      `recomputeWalkerLeaderboardsOnDelete: walker=${walkerUid} ` +
+        `walk=${event.params.walkId} result=${JSON.stringify(result)}`,
+    );
+  },
+);
+
+/** Delete a leaderboard entry doc if it exists; no-op when the walker
+ *  never appeared in the period (e.g., personal-mode-only history that
+ *  somehow tripped the trigger). Used by the onDelete trigger when a
+ *  recompute returns null for a period — leaving a stale entry would
+ *  render as a 0-score row that never refreshes. */
+async function deleteLeaderboardEntryIfPresent(
+  periodKey: string,
+  uid: string,
+): Promise<void> {
+  const ref = db.doc(`leaderboards/${periodKey}/entries/${uid}`);
+  const snap = await ref.get();
+  if (!snap.exists) return;
+  await ref.delete();
+}
 
 /** Write/merge a SINGLE leaderboard entry — used by the realtime
  *  trigger to bump one walker without touching the rest of the
