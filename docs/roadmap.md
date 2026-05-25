@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 早上（🎉 Phase 1 v2 walks 全頁重建 SHIPPED；Epic 5 主動推播觀察至 2026-05-27；Phase 2 pets prototype 開 Claude Design 中；**Photo Lightbox spec GO**（feed + walks 點圖放大，UI/UX 直接寫）；Q11 寵物動效 retracted — 圈內限定 OK）
+最後更新：2026-05-25 早上（🎉 Phase 1 v2 walks 全頁重建 SHIPPED；Epic 5 主動推播觀察至 2026-05-27；Phase 2 pets prototype 開 Claude Design 中；**Photo Lightbox + Family Leaderboard 即時更新 specs GO**；家庭邀請連結 follow-up 待 user 排序）
 
 ## 進行中
 
@@ -25,6 +25,12 @@
     - 即時：手動 test 觀察清單跑一輪（spec 內 4 個 test 步驟）
     - **觀察至 2026-05-27（3 天）**：每 push opt-out 率 < 20% / A1 開啟率 ≥ 20% / A2 補遛率 ≥ 15% / B1 追上率 ≥ 10% / B2 family 開啟率 ≥ 30% / 同晚 A1+A2 雙推不擾人
     - 觀察過關 → 收尾移到已收尾速覽；不過關 → 寫 follow-up（throttle / 文案調整 / 時段微調）
+- **Family Leaderboard 即時更新** — [`docs/features/family-leaderboard-realtime.md`](../features/family-leaderboard-realtime.md) **GO**（spec ready，Feature Builder 動工）
+  - User vision：「將家庭內的遛狗排行榜即時更新」
+  - 3 decisions confirmed：scope = 只 family view 即時（global 仍 daily cron）/ 機制 = server-side walks onCreate trigger（同 B2 pattern）/ UI = brand glow 1.5s + reduced-motion skip
+  - 抽 `computeWalkerPeriodScore` shared helper → daily cron + 新 trigger 共用；加 `lastUpdatedAt` schema 給 client glow 用
+  - 工作量 S-M，預估 1 session 內可收，3 commits（refactor / trigger / glow）
+  - 👉 **下個動作（user）**：開 Feature Builder session 用 spec 末段 launch prompt 動工
 - **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) **GO**（spec ready，UI/UX 直接寫）
   - User vision：「動態的照片點一下可以放大預覽」
   - 3 decisions confirmed：scope = feed + walks（餐廳 backlog）/ multi-photo = carousel swipe + dots / 關閉 = 點背景 + X + swipe-down 三招
