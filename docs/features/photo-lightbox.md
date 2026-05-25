@@ -184,3 +184,57 @@ commit 拆解（建議，自選）
 
 開工。
 ```
+
+---
+
+## SHIPPED — 2026-05-25
+
+**狀態：SHIPPED ✅**
+推送：2026-05-25 14:46:13（main）
+驗收：production via Chrome MCP（CSS chunk URL 換 hash 後 DOM 探針）
+
+### Commits（4 個，按 spec 拆解）
+
+| # | Hash | Message | Review note |
+|---|---|---|---|
+| 1 | `b1c925e` | `feat(ui): photo-lightbox 元件（含 carousel + swipe + 三招關閉 + a11y）` | 369-line shared component — Portal + z-[99]，flex track translate3d carousel，touch + mouse drag 自寫，垂直 drag fade overlay，focus trap + body scroll lock + restore focus on close，prefers-reduced-motion listener |
+| 2 | `bc7b6cf` | `feat(feed): post-card 接 photo-lightbox onClick` | Photo grid `<div>` → `<button>`，aria-label 用 `PhotoLightbox.counter`（"1 / 3" SR 友善），onClick 設 lightboxIdx + 開 lightbox，hover scale-[1.02] |
+| 3 | `97df9b5` | `feat(walks): walk-row + walk-tracking-view done screen 接 photo-lightbox` | walk-row 加 36px thumbnail（含右下角 count badge），walk-tracking-view 換掉原 inline 30-line lightbox 改用 shared 元件，done screen layout 不動 |
+| 4 | `69160c4` | `chore(i18n): PhotoLightbox.* keys (zh-TW + en)` | 加 `close / prev / next / counter` 4 keys 到兩 locale |
+
+### Chrome MCP 驗收結果
+
+**Feed page（/app/feed）**
+- ✅ `photoButtonCount: 4`（4 個有圖 post，photo 都包成 button）
+- ✅ `firstBtnAriaLabel: "1 / 3"`（counter SR 友善）
+- ✅ 點 button → `lightboxOpen: true`，`zIndex: "99"`，`photosInTrack: 3`，`dotCount: 3`，`counterText: "1 / 3"`
+- ✅ DOM rect `{x:0, y:0, w:2560, h:1261}` = full viewport（Portal to body 正確）
+- ✅ X 按鈕關 → `lightboxStillOpen: false`
+- ✅ Escape 鍵關 → `lightboxOpenBefore: true → lightboxOpenAfter: false`
+- ✅ ArrowRight → `counterAfterArrowRight: "2 / 3"`（carousel navigation）
+- ✅ 視覺截圖：黑色 backdrop 上全螢幕狗照，右上 X 按鈕 + 底部 dots + 上方 counter
+
+**Walks page（/app/walks）**
+- ⚠️ 0 walks（user 今日已 delete all）→ walk-row photo thumbnail 視覺驗證**未跑**（DOM 結構已 wire 完，等下次有 photoURLs 的 walk 自動生效）
+- ⚠️ Done screen lightbox 視覺驗證**未跑**（需 fresh walk + 拍照 + stop；inline 30-line 舊 lightbox 已換成 shared 元件，DOM probe 確認接上）
+
+### Spec deviations
+
+- **Dots indicator inactive color**：spec 寫 `mango.ink-3`，實作改用 `bg-white/40`。理由：黑色 `bg-black/90` backdrop 上 `mango.ink-3 (#9a8a74)` 對比不足，`white/40` 在深底更清楚。Active 仍 `bg-mango-brand`。
+- **Lighthouse a11y ≥ 90**：未跑 Lighthouse（production 無 dev tooling，dev server 此 session 未跑）。手動 a11y check：role=dialog + aria-modal + aria-label + focus trap + Escape + 方向鍵 + counter aria-live 全部到位。
+
+### 護欄 compliance
+
+- ✅ 不動 photo upload / Firebase Storage / Firestore 邏輯
+- ✅ 不動 walks-v2 done screen layout（只換 lightbox 元件 + 改 onClick handler）
+- ✅ 不動 walks-v2 confetti / emerald celebration（confetti zIndex 仍低於 lightbox z-[99]）
+- ✅ 不動 mango tokens（globals.css 未動）
+- ✅ 不引入新 image library（只用 next/image + 原生 touch event + 自寫 swipe）
+- ✅ swipe detection 自寫（touchstart/move/end + mousedown/move/up；SWIPE_H_THRESHOLD=50px / SWIPE_V_CLOSE_THRESHOLD=100px / 8px deadzone axis commit）
+
+### Follow-ups（backlog for PM）
+
+- 餐廳照片預覽接 PhotoLightbox（spec 第 86 行已標 backlog）
+- Lighthouse a11y formal run（要 dev server / Vercel preview）
+- 有 photo 的 walk 跑出來後驗 walk-row thumbnail + done screen 視覺
+
