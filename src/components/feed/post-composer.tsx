@@ -39,7 +39,10 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
   const [text, setText] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [visibility, setVisibility] = useState<Visibility>("friends");
+  // Default visibility: 'public' per docs/features/ui-polish-bundle-
+  // 2026-05-25.md Item #3 — user wants 分享預設公開. Manual switch via
+  // the visibility chips below still respected for any individual post.
+  const [visibility, setVisibility] = useState<Visibility>("public");
   const [selectedPets, setSelectedPets] = useState<string[]>([]);
   const [processing, setProcessing] = useState(false);
   const [posting, setPosting] = useState(false);
@@ -50,7 +53,7 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
       setText("");
       setPhotos([]);
       setPreviews([]);
-      setVisibility("friends");
+      setVisibility("public");
       setSelectedPets([]);
       setProcessing(false);
       setError(null);
