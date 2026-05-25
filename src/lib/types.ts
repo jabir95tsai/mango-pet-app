@@ -98,6 +98,20 @@ export type Pet = {
   photoURL?: string;
   bio?: string;
   createdAt: Timestamp;
+  /** Per-pet daily walk-minute goal. Drives the walks-page dial, week-
+   *  strip done flags, A1 evening reminder threshold, and B2 family-
+   *  milestone threshold (all of which historically hardcoded 30).
+   *
+   *  Absent on legacy pets — every read site MUST go through
+   *  `getPetWalkGoalMinutes()` in `@/lib/walk-goals` which falls back
+   *  to `DEFAULT_WALK_GOAL_MINUTES` (30). Don't read `pet.walkGoal.minutes`
+   *  directly without the fallback or legacy pets will throw nil-ptr.
+   *
+   *  `source: 'computed'` namespace is reserved for a future spec that
+   *  derives a recommendation from breed/age/weight; this round only
+   *  ever writes `'manual'`. UI may render a "建議值（可覆蓋）" chip on
+   *  `'computed'` so user knows it's overridable. */
+  walkGoal?: { minutes: number; source: "manual" | "computed" };
 };
 
 export type PetInput = {
@@ -108,6 +122,9 @@ export type PetInput = {
   gender?: Gender;
   weightKg?: number;
   bio?: string;
+  /** Optional in the form; absent value preserves the existing pet's
+   *  walkGoal on update (the form just doesn't touch the field). */
+  walkGoal?: { minutes: number; source: "manual" | "computed" };
 };
 
 export type Post = {
