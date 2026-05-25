@@ -9,6 +9,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Share2,
   Users,
   X,
 } from "lucide-react";
@@ -33,6 +34,7 @@ import { ImportWizardDialog } from "@/components/family/import-wizard-dialog";
 
 export function FamilySection() {
   const tC = useTranslations("Common");
+  const tShare = useTranslations("Family.invite");
   const { user } = useAuth();
   const { family, families, loading, refresh, switchFamily } = useFamily();
   const askConfirm = useConfirm();
@@ -42,6 +44,7 @@ export function FamilySection() {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // After settings-page create/join, drop into the import wizard so
@@ -87,6 +90,37 @@ export function FamilySection() {
     } catch {
       // Fallback: select-and-show. Most modern browsers grant clipboard
       // on user gesture so this rarely runs.
+    }
+  }
+
+  /** Share a deep-link to /join/{inviteCode}. Tries the native Web
+   *  Share API first (mobile + many desktop browsers) so the user can
+   *  pick LINE/WhatsApp/etc; falls back to clipboard if share is
+   *  unsupported or the user dismisses the sheet. Sharing relies on
+   *  the existing /join/[code] page to do the actual joinFamilyByCode
+   *  call when the link is opened. */
+  async function handleShareLink() {
+    if (!family) return;
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const url = `${origin}/join/${family.inviteCode}`;
+    const text = tShare("text", { name: family.name, url });
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share({ title: family.name, text, url });
+        return;
+      } catch {
+        // User dismissed or share failed — fall through to clipboard.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      // Last resort: prompt the URL so the user can copy manually.
+      // window.prompt is hideous but works everywhere.
+      if (typeof window !== "undefined") window.prompt(text, url);
     }
   }
 
@@ -229,6 +263,18 @@ export function FamilySection() {
                 </p>
               </div>
               <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleShareLink}
+                  className="grid size-9 place-items-center rounded-lg bg-white text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
+                  aria-label={tShare("shareAria")}
+                >
+                  {shared ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <Share2 className="size-4" />
+                  )}
+                </button>
                 <button
                   type="button"
                   onClick={handleCopyCode}

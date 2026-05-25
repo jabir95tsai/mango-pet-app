@@ -206,6 +206,24 @@
     "importEmpty": "Nothing to import",
     "importing": "Importing..."
   },
+  "Family": {
+    "invite": {
+      "shareAria": "Share invite link",
+      "text": "Join my \"{name}\" family on Mango Pet: {url}"
+    }
+  },
+  "JoinFamily": {
+    "joining": "Joining the family...",
+    "joiningHint": "Hang tight, we're adding you in.",
+    "joinedTitle": "Welcome!",
+    "joinedHint": "You're in. Redirecting to the home screen in a moment.",
+    "alreadyMemberTitle": "You're already a member",
+    "alreadyMemberHint": "Nothing to do — go straight to the app.",
+    "invalidCodeTitle": "Invite code looks off",
+    "invalidCodeHint": "\"{code}\" isn't a valid 6-digit invite code. Double-check with whoever shared the link.",
+    "errorTitle": "Couldn't join",
+    "goToApp": "Back to app"
+  },
   "Onboarding": {
     "title": "Welcome to Mango Pet",
     "subtitle": "Take care of your pets with family — or solo for now. You can switch anytime.",

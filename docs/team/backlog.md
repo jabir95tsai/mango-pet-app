@@ -32,9 +32,26 @@ P3 = 也許永遠不做的「想法」。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 
-_2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 2 條 deviation。2026-05-23 Bug Hunter session 加 1 條 push UX。_
+_2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 2 條 deviation。2026-05-23 Bug Hunter session 加 1 條 push UX。2026-05-25 Feature Builder 加 1 條家庭邀請連結 follow-up。_
 
-### PushToggle probe 把跨 context 的 token 當「已啟用」 — ✅ SHIPPED
+### 家庭邀請連結 follow-up — minimal slice 已 ship，PM 後續排序「進階版」
+- **發現於**：2026-05-25、Feature Builder session（user 直接要求 minimal slice 動工 + 同時要 backlog 條目留 paper trail）
+- **類型**：體驗 / 新功能想法（v1.5 polish）
+- **重現 / 觀察**：本 session 已 ship 的 minimal slice：
+  - `/join/{6位 inviteCode}` deep-link route
+  - 點 → 自動 `joinFamilyByCode` → 成功 redirect `/app`
+  - 沿用既有 already-member / not-found 錯誤訊息
+  - Share UX：`navigator.share` + clipboard fallback (已加 button in family-section)
+  - 用既有 inviteCode（無新 schema）— 完全 additive，零既有 user 影響
+- **沒做（PM 之後決定的 ambiguous 點）**：
+  - **Preview page**：點開 link 是否顯示「{family.name} 邀請你加入，有 N 人 + N 隻寵物」preview，按確認才 join？ 需要新 callable 給 unauthenticated preview（rules 限 member 才能讀 family doc）
+  - **Link 過期**：schema 預留 `inviteCodeExpiresAt` 但從未實作；要不要 regenerate 連動連結失效？
+  - **濫用防範**：連結比手動 6 位數 一鍵 join 摩擦低，是否要 owner approval 步驟？
+  - **QR code 顯示**：既有 backlog Deferred 的「內建 QR scanner」是 scan 方向；display QR 是不同方向，工作量低
+  - **多家庭 currentFamilyId 切換**：join 後該 family 不一定設成 active；UX 上要不要自動切？
+- **建議交付給**：PM（升 spec 後再 Feature Builder）
+- **優先級提示**：P3（minimal slice 已可用；polish 等使用者實際反映摩擦再排）
+- **PM 排序提示**：在 user 實測 minimal slice 後，挑 1-2 個 polish 項合一個 spec（preview page + QR display 是最自然的下一步）
 - **發現於**：2026-05-23、Bug Hunter session
 - **狀態**：✅ SHIPPED `9f1dc67`（Feature Builder 2026-05-23）— 新 `reconcileCurrentToken(uid)` helper in `src/lib/firebase/messaging.ts` 主動 `getToken({ vapidKey, swReg })` 拿當前 context 的 token，arrayUnion 進 `user.fcmTokens`（idempotent）。`push-toggle.tsx` probe 改在 `perm === "granted"` 時呼叫 reconcile，不再僅看 `tokens.length > 0`。Cost: 多一次 ~1s getToken 網路 call per Settings 開啟（acceptable，使用者不常開）。原本「PWA 內停用→啟用」 workaround 不需要了 — 新 context 第一次進 settings 自動 reconcile
 

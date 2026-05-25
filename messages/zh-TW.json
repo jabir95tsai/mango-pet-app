@@ -206,6 +206,24 @@
     "importEmpty": "沒有可搬的",
     "importing": "搬移中..."
   },
+  "Family": {
+    "invite": {
+      "shareAria": "分享邀請連結",
+      "text": "加入我的「{name}」家庭：{url}"
+    }
+  },
+  "JoinFamily": {
+    "joining": "加入家庭中...",
+    "joiningHint": "請稍候，我們正在把你加進去。",
+    "joinedTitle": "歡迎加入！",
+    "joinedHint": "已加入家庭，3 秒後跳回首頁。",
+    "alreadyMemberTitle": "你已經是這個家庭的成員了",
+    "alreadyMemberHint": "不用再加一次，直接回首頁開始用。",
+    "invalidCodeTitle": "邀請碼無效",
+    "invalidCodeHint": "「{code}」不是有效的 6 位數邀請碼。請跟分享連結的家人確認。",
+    "errorTitle": "加入失敗",
+    "goToApp": "回到首頁"
+  },
   "Onboarding": {
     "title": "歡迎加入芒果寵物",
     "subtitle": "你想跟家人一起照顧寵物，還是先一個人開始？兩種模式之後都能切換。",
