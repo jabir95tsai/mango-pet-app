@@ -114,6 +114,14 @@
       "other": "Other"
     }
   },
+  "PetEdit": {
+    "walkGoal": {
+      "label": "Daily walk goal",
+      "unit": "min/day",
+      "hint": "Will suggest based on breed/age/weight later",
+      "computedChip": "Suggested (overridable)"
+    }
+  },
   "Health": {
     "title": "Health records",
     "addRecord": "Add record",

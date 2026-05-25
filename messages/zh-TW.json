@@ -114,6 +114,14 @@
       "other": "其他"
     }
   },
+  "PetEdit": {
+    "walkGoal": {
+      "label": "每日散步目標",
+      "unit": "分鐘 / 天",
+      "hint": "之後可依品種、年齡、體重自動建議",
+      "computedChip": "建議值（可覆蓋）"
+    }
+  },
   "Health": {
     "title": "健康紀錄",
     "addRecord": "新增紀錄",

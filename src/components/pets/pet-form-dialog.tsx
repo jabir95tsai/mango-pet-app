@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, FieldLabel } from "@/components/ui/select";
 import { fromLocalDateInput, toLocalDateInput } from "@/lib/dates";
 import { IMAGE_PRESETS, processImage } from "@/lib/image-processing";
+import { PetWalkGoalInput } from "@/components/pets/pet-walk-goal-input";
+import { DEFAULT_WALK_GOAL_MINUTES, getPetWalkGoalMinutes } from "@/lib/walk-goals";
 import type { Pet, PetInput, Species, Gender } from "@/lib/types";
 
 type Props = {
@@ -32,6 +34,14 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
   const [weight, setWeight] = useState("");
   const [birthday, setBirthday] = useState("");
   const [bio, setBio] = useState("");
+  const [walkGoalMin, setWalkGoalMin] = useState(DEFAULT_WALK_GOAL_MINUTES);
+  // Snapshot of the initial pet's walkGoal source so the input chip
+  // reflects "建議值（可覆蓋）" when loaded from a future computed
+  // recommendation. This round always writes back 'manual' since the
+  // user explicitly touched the stepper to save.
+  const [walkGoalSource, setWalkGoalSource] = useState<"manual" | "computed">(
+    "manual",
+  );
   const [avatar, setAvatar] = useState<File | null>(null);
   const [previewURL, setPreviewURL] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -51,6 +61,10 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
         : "",
     );
     setBio(initial?.bio ?? "");
+    // Seed from existing pet's goal via the same clamp/fallback the
+    // rest of the app uses; first-edit on a legacy pet shows 30.
+    setWalkGoalMin(getPetWalkGoalMinutes(initial ?? null));
+    setWalkGoalSource(initial?.walkGoal?.source ?? "manual");
     setAvatar(null);
     setPreviewURL(initial?.photoURL ?? null);
     setProcessing(false);
@@ -82,6 +96,12 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
           weightKg: weight ? Number(weight) : undefined,
           birthday: birthday ? fromLocalDateInput(birthday) : undefined,
           bio: bio.trim() || undefined,
+          // Always write 'manual' on save — even if the input was
+          // seeded from a 'computed' value, the act of saving means
+          // the user reviewed it. Future spec may refine this (e.g.,
+          // only flip to manual when the value differs from the
+          // computed recommendation).
+          walkGoal: { minutes: walkGoalMin, source: "manual" },
         },
         avatar ?? undefined,
       );
@@ -220,6 +240,12 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
             />
           </div>
         </div>
+
+        <PetWalkGoalInput
+          value={walkGoalMin}
+          onChange={setWalkGoalMin}
+          source={walkGoalSource}
+        />
 
         <div className="flex flex-col gap-1">
           <FieldLabel>{tPet("fields.bio")}</FieldLabel>
