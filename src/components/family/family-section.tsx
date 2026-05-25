@@ -107,7 +107,14 @@ export function FamilySection() {
     const text = tShare("text", { name: family.name, url });
     if (typeof navigator !== "undefined" && "share" in navigator) {
       try {
-        await navigator.share({ title: family.name, text, url });
+        // Don't pass `url` separately — the i18n `text` template already
+        // embeds it ("加入我的「家庭」家庭：https://…"). When both `text`
+        // and `url` are present, iOS share targets (LINE, iMessage…) tend
+        // to send TWO messages: the text body, then the URL on its own.
+        // Letting receivers auto-detect the URL in the text body keeps it
+        // a single message and the link is still tappable in every app
+        // we've checked.
+        await navigator.share({ title: family.name, text });
         return;
       } catch {
         // User dismissed or share failed — fall through to clipboard.
