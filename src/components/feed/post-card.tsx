@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { zhTW, enUS } from "date-fns/locale";
@@ -7,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Globe, Users, Lock, Trash2 } from "lucide-react";
 import type { Post, Visibility } from "@/lib/types";
 import { Avatar } from "@/components/ui/avatar";
+import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { EmojiReactions } from "./emoji-reactions";
 import { cn } from "@/lib/utils";
 
@@ -25,8 +27,15 @@ const VISIBILITY_ICON: Record<Visibility, typeof Globe> = {
 export function PostCard({ post, currentUid, onDelete }: Props) {
   const locale = useLocale();
   const tC = useTranslations("Common");
+  const tPL = useTranslations("PhotoLightbox");
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
   const VIcon = VISIBILITY_ICON[post.visibility];
+
+  // Lightbox state owned by the card — one set per post since each post
+  // has its own photo collection. Tapping any photo opens the lightbox
+  // at that photo's index.
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState(0);
 
   const createdMs =
     (post.createdAt as { toMillis?: () => number } | undefined)?.toMillis?.() ??
@@ -72,17 +81,29 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
             post.photoURLs.length >= 3 && "grid-cols-2",
           )}
         >
-          {post.photoURLs.map((url) => (
-            <div key={url} className="relative aspect-square bg-zinc-100">
+          {post.photoURLs.map((url, idx) => (
+            <button
+              key={url}
+              type="button"
+              onClick={() => {
+                setLightboxIdx(idx);
+                setLightboxOpen(true);
+              }}
+              aria-label={tPL("counter", {
+                current: idx + 1,
+                total: post.photoURLs.length,
+              })}
+              className="group relative aspect-square overflow-hidden bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+            >
               <Image
                 src={url}
                 alt=""
                 fill
                 sizes="(max-width: 640px) 50vw, 300px"
-                className="object-cover"
+                className="object-cover transition-transform group-hover:scale-[1.02]"
                 unoptimized
               />
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -91,6 +112,13 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
         postId={post.postId}
         uid={currentUid}
         counts={post.reactionCounts}
+      />
+
+      <PhotoLightbox
+        photos={post.photoURLs}
+        initialIdx={lightboxIdx}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
       />
     </article>
   );
