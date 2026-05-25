@@ -12,6 +12,7 @@ import { Select, FieldLabel } from "@/components/ui/select";
 import { fromLocalDateInput, toLocalDateInput } from "@/lib/dates";
 import { IMAGE_PRESETS, processImage } from "@/lib/image-processing";
 import { PetWalkGoalInput } from "@/components/pets/pet-walk-goal-input";
+import { SaveToAlbumButton } from "@/components/ui/save-to-album-button";
 import { DEFAULT_WALK_GOAL_MINUTES, getPetWalkGoalMinutes } from "@/lib/walk-goals";
 import type { Pet, PetInput, Species, Gender } from "@/lib/types";
 
@@ -152,6 +153,18 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
           ) : !previewURL ? (
             <span className="text-xs text-zinc-500">{tPet("fields.photo")}</span>
           ) : null}
+          {/* Save-to-album — appears only after the user just picked
+              a new file (avatar set) AND the browser supports Web
+              Share with files. On legacy pet edit with no new pick
+              (avatar still null), the existing photoURL lives on
+              Storage with no File handle, so nothing to share. */}
+          {avatar && (
+            <SaveToAlbumButton
+              file={avatar}
+              title={name.trim() || tPet("fields.photo")}
+              className="size-9"
+            />
+          )}
           <input
             ref={fileInputRef}
             type="file"
