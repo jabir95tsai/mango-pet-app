@@ -1,11 +1,27 @@
 # UI Polish Bundle 2026-05-25（friends icon + post default + leaderboard refresh）
 
-狀態：**GO**（user 2026-05-25 下午 confirm 3 個 decisions）
+狀態：**SHIPPED 2026-05-25**（4 commits `76ac18d` → `9ab5c10`；3 個 UI item 全接，App Hosting 自動 build frontend）
 建立日期：2026-05-25 下午
 最後更新：2026-05-25 下午
 規格作者：PM session @ `54c0781`
 角色：**UI/UX**（整 stack — 3 個 UI 細修 + 1 個 default value 改 + 1 個 refresh listener wiring + i18n）
 工作量：**S**（3 個 quick win 合 1 個 spec，1 個 session 內 ship）
+
+## SHIPPED bookkeeping
+
+| Commit | What |
+|---|---|
+| `76ac18d` | feat(settings): friends icon button in avatar box + remove old nav entry |
+| `d53f65e` | feat(feed): post-composer visibility default 'public' |
+| `74751a3` | feat(leaderboard): refresh button + 800ms spinner + listener re-subscribe |
+| `9ab5c10` | chore(i18n): Settings.friendsLink + Leaderboard.refreshButton (zh-TW + en) |
+
+### 後續驗證 / 觀察
+
+- Settings page user-avatar 框右側 friends icon → 點進 /app/friends ⏳ live test
+- Post composer 預設 'public' → 第一次發 post 預設可被公開看 ⏳ user 觀察是否符合預期
+- Leaderboard refresh button → 800ms spinner 後 listener 重 subscribe ⏳ live test
+- 既有 real-time listener (family-leaderboard-realtime SHIPPED) 仍 work ✅ 不破舊功能
 
 ## User Vision（原話保留）
 

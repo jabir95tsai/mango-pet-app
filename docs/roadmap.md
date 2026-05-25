@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 下午（🎉 Phase 1 v2 + Family Leaderboard 即時 + Per-pet walk goal + **save-photo-to-album 6 commits** 全 SHIPPED；Phase 2 pets / 遛狗自動拍照 / Photo Lightbox 仍在跑；**新 4 specs GO**（friends icon + post default public + leaderboard refresh 合 ui-polish-bundle；auto-friend family members 獨立）；Epic 5 觀察至 2026-05-27）
+最後更新：2026-05-25 傍晚（🎉 今日批量 SHIPPED — Phase 1 v2 + Family Leaderboard 即時 + Per-pet walk goal + save-photo-to-album + **UI Polish Bundle 4 commits** + **auto-friend-family-members 3 commits + 1 sideways slip (purgeMyOrphanWalks)**；剩 3 active spec：Phase 2 pets / 遛狗自動拍照 / Photo Lightbox；Epic 5 觀察至 2026-05-27）
 
 ## 進行中
 
@@ -49,21 +49,15 @@
   - `c106d74` save-to-album helper / `ff5e26d` SaveToAlbumButton + i18n / `c6aa3b5` pet-form-dialog / `76f7fbb` walk-tracking-view / `fb0a120` receipt-scanner / `224829d` post-composer per-photo
   - 純 client + browser API（Web Share），無 schema / functions 改動
   - 👉 **下個動作（user）**：iOS Safari/PWA real-device 4 入口 test → share sheet 點「儲存影像」進 Photos.app
-- **UI Polish Bundle 2026-05-25** — [`docs/features/ui-polish-bundle-2026-05-25.md`](../features/ui-polish-bundle-2026-05-25.md) **GO**（3 個 UI quick wins 合 1 spec）
-  - Item #1 好友 icon button 移到 settings user-avatar 框右側 → `/app/friends`
-  - Item #3 post composer 貼文預設 'public'（不 migrate 既有 posts）
-  - Item #4 排行榜加 refresh button + 800ms spinner（沿用既有 real-time listener）
-  - 3 decisions 全採 PM 推薦
-  - 工作量 S，1 session ship，4 commits 拆解（或合 1）
-  - 👉 **下個動作（user）**：開 UI/UX session 動工
-- **加入家庭時自動加為家人好友** — [`docs/features/auto-friend-family-members.md`](../features/auto-friend-family-members.md) **GO**（D1 退家不解 friend confirmed）
-  - User vision：「加入家庭時自動加入家庭成員好友」
-  - Server-side onWrite(`families/{familyId}`) trigger → detect new member → batch create bidirectional friendships
-  - createMutualFriendship helper（idempotent deterministic pairId）
-  - autoFriendEvents audit collection（admin/server-only）
-  - 退家 friendship 仍保留（家庭與社交解耦 per D1）
-  - 工作量 S-M，1 session ship，3 commits 拆解
-  - 👉 **下個動作（user）**：開 Feature Builder session 動工
+- **UI Polish Bundle 2026-05-25** — [`docs/features/ui-polish-bundle-2026-05-25.md`](../features/ui-polish-bundle-2026-05-25.md) ✅ **SHIPPED 2026-05-25**（4 commits + App Hosting auto-build）
+  - `76ac18d` friends icon in settings avatar 框 / `d53f65e` post default public / `74751a3` leaderboard refresh + 800ms spinner / `9ab5c10` i18n keys
+  - 👉 **下個動作（user）**：實機跑 3 個改動驗收 — settings friends icon 點 / 發 post 看預設 public / leaderboard refresh button 點
+- **加入家庭時自動加為家人好友** — [`docs/features/auto-friend-family-members.md`](../features/auto-friend-family-members.md) ✅ **SHIPPED 2026-05-25**（3 commits + 1 sideways slip + asia-east1 deployed）
+  - `b9038da` friendship-helpers + createMutualFriendship (idempotent) / `e17acd5` autoFriendFamilyMembers onDocumentWritten trigger + audit / `4962c69` autoFriendEvents rules
+  - ⚠️ commit `e17acd5` 訊息誤掛 `purgeMyOrphanWalks` 但實際也含 trigger 內容（FB spec 已 verified by grep）
+  - ⭐ 同 commit 順手 ship `purgeMyOrphanWalks` callable（leaderboard data hygiene tool，無獨立 spec — FB session 主動修補）
+  - 退家 friendship 仍保留（per D1）；trigger 對 N 人 join + missing profile + 重複 join 都 idempotent
+  - 👉 **下個動作（user）**：2 帳號 join 同 family live test → friends 頁互相看到
 - **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](../features/walks-auto-photo-share.md) **GO**（spec ready，Feature Builder 動工）
   - User vision：「加入剛開始跟剛結束遛狗的時候拍一張照自動分享到動態的功能」
   - 3 decisions confirmed：D1 觸發 = prompt 可 skip / D2 發布 = 進 composer preview user 編 caption / D3 包裝 = 各自 1 個 post（user 改 PM default）
