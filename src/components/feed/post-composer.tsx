@@ -20,6 +20,18 @@ type Props = {
   onClose: () => void;
   pets: Pet[];
   onCreated?: () => void;
+  /** Pre-load the composer with a single photo (e.g., from the
+   *  walks auto-photo-share start/end prompt). Counts against the
+   *  MAX_PHOTOS limit but the user can still add more or remove this
+   *  one. Spec docs/features/walks-auto-photo-share.md flows A + B. */
+  initialPhoto?: File;
+  /** Pre-fill the caption — typically "Mango 開始遛狗 🐾" or similar.
+   *  User can still edit before submitting. */
+  initialCaption?: string;
+  /** Cross-link the resulting post to walks/{walkId}. Threaded into
+   *  createPost which writes it to post.walkId. Absent on the
+   *  freehand-compose path so legacy posts stay untouched. */
+  walkId?: string;
 };
 
 const MAX_PHOTOS = 4;
@@ -30,7 +42,15 @@ const VISIBILITY_OPTIONS: { value: Visibility; icon: typeof Globe; labelKey: str
   { value: "private", icon: Lock, labelKey: "visibilityPrivate" },
 ];
 
-export function PostComposer({ open, onClose, pets, onCreated }: Props) {
+export function PostComposer({
+  open,
+  onClose,
+  pets,
+  onCreated,
+  initialPhoto,
+  initialCaption,
+  walkId,
+}: Props) {
   const tCommon = useTranslations("Common");
   const tP = useTranslations("Post");
   const { user } = useAuth();
@@ -50,14 +70,24 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
 
   useEffect(() => {
     if (open) {
-      setText("");
-      setPhotos([]);
+      // Pre-fills from the walks auto-photo-share flow. Caller can
+      // omit either prop independently — caption-only pre-fill is
+      // valid (e.g., future "share my pet's profile" flow), and so
+      // is photo-only. The freehand-compose path passes neither and
+      // we reset everything to empty as before.
+      setText(initialCaption ?? "");
+      setPhotos(initialPhoto ? [initialPhoto] : []);
       setPreviews([]);
       setVisibility("public");
       setSelectedPets([]);
       setProcessing(false);
       setError(null);
     }
+    // initialPhoto / initialCaption are stable per `open` toggle in
+    // practice (caller mounts the composer with one file then
+    // unmounts), so omitting them from deps avoids resetting state
+    // mid-edit if the parent re-renders with new prop identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -115,6 +145,10 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
         visibility,
         photoURLs: [],
         photos,
+        // Cross-link to the walk that triggered this post (auto-photo-
+        // share flow). Absent for freehand compose — createPost skips
+        // the field when undefined so legacy posts stay untouched.
+        walkId,
       });
       onCreated?.();
       onClose();
