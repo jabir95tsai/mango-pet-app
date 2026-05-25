@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
+import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   estimatePetCalories,
@@ -658,11 +659,11 @@ export function WalkTrackingView({
                 {tP("recapGridLabel", { n: photos.length })}
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {photos.map((p) => (
+                {photos.map((p, i) => (
                   <button
                     key={`done-${p.idx}-${p.ts}`}
                     type="button"
-                    onClick={() => setLightboxIdx(p.idx)}
+                    onClick={() => setLightboxIdx(i)}
                     aria-label={tP("viewLightbox")}
                     className="aspect-square overflow-hidden rounded-lg ring-1 ring-zinc-200 transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:ring-zinc-700"
                   >
@@ -736,37 +737,16 @@ export function WalkTrackingView({
         </div>
       )}
 
-      {/* Photo lightbox — simple full-screen overlay. Tapping anywhere
-          dismisses. Kept inline to avoid pulling a new dialog dep in;
-          the walks flow only needs a viewer, not editing. */}
-      {lightboxIdx !== null &&
-        photos.find((p) => p.idx === lightboxIdx) && (
-          <div
-            className="absolute inset-0 z-10 flex items-center justify-center bg-black/90 p-4"
-            onClick={() => setLightboxIdx(null)}
-            role="dialog"
-            aria-modal="true"
-            aria-label={tP("viewLightbox")}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={
-                (photos.find((p) => p.idx === lightboxIdx)?.uploadedUrl ??
-                  photos.find((p) => p.idx === lightboxIdx)?.previewUrl) || ""
-              }
-              alt=""
-              className="max-h-full max-w-full object-contain"
-            />
-            <button
-              type="button"
-              onClick={() => setLightboxIdx(null)}
-              aria-label={tP("delete")}
-              className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-white/10 text-white backdrop-blur hover:bg-white/20"
-            >
-              <X className="size-5" />
-            </button>
-          </div>
-        )}
+      {/* Photo lightbox — swapped from the inline overlay to the shared
+          PhotoLightbox component (spec docs/features/photo-lightbox.md).
+          `lightboxIdx` now stores an ARRAY POSITION (was the photo's
+          `idx` field), so the grid onClick passes `i` from .map(). */}
+      <PhotoLightbox
+        photos={photos.map((p) => p.uploadedUrl ?? p.previewUrl)}
+        initialIdx={lightboxIdx ?? 0}
+        open={lightboxIdx !== null}
+        onClose={() => setLightboxIdx(null)}
+      />
     </div>,
     document.body,
   );

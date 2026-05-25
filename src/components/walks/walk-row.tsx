@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { enUS, zhTW } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
 import { Clock, Hand, Route, Star, Trash2 } from "lucide-react";
 import type { Timestamp } from "firebase/firestore";
 import type { Walk } from "@/lib/types";
+import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { cn } from "@/lib/utils";
 
 /**
@@ -31,7 +33,14 @@ type Props = {
 export function WalkRow({ walk, onDelete }: Props) {
   const locale = useLocale();
   const tC = useTranslations("Common");
+  const tPL = useTranslations("PhotoLightbox");
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
+
+  // Optional photo strip — adds a 36px thumbnail before the delete
+  // button if the walk has any photos. Tap → opens the shared
+  // PhotoLightbox at the first photo; carousel handles the rest.
+  const photos = walk.photoURLs ?? [];
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const ts = walk.startedAt as Timestamp | undefined;
   const start = ts ? new Date(ts.toMillis()) : new Date();
@@ -94,6 +103,37 @@ export function WalkRow({ walk, onDelete }: Props) {
         </div>
       </div>
 
+      {/* Photo thumbnail — only renders when the walk has photos.
+          Tapping opens the lightbox at the first photo; the carousel
+          inside handles the rest. */}
+      {photos.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setLightboxOpen(true)}
+          aria-label={tPL("counter", {
+            current: 1,
+            total: photos.length,
+          })}
+          className="relative size-9 shrink-0 overflow-hidden rounded-lg border border-mango-hairline bg-mango-bg-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photos[0]}
+            alt=""
+            className="size-full object-cover"
+            draggable={false}
+          />
+          {photos.length > 1 && (
+            <span
+              aria-hidden="true"
+              className="absolute right-0 bottom-0 grid h-4 min-w-4 place-items-center rounded-tl-md bg-black/70 px-1 text-[10px] font-bold tabular-nums text-white"
+            >
+              {photos.length}
+            </span>
+          )}
+        </button>
+      )}
+
       {/* Delete — kept tertiary; reveals red on hover/focus */}
       <button
         type="button"
@@ -103,6 +143,13 @@ export function WalkRow({ walk, onDelete }: Props) {
       >
         <Trash2 className="size-4" />
       </button>
+
+      <PhotoLightbox
+        photos={photos}
+        initialIdx={0}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </article>
   );
 }
