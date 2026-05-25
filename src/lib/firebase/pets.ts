@@ -134,6 +134,15 @@ export async function updatePet(
 
   await updateDoc(petDoc(petId), updates);
 
+  // walkGoal is set/overwritten as a whole map field — `clean` would
+  // drop the entire object if any inner property were undefined, so we
+  // splice it back outside the clean() pass. Absent input.walkGoal
+  // means "don't touch the existing value" (matches the form, which
+  // omits the field when the user didn't open the goal control).
+  if (input.walkGoal) {
+    await updateDoc(petDoc(petId), { walkGoal: input.walkGoal });
+  }
+
   if (avatar) {
     const { url } = await uploadImage(
       petAvatarPath(actingUid, petId, fileExt(avatar)),
@@ -143,6 +152,19 @@ export async function updatePet(
   }
 
   return (await getPet(petId))!;
+}
+
+/** Focused write for the walk goal alone — used by surfaces that want
+ *  to update the goal without going through the full pet-form save
+ *  path (e.g., a future inline stepper on the walks page picker, or a
+ *  per-pet quick-edit). Pet edit form goes through `updatePet` so its
+ *  single Save button writes everything atomically. */
+export async function updatePetWalkGoal(
+  petId: string,
+  minutes: number,
+  source: "manual" | "computed" = "manual",
+): Promise<void> {
+  await updateDoc(petDoc(petId), { walkGoal: { minutes, source } });
 }
 
 export async function deletePet(petId: string): Promise<void> {
