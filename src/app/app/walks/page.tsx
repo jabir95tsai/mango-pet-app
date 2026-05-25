@@ -487,7 +487,7 @@ export default function WalksPage() {
             type="button"
             onClick={() => setSessionOpen(true)}
             disabled={pets.length === 0}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-0 text-base font-bold text-mango-ink transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-0 text-base font-bold text-white transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
             style={{
               background:
                 "linear-gradient(180deg, #f39800 0%, #d77b00 100%)",
@@ -501,7 +501,11 @@ export default function WalksPage() {
         </div>
       )}
 
-      {/* Desktop CTA — same label as the sticky (no variant swap). */}
+      {/* Desktop CTA — same label as the sticky (no variant swap).
+          `text-white` overrides CTA_MANGO's `text-mango-ink` per user
+          2026-05-25 — white reads as a stronger primary on the orange
+          gradient. The "去新增寵物" empty-state link still uses
+          CTA_MANGO unchanged (ink), so the override only fires here. */}
       <div className="mt-4 hidden justify-center md:flex">
         <Button
           onClick={() => setSessionOpen(true)}
@@ -510,6 +514,7 @@ export default function WalksPage() {
           className={cn(
             "h-14 w-full max-w-xs text-base font-bold sm:text-lg",
             CTA_MANGO,
+            "text-white hover:text-white",
           )}
         >
           <Play className="size-5" />
