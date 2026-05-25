@@ -1,9 +1,9 @@
 # 拍照後選擇性存到手機相簿
 
-狀態：DRAFT
+狀態：**GO**（user 2026-05-25 下午 confirm 3 開放問題：Q1 改「4 入口一次做」/ Q2/Q3 全採 PM 預設）
 建立日期：2026-05-25
-最後更新：2026-05-25
-規格作者：Bug Hunter session（user 2026-05-25 詢問「拍照後檔案是否有儲存到手機相簿」確認非 bug 後，PM 預設轉 feature spec）
+最後更新：2026-05-25 下午
+規格作者：Bug Hunter session（user 2026-05-25 詢問「拍照後檔案是否有儲存到手機相簿」確認非 bug 後，PM 預設轉 feature spec）；PM `f5a5b33` 接手鎖 GO
 角色：Feature Builder（UI + 一支 helper + i18n）
 
 ## User Story
@@ -126,10 +126,24 @@ export async function saveToAlbum(
 
 - 無
 
-## 開放問題
+## 開放問題 — ✅ 全部 resolved（user 2026-05-25 下午）
 
-> Feature Builder 開工前要回 PM 確認的問題清空
+- [x] Phase 1 scope：~~先 pet-form 1 個入口~~ → **直接 4 個入口一次做**（user 改 PM default — 不分階段；建議 Feature Builder 直接 inline `<SaveToAlbumButton>` 在 4 個檔，最後一個 commit 內抽 shared 元件）
+- [x] 「✓ 已存」回饋：**inline icon swap**（icon button 變勾勾 2 秒，不引 toast system）— 採 PM 預設
+- [x] confirm dialog：**不要**（share sheet 本身就是 user confirm）— 採 PM 預設
 
-- [ ] Phase 1 只做 pet-form 太小切？要不要 Phase 1 直接做 4 個入口的最小版（不抽元件）？— PM 預設：先 pet-form 1 個入口跑通流程 + 拿 user feedback，再決定要不要全鋪 + 抽元件
-- [ ] 「✓ 已存」回饋是 toast 還是 inline icon swap？— PM 預設：inline icon swap（icon button 變勾勾 2 秒），不引入 toast system
-- [ ] 點「存到相簿」之前要不要 confirm dialog？— PM 預設：不要。share sheet 本身就是 user confirm
+### 完成標準 / commit 拆解調整（依 Q1 改 4 入口一次做）
+
+原 Phase 1（pet-form only）→ Phase 2（其他 3 入口）→ Phase 3（共用元件）三段式 ship 取消。改建議 commit：
+
+1. `feat(ui): save-to-album helper (canSaveToAlbum + saveToAlbum)`
+2. `feat(ui): SaveToAlbumButton shared 元件 + inline check icon swap 2s`
+3. `feat(pets): pet-form-dialog 頭像預覽接 SaveToAlbumButton`
+4. `feat(walks): walk-tracking-view 拍完照預覽接 SaveToAlbumButton`
+5. `feat(expenses): receipt-scanner 預覽接 SaveToAlbumButton`
+6. `feat(feed): post-composer 多照片預覽各接 SaveToAlbumButton`
+7. `chore(i18n): Common.saveToAlbum / savedToAlbum / saveToAlbumFailed (zh-TW + en)`
+
+（或合 1-2 個 commit — FB 自選）
+
+Ship 一次 push，無 functions 改動。

@@ -45,13 +45,13 @@
   - A2 streak / leaderboard scoring 全照 spec 不動
   - 已知 follow-ups（PM 排序候選）：per-pet push 不只主寵物 / inline goal-stepper 在 picker / breed-based computed goal / goal 改動 history
   - 👉 **下個動作（user）**：實機驗證（多 pet user 切 pet 看 dial 換 goal；A1 20:00 cron 看 push 用新 threshold）+ live test pending
-- **拍照後選擇性存到手機相簿** — [`docs/features/save-photo-to-album.md`](../features/save-photo-to-album.md) **DRAFT**（Bug Hunter session 寫，含 3 開放問題等 user confirm）
-  - User 主動回報 friction：「拍照後檔案是否有儲存到手機相簿」— Bug Hunter 確認非 bug（PWA 沙箱限制）→ PM 轉 feature spec
+- **拍照後選擇性存到手機相簿** — [`docs/features/save-photo-to-album.md`](../features/save-photo-to-album.md) **GO**（Bug Hunter spec + user 2026-05-25 下午 confirm 3 開放問題）
+  - User 主動回報 friction：「拍照後檔案是否有儲存到手機相簿」— Bug Hunter 確認非 bug（PWA 沙箱限制）→ 轉 feature spec
   - Scope = 4 個拍照 entry：pet form / walks tracking-view / expenses receipt-scanner / feed post-composer
-  - 3 decisions confirmed：純 Web Share API（不 fallback download 避免 iOS Files App 誤導）/ 不記偏好 / 不支援瀏覽器 button 隱藏
-  - 3 開放問題待 user 決定：(1) Phase 1 只 pet-form 還是直接 4 入口 (2) 回饋用 toast 還是 inline icon swap (3) 點之前要不要 confirm dialog
-  - 工作量 S（1 helper + 4 button 接入 + i18n keys），純 client + browser API 無 schema 改動
-  - 👉 **下個動作（user）**：回 3 開放問題，PM 升 GO + Feature Builder 動工
+  - 3 base decisions：純 Web Share API（不 fallback download 避免 iOS Files App 誤導）/ 不記偏好 / 不支援瀏覽器 button 隱藏
+  - 3 開放問題 resolved：(Q1) **改 4 入口一次做**（user push back PM default 'pet-form first'）/ (Q2) inline icon swap 2 秒 / (Q3) 不 confirm dialog
+  - 工作量 S（1 helper + 1 shared button 元件 + 4 入口接入 + i18n），純 client + browser API 無 schema 改動
+  - 👉 **下個動作（user）**：開 Feature Builder session 動工（spec 末段已含 7 commit 拆解建議）
 - **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](../features/walks-auto-photo-share.md) **GO**（spec ready，Feature Builder 動工）
   - User vision：「加入剛開始跟剛結束遛狗的時候拍一張照自動分享到動態的功能」
   - 3 decisions confirmed：D1 觸發 = prompt 可 skip / D2 發布 = 進 composer preview user 編 caption / D3 包裝 = 各自 1 個 post（user 改 PM default）
