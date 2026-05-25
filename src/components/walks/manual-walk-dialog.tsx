@@ -16,7 +16,13 @@ type Props = {
   onClose: () => void;
   pets: Pet[];
   streakDays: number;
-  onSubmit: (input: WalkInput & { score: number }) => Promise<void>;
+  /** Caller may return a `{ walkId }` (e.g., shared `handleCreate`
+   *  on the walks page) but this dialog doesn't read it — the
+   *  union widens the type purely so the same handler works for
+   *  both this dialog and WalkTrackingView. */
+  onSubmit: (
+    input: WalkInput & { score: number },
+  ) => Promise<{ walkId: string } | null | void>;
 };
 
 export function ManualWalkDialog({

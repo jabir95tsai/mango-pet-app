@@ -73,7 +73,15 @@ type Props = {
    *  session). Used by the completion recap "vs weekly avg" tile; <= 0
    *  collapses that line. */
   weeklyAvgMin?: number;
-  onComplete: (input: WalkInput & { score: number }) => Promise<void>;
+  /** Caller saves the walk + may pre-mint a walkId for cross-link
+   *  use cases (auto-photo-share start post). Returns `{ walkId }` on
+   *  success so the in-view end-photo flow can include the same id
+   *  in its post, or `null` on failure (caller logged it). The
+   *  walk-tracking-view tolerates either shape — only the new
+   *  end-photo flow reads the walkId. */
+  onComplete: (
+    input: WalkInput & { score: number },
+  ) => Promise<{ walkId: string } | null | void>;
 };
 
 // Map the session's structured error kind to a short, localized hint. The

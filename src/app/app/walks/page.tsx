@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Footprints, Hand, Play, Plus } from "lucide-react";
@@ -17,13 +17,17 @@ import { WalksConfettiDecor } from "@/components/walks/walks-confetti-decor";
 import { StreakChip } from "@/components/walks/streak-chip";
 import { WalkRow } from "@/components/walks/walk-row";
 import { PetPickerDropdown } from "@/components/walks/pet-picker-dropdown";
+import { PhotoPromptSheet } from "@/components/walks/photo-prompt-sheet";
+import { PostComposer } from "@/components/feed/post-composer";
 import {
   createWalk,
   deleteWalk,
   listPersonalWalks,
   listWalks,
+  mintWalkId,
 } from "@/lib/firebase/walks";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
+import { getAppUser } from "@/lib/firebase/users";
 import { computeStreak } from "@/lib/scoring";
 import {
   getTodayProgress,
@@ -109,6 +113,7 @@ export default function WalksPage() {
   const tP = useTranslations("Walks.page");
   const tS = useTranslations("Walks.streak");
   const tC = useTranslations("Common");
+  const tPP = useTranslations("WalksPhotoPrompt");
   const askConfirm = useConfirm();
   const { user } = useAuth();
   const { family, loading: familyLoading } = useFamily();
@@ -132,6 +137,42 @@ export default function WalksPage() {
     if (typeof localStorage === "undefined") return;
     setStoredPetId(localStorage.getItem(LAST_PET_ID_STORAGE_KEY));
   }, []);
+
+  // ── Walks auto-photo-share (flow A: start prompt) ──────────────
+  // Spec docs/features/walks-auto-photo-share.md.
+  // `pendingWalkId` is minted on every walk-start attempt (whether
+  // or not the user takes the photo) so we have a stable id to use
+  // for both (a) the optional start-photo post.walkId and (b) the
+  // eventual createWalk pre-minted id — when the walk doc finally
+  // saves, it lands at the same id, making the cross-link valid.
+  const [autoPhotoEnabled, setAutoPhotoEnabled] = useState(true);
+  const [pendingWalkId, setPendingWalkId] = useState<string | null>(null);
+  const [startPromptOpen, setStartPromptOpen] = useState(false);
+  const [startComposerOpen, setStartComposerOpen] = useState(false);
+  const [startPhoto, setStartPhoto] = useState<File | null>(null);
+  const startPhotoInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Pull the user's walkPrefs once. Absent walkPrefs / absent
+  // autoPhotoShare both fall back to ON per spec — only an explicit
+  // `false` disables the prompt.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const u = await getAppUser(user.uid);
+        if (!cancelled) {
+          setAutoPhotoEnabled(u?.walkPrefs?.autoPhotoShare !== false);
+        }
+      } catch {
+        // Best-effort — default ON is the spec-mandated fallback so
+        // a read failure doesn't accidentally suppress the prompt.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -205,9 +246,9 @@ export default function WalksPage() {
   const weeklyAvgMin = useMemo(() => getWeeklyAvgMinutes(walks), [walks]);
 
   async function handleCreate(input: WalkInput & { score: number }) {
-    if (!user) return;
+    if (!user) return null;
     const { score, ...rest } = input;
-    await createWalk({
+    const walk = await createWalk({
       ...rest,
       // family === null → personal walk (not on leaderboard, anti-farm).
       familyId: family?.familyId ?? null,
@@ -215,8 +256,70 @@ export default function WalksPage() {
       walkerName: user.displayName ?? undefined,
       walkerPhotoURL: user.photoURL,
       score,
+      // If a start-photo flow pre-minted an id (so the start post
+      // could cross-link), use the same id here so the resulting
+      // walk doc lands at that path and the START post's walkId is
+      // valid. `pendingWalkId` is consumed exactly once per walk
+      // and cleared in the WalkTrackingView onClose handler below.
+      walkId: pendingWalkId ?? undefined,
     });
     await refresh();
+    // Return the id so WalkTrackingView's end-photo flow can use it
+    // for the END post's walkId cross-link.
+    return { walkId: walk.walkId };
+  }
+
+  // Single entry point for the "開始遛狗" CTA on both mobile + desktop.
+  // Mints a walkId up-front so the optional start-photo post can
+  // cross-link to the same id `createWalk` will eventually use. Then
+  // either shows the prompt (default) or skips straight into tracking
+  // (user toggled the pref off, or no active pet).
+  function handleStartWalking() {
+    if (pets.length === 0) return;
+    const id = mintWalkId();
+    setPendingWalkId(id);
+    if (autoPhotoEnabled) {
+      setStartPromptOpen(true);
+    } else {
+      setSessionOpen(true);
+    }
+  }
+
+  function handleStartPromptTake() {
+    // Open the hidden camera input — the resulting picked file is
+    // handled by handleStartPhotoPicked below, which advances to the
+    // composer.
+    setStartPromptOpen(false);
+    startPhotoInputRef.current?.click();
+  }
+
+  function handleStartPromptSkip() {
+    setStartPromptOpen(false);
+    // No photo, no composer — straight into tracking. The pre-minted
+    // walkId stays in pendingWalkId for handleCreate to consume on
+    // save.
+    setSessionOpen(true);
+  }
+
+  function handleStartPhotoPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (!file) {
+      // User dismissed the OS camera sheet — treat as Skip per spec.
+      setSessionOpen(true);
+      return;
+    }
+    setStartPhoto(file);
+    setStartComposerOpen(true);
+  }
+
+  function handleStartComposerClose() {
+    // Composer closed via either [取消] (no post created) or after a
+    // successful publish. Either way the next step is to start
+    // tracking — the walkId is already pinned to pendingWalkId.
+    setStartComposerOpen(false);
+    setStartPhoto(null);
+    setSessionOpen(true);
   }
 
   async function handleDelete(walk: Walk) {
@@ -488,7 +591,7 @@ export default function WalksPage() {
         >
           <button
             type="button"
-            onClick={() => setSessionOpen(true)}
+            onClick={handleStartWalking}
             disabled={pets.length === 0}
             className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-0 text-base font-bold text-white transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
             style={{
@@ -511,7 +614,7 @@ export default function WalksPage() {
           CTA_MANGO unchanged (ink), so the override only fires here. */}
       <div className="mt-4 hidden justify-center md:flex">
         <Button
-          onClick={() => setSessionOpen(true)}
+          onClick={handleStartWalking}
           size="lg"
           disabled={pets.length === 0}
           className={cn(
@@ -527,7 +630,13 @@ export default function WalksPage() {
 
       <WalkTrackingView
         open={sessionOpen}
-        onClose={() => setSessionOpen(false)}
+        onClose={() => {
+          setSessionOpen(false);
+          // Walk session ended (saved or abandoned) — pendingWalkId
+          // is single-use, clear it so the next walk attempt mints a
+          // fresh one.
+          setPendingWalkId(null);
+        }}
         pet={activePet}
         streakDays={streakDays}
         storedTodayMin={todayProgress.minutes}
@@ -542,6 +651,43 @@ export default function WalksPage() {
         streakDays={streakDays}
         onSubmit={handleCreate}
       />
+
+      {/* ── Auto-photo-share flow A: walk-start prompt ──
+          Sheet → optional camera → composer. All gated on pendingWalkId
+          being non-null, so they only render in the brief window
+          between [開始遛狗] click and tracking actually starting. */}
+      <input
+        ref={startPhotoInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleStartPhotoPicked}
+        aria-hidden="true"
+      />
+      {activePet && (
+        <>
+          <PhotoPromptSheet
+            open={startPromptOpen}
+            onSkip={handleStartPromptSkip}
+            onTake={handleStartPromptTake}
+            petName={activePet.name}
+            phase="start"
+          />
+          <PostComposer
+            open={startComposerOpen}
+            onClose={handleStartComposerClose}
+            pets={pets}
+            initialPhoto={startPhoto ?? undefined}
+            initialCaption={
+              startPhoto
+                ? tPP("captionStartDefault", { pet: activePet.name })
+                : undefined
+            }
+            walkId={pendingWalkId ?? undefined}
+          />
+        </>
+      )}
     </>
   );
 }
