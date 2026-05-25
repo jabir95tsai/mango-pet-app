@@ -2,19 +2,19 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-24 深夜（🎉 Epic 5 主動推播 5 phase 全 SHIPPED；Epic 4 walks v2 prototype 拿到 → 原 Phase 1 superseded by Phase 1 v2 全頁重建，待 Claude Design 產 production patch；Q11 寵物動效 retracted — 圈內限定 OK）
+最後更新：2026-05-24 深夜（🎉 Epic 5 主動推播 5 phase 全 SHIPPED；Epic 4 walks v2 prototype 拿到 → 原 Phase 1 superseded by Phase 1 v2 全頁重建，**workflow 改 UI/UX 直接寫 src/**（跳過 Claude Design 中介），待 UI/UX session 動工；Q11 寵物動效 retracted — 圈內限定 OK）
 
 ## 進行中
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- **Epic 4: 視覺重設計（芒果主題）** — Phase 0/0.5/(原 Phase 1) ✅ SHIPPED；**Phase 1 v2 全頁重建** prototype 已 review，待 Claude Design 產 production patch
+- **Epic 4: 視覺重設計（芒果主題）** — Phase 0/0.5/(原 Phase 1) ✅ SHIPPED；**Phase 1 v2 全頁重建** prototype 已 review，**workflow 改 UI/UX 直接寫 src/**（跳過 Claude Design 中介），待 UI/UX session 動工
   - 原 Phase 1 palette swap **superseded by Phase 1 v2**（walks 頁結構重建 — radial dial + week strip + 圈內走路狗 + 主寵物 only pill + Confetti @ 達標 + 「再遛一次」CTA）
   - User 推翻 Q11：圈內限定走路狗動效 OK（roadmap not-do 第 118 行 retract，見「不做」段）
   - 多 pet picker DEFERRED — 主寵物 only，多 pet 設計之後再 spec
   - Spec: [`docs/features/walks-v2-rebuild.md`](../features/walks-v2-rebuild.md)
-  - Prototype: [`docs/design/walks-v2-prototype/Walks redesign.html`](../design/walks-v2-prototype/Walks%20redesign.html)
-  - 👉 **下個動作（user）**：開 Claude Design session 用 PM 寫好的 prompt（walks-v2-rebuild.md 末段）→ 之後 Code session apply patch + ship
+  - Prototype: [`docs/design/walks-v2-prototype/Walks redesign.html`](../design/walks-v2-prototype/Walks%20redesign.html)（視覺/實作參考，不再產 patches/ 中間層）
+  - 👉 **下個動作（user）**：開 UI/UX session 用 PM 寫好的 launch prompt（walks-v2-rebuild.md 末段）→ UI/UX 直接寫 src/ + commit + push + ship（5-8 min App Hosting 部署後 production 驗收）
 - **Epic 5: 主動推播 — 提升用戶活躍** — [`docs/features/engagement-push-notifications.md`](../features/engagement-push-notifications.md) ✅ **5 phase 全 SHIPPED**（FB session 5/24 深夜批 ship）
   - 4 push types 上線：A1 evening reminder 20:00 cron (`1a6fc7f`) / A2 streak warning 22:00 cron (`64f5de7`) / B1 rank-overtake aggregateLeaderboards 改 (`9c6442e`) / B2 family-milestone walks onCreate (`40a7e02`)；schema + UI (`f1e6952`)；PM ship recap (`380786d`)
   - 1 deviation：`engagementPushes` 路徑改 3-level（`/{type}/waves/{ISO}`，functionally 等價）
@@ -27,7 +27,7 @@
 | **0** | Design tokens（globals.css @theme inline mango palette + :root radius/motion vars — Tailwind v4 collapsed from spec's tailwind.config.ts plan）| S | ✅ **SHIPPED** `7baff73` |
 | **0.5** | Raised center walks tab + bg-mango-card-soft nav surface | S | ✅ **SHIPPED** `e1a7b60` |
 | ~~1~~ | ~~`/app/walks` 套 mockup tone（warm cream bg + brand CTA + leaf success）~~ | S | ⚠️ **SUPERSEDED by Phase 1 v2** — 原 ship `37d1ec4` + `8aebe14` 不 rollback，視覺由 v2 覆蓋 |
-| **1 v2** | `/app/walks` **全頁結構重建** — radial dial hero + week strip + 圈內走路狗 + 主寵物 only pill + Confetti @ 達標 + 「再遛一次」CTA | M | 🔄 **prototype reviewed**，待 Claude Design 產 production patch |
+| **1 v2** | `/app/walks` **全頁結構重建** — radial dial hero + week strip + 圈內走路狗 + 主寵物 only pill + Confetti @ 達標 + 「再遛一次」CTA | M | 🔄 **prototype reviewed + spec ready**，待 UI/UX session 動工（直接寫 src/，no patches/ 中介）|
 | 2 | `/app` + `/app/pets` + `/app/pets/[petId]` | M | 等 Phase 1 v2 |
 | 3 | `/onboarding` + Landing + sign-in | M | 等 Phase 1 v2 |
 | 4 | `/app/settings` + `/app/leaderboard` | M | 等 Phase 1 v2 |
