@@ -30,6 +30,16 @@ import {
 initializeApp();
 
 const db = getFirestore();
+// Strip `undefined` from writes instead of throwing. Optional fields
+// like `users.city` are commonly absent, and writers across
+// aggregateLeaderboards / recomputeWalkerLeaderboards / etc. spread
+// the value directly into `set()` — pre-flag, that triggered "Cannot
+// use 'undefined' as a Firestore value (found in field 'city')" and
+// every leaderboard write failed. Safe to enable globally: the
+// existing call sites either intend the field to be present OR want
+// it elided, and Firestore docs explicitly recommend this flag for
+// admin code that shapes payloads from optional sources.
+db.settings({ ignoreUndefinedProperties: true });
 const messaging = getMessaging();
 
 // Keep this aligned with the largest "notify before" option in the reminder form.

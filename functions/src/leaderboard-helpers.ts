@@ -71,10 +71,12 @@ export function periodStartMs(
  *  Queries by `walkerUid` (the canonical field — `walks.ts` writes it
  *  on every new walk, and legacy walks are mirrored). The personal-
  *  mode filter (`familyId == null` → skip) happens in memory so we
- *  don't need a `(walkerUid, familyId, startedAt)` composite for the
- *  `!= null` case; the existing `(walkerUid ASC, familyId ASC,
- *  startedAt DESC)` index in firestore.indexes.json covers the
- *  equality predicate. */
+ *  only need the `(walkerUid ASC, startedAt ASC)` composite index in
+ *  firestore.indexes.json — covers both the equality predicate and
+ *  the `startedAt >= T` range filter. (The earlier version of this
+ *  comment claimed a different index existed; it didn't, and every
+ *  trigger fire threw FAILED_PRECONDITION until the real one was
+ *  added.) */
 export async function computeWalkerPeriodScore(
   walkerUid: string,
   period: LeaderboardPeriod,
