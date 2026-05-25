@@ -75,6 +75,13 @@ export function PhotoLightbox({ photos, initialIdx, open, onClose }: Props) {
   const [reducedMotion, setReducedMotion] = useState(false);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+  // True for the synthetic click that fires right after a touch/mouse
+  // drag that committed an axis (carousel swipe / vertical swipe-to-close).
+  // Without this guard, swiping between photos lands on `touchend` which
+  // immediately triggers the synthesized `click` event — and the click
+  // handler's "target === currentTarget" backdrop-dismiss check would
+  // close the lightbox the user was trying to swipe inside.
+  const wasDraggingRef = useRef(false);
 
   // Clamp + sync incoming initialIdx whenever a NEW lightbox session
   // starts (open transitions false→true OR initialIdx changes).
@@ -190,6 +197,15 @@ export function PhotoLightbox({ photos, initialIdx, open, onClose }: Props) {
   function endDrag() {
     setDrag((d) => {
       if (!d.active) return d;
+      if (d.axis !== null) {
+        // A drag actually committed — suppress the synthetic click
+        // that browsers fire right after touchend / mouseup. Clear on
+        // the next tick so the very next user gesture works normally.
+        wasDraggingRef.current = true;
+        setTimeout(() => {
+          wasDraggingRef.current = false;
+        }, 0);
+      }
       if (d.axis === "horizontal" && photos.length > 1) {
         if (d.dx < -SWIPE_H_THRESHOLD) {
           setCurrentIdx((i) => Math.min(photos.length - 1, i + 1));
@@ -242,9 +258,14 @@ export function PhotoLightbox({ photos, initialIdx, open, onClose }: Props) {
         transition: transitionRule,
       }}
       onClick={(e) => {
-        // Tap on the backdrop closes; inner image/control taps
-        // stopPropagation so they don't bubble here.
-        if (e.target === e.currentTarget) onClose();
+        // Tap on the bare overlay closes. Per-photo wrapper applies
+        // the same check (the wrapper, not this element, is what
+        // receives the click when the user taps the dark margin
+        // around an `object-contain` image, because the wrapper
+        // fills the viewport).
+        if (e.target === e.currentTarget && !wasDraggingRef.current) {
+          onClose();
+        }
       }}
       onTouchStart={(e) => {
         const t0 = e.touches[0];
@@ -281,7 +302,16 @@ export function PhotoLightbox({ photos, initialIdx, open, onClose }: Props) {
           <div
             key={`${url}-${i}`}
             className="flex h-full w-full shrink-0 items-center justify-center p-4"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              // Wrapper fills the viewport; a tap on the dark margin
+              // around an `object-contain` image lands here, not on
+              // the outer overlay. Close on bare-wrapper taps using
+              // the same target-identity trick the outer uses, and
+              // suppress the synthetic click that follows a swipe.
+              if (e.target === e.currentTarget && !wasDraggingRef.current) {
+                onClose();
+              }
+            }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
