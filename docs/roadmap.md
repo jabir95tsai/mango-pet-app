@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 中午（🎉 Phase 1 v2 walks 全頁重建 + Family Leaderboard 即時更新 都 SHIPPED；**Phase 2 pets prototype review 完 + spec GO**；Epic 5 主動推播觀察至 2026-05-27；3 個 active spec 等動工：pets-v2 / 遛狗自動拍照 / Photo Lightbox；家庭邀請連結 follow-up 待 user 排序）
+最後更新：2026-05-25 中午（🎉 Phase 1 v2 walks 全頁重建 + Family Leaderboard 即時更新 都 SHIPPED；Phase 2 pets prototype review 完 + spec GO；**Per-pet walk goal spec GO**（啟用 Phase 1 v2 原 DEFERRED 多 pet picker）；Epic 5 主動推播觀察至 2026-05-27；4 個 active spec 等動工：pets-v2 / 遛狗自動拍照 / Photo Lightbox / per-pet walk goal）
 
 ## 進行中
 
@@ -39,6 +39,13 @@
   - Scope = 一次 ship 全 6 個 artboard（list 單/多 + detail 3 tabs + empty）
   - 工作量 L，預估 1-2 session ship，8 commits 拆解
   - 👉 **下個動作（user）**：開 UI/UX session 用 spec 末段 launch prompt 動工
+- **Per-pet 自訂散步目標** — [`docs/features/per-pet-walk-goal.md`](../features/per-pet-walk-goal.md) **GO**（spec ready，Feature Builder 整 stack）
+  - User vision：「加上可自訂散步目標的功能，在我的寵物裡面編輯，之後會依照不同品種年齡體重計算目標」
+  - 3 decisions confirmed：D1 維度 = 只分鐘 / D2 多 pet = walks page 加選單（user 改 PM default）/ D3 future = 預留 schema namespace 純 manual override
+  - 跨 4 surface：schema + Pet edit UI + walks page picker（**啟用 Phase 1 v2 原 DEFERRED chevron-down**）+ A1/B2 push cascade
+  - A2 streak warning 不改（streak 跟 goal 解耦）+ leaderboard scoring 不改
+  - 工作量 M-L，預估 1-2 session ship，6 commits 拆解
+  - 👉 **下個動作（user）**：開 Feature Builder session 用 spec 末段 launch prompt 動工
 - **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](../features/walks-auto-photo-share.md) **GO**（spec ready，Feature Builder 動工）
   - User vision：「加入剛開始跟剛結束遛狗的時候拍一張照自動分享到動態的功能」
   - 3 decisions confirmed：D1 觸發 = prompt 可 skip / D2 發布 = 進 composer preview user 編 caption / D3 包裝 = 各自 1 個 post（user 改 PM default）
@@ -125,7 +132,8 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 ## 想做但還沒規格
 
 - Quiet hours / per-pet opt-out push 設定（Epic 5 follow-up，pushPrefs namespace 已預埋）
-- 多 pet picker UX（walks 頁 Phase 1 v2 ship 後 follow-up — 目前 top-bar Mango pill chevron no-op）
+- ~~多 pet picker UX~~（per-pet-walk-goal spec 即將解鎖）
+- **breed/age/weight 自動計算 walk goal**（per-pet-walk-goal spec ship 後 follow-up，schema source: 'computed' 已預埋）
 - **餐廳照片 lightbox**（Photo Lightbox ship 後接 restaurants page，sharing same 元件）
 - Push throttle（A1 + A2 同晚雙推觀察後決定）
 - walks 頁「全部 →」link 對應的 walks history 頁（Phase 1 v2 留下的 UX gap — 純標籤無 href）
