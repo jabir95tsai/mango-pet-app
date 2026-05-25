@@ -1,11 +1,21 @@
 # Photo Lightbox — feed + walks 點圖放大預覽
 
-狀態：**GO**（user 2026-05-25 早上 3 個 decisions confirmed）
+狀態：**SHIPPED 2026-05-25**（5 commits `b1c925e` → `9da6883`；UI/UX session 寫了 SHIPPED record 但沒改 header — PM `53d3629` 接手 sync header）
 建立日期：2026-05-25
-最後更新：2026-05-25
+最後更新：2026-05-25 傍晚
 規格作者：PM session @ `991432f`
 角色：**UI/UX**（整 stack — 新元件 + 接入 feed + walks + i18n + 自驗 + commit + ship）
 工作量：**S-M**
+
+## SHIPPED bookkeeping (PM 補貼，UI/UX 已寫 SHIPPED record 在 spec 末段)
+
+| Commit | What |
+|---|---|
+| `b1c925e` | feat(ui): photo-lightbox 元件（含 carousel + swipe + 三招關閉 + a11y）|
+| `bc7b6cf` | feat(feed): post-card 接 photo-lightbox onClick |
+| `97df9b5` | feat(walks): walk-row / walk-tracking-view done screen 接 photo-lightbox |
+| `69160c4` | chore(i18n): PhotoLightbox.* keys (zh-TW + en) |
+| `9da6883` | docs(ui): photo-lightbox SHIPPED record (UI/UX 4 commits + Chrome MCP verification) |
 
 ## User Vision（原話保留）
 

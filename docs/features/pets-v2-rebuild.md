@@ -1,11 +1,23 @@
 # Pets page v2 — 全頁結構重建（Phase 2 v2）
 
-狀態：**GO**（user 2026-05-25 中午 prototype review 後 3 個 decisions confirmed — 全採 PM 推薦）
+狀態：**SHIPPED 2026-05-25**（7 commits `cbd95df` → `9d7956a`；UI/UX 整頁重建 + 6 artboard 變體全 port + Phase 2 一次到位 — PM `53d3629` 接手 sync header）
 建立日期：2026-05-25
-最後更新：2026-05-25
+最後更新：2026-05-25 傍晚
 規格作者：PM session @ `d6fae58`
 角色：**UI/UX**（整 stack — 元件設計 + 寫 src/ + 自驗 + per-phase commit + ship）
 工作量：**L**（整頁重建 + multi-pet switcher + 4 detail tabs + donut chart + line chart + EmptyState；不影響其他頁面）
+
+## SHIPPED bookkeeping (PM 補貼)
+
+| Commit | What |
+|---|---|
+| `cbd95df` | feat(pets): pet-avatar + top-bar + header + switcher (photoURL fallback) |
+| `b24c17c` | feat(pets): pet-tabs + URL state + stat grid + overview body |
+| `fbc4bcf` | feat(pets): reminder-card + reminders tab body |
+| `5e14f15` | feat(pets): expense-card + hand-rolled SVG donut + expenses tab body |
+| `a40481a` | feat(pets): health-record-card + weight-trend SVG chart + health body |
+| `46c62e2` | feat(pets): floating-add with tab-aware tone |
+| `9d7956a` | feat(pets): empty-state + integrate pets-page-content into page.tsx + [petId]/page.tsx |
 
 ## 背景
 

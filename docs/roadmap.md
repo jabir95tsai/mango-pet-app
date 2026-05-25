@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 傍晚（🎉 今日批量 SHIPPED — Phase 1 v2 + Family Leaderboard 即時 + Per-pet walk goal + save-photo-to-album + **UI Polish Bundle 4 commits** + **auto-friend-family-members 3 commits + 1 sideways slip (purgeMyOrphanWalks)**；剩 3 active spec：Phase 2 pets / 遛狗自動拍照 / Photo Lightbox；Epic 5 觀察至 2026-05-27）
+最後更新：2026-05-25 傍晚（🎉 今日批量 SHIPPED — Phase 1 v2 + Family Leaderboard 即時 + Per-pet walk goal + save-photo-to-album + UI Polish Bundle + auto-friend-family-members + **Phase 2 pets 7 commits + Photo Lightbox 5 commits** 全 SHIPPED；剩 1 active spec：遛狗自動拍照；Epic 5 觀察至 2026-05-27；今日 ~9 個大 bundle ship）
 
 ## 進行中
 
@@ -32,13 +32,10 @@
   - Deploy 全到位：rules（realtimeLeaderboardUpdates audit）+ functions:recomputeWalkerLeaderboards,aggregateLeaderboards + App Hosting frontend rebuild
   - ⚠️ Mid-session hygiene：commit `d07511c` 訊息誤掛 `feat(leaderboard)` 但內容是 `/join` redirect 修復（前一 session 遺留 working tree）；歷史 cosmetic 髒，無功能影響
   - 👉 **下個動作（user）**：雙瀏覽器實機 test（家人 A 在 leaderboard / 家人 B 完成 walk → 對方 1-2s glow）+ 明天 00:30 cron reconciliation 觀察
-- **Phase 2 pets 全頁重建** — [`docs/features/pets-v2-rebuild.md`](../features/pets-v2-rebuild.md) **GO**（prototype reviewed + spec ready，UI/UX 直接寫）
-  - Prototype 100% spec coverage + 3 個加值：tab-aware FAB / Expense donut + 月比較 / 體重 trend line chart + 完整 EmptyState
-  - 1 critical issue user 已決：**Pet avatar 採真實照片**（不是 prototype 卡通插畫；fallback initial + paw icon）
-  - Workflow = UI/UX 直接寫 src/（同 Phase 1 v2 模式，不走 Claude Design patch 中介）
-  - Scope = 一次 ship 全 6 個 artboard（list 單/多 + detail 3 tabs + empty）
-  - 工作量 L，預估 1-2 session ship，8 commits 拆解
-  - 👉 **下個動作（user）**：開 UI/UX session 用 spec 末段 launch prompt 動工
+- **Phase 2 pets 全頁重建** — [`docs/features/pets-v2-rebuild.md`](../features/pets-v2-rebuild.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 7 commits + 6 artboard 變體全 port，PM 後 sync header）
+  - `cbd95df` pet-avatar + top-bar + header + switcher / `b24c17c` pet-tabs + URL state + stat grid + overview / `fbc4bcf` reminder-card + reminders / `5e14f15` expense-card + donut + expenses / `a40481a` health-record-card + weight-trend chart + health / `46c62e2` floating-add tab-aware / `9d7956a` empty-state + page.tsx 整合
+  - Pet avatar 改用真照片 + fallback initial / Donut chart + 體重 trend line chart 純 hand-rolled SVG / FAB tab-aware tone
+  - 👉 **下個動作（user）**：實機驗證 — 單 pet / 多 pet switcher / 4 tab (概覽/提醒/開銷/健康) / EmptyState 0 pets 情境
 - **Per-pet 自訂散步目標** — [`docs/features/per-pet-walk-goal.md`](../features/per-pet-walk-goal.md) ✅ **SHIPPED 2026-05-25**（FB session 6 commits + A1+B2 deployed asia-east1）
   - `1d0f51b` types + walk-goals helper / `ee9bb1a` updatePet walkGoal passthrough / `8ac764f` pet-walk-goal-input stepper + form 整合 / `9606f80` pet-picker-dropdown + i18n / `313af47` walks page activate chevron + activePet state / `985a547` A1+B2 push cascade (deployed)
   - **Phase 1 v2 DEFERRED chevron 已 ACTIVATED** — multi-pet user 看到 dropdown picker 含 goal chip + 「管理寵物」link
@@ -66,12 +63,9 @@
   - Schema：AppUser.walkPrefs.autoPhotoShare 預設 ON + Post.walkId optional reference
   - 工作量 M，預估 1-2 session ship，6 commits 拆解
   - 👉 **下個動作（user）**：開 Feature Builder session 用 spec 末段 launch prompt 動工
-- **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) **GO**（spec ready，UI/UX 直接寫）
-  - User vision：「動態的照片點一下可以放大預覽」
-  - 3 decisions confirmed：scope = feed + walks（餐廳 backlog）/ multi-photo = carousel swipe + dots / 關閉 = 點背景 + X + swipe-down 三招
-  - 新 reusable 元件 `src/components/ui/photo-lightbox.tsx` + 接入 post-card / walk-row / walk-tracking-view done screen + i18n
-  - 工作量 S-M（1 session 內可收），預估 3-4 個 commit 拆解
-  - 👉 **下個動作（user）**：開 UI/UX session 用 spec 末段 launch prompt 動工
+- **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
+  - `b1c925e` photo-lightbox 元件（carousel + swipe + 三招關閉 + a11y）/ `bc7b6cf` post-card 接 / `97df9b5` walk-row + walk-tracking-view done screen 接 / `69160c4` i18n keys / `9da6883` UI/UX SHIPPED record
+  - 👉 **下個動作（user）**：feed post 點 photo / walks recent 點 photo / done screen 點 photo — 3 處驗收 lightbox 開
 
 ## Epic 4: 視覺重設計 — 芒果主題（user 2026-05-24 vision + 20 個答案）
 
@@ -81,7 +75,7 @@
 | **0.5** | Raised center walks tab + bg-mango-card-soft nav surface | S | ✅ **SHIPPED** `e1a7b60` |
 | ~~1~~ | ~~`/app/walks` 套 mockup tone（warm cream bg + brand CTA + leaf success）~~ | S | ⚠️ **SUPERSEDED by Phase 1 v2** — 原 ship `37d1ec4` + `8aebe14` 不 rollback，視覺由 v2 覆蓋 |
 | **1 v2** | `/app/walks` **全頁結構重建** — radial dial hero + week strip + 圈內走路狗 + 主寵物 only pill + Confetti @ 達標 + 「再遛一次」CTA | M | ✅ **SHIPPED** 2026-05-25 — 元件 `c98c939` + page `984be5b` + i18n `110601e` + 紀錄 `33fef7b`；desktop 12 項驗收全過；complete 變體待 user 觸發 |
-| **2 v2** | `/app/pets` + `/app/pets/[petId]` **全頁重建** — TopBar + PetHeader (真照片) + sticky 4-tab pill + 概覽 2×2 stat grid + Reminder/Expense/Health tab bodies + Expense donut + 體重 trend chart + tab-aware FAB + 完整 EmptyState + multi-pet switcher | L | 🔄 **prototype reviewed + spec ready** — 待 UI/UX session 動工（[`pets-v2-rebuild.md`](../features/pets-v2-rebuild.md)）|
+| **2 v2** | `/app/pets` + `/app/pets/[petId]` **全頁重建** — TopBar + PetHeader (真照片) + sticky 4-tab pill + 概覽 2×2 stat grid + Reminder/Expense/Health tab bodies + Expense donut + 體重 trend chart + tab-aware FAB + 完整 EmptyState + multi-pet switcher | L | ✅ **SHIPPED 2026-05-25** — 7 commits `cbd95df` → `9d7956a`（[`pets-v2-rebuild.md`](../features/pets-v2-rebuild.md)）|
 | ~~2~~ home page | ~~`/app`~~ 移到 Phase 3 | — | merged into Phase 3 |
 | 3 | `/onboarding` + Landing + sign-in | M | 🔓 ready，等 PM spec |
 | 4 | `/app/settings` + `/app/leaderboard` | M | 🔓 ready，等 PM spec |
