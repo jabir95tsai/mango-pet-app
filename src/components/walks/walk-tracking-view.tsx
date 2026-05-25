@@ -17,6 +17,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { Textarea } from "@/components/ui/textarea";
+import { SaveToAlbumButton } from "@/components/ui/save-to-album-button";
 import {
   estimatePetCalories,
   WalkSession,
@@ -44,6 +45,11 @@ type PhotoSlot = {
    *  immediately so the user sees their photo without waiting for the
    *  Storage round-trip. Revoked on delete / unmount. */
   previewUrl: string;
+  /** Original (post-processing) File kept in memory so the in-thumbnail
+   *  save-to-album button has something to hand to navigator.share.
+   *  Not persisted; lifetime matches the previewUrl (cleared on delete
+   *  and on session close together with the URL). */
+  file?: File;
   status: "uploading" | "done" | "failed";
   /** Download URL from Firebase Storage. Populated once upload succeeds;
    *  this is what gets persisted to `walk.photoURLs`. */
@@ -216,7 +222,16 @@ export function WalkTrackingView({
       setPhotos((prev) =>
         prev.map((p) =>
           p.idx === idx && p.ts === ts
-            ? { ...p, status: "done", uploadedUrl: url, storagePath: path }
+            ? {
+                ...p,
+                status: "done",
+                uploadedUrl: url,
+                storagePath: path,
+                // Retain the processed File so SaveToAlbumButton has a
+                // handle. Processed version (not the raw camera file)
+                // because that's the canonical sharable artifact.
+                file: processed,
+              }
             : p,
         ),
       );
@@ -501,6 +516,15 @@ export function WalkTrackingView({
                     >
                       <X className="size-3" />
                     </button>
+                    {/* Save-to-album — bottom-right corner, only after
+                        upload finishes so we have a stable File handle
+                        (file is set together with status: done). */}
+                    {p.status === "done" && p.file && (
+                      <SaveToAlbumButton
+                        file={p.file}
+                        className="absolute -bottom-1 -right-1 size-5"
+                      />
+                    )}
                   </li>
                 ))}
               </ul>
