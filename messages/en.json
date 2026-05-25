@@ -461,5 +461,73 @@
     "prev": "Previous",
     "next": "Next",
     "counter": "{current} / {total}"
+  },
+  "PetsPage": {
+    "title": {
+      "list": "My Pets",
+      "detail": "Pet Profile"
+    },
+    "addPet": "Pet",
+    "tabs": {
+      "overview": "Overview",
+      "reminders": "Reminders",
+      "expenses": "Expenses",
+      "health": "Health"
+    },
+    "overview": {
+      "upcoming": "Upcoming",
+      "recentExpense": "Recent expense",
+      "noReminder": "No reminders yet",
+      "noExpense": "No expenses this month"
+    },
+    "stat": {
+      "nextReminder": "Next reminder",
+      "monthSpend": "This month",
+      "weight": "Weight",
+      "walkDays": "Walk days",
+      "subThisMonth": "This month",
+      "subRecent": "Latest reading",
+      "subKeepGoing": "Keep it up",
+      "noReminder": "All caught up",
+      "noWeight": "Add a weight record"
+    },
+    "viewAll": "View all",
+    "switcher": {
+      "addPet": "Add pet"
+    },
+    "reminders": {
+      "summary": "{total} this month · {done} done",
+      "sortHint": "Sorted by due time",
+      "empty": "No reminders for this pet",
+      "addCta": "Add reminder"
+    },
+    "expenses": {
+      "monthTitle": "Month {month}",
+      "monthCompare": "{sign}{pct}% vs last month",
+      "byCategory": "By category",
+      "donutLabel": "This month",
+      "itemCount": "{count} items",
+      "empty": "No expenses this month",
+      "addCta": "Add expense"
+    },
+    "health": {
+      "weightTrend": "Weight trend",
+      "weightTrendRange": "Last 6 months",
+      "weightTrendInsufficient": "Need at least 2 weight records",
+      "empty": "No health records yet",
+      "addCta": "Add record"
+    },
+    "empty": {
+      "title": "No pets yet",
+      "body": "Add your first pet to start tracking walks, expenses, and health.",
+      "cta": "Add Pet",
+      "hint": "You can add, edit, or switch pets at any time."
+    },
+    "fab": {
+      "overview": "Add reminder",
+      "reminders": "Add reminder",
+      "expenses": "Add expense",
+      "health": "Add health record"
+    }
   }
 }

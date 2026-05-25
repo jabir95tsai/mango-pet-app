@@ -461,5 +461,73 @@
     "prev": "上一張",
     "next": "下一張",
     "counter": "{current} / {total}"
+  },
+  "PetsPage": {
+    "title": {
+      "list": "我的寵物",
+      "detail": "寵物資料"
+    },
+    "addPet": "寵物",
+    "tabs": {
+      "overview": "概覽",
+      "reminders": "提醒",
+      "expenses": "開銷",
+      "health": "健康"
+    },
+    "overview": {
+      "upcoming": "即將到期",
+      "recentExpense": "最近開銷",
+      "noReminder": "目前無提醒",
+      "noExpense": "本月還沒有開銷"
+    },
+    "stat": {
+      "nextReminder": "下次提醒",
+      "monthSpend": "本月開銷",
+      "weight": "體重",
+      "walkDays": "散步天數",
+      "subThisMonth": "本月小計",
+      "subRecent": "最新一次紀錄",
+      "subKeepGoing": "繼續加油",
+      "noReminder": "沒有待辦",
+      "noWeight": "新增體重紀錄"
+    },
+    "viewAll": "全部",
+    "switcher": {
+      "addPet": "新增寵物"
+    },
+    "reminders": {
+      "summary": "本月 {total} 條 · 已完成 {done}",
+      "sortHint": "按到期時間排序",
+      "empty": "此寵物還沒有提醒",
+      "addCta": "新增提醒"
+    },
+    "expenses": {
+      "monthTitle": "{month} 月開銷",
+      "monthCompare": "{sign}{pct}% 較上月",
+      "byCategory": "分類占比",
+      "donutLabel": "本月合計",
+      "itemCount": "{count} 項",
+      "empty": "本月還沒有開銷",
+      "addCta": "新增開銷"
+    },
+    "health": {
+      "weightTrend": "體重趨勢",
+      "weightTrendRange": "近 6 個月",
+      "weightTrendInsufficient": "資料不足，需 ≥ 2 次體重記錄",
+      "empty": "還沒有健康紀錄",
+      "addCta": "新增紀錄"
+    },
+    "empty": {
+      "title": "還沒有寵物",
+      "body": "新增第一隻寵物，開始追蹤散步、開銷與健康紀錄。",
+      "cta": "新增寵物",
+      "hint": "之後可以隨時新增、編輯或切換"
+    },
+    "fab": {
+      "overview": "新增提醒",
+      "reminders": "新增提醒",
+      "expenses": "新增開銷",
+      "health": "新增健康紀錄"
+    }
   }
 }
