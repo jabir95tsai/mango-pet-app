@@ -22,6 +22,10 @@ import {
 } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getStorage } from "firebase-admin/storage";
+import {
+  computeWalkerPeriodScore,
+  type UserAccum,
+} from "./leaderboard-helpers";
 
 initializeApp();
 
@@ -188,30 +192,12 @@ export const scanReminders = onSchedule(
 // ─────────────────────────────────────────────────────────────────────
 // aggregateLeaderboards — daily 00:30 Asia/Taipei
 // ─────────────────────────────────────────────────────────────────────
-
-type WalkRow = {
-  ownerUid: string;
-  startedAt: Timestamp;
-  distanceKm: number;
-  durationMin: number;
-  score: number;
-};
-
-type UserAccum = {
-  uid: string;
-  displayName: string;
-  photoURL: string | null;
-  city?: string;
-  totalScore: number;
-  totalDistanceKm: number;
-  totalDurationMin: number;
-  walkCount: number;
-  walkDays: Set<number>;
-};
-
-function dayBucket(ts: Timestamp): number {
-  return Math.floor(ts.toMillis() / 86_400_000);
-}
+//
+// Per-walker per-period scoring lives in `leaderboard-helpers.ts` so
+// the realtime trigger (recomputeWalkerLeaderboards) and this cron
+// produce identical entries — see docs/features/family-leaderboard-
+// realtime.md "確保兩條 path 算出來的值一致". `UserAccum` is re-
+// exported from there.
 
 function isoWeekLabel(date: Date): string {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -325,101 +311,47 @@ export const aggregateLeaderboards = onSchedule(
     const now = new Date();
     const weekKey = isoWeekLabel(now);
     const monthKey = monthLabel(now);
-    const weekStart = new Date(now);
-    weekStart.setDate(weekStart.getDate() - 7);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // Phase 0 of family-leaderboard spec: personal-mode walks
-    // (familyId === null) must NOT contribute to the global leaderboard.
-    // The `!=` filter also excludes docs where `familyId` is missing
-    // entirely — correct behaviour for legacy `users/{uid}/walks/`
-    // docs (mirrored to top-level by migration; counting them here
-    // would double-count).
+    // Enumerate active walker uids via the same collectionGroup query
+    // we've always used — Phase 0 family-leaderboard filter (personal-
+    // mode walks excluded) is preserved. We only need the set of uids
+    // here; the helper re-queries each walker's walks per period to
+    // do the actual aggregation. That doubles the read fan-out vs the
+    // old single-pass loop, but at daily cron cadence + Firestore's
+    // per-walker query being tiny, the cost is negligible — and it's
+    // the price for sharing the codepath with the realtime trigger
+    // (the whole point of this refactor).
     const allWalks = await db
       .collectionGroup("walks")
       .where("familyId", "!=", null)
       .get();
-    logger.info(`aggregateLeaderboards: walks = ${allWalks.size}`);
-
-    const usersById = new Map<string, { displayName: string; photoURL: string | null; city?: string }>();
+    const walkerUids = new Set<string>();
+    for (const d of allWalks.docs) {
+      const w = d.data();
+      const uid = (w.walkerUid as string) || (w.ownerUid as string);
+      if (uid) walkerUids.add(uid);
+    }
+    logger.info(
+      `aggregateLeaderboards: walks=${allWalks.size} walkers=${walkerUids.size}`,
+    );
 
     const weekly = new Map<string, UserAccum>();
     const monthly = new Map<string, UserAccum>();
     const allTime = new Map<string, UserAccum>();
 
-    function getOrInit(
-      map: Map<string, UserAccum>,
-      uid: string,
-    ): UserAccum {
-      let acc = map.get(uid);
-      if (acc) return acc;
-      const profile = usersById.get(uid);
-      acc = {
-        uid,
-        displayName: profile?.displayName ?? "Friend",
-        photoURL: profile?.photoURL ?? null,
-        city: profile?.city,
-        totalScore: 0,
-        totalDistanceKm: 0,
-        totalDurationMin: 0,
-        walkCount: 0,
-        walkDays: new Set<number>(),
-      };
-      map.set(uid, acc);
-      return acc;
-    }
-
-    // Dedupe across legacy (users/{uid}/walks/) and new (walks/) paths.
-    // During the migration window both can exist for the same logical
-    // walk (same doc id, the migration copies preserving id). We prefer
-    // the top-level doc when both are present (it has familyId set), but
-    // count whichever exists exactly once.
-    const docsById = new Map<
-      string,
-      { data: WalkRow; path: string; isTopLevel: boolean }
-    >();
-    for (const doc of allWalks.docs) {
-      const isTopLevel = !doc.ref.path.startsWith("users/");
-      const prior = docsById.get(doc.id);
-      if (prior && prior.isTopLevel) continue; // already have the canonical copy
-      docsById.set(doc.id, {
-        data: doc.data() as WalkRow,
-        path: doc.ref.path,
-        isTopLevel,
-      });
-    }
-
-    for (const { data: w } of docsById.values()) {
-      if (!w.ownerUid) continue;
-
-      if (!usersById.has(w.ownerUid)) {
-        const userSnap = await db.doc(`users/${w.ownerUid}`).get();
-        const data = userSnap.data() ?? {};
-        usersById.set(w.ownerUid, {
-          displayName: (data.displayName as string) ?? "Friend",
-          photoURL: (data.photoURL as string | null) ?? null,
-          city: data.city as string | undefined,
-        });
-      }
-
-      const at = w.startedAt.toDate();
-      const dayIdx = dayBucket(w.startedAt);
-
-      const buckets: { map: Map<string, UserAccum>; ok: boolean }[] = [
-        { map: weekly, ok: at >= weekStart },
-        { map: monthly, ok: at >= monthStart },
-        { map: allTime, ok: true },
-      ];
-
-      for (const b of buckets) {
-        if (!b.ok) continue;
-        const acc = getOrInit(b.map, w.ownerUid);
-        acc.totalScore += w.score ?? 0;
-        acc.totalDistanceKm += w.distanceKm ?? 0;
-        acc.totalDurationMin += w.durationMin ?? 0;
-        acc.walkCount += 1;
-        acc.walkDays.add(dayIdx);
-      }
+    // Per-walker score via the shared helper. Parallel inside each
+    // walker (3 periods) but serial across walkers — keeps the cron's
+    // peak concurrency bounded for the (rare) thousands-of-walkers
+    // case without needing a queue.
+    for (const uid of walkerUids) {
+      const [w, m, a] = await Promise.all([
+        computeWalkerPeriodScore(uid, "weekly", db, now),
+        computeWalkerPeriodScore(uid, "monthly", db, now),
+        computeWalkerPeriodScore(uid, "all_time", db, now),
+      ]);
+      if (w) weekly.set(uid, w);
+      if (m) monthly.set(uid, m);
+      if (a) allTime.set(uid, a);
     }
 
     // Weekly + monthly use the same writer (they need previousRank
