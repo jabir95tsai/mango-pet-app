@@ -355,6 +355,16 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ── autoFriendEvents audit log (server-only) ──
+    // Written by the autoFriendFamilyMembers onWrite(families/{familyId})
+    // trigger when new uids land in memberUids. One doc per fire keyed
+    // by {familyId}_{ISO}; captures created/skipped pair counts +
+    // reasons so we can spot abuse / runaway loops. Spec docs/features/
+    // auto-friend-family-members.md.
+    match /autoFriendEvents/{document=**} {
+      allow read, write: if false;
+    }
+
     // ── userDailyStats — per-user per-day flags (server writes only) ──
     // Currently holds the `goalHitNotifiedAt` field used by the B2
     // family-milestone push to dedupe (one push per achiever per day).
