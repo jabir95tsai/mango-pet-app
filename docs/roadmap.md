@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 中午（🎉 Phase 1 v2 walks 全頁重建 + Family Leaderboard 即時更新 都 SHIPPED；Phase 2 pets prototype review 完 + spec GO；**Per-pet walk goal spec GO**（啟用 Phase 1 v2 原 DEFERRED 多 pet picker）；Epic 5 主動推播觀察至 2026-05-27；4 個 active spec 等動工：pets-v2 / 遛狗自動拍照 / Photo Lightbox / per-pet walk goal）
+最後更新：2026-05-25 下午（🎉 Phase 1 v2 walks + Family Leaderboard 即時 + **Per-pet walk goal 6 commits 都 SHIPPED**（Phase 1 v2 DEFERRED chevron 解鎖 → 多 pet picker ACTIVE）；Phase 2 pets prototype spec GO；Epic 5 主動推播觀察至 2026-05-27；**新 spec save-photo-to-album DRAFT**（PM 預設 3 decisions 等 user confirm）；4 個 active spec 等動工）
 
 ## 進行中
 
@@ -39,13 +39,19 @@
   - Scope = 一次 ship 全 6 個 artboard（list 單/多 + detail 3 tabs + empty）
   - 工作量 L，預估 1-2 session ship，8 commits 拆解
   - 👉 **下個動作（user）**：開 UI/UX session 用 spec 末段 launch prompt 動工
-- **Per-pet 自訂散步目標** — [`docs/features/per-pet-walk-goal.md`](../features/per-pet-walk-goal.md) **GO**（spec ready，Feature Builder 整 stack）
-  - User vision：「加上可自訂散步目標的功能，在我的寵物裡面編輯，之後會依照不同品種年齡體重計算目標」
-  - 3 decisions confirmed：D1 維度 = 只分鐘 / D2 多 pet = walks page 加選單（user 改 PM default）/ D3 future = 預留 schema namespace 純 manual override
-  - 跨 4 surface：schema + Pet edit UI + walks page picker（**啟用 Phase 1 v2 原 DEFERRED chevron-down**）+ A1/B2 push cascade
-  - A2 streak warning 不改（streak 跟 goal 解耦）+ leaderboard scoring 不改
-  - 工作量 M-L，預估 1-2 session ship，6 commits 拆解
-  - 👉 **下個動作（user）**：開 Feature Builder session 用 spec 末段 launch prompt 動工
+- **Per-pet 自訂散步目標** — [`docs/features/per-pet-walk-goal.md`](../features/per-pet-walk-goal.md) ✅ **SHIPPED 2026-05-25**（FB session 6 commits + A1+B2 deployed asia-east1）
+  - `1d0f51b` types + walk-goals helper / `ee9bb1a` updatePet walkGoal passthrough / `8ac764f` pet-walk-goal-input stepper + form 整合 / `9606f80` pet-picker-dropdown + i18n / `313af47` walks page activate chevron + activePet state / `985a547` A1+B2 push cascade (deployed)
+  - **Phase 1 v2 DEFERRED chevron 已 ACTIVATED** — multi-pet user 看到 dropdown picker 含 goal chip + 「管理寵物」link
+  - A2 streak / leaderboard scoring 全照 spec 不動
+  - 已知 follow-ups（PM 排序候選）：per-pet push 不只主寵物 / inline goal-stepper 在 picker / breed-based computed goal / goal 改動 history
+  - 👉 **下個動作（user）**：實機驗證（多 pet user 切 pet 看 dial 換 goal；A1 20:00 cron 看 push 用新 threshold）+ live test pending
+- **拍照後選擇性存到手機相簿** — [`docs/features/save-photo-to-album.md`](../features/save-photo-to-album.md) **DRAFT**（Bug Hunter session 寫，含 3 開放問題等 user confirm）
+  - User 主動回報 friction：「拍照後檔案是否有儲存到手機相簿」— Bug Hunter 確認非 bug（PWA 沙箱限制）→ PM 轉 feature spec
+  - Scope = 4 個拍照 entry：pet form / walks tracking-view / expenses receipt-scanner / feed post-composer
+  - 3 decisions confirmed：純 Web Share API（不 fallback download 避免 iOS Files App 誤導）/ 不記偏好 / 不支援瀏覽器 button 隱藏
+  - 3 開放問題待 user 決定：(1) Phase 1 只 pet-form 還是直接 4 入口 (2) 回饋用 toast 還是 inline icon swap (3) 點之前要不要 confirm dialog
+  - 工作量 S（1 helper + 4 button 接入 + i18n keys），純 client + browser API 無 schema 改動
+  - 👉 **下個動作（user）**：回 3 開放問題，PM 升 GO + Feature Builder 動工
 - **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](../features/walks-auto-photo-share.md) **GO**（spec ready，Feature Builder 動工）
   - User vision：「加入剛開始跟剛結束遛狗的時候拍一張照自動分享到動態的功能」
   - 3 decisions confirmed：D1 觸發 = prompt 可 skip / D2 發布 = 進 composer preview user 編 caption / D3 包裝 = 各自 1 個 post（user 改 PM default）
