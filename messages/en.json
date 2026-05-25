@@ -394,7 +394,12 @@
       "recentTitle": "Recent walks",
       "viewAll": "View all",
       "walkAgain": "Walk again",
-      "multiPetHint": "Showing primary pet {pet}; multi-pet picker coming soon"
+      "multiPetHint": "Showing primary pet {pet}; multi-pet picker coming soon",
+      "petPicker": {
+        "manageLink": "Manage pets",
+        "goalChip": "{n} min/day",
+        "openLabel": "Switch pet (currently: {pet})"
+      }
     }
   },
   "Push": {

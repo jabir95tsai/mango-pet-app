@@ -394,7 +394,12 @@
       "recentTitle": "最近紀錄",
       "viewAll": "全部",
       "walkAgain": "再遛一次",
-      "multiPetHint": "目前顯示主寵物 {pet}；多寵物切換開發中"
+      "multiPetHint": "目前顯示主寵物 {pet}；多寵物切換開發中",
+      "petPicker": {
+        "manageLink": "管理寵物",
+        "goalChip": "{n} 分/天",
+        "openLabel": "切換寵物（目前：{pet}）"
+      }
     }
   },
   "Push": {
