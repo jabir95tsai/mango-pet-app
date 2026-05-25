@@ -525,10 +525,17 @@ export const recomputeWalkerLeaderboardsOnDelete = onDocumentDeleted(
     const weekKey = isoWeekLabel(now);
     const monthKey = monthLabel(now);
 
+    // Pass the deleted walkId so the helper drops it from the
+    // aggregation even if Firestore's composite-indexed query still
+    // surfaces it for ~1s post-delete (eventual consistency at the
+    // index layer). Without this guard the recompute can briefly
+    // overcount by 1, leaving the entry showing "1 extra walk" until
+    // the next trigger fires or the daily cron runs.
+    const walkId = event.params.walkId;
     const [w, m, a] = await Promise.all([
-      computeWalkerPeriodScore(walkerUid, "weekly", db, now),
-      computeWalkerPeriodScore(walkerUid, "monthly", db, now),
-      computeWalkerPeriodScore(walkerUid, "all_time", db, now),
+      computeWalkerPeriodScore(walkerUid, "weekly", db, now, walkId),
+      computeWalkerPeriodScore(walkerUid, "monthly", db, now, walkId),
+      computeWalkerPeriodScore(walkerUid, "all_time", db, now, walkId),
     ]);
 
     const ops: Array<Promise<unknown>> = [];

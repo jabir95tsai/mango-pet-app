@@ -82,6 +82,16 @@ export async function computeWalkerPeriodScore(
   period: LeaderboardPeriod,
   db: Firestore = getFirestore(),
   now: Date = new Date(),
+  /** Doc id to exclude from the aggregation. Used by the onDelete
+   *  trigger: Firestore's composite-indexed queries are eventually
+   *  consistent across the global index, so the just-deleted doc can
+   *  still show up in the query result for up to ~1s after the delete
+   *  event fires — leaving the entry overcounted by 1 until the next
+   *  recompute. Passing the id here makes the trigger deterministic
+   *  regardless of how stale the index is. The onCreate trigger doesn't
+   *  need this (Firestore is strongly consistent for the just-inserted
+   *  doc post-create). */
+  excludeWalkId?: string,
 ): Promise<UserAccum | null> {
   const startMs = periodStartMs(period, now);
 
@@ -100,6 +110,7 @@ export async function computeWalkerPeriodScore(
   const walkDays = new Set<number>();
 
   for (const d of snap.docs) {
+    if (excludeWalkId && d.id === excludeWalkId) continue;
     const w = d.data();
     // Personal-mode filter — same semantics as the cron's
     // `where("familyId", "!=", null)`. Skipping in-memory keeps the
