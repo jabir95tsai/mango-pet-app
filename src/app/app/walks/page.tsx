@@ -3,16 +3,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Footprints, Hand, Play, Plus } from "lucide-react";
+import { ChevronDown, Footprints, Hand, Play, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFamily } from "@/components/family/family-provider";
-import { RouteHeader } from "@/components/nav/route-header";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WalkTrackingView } from "@/components/walks/walk-tracking-view";
 import { ManualWalkDialog } from "@/components/walks/manual-walk-dialog";
-import { WalkCard } from "@/components/walks/walk-card";
+import { WalksDial } from "@/components/walks/walks-dial";
+import { WalksWeekStrip } from "@/components/walks/walks-week-strip";
+import { WalksConfettiDecor } from "@/components/walks/walks-confetti-decor";
+import { StreakChip } from "@/components/walks/streak-chip";
+import { WalkRow } from "@/components/walks/walk-row";
 import {
   createWalk,
   deleteWalk,
@@ -22,40 +25,87 @@ import {
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { computeStreak } from "@/lib/scoring";
 import {
-  getEncouragementHint,
   getTodayProgress,
-  getWeekProgress,
   getWeeklyAvgMinutes,
 } from "@/lib/walk-tracking";
 import { cn } from "@/lib/utils";
 import type { Pet, Walk, WalkInput } from "@/lib/types";
 import type { Timestamp } from "firebase/firestore";
 
-// Spec docs/features/walk-core-redesign.md decisions:
+// Spec decisions:
 const TODAY_GOAL_MIN = 30;
 const WEEK_GOAL_COUNT = 5;
-const RECENT_WALKS_LIMIT = 10;
+const RECENT_WALKS_LIMIT = 5;
 
-// Per-uid last-selected-pet so a single-device household reopens to the
-// same pet the user walked yesterday. Spec edge case "多寵物 上次選的".
-const lastPetKey = (uid: string) => `mango.walks.lastPetId.${uid}`;
-
-// Phase 1 (visual-redesign-mango v2) — palette swap to mango.* tokens.
-// Structure / logic / state machine untouched. Per-instance className
-// overrides on the shared <Button> because Button.tsx is out of scope
-// (it would change every CTA across the app — Phase 6 polish).
-//
-// CTA family used across this page:
-//   bg-mango-brand text-mango-ink hover:bg-mango-brand-deep shadow-mango
-//   ↑ ink on brand = 7.6:1 AAA (white-on-brand would be 2.6:1, fails AA)
+// CTA family — ink on brand mango (7.6:1 AAA). Shared across hero CTA
+// (desktop), sticky CTA (mobile), and the empty-state inline link.
 const CTA_MANGO =
   "bg-mango-brand text-mango-ink hover:bg-mango-brand-deep shadow-mango";
+
+/** ISO-8601 week start (Monday 00:00 device-local). Mirrors the helper
+ *  inside `walk-tracking.ts` but re-implemented here per spec rule
+ *  "不動 walk-tracking.ts". */
+function startOfWeekLocal(now: Date = new Date()): Date {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  const daysFromMonday = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - daysFromMonday);
+  return d;
+}
+
+/** Day index 0..6 (Monday=0) for "today". */
+function todayIdxLocal(now: Date = new Date()): number {
+  return (now.getDay() + 6) % 7;
+}
+
+/** Per-day minute totals for this week → boolean array of length 7,
+ *  Monday-first, true if that day's total minutes >= goalMin. */
+function getWeekDayDoneFlags(walks: Walk[], goalMin: number): boolean[] {
+  const start = startOfWeekLocal().getTime();
+  const dayMs = 24 * 3600 * 1000;
+  const totals = [0, 0, 0, 0, 0, 0, 0];
+  for (const w of walks) {
+    const ts = w.startedAt as Timestamp | undefined;
+    if (!ts) continue;
+    const t = ts.toMillis();
+    const idx = Math.floor((t - start) / dayMs);
+    if (idx >= 0 && idx < 7) {
+      totals[idx] += w.durationMin ?? 0;
+    }
+  }
+  return totals.map((m) => m >= goalMin);
+}
+
+/** Total km across this week (used in the week-strip header summary). */
+function getWeekKm(walks: Walk[]): number {
+  const start = startOfWeekLocal().getTime();
+  let km = 0;
+  for (const w of walks) {
+    const ts = w.startedAt as Timestamp | undefined;
+    if (!ts) continue;
+    if (ts.toMillis() >= start) km += w.distanceKm ?? 0;
+  }
+  return km;
+}
+
+/** This-week walk count (matches the dial's data shape — counted by
+ *  walks not days). */
+function getWeekWalkCount(walks: Walk[]): number {
+  const start = startOfWeekLocal().getTime();
+  let n = 0;
+  for (const w of walks) {
+    const ts = w.startedAt as Timestamp | undefined;
+    if (!ts) continue;
+    if (ts.toMillis() >= start) n += 1;
+  }
+  return n;
+}
 
 export default function WalksPage() {
   const t = useTranslations("Nav");
   const tW = useTranslations("Walks.core");
+  const tP = useTranslations("Walks.page");
   const tS = useTranslations("Walks.streak");
-  const tE = useTranslations("Walks.encouragement");
   const tC = useTranslations("Common");
   const askConfirm = useConfirm();
   const { user } = useAuth();
@@ -66,7 +116,6 @@ export default function WalksPage() {
   const [loading, setLoading] = useState(true);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
-  const [selectedPetId, setSelectedPetId] = useState<string>("");
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -88,37 +137,18 @@ export default function WalksPage() {
     refresh();
   }, [familyLoading, refresh]);
 
-  // Hydrate selected pet from localStorage once we know who's logged in and
-  // which pets exist. Falls back to pets[0] when no remembered choice or the
-  // remembered id was deleted.
-  useEffect(() => {
-    if (!user || pets.length === 0) return;
-    let stored: string | null = null;
-    try {
-      stored =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem(lastPetKey(user.uid))
-          : null;
-    } catch {
-      /* private mode / disabled storage — fall through to default */
-    }
-    const initial =
-      stored && pets.some((p) => p.petId === stored) ? stored : pets[0].petId;
-    setSelectedPetId(initial);
-  }, [user, pets]);
-
-  const handlePickPet = useCallback(
-    (id: string) => {
-      setSelectedPetId(id);
-      if (!user) return;
-      try {
-        window.localStorage.setItem(lastPetKey(user.uid), id);
-      } catch {
-        /* best-effort persistence — re-pick stays per-tab on failure */
-      }
-    },
-    [user],
-  );
+  // Primary pet = earliest createdAt. Spec edge case "多 pet user
+  // → top-bar only shows primary pet; multi-pet picker DEFERRED".
+  // Single-pet user falls through to the same code path.
+  const primaryPet = useMemo<Pet | null>(() => {
+    if (pets.length === 0) return null;
+    return [...pets].sort((a, b) => {
+      const at = a.createdAt?.toMillis?.() ?? 0;
+      const bt = b.createdAt?.toMillis?.() ?? 0;
+      return at - bt;
+    })[0];
+  }, [pets]);
+  const hasMultiplePets = pets.length > 1;
 
   const todayProgress = useMemo(
     () => getTodayProgress(walks, TODAY_GOAL_MIN),
@@ -133,48 +163,15 @@ export default function WalksPage() {
     [walks],
   );
 
-  const weekProgress = useMemo(
-    () => getWeekProgress(walks, WEEK_GOAL_COUNT),
+  const weekDayFlags = useMemo(
+    () => getWeekDayDoneFlags(walks, TODAY_GOAL_MIN),
     [walks],
   );
+  const weekKm = useMemo(() => getWeekKm(walks), [walks]);
+  const weekCount = useMemo(() => getWeekWalkCount(walks), [walks]);
+  const todayIdx = useMemo(() => todayIdxLocal(), []);
 
-  // Pre-compute fields the completion recap + Hero encouragement need.
-  // Doing it on the page keeps the WalkTrackingView decoupled from the
-  // walks list query.
   const weeklyAvgMin = useMemo(() => getWeeklyAvgMinutes(walks), [walks]);
-  const lastWalkMs = useMemo<number | null>(() => {
-    if (walks.length === 0) return null;
-    const ts = walks[0].startedAt as Timestamp;
-    return ts.toMillis();
-  }, [walks]);
-  const encouragement = useMemo(
-    () =>
-      getEncouragementHint({
-        todayMinutes: todayProgress.minutes,
-        streakDays,
-        lastWalkMs,
-        petName: pets.find((p) => p.petId === selectedPetId)?.name ?? null,
-      }),
-    [todayProgress.minutes, streakDays, lastWalkMs, pets, selectedPetId],
-  );
-
-  // Most-recent pet from the walks list — drives the "Last walk: Mango"
-  // hint shown under the Start CTA when there are 2+ pets.
-  const lastWalkedName = useMemo(() => {
-    if (walks.length === 0) return null;
-    return walks[0].petName ?? null;
-  }, [walks]);
-
-  // Promote the user's chosen pet to position 0 so the existing
-  // WalkSessionDialog (which auto-selects pets[0] internally) opens on the
-  // right pet. Phase 3 will replace this with a proper full-screen view
-  // that accepts the selected pet directly.
-  const dialogPets = useMemo(() => {
-    if (!selectedPetId) return pets;
-    const idx = pets.findIndex((p) => p.petId === selectedPetId);
-    if (idx <= 0) return pets;
-    return [pets[idx], ...pets.slice(0, idx), ...pets.slice(idx + 1)];
-  }, [pets, selectedPetId]);
 
   async function handleCreate(input: WalkInput & { score: number }) {
     if (!user) return;
@@ -204,12 +201,11 @@ export default function WalksPage() {
     await refresh();
   }
 
-  // No-pets short circuit. Hero needs a target pet, so we route the user to
-  // create one before anything else loads.
+  // No-pets short circuit — same as before, just re-styled into the
+  // mango CTA family.
   if (!loading && pets.length === 0) {
     return (
       <>
-        <RouteHeader title={t("walks")} className="mb-6" />
         <EmptyState
           icon={Footprints}
           title={tW("needPetTitle")}
@@ -218,8 +214,6 @@ export default function WalksPage() {
             <Link
               href="/app/pets"
               className={cn(
-                // Mini-Button styled inline (Button component is out of
-                // scope for Phase 1). Same CTA family as the Hero.
                 "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 CTA_MANGO,
               )}
@@ -238,189 +232,124 @@ export default function WalksPage() {
     TODAY_GOAL_MIN - Math.round(todayProgress.minutes),
   );
   const goalHit = todayProgress.percent >= 100;
-  const todayLabel = goalHit
-    ? tW("todayGoalHit")
-    : todayProgress.minutes === 0
-      ? tW("noWalksToday")
-      : tW("todayGoalGap", { min: remainingMin });
+  const doneMin = Math.round(todayProgress.minutes);
+  const petName = primaryPet?.name ?? "";
+
+  // Hero copy — title + sub-line. Spec format:
+  //   "再走 {min} 分鐘" / "達標了 🎉"
+  //   "{pet} 今天走了 {done} 分 · 連續 {streak} 天"
+  const heroTitle = goalHit
+    ? tP("heroComplete")
+    : tP("heroIncomplete", { min: remainingMin });
+  const heroSub = petName
+    ? tP("heroSub", { pet: petName, done: doneMin, streak: streakDays })
+    : tP("heroSubNoPet", { done: doneMin, streak: streakDays });
 
   return (
     <>
-      <RouteHeader title={t("walks")} className="mb-6" />
-
-      {/* Hero — "Do I need to walk today, and what do I tap to start?" The
-          three answers (status copy, progress bar, big CTA) line up in the
-          user's eye in one read. */}
-      <section
-        aria-labelledby="walks-hero-status"
-        className="mb-6 flex flex-col gap-5 rounded-xl border border-mango-hairline bg-mango-card p-6 shadow-card dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none"
-      >
-        <div className="flex flex-col gap-2">
-          <div className="flex items-baseline justify-between gap-3">
-            <p
-              id="walks-hero-status"
-              className="text-lg font-semibold text-mango-ink dark:text-zinc-100 sm:text-xl"
-            >
-              {todayLabel}
-            </p>
-            <div className="flex shrink-0 items-center gap-2">
-              {/* Streak badge — spec D4: always visible in Hero.
-                  0-2 days: muted ink-2 number; ≥3: brand-tint chip with 🔥;
-                  ≥7: leaf-tint chip with 🔥 (text-green-800 here is a
-                  deliberate one-off — see patches/README.md "Deviations"). */}
-              <span
-                title={streakDays >= 7 ? tS("weekTooltip") : undefined}
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
-                  streakDays >= 7
-                    ? "bg-mango-leaf-tint text-green-800 dark:bg-emerald-500/15 dark:text-emerald-200"
-                    : streakDays >= 3
-                      ? "bg-mango-brand-tint text-mango-brand-deep dark:bg-amber-500/15 dark:text-amber-200"
-                      : "text-mango-ink-2 dark:text-zinc-400",
-                )}
-              >
-                {streakDays >= 3 ? "🔥 " : ""}
-                {tS("labelShort", { days: streakDays })}
-              </span>
-              <p className="text-xs tabular-nums text-mango-ink-2 dark:text-zinc-400">
-                {tW("todayProgress", {
-                  done: Math.round(todayProgress.minutes),
-                  goal: TODAY_GOAL_MIN,
-                })}
-              </p>
-            </div>
-          </div>
-          {/* Encouragement sub-text — pulled from the i18n bank by
-              getEncouragementHint based on (today, streak, last walk,
-              pet name). One line, low-key. */}
-          <p className="text-xs text-mango-ink-2 dark:text-zinc-400">
-            {tE(encouragement.key, encouragement.vars)}
-          </p>
-          <div
-            className="h-2.5 w-full overflow-hidden rounded-full bg-mango-hairline dark:bg-zinc-800"
-            role="progressbar"
-            aria-valuenow={todayProgress.percent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={tW("todayProgress", {
-              done: Math.round(todayProgress.minutes),
-              goal: TODAY_GOAL_MIN,
-            })}
-          >
-            <div
-              className={cn(
-                "h-full rounded-full transition-[width] duration-500",
-                goalHit ? "bg-mango-leaf" : "bg-mango-amber",
-              )}
-              style={{ width: `${todayProgress.percent}%` }}
-            />
-          </div>
+      {/* Confetti decor — only when today's goal is met. Sits at -z-0
+          behind the top section so it doesn't intercept taps. */}
+      {goalHit && (
+        <div className="relative">
+          <WalksConfettiDecor />
         </div>
+      )}
 
-        {/* Multi-pet picker. Single-pet households skip the chips entirely
-            (spec: "單寵物時直接預選"). Segmented chips beat a select because
-            tapping a chip is one step, not two.
-            Phase 1 palette:
-              unselected → brand-tint bg, brand-deep text
-              selected   → brand bg, ink text, soft mango shadow
-            (mirrors the CTA hierarchy — picked pet visually feeds the
-            big orange Start button below.) */}
-        {pets.length > 1 && (
-          <div
-            className="flex flex-wrap gap-2"
-            role="radiogroup"
-            aria-label={tW("pickPet")}
+      {/* Top bar — title (left) + Mango pill (multi-pet primary) +
+          streak chip (right). Spec: chevron is decoration only;
+          multi-pet picker is DEFERRED to a follow-up spec. */}
+      <div className="relative z-10 mb-3 flex items-center gap-2.5">
+        <h1 className="text-[22px] font-bold tracking-tight text-mango-ink">
+          {t("walks")}
+        </h1>
+        {primaryPet && (
+          <button
+            type="button"
+            disabled={!hasMultiplePets}
+            aria-label={
+              hasMultiplePets
+                ? tP("multiPetHint", { pet: primaryPet.name })
+                : primaryPet.name
+            }
+            title={hasMultiplePets ? tP("multiPetHint", { pet: primaryPet.name }) : undefined}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border border-mango-hairline bg-mango-card py-1 pl-1 pr-2.5 text-[13px] font-semibold text-mango-ink",
+              hasMultiplePets
+                ? "cursor-default opacity-100"
+                : "cursor-default",
+            )}
           >
-            {pets.map((p) => {
-              const active = p.petId === selectedPetId;
-              return (
-                <button
-                  key={p.petId}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => handlePickPet(p.petId)}
-                  className={cn(
-                    "h-9 rounded-full border px-3 text-sm font-medium transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep",
-                    active
-                      ? "border-transparent bg-mango-brand text-mango-ink shadow-[0_6px_14px_-6px_rgba(243,152,0,0.45)] dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-200"
-                      : "border-transparent bg-mango-brand-tint text-mango-brand-deep hover:bg-mango-brand-tint/80 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800",
-                  )}
-                >
-                  🐾 {p.name}
-                </button>
-              );
-            })}
-          </div>
+            <span
+              aria-hidden="true"
+              className="grid h-[22px] w-[22px] place-items-center overflow-hidden rounded-full bg-[#f7c168] text-[13px]"
+            >
+              🐶
+            </span>
+            <span className="truncate max-w-[6.5rem]">{primaryPet.name}</span>
+            {hasMultiplePets && (
+              <ChevronDown
+                className="size-3 text-mango-ink-3"
+                aria-hidden="true"
+              />
+            )}
+          </button>
         )}
+        <div className="flex-1" />
+        <StreakChip
+          streakDays={streakDays}
+          label={tS("labelShort", { days: streakDays })}
+          weekTooltip={tS("weekTooltip")}
+        />
+      </div>
 
-        {/* Hero CTA — desktop only. Mobile relies on the sticky bottom CTA
-            (renders below) so the user only sees one Start button at a time.
-            Desktop has no sticky (md:hidden there) so the Hero CTA stays
-            as the start button. Per-instance mango override on Button. */}
-        <Button
-          onClick={() => setSessionOpen(true)}
-          size="lg"
-          className={cn(
-            "hidden h-14 w-full text-base font-bold sm:text-lg md:inline-flex",
-            CTA_MANGO,
-          )}
+      {/* Hero copy — title + sub-line. Mounts above the dial. */}
+      <div className="relative z-10 mb-3 px-1">
+        <h2
+          className="text-[26px] font-bold leading-tight tracking-tight text-mango-ink"
+          aria-live="polite"
         >
-          <Play className="size-5" />
-          {tW("startWalking")}
-        </Button>
+          {heroTitle}
+        </h2>
+        <p className="mt-1 text-[13px] font-medium text-mango-ink-2">
+          {heroSub}
+        </p>
+      </div>
 
-        {pets.length > 1 && lastWalkedName && (
-          <p className="hidden text-center text-xs text-mango-ink-2 md:block dark:text-zinc-400">
-            {tW("lastWalkedWith", { name: lastWalkedName })}
-          </p>
-        )}
+      {/* Dial — the page's hero element. 232px radial with walking dog
+          inside. Bottom pill ({done} / {goal} 分) overlaps the ring. */}
+      <div className="relative z-10 mb-6 pt-2 pb-6">
+        <WalksDial
+          percent={todayProgress.percent}
+          complete={goalHit}
+          doneMin={todayProgress.minutes}
+          goalMin={TODAY_GOAL_MIN}
+        />
+      </div>
+
+      {/* Week strip — 7 days Mon-Sun + summary header */}
+      <section className="mb-6">
+        <div className="mb-2 flex items-baseline justify-between px-1">
+          <span className="text-xs font-semibold text-mango-ink-2">
+            {tP("weekLabel")}
+          </span>
+          <span className="text-xs text-mango-ink-3">
+            <strong className="font-bold text-mango-ink">{weekCount}</strong>
+            {" / "}
+            {WEEK_GOAL_COUNT}
+            {" · "}
+            <span className="tabular-nums">{weekKm.toFixed(1)}</span>
+            {" km"}
+          </span>
+        </div>
+        <WalksWeekStrip
+          days={weekDayFlags}
+          todayIdx={todayIdx}
+          complete={goalHit}
+        />
       </section>
 
-      {/* Second screen — week + streak compact cards. Sit just under the
-          Hero so a scroll reveals them; "分數" deliberately dropped per
-          spec (kept on /app/leaderboard where it belongs). */}
-      <section className="mb-6 grid grid-cols-2 gap-3">
-        <article className="flex flex-col gap-2 rounded-xl border border-mango-hairline bg-mango-card p-4 shadow-card dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-mango-ink-2 dark:text-zinc-400">
-            {tW("weekProgressLabel")}
-          </p>
-          <p className="text-2xl font-bold tabular-nums text-mango-ink dark:text-zinc-100">
-            {tW("weekProgressCount", {
-              done: weekProgress.count,
-              goal: WEEK_GOAL_COUNT,
-            })}
-          </p>
-          <div
-            className="h-1.5 w-full overflow-hidden rounded-full bg-mango-hairline dark:bg-zinc-800"
-            role="progressbar"
-            aria-valuenow={weekProgress.percent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className={cn(
-                "h-full rounded-full transition-[width] duration-500",
-                weekProgress.percent >= 100
-                  ? "bg-mango-leaf"
-                  : "bg-mango-amber",
-              )}
-              style={{ width: `${weekProgress.percent}%` }}
-            />
-          </div>
-        </article>
-        <article className="flex flex-col gap-2 rounded-xl border border-mango-hairline bg-mango-card p-4 shadow-card dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-mango-ink-2 dark:text-zinc-400">
-            {tW("streakLabel")}
-          </p>
-          <p className="text-2xl font-bold tabular-nums text-mango-brand-deep dark:text-amber-300">
-            {tW("streakDaysCount", { days: streakDays })}
-          </p>
-        </article>
-      </section>
-
-      {/* Recent walks — section header sets expectation that this is a
-          summary, not the full archive. Limited to 10 per spec. */}
+      {/* Recent walks — compact rows (max 5). "全部" → /app/walks history
+          page is OUT of scope for v2 (placeholder text only for now). */}
       {loading ? (
         <p className="text-sm text-mango-ink-2">{tC("loading")}</p>
       ) : walks.length === 0 ? (
@@ -430,13 +359,21 @@ export default function WalksPage() {
           description={tW("emptyWalksDescription")}
         />
       ) : (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-mango-ink-2 dark:text-zinc-300">
-            {tW("recentWalks")}
-          </h2>
-          <div className="flex flex-col gap-3">
+        <section className="mb-6">
+          <div className="mb-2 flex items-baseline justify-between px-1">
+            <h3 className="text-sm font-semibold text-mango-ink">
+              {tP("recentTitle")}
+            </h3>
+            {/* "View all" link — TODO: target the future history page
+                when one exists. For now it just labels intent so the
+                user understands the list is truncated. */}
+            <span className="text-xs font-semibold text-mango-brand-deep">
+              {tP("viewAll")}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2">
             {walks.slice(0, RECENT_WALKS_LIMIT).map((w) => (
-              <WalkCard
+              <WalkRow
                 key={w.walkId}
                 walk={w}
                 onDelete={() => handleDelete(w)}
@@ -446,9 +383,9 @@ export default function WalksPage() {
         </section>
       )}
 
-      {/* Manual log — secondary action at the very bottom. Ghost variant
-          + small size so it never competes with the Hero CTA. */}
-      <div className="mt-8 flex justify-center">
+      {/* Manual log — secondary action; small, low-contrast so it never
+          competes with the sticky CTA. */}
+      <div className="mt-6 flex justify-center">
         <Button
           variant="ghost"
           size="sm"
@@ -461,47 +398,89 @@ export default function WalksPage() {
         </Button>
       </div>
 
-      {/* Mobile-only spacer so the sticky bottom CTA below can't cover
-          the manual-log button when the user scrolls to the very end of
-          the page. Grown from h-16 → h-24 alongside the sticky bottom
-          bump (3.75rem → 5.75rem) so the raised nav disc has clearance. */}
+      {/* Mobile-only spacer — sticky CTA below sits 5.75rem above
+          viewport bottom (3.75rem nav + 1rem disc protrusion + 1rem
+          gap), spacer h-24 keeps the tail content above it. */}
       <div className="h-24 md:hidden" aria-hidden="true" />
 
-      {/* Sticky bottom CTA — backlog "walks 頁加 sticky bottom CTA"
-          (user 2026-05-24 解 A). Duplicates the Hero CTA so "Start
-          walking" is always within iPhone thumb reach without scrolling
-          back up. Hidden when the tracking view is open (already
-          full-screen) and hidden on desktop (Hero is in view alongside
-          the sidebar there, sticky would be redundant).
-          Phase 1 palette: matches the warm cream + blur nav surface from
-          Phase 0.5 so the bottom band reads as a continuous warm strip. */}
+      {/* Sticky bottom CTA — variant swap on goalHit:
+            incomplete  → orange gradient pill ▶ 開始遛狗
+            complete    → white pill with brand border + 「再遛一次」 */}
       {!sessionOpen && (
         <div
-          className="fixed inset-x-0 z-20 border-t border-mango-hairline bg-mango-card-soft/92 px-4 py-3 backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-950/95"
-          style={{
-            // 3.75rem nav + 2rem so the sticky bar clears the raised
-            // walks-disc's 1rem protrusion + leaves a 1rem visual gap.
-            bottom: "calc(env(safe-area-inset-bottom) + 5.75rem)",
-          }}
+          className="fixed inset-x-0 z-20 border-t border-mango-hairline bg-mango-card-soft/92 px-4 py-3 backdrop-blur-md md:hidden"
+          style={{ bottom: "calc(env(safe-area-inset-bottom) + 5.75rem)" }}
         >
-          <Button
+          <button
+            type="button"
             onClick={() => setSessionOpen(true)}
-            size="lg"
+            disabled={pets.length === 0}
             className={cn(
-              "h-12 w-full text-base font-bold",
-              CTA_MANGO,
+              "flex h-12 w-full items-center justify-center gap-2 rounded-full text-base font-bold transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60",
+              goalHit
+                ? "border-[1.5px] border-mango-brand bg-mango-card text-mango-ink"
+                : "border-0 text-mango-ink",
             )}
+            style={
+              goalHit
+                ? {
+                    boxShadow:
+                      "0 10px 24px -8px rgba(80,50,10,0.22)",
+                  }
+                : {
+                    background:
+                      "linear-gradient(180deg, #f39800 0%, #d77b00 100%)",
+                    boxShadow:
+                      "0 16px 32px -8px rgba(243,152,0,0.60), 0 4px 10px -4px rgba(180,100,0,0.35), 0 1px 0 rgba(255,255,255,0.3) inset",
+                  }
+            }
           >
-            <Play className="size-5" />
-            {tW("startWalking")}
-          </Button>
+            {goalHit ? (
+              <>
+                <Plus className="size-5 text-mango-brand-deep" strokeWidth={2.5} />
+                {tP("walkAgain")}
+              </>
+            ) : (
+              <>
+                <Play className="size-5" />
+                {tW("startWalking")}
+              </>
+            )}
+          </button>
         </div>
       )}
+
+      {/* Desktop Hero CTA — sticky is md:hidden so desktop needs its own
+          start button. Lives below the manual log row visually but only
+          renders on md+. */}
+      <div className="mt-4 hidden justify-center md:flex">
+        <Button
+          onClick={() => setSessionOpen(true)}
+          size="lg"
+          disabled={pets.length === 0}
+          className={cn(
+            "h-14 w-full max-w-xs text-base font-bold sm:text-lg",
+            CTA_MANGO,
+          )}
+        >
+          {goalHit ? (
+            <>
+              <Plus className="size-5" />
+              {tP("walkAgain")}
+            </>
+          ) : (
+            <>
+              <Play className="size-5" />
+              {tW("startWalking")}
+            </>
+          )}
+        </Button>
+      </div>
 
       <WalkTrackingView
         open={sessionOpen}
         onClose={() => setSessionOpen(false)}
-        pet={pets.find((p) => p.petId === selectedPetId) ?? null}
+        pet={primaryPet}
         streakDays={streakDays}
         storedTodayMin={todayProgress.minutes}
         goalMin={TODAY_GOAL_MIN}
@@ -511,7 +490,7 @@ export default function WalksPage() {
       <ManualWalkDialog
         open={manualOpen}
         onClose={() => setManualOpen(false)}
-        pets={dialogPets}
+        pets={pets}
         streakDays={streakDays}
         onSubmit={handleCreate}
       />
