@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 早上（🎉 Phase 1 v2 walks 全頁重建 SHIPPED；Epic 5 主動推播觀察至 2026-05-27；Phase 2 pets prototype 開 Claude Design 中；**Photo Lightbox + Family Leaderboard 即時更新 specs GO**；家庭邀請連結 follow-up 待 user 排序）
+最後更新：2026-05-25 中午（🎉 Phase 1 v2 walks 全頁重建 + **Family Leaderboard 即時更新** 都 SHIPPED；Epic 5 主動推播觀察至 2026-05-27；**遛狗自動拍照 + 自動發動態 spec GO**；Photo Lightbox + Pets prototype 在跑；家庭邀請連結 follow-up 待 user 排序）
 
 ## 進行中
 
@@ -25,11 +25,20 @@
     - 即時：手動 test 觀察清單跑一輪（spec 內 4 個 test 步驟）
     - **觀察至 2026-05-27（3 天）**：每 push opt-out 率 < 20% / A1 開啟率 ≥ 20% / A2 補遛率 ≥ 15% / B1 追上率 ≥ 10% / B2 family 開啟率 ≥ 30% / 同晚 A1+A2 雙推不擾人
     - 觀察過關 → 收尾移到已收尾速覽；不過關 → 寫 follow-up（throttle / 文案調整 / 時段微調）
-- **Family Leaderboard 即時更新** — [`docs/features/family-leaderboard-realtime.md`](../features/family-leaderboard-realtime.md) **GO**（spec ready，Feature Builder 動工）
-  - User vision：「將家庭內的遛狗排行榜即時更新」
-  - 3 decisions confirmed：scope = 只 family view 即時（global 仍 daily cron）/ 機制 = server-side walks onCreate trigger（同 B2 pattern）/ UI = brand glow 1.5s + reduced-motion skip
-  - 抽 `computeWalkerPeriodScore` shared helper → daily cron + 新 trigger 共用；加 `lastUpdatedAt` schema 給 client glow 用
-  - 工作量 S-M，預估 1 session 內可收，3 commits（refactor / trigger / glow）
+- **Family Leaderboard 即時更新** — [`docs/features/family-leaderboard-realtime.md`](../features/family-leaderboard-realtime.md) ✅ **SHIPPED 2026-05-25**（FB session 3 commits + deploy 完成）
+  - `bf8ed08` refactor: extract computeWalkerPeriodScore helper
+  - `1245286` feat: recomputeWalkerLeaderboards onCreate trigger + audit + lastUpdatedAt
+  - `4edb873` feat: client onSnapshot listener + glow animation + reduced-motion skip
+  - Deploy 全到位：rules（realtimeLeaderboardUpdates audit）+ functions:recomputeWalkerLeaderboards,aggregateLeaderboards + App Hosting frontend rebuild
+  - ⚠️ Mid-session hygiene：commit `d07511c` 訊息誤掛 `feat(leaderboard)` 但內容是 `/join` redirect 修復（前一 session 遺留 working tree）；歷史 cosmetic 髒，無功能影響
+  - 👉 **下個動作（user）**：雙瀏覽器實機 test（家人 A 在 leaderboard / 家人 B 完成 walk → 對方 1-2s glow）+ 明天 00:30 cron reconciliation 觀察
+- **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](../features/walks-auto-photo-share.md) **GO**（spec ready，Feature Builder 動工）
+  - User vision：「加入剛開始跟剛結束遛狗的時候拍一張照自動分享到動態的功能」
+  - 3 decisions confirmed：D1 觸發 = prompt 可 skip / D2 發布 = 進 composer preview user 編 caption / D3 包裝 = 各自 1 個 post（user 改 PM default）
+  - 新元件：photo-prompt-sheet bottom sheet + walk-auto-photo-section settings toggle
+  - reuse：post-composer（加 3 個 optional props）+ camera capture（既有 walks pattern）+ Firebase Storage
+  - Schema：AppUser.walkPrefs.autoPhotoShare 預設 ON + Post.walkId optional reference
+  - 工作量 M，預估 1-2 session ship，6 commits 拆解
   - 👉 **下個動作（user）**：開 Feature Builder session 用 spec 末段 launch prompt 動工
 - **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) **GO**（spec ready，UI/UX 直接寫）
   - User vision：「動態的照片點一下可以放大預覽」
