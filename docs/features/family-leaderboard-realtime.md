@@ -1,11 +1,39 @@
 # Family Leaderboard 即時更新（real-time）
 
-狀態：**GO**（user 2026-05-25 早上 3 個 decisions confirmed — 全採 PM 推薦）
+狀態：**SHIPPED 2026-05-25**（3 commits `bf8ed08` → `1245286` → `4edb873`；deploy 完成 rules + functions:recomputeWalkerLeaderboards,aggregateLeaderboards；App Hosting 自動 build frontend）
 建立日期：2026-05-25
 最後更新：2026-05-25
 規格作者：PM session @ `b6e781d`
 角色：**Feature Builder**（server-side onCreate trigger + frontend listener + UI glow + i18n 不需）
 工作量：**S-M**
+
+## SHIPPED bookkeeping
+
+- `bf8ed08` refactor(leaderboard): extract computeWalkerPeriodScore shared helper
+  - 新 `functions/src/leaderboard-helpers.ts` 匯出 `computeWalkerPeriodScore(walkerUid, period, db, now?)` + `UserAccum` + `periodStartMs`
+  - `aggregateLeaderboards` 改用 helper（先 collectionGroup 拿 unique walker uids，每人 3 個 period 並行算）
+  - Personal-mode filter (`familyId == null` → skip) 移到 helper 內
+  - 既有 `(walkerUid ASC, familyId ASC, startedAt DESC)` 複合索引 cover helper 查詢
+- `1245286` feat(leaderboard): recomputeWalkerLeaderboards onCreate trigger + audit + lastUpdatedAt
+  - 新 `recomputeWalkerLeaderboards` onCreate(`walks/{walkId}`) trigger（並列 `familyGoalMilestone`）
+  - `writeSingleLeaderboardEntry` 用 `merge:true`，不動 `previousRank`（B1 push 邏輯保留）
+  - `LeaderboardEntry.lastUpdatedAt?: Timestamp` 新欄位；cron + trigger 都寫
+  - `realtimeLeaderboardUpdates/{walkerUid}_{ISO}` audit collection；rules admin/server-only
+- `4edb873` feat(leaderboard): client listener glow animation + reduced-motion skip
+  - `subscribeLeaderboard()` 用 `onSnapshot` 取代 `getDocs`
+  - `useLeaderboardEntryGlow` hook (`src/components/leaderboard/use-glow.ts`)：mount-baseline pass 不 glow；FRESH_WINDOW_MS=5s 過濾掉 cron 寫入（user 通常 00:30 不在看）
+  - `LeaderboardRow.isGlowing` prop → `.leaderboard-row-glow` className
+  - `@keyframes leaderboardGlow`（rgba(243,152,0,0.18) peak, 1.5s, ease-out）+ explicit `animation:none` for reduced-motion audience
+
+### 後續驗證 / 觀察
+
+- 雙瀏覽器 test（user A leaderboard / user B walks）等 PM/user 實機跑
+- `realtimeLeaderboardUpdates/*` doc 可在 Firebase Console 直接查（grep walker_uid_2026-05-25T*）
+- 明天 00:30 cron 自動跑一次 reconciliation — 觀察 entries 值是否跟 realtime trigger 寫的最後值一致
+
+### 已知議題（PM 收尾 backlog 候選）
+
+- Mid-session staging slip：`d07511c` commit 訊息誤掛 `feat(leaderboard)` 但內容是 `/join` redirect 修復（先前 session 遺留 working tree）。實際 commit 2 是 `1245286`。歷史 cosmetic 髒，不影響功能。建議下次 commit / PR 時用 `git status` 確認 staged 內容。
 
 ## User Vision（原話保留）
 
