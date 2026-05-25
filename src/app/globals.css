@@ -194,3 +194,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .leaderboard-row-glow { animation: none; }
 }
+
+/* Walks photo-prompt bottom sheet — slide-up. Used by the
+ * PhotoPromptSheet component via Tailwind arbitrary value
+ * animate-[photoPromptSlideUp_220ms_ease-out]. The global
+ * prefers-reduced-motion rule above already collapses
+ * animation-duration to ~0 so reduced-motion users see a snap
+ * appear, matching the spec's "prefers-reduced-motion：snap appear
+ * (無 slide-up)". */
+@keyframes photoPromptSlideUp {
+  0%   { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}

@@ -278,6 +278,10 @@
         "hint": "家庭成員完成今日 30 分鐘目標的當下通知你。"
       }
     },
+    "walkAutoPhoto": {
+      "title": "遛狗自動拍照",
+      "body": "開始 / 結束遛狗時提示拍照，可一鍵分享到動態"
+    },
     "dangerZone": {
       "title": "危險區",
       "subtitle": "下方操作不可復原。請確認你了解後果再進行。",
@@ -402,6 +406,20 @@
         "openLabel": "切換寵物（目前：{pet}）"
       }
     }
+  },
+  "WalksPhotoPrompt": {
+    "start": {
+      "title": "拍張開始照？",
+      "body": "分享 {pet} 出發的瞬間給家人"
+    },
+    "end": {
+      "title": "拍張結束照分享給家人？",
+      "body": "{pet} 今天走了 {min} 分，留個紀念"
+    },
+    "take": "拍照",
+    "skip": "跳過",
+    "captionStartDefault": "{pet} 開始遛狗 🐾",
+    "captionEndDefault": "{pet} 遛完了！走了 {min} 分 ✨"
   },
   "Push": {
     "title": "推播通知",

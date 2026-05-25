@@ -278,6 +278,10 @@
         "hint": "The moment a family member completes their 30-minute daily goal."
       }
     },
+    "walkAutoPhoto": {
+      "title": "Auto-photo on walks",
+      "body": "Prompt to capture + share at walk start & end"
+    },
     "dangerZone": {
       "title": "Danger zone",
       "subtitle": "Actions below cannot be undone. Make sure you understand the consequences first.",
@@ -402,6 +406,20 @@
         "openLabel": "Switch pet (currently: {pet})"
       }
     }
+  },
+  "WalksPhotoPrompt": {
+    "start": {
+      "title": "Take a start photo?",
+      "body": "Share {pet} setting off"
+    },
+    "end": {
+      "title": "Take an end photo?",
+      "body": "{pet} walked {min} min — make it count"
+    },
+    "take": "Take photo",
+    "skip": "Skip",
+    "captionStartDefault": "{pet} starting a walk 🐾",
+    "captionEndDefault": "{pet} done walking! {min} min ✨"
   },
   "Push": {
     "title": "Push notifications",
