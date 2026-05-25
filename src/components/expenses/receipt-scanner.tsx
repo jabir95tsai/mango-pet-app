@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Camera, Loader2, Sparkles, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { SaveToAlbumButton } from "@/components/ui/save-to-album-button";
 import { extractReceipt } from "@/lib/firebase/ai-receipt";
 import { IMAGE_PRESETS, processImage } from "@/lib/image-processing";
 import type { ExtractedReceipt } from "@/lib/types";
@@ -141,6 +142,15 @@ export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
               >
                 <X className="size-4" />
               </button>
+              {/* Save-to-album — bottom-right corner so it doesn't
+                  collide with the close X. Receipt scanning is the
+                  most common use case where users want a copy on the
+                  device for their own records, separate from the
+                  parsed expense doc. */}
+              <SaveToAlbumButton
+                file={file}
+                className="absolute bottom-2 right-2 size-8"
+              />
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
