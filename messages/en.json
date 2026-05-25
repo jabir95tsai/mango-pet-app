@@ -414,7 +414,7 @@
     },
     "eveningWalkReminder": {
       "title": "Time to walk",
-      "body": "{petName} hasn't hit 30 min today 🐶"
+      "body": "{petName} hasn't hit {goalMin} min today 🐶"
     },
     "streakWarning": {
       "title": "Don't break your streak 🔥",

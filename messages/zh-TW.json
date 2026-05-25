@@ -414,7 +414,7 @@
     },
     "eveningWalkReminder": {
       "title": "晚上遛狗提醒",
-      "body": "{petName} 今天還沒走滿 30 分鐘 🐶"
+      "body": "{petName} 今天還沒走滿 {goalMin} 分鐘 🐶"
     },
     "streakWarning": {
       "title": "別斷掉 streak 🔥",

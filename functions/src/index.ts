@@ -2449,7 +2449,30 @@ function pushCopy(
 // ─────────────────────────────────────────────────────────────────────
 
 const EVENING_WALK_REMINDER_TYPE = "evening-walk-reminder";
-const TODAY_GOAL_MIN = 30;
+
+/** Hardcoded fallback for pets without a walkGoal (legacy pets +
+ *  pets created before per-pet-walk-goal shipped). Kept in sync with
+ *  DEFAULT_WALK_GOAL_MINUTES in src/lib/walk-goals.ts — Cloud
+ *  Functions can't import from src/, so the value lives in both
+ *  trees. If the default ever changes, update both. */
+const DEFAULT_WALK_GOAL_MIN = 30;
+const WALK_GOAL_MIN_BOUND = 5;
+const WALK_GOAL_MAX_BOUND = 180;
+
+/** Server-side mirror of getPetWalkGoalMinutes() in src/lib/walk-goals.ts.
+ *  Returns the per-pet goal in minutes with the same clamp + fallback
+ *  the client uses, so push thresholds match the dial the user sees.
+ *  Accepts the raw Firestore doc data (not a typed Pet). */
+function getPetWalkGoalMinutes(
+  pet: Record<string, unknown> | null | undefined,
+): number {
+  const wg = pet?.walkGoal as { minutes?: unknown } | undefined;
+  const m = wg?.minutes;
+  if (typeof m === "number" && Number.isFinite(m) && m > 0) {
+    return Math.min(WALK_GOAL_MAX_BOUND, Math.max(WALK_GOAL_MIN_BOUND, m));
+  }
+  return DEFAULT_WALK_GOAL_MIN;
+}
 
 export const eveningWalkReminder = onSchedule(
   {
@@ -2505,15 +2528,16 @@ export const eveningWalkReminder = onSchedule(
         skippedOptOut++;
         continue;
       }
-      const todayMin = minutesByUid.get(uid) ?? 0;
-      if (todayMin >= TODAY_GOAL_MIN) {
-        skippedAlreadyHit++;
-        continue;
-      }
 
-      // Cheapest pet lookup: filter the user's pets in memory rather
-      // than asking Firestore to sort (avoids needing a composite index
-      // we don't currently have). Pet counts per user are tiny.
+      // Per per-pet-walk-goal spec: threshold = primary pet's goal.
+      // Pet lookup happens BEFORE the threshold check now (it used to
+      // run after, gated on the user not having hit the hardcoded 30)
+      // because each user's threshold depends on their own pet's
+      // walkGoal. The extra read fan-out is one getDocs per user with
+      // FCM tokens that hasn't opted out — still trivial at our scale.
+      // Multi-pet user: we deliberately use the *primary* pet's goal
+      // only (avoid sending N pushes — one per pet — and overwhelming
+      // the user). Per-pet pushes are out of scope per spec.
       const petsSnap = await db
         .collection("pets")
         .where("ownerUid", "==", uid)
@@ -2530,12 +2554,19 @@ export const eveningWalkReminder = onSchedule(
           return ax - bx;
         })[0];
       const petName = (earliestPet?.name as string) || "Pet";
+      const goalMin = getPetWalkGoalMinutes(earliestPet);
+
+      const todayMin = minutesByUid.get(uid) ?? 0;
+      if (todayMin >= goalMin) {
+        skippedAlreadyHit++;
+        continue;
+      }
 
       const copy = pushCopy(
         u.locale as string | undefined,
-        { petName },
-        { title: "晚上遛狗提醒", body: "{petName} 今天還沒走滿 30 分鐘 🐶" },
-        { title: "Time to walk", body: "{petName} hasn't hit 30 min today 🐶" },
+        { petName, goalMin },
+        { title: "晚上遛狗提醒", body: "{petName} 今天還沒走滿 {goalMin} 分鐘 🐶" },
+        { title: "Time to walk", body: "{petName} hasn't hit {goalMin} min today 🐶" },
       );
 
       try {
@@ -2776,7 +2807,10 @@ export const streakBreakWarning = onSchedule(
 // ─────────────────────────────────────────────────────────────────────
 
 const FAMILY_MILESTONE_TYPE = "family-milestone";
-const FAMILY_MILESTONE_GOAL_MIN = 30;
+// FAMILY_MILESTONE_GOAL_MIN constant removed per per-pet-walk-goal
+// spec — threshold now reads from the walker's primary pet's
+// walkGoal via getPetWalkGoalMinutes(). Multi-pet walker still uses
+// only the primary pet's goal (avoid N pushes per walk).
 
 /** YYYY-MM-DD in Asia/Taipei wall-clock. Used as the daily-stats doc
  *  id suffix; matches the Hero "today" semantics walk-tracking.ts uses
@@ -2805,7 +2839,29 @@ export const familyGoalMilestone = onDocumentCreated(
     // Spec: skip personal-mode walks outright (no family to notify).
     if (!familyId) return;
 
-    // 1. Sum today's minutes for this user across all walks. Done
+    // 1. Pet lookup BEFORE today's minutes — per per-pet-walk-goal
+    //    spec, threshold depends on the walker's primary pet's
+    //    walkGoal. Multi-pet walker still uses only the primary pet's
+    //    goal (avoid N pushes per walk).
+    const petsSnap = await db
+      .collection("pets")
+      .where("ownerUid", "==", achieverUid)
+      .get();
+    const earliestPet = petsSnap.empty
+      ? null
+      : petsSnap.docs
+          .map((d) => d.data() as Record<string, unknown>)
+          .sort((a, b) => {
+            const ax =
+              (a.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
+            const bx =
+              (b.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
+            return ax - bx;
+          })[0];
+    const petName = (earliestPet?.name as string) || "Pet";
+    const goalMin = getPetWalkGoalMinutes(earliestPet);
+
+    // 2. Sum today's minutes for this user across all walks. Done
     //    inside the trigger so we know whether the just-written walk
     //    is the one that crossed the line.
     const now = new Date();
@@ -2819,9 +2875,9 @@ export const familyGoalMilestone = onDocumentCreated(
     for (const d of todaysWalksSnap.docs) {
       todayMin += Number(d.data().durationMin) || 0;
     }
-    if (todayMin < FAMILY_MILESTONE_GOAL_MIN) return;
+    if (todayMin < goalMin) return;
 
-    // 2. Family membership lookup — bail if we're the only member.
+    // 3. Family membership lookup — bail if we're the only member.
     const famSnap = await db.doc(`families/${familyId}`).get();
     if (!famSnap.exists) return;
     const memberUids =
@@ -2829,7 +2885,7 @@ export const familyGoalMilestone = onDocumentCreated(
     const recipients = memberUids.filter((m) => m !== achieverUid);
     if (recipients.length === 0) return;
 
-    // 3. Dedupe in a transaction — first writer wins, everyone else
+    // 4. Dedupe in a transaction — first writer wins, everyone else
     //    bails before sending push. Doc id format matches the spec
     //    (`{uid}_{YYYY-MM-DD}`) so a daily-stats client read is one
     //    getDoc by id.
@@ -2847,27 +2903,10 @@ export const familyGoalMilestone = onDocumentCreated(
     });
     if (!claimed) return;
 
-    // 4. Achiever profile (display name) + earliest pet (the name in
-    //    the copy). Same pattern as A1/A2.
+    // 5. Achiever profile (display name) — pet already loaded above.
     const achieverDoc = await db.doc(`users/${achieverUid}`).get();
     const achieverName =
       (achieverDoc.data()?.displayName as string | undefined) || "Someone";
-    const petsSnap = await db
-      .collection("pets")
-      .where("ownerUid", "==", achieverUid)
-      .get();
-    const earliestPet = petsSnap.empty
-      ? null
-      : petsSnap.docs
-          .map((d) => d.data() as Record<string, unknown>)
-          .sort((a, b) => {
-            const ax =
-              (a.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
-            const bx =
-              (b.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
-            return ax - bx;
-          })[0];
-    const petName = (earliestPet?.name as string) || "Pet";
 
     // 5. Push to each recipient (with per-recipient opt-out + token
     //    cleanup).
