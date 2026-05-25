@@ -175,3 +175,22 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .walk-confetti { display: none; }
 }
+
+/* Leaderboard row glow — fires when useLeaderboardEntryGlow sees a
+ * lastUpdatedAt bump on a row (realtime recomputeWalkerLeaderboards
+ * trigger or daily cron). Spec docs/features/family-leaderboard-
+ * realtime.md D3 — brand-color pulse, 1.5s. The global prefers-
+ * reduced-motion rule above already collapses the duration to ~0,
+ * but we also explicitly hard-clear the animation for that audience
+ * so the row is fully background-stable (no half-tinted flash). */
+.leaderboard-row-glow {
+  animation: leaderboardGlow 1.5s ease-out;
+}
+@keyframes leaderboardGlow {
+  0%   { background-color: rgba(243, 152, 0, 0); }
+  20%  { background-color: rgba(243, 152, 0, 0.18); }
+  100% { background-color: rgba(243, 152, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .leaderboard-row-glow { animation: none; }
+}

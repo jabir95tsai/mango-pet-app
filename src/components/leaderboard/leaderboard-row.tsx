@@ -8,6 +8,12 @@ type Props = {
   rank: number;
   entry: LeaderboardEntry;
   highlight?: boolean;
+  /** Set by useLeaderboardEntryGlow when this entry's lastUpdatedAt
+   *  just bumped (realtime trigger or daily cron). Adds the
+   *  `leaderboard-row-glow` class which runs a 1.5s brand-color
+   *  background pulse. Globally suppressed by prefers-reduced-motion
+   *  via the existing rule in globals.css. */
+  isGlowing?: boolean;
 };
 
 function rankBadge(rank: number): { emoji: string; color: string } {
@@ -17,7 +23,7 @@ function rankBadge(rank: number): { emoji: string; color: string } {
   return { emoji: `${rank}`, color: "text-zinc-500" };
 }
 
-export function LeaderboardRow({ rank, entry, highlight }: Props) {
+export function LeaderboardRow({ rank, entry, highlight, isGlowing }: Props) {
   const { emoji, color } = rankBadge(rank);
   return (
     <article
@@ -26,6 +32,7 @@ export function LeaderboardRow({ rank, entry, highlight }: Props) {
         highlight
           ? "border-amber-400 bg-amber-100/70 dark:border-amber-500/50 dark:bg-amber-500/10"
           : "border-amber-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-950",
+        isGlowing && "leaderboard-row-glow",
       )}
     >
       <div className={cn("w-8 text-center text-lg font-bold", color)}>{emoji}</div>

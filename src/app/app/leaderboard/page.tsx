@@ -12,7 +12,8 @@ import { Tabs } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { LeaderboardRow } from "@/components/leaderboard/leaderboard-row";
-import { listLeaderboard } from "@/lib/firebase/leaderboards";
+import { useLeaderboardEntryGlow } from "@/components/leaderboard/use-glow";
+import { subscribeLeaderboard } from "@/lib/firebase/leaderboards";
 import { listFamilyMembers } from "@/lib/firebase/families";
 import type {
   FamilyMember,
@@ -45,34 +46,48 @@ export default function LeaderboardPage() {
     if (saved === "family" || saved === "all") setScope(saved);
   }, []);
 
-  const refresh = useCallback(async () => {
+  // Entries: realtime listener so the recomputeWalkerLeaderboards
+  // trigger's writes reach the page within 1-2s — letting the glow
+  // hook detect lastUpdatedAt deltas and flash the row. Personal mode
+  // bypasses the listener (the empty-state branch returns before any
+  // row renders).
+  useEffect(() => {
     if (familyLoading) return;
     if (!family) {
-      // Personal mode — nothing to fetch. The empty-state branch below
-      // doesn't render LeaderboardRow at all.
       setEntries([]);
-      setMembers([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    try {
-      // allSettled so a slow members fetch doesn't blank the leaderboard
-      // (and vice versa). Each section degrades independently.
-      const [entriesR, membersR] = await Promise.allSettled([
-        listLeaderboard(period),
-        listFamilyMembers(family),
-      ]);
-      setEntries(entriesR.status === "fulfilled" ? entriesR.value : []);
-      setMembers(membersR.status === "fulfilled" ? membersR.value : []);
-    } finally {
-      setLoading(false);
-    }
+    const unsub = subscribeLeaderboard(
+      period,
+      (next) => {
+        setEntries(next);
+        setLoading(false);
+      },
+      () => setLoading(false),
+    );
+    return () => unsub();
   }, [familyLoading, family, period]);
 
+  // Members: one-shot fetch — family member list rarely changes, no
+  // realtime needed. Re-runs if family doc swaps under us.
+  const refreshMembers = useCallback(async () => {
+    if (familyLoading || !family) {
+      setMembers([]);
+      return;
+    }
+    try {
+      const m = await listFamilyMembers(family);
+      setMembers(m);
+    } catch {
+      setMembers([]);
+    }
+  }, [familyLoading, family]);
+
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    refreshMembers();
+  }, [refreshMembers]);
 
   function handleScopeChange(next: Scope) {
     setScope(next);
@@ -138,6 +153,13 @@ export default function LeaderboardPage() {
   const isFamilyOnlyMe =
     scope === "family" && members.length === 1 && visibleEntries.length === 1;
 
+  // Glow signal — diff lastUpdatedAt across realtime snapshots. We
+  // feed the source-of-truth `entries` (not `visibleEntries`, which
+  // has the zero-score placeholder rows that never have a real
+  // lastUpdatedAt and would never glow anyway). Family-only-me
+  // single-member case is naturally a no-op — same uid in both arrays.
+  const glowing = useLeaderboardEntryGlow(entries);
+
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -188,6 +210,7 @@ export default function LeaderboardPage() {
                 rank={idx + 1}
                 entry={e}
                 highlight={e.uid === user?.uid}
+                isGlowing={glowing.has(e.uid)}
               />
             ))}
           </div>
