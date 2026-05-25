@@ -14,6 +14,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import {
   onDocumentCreated,
   onDocumentDeleted,
+  onDocumentWritten,
 } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { initializeApp } from "firebase-admin/app";
@@ -29,6 +30,11 @@ import {
   computeWalkerPeriodScore,
   type UserAccum,
 } from "./leaderboard-helpers";
+import {
+  createMutualFriendship,
+  pairId,
+  type CreateFriendshipResult,
+} from "./friendship-helpers";
 
 initializeApp();
 
@@ -582,6 +588,120 @@ export const recomputeWalkerLeaderboardsOnDelete = onDocumentDeleted(
       `recomputeWalkerLeaderboardsOnDelete: walker=${walkerUid} ` +
         `walk=${event.params.walkId} result=${JSON.stringify(result)}`,
     );
+  },
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// purgeMyOrphanWalks — callable, one-off cleanup
+//
+// Use case: user left a family. Their walks under that family still
+// live at top-level `walks/{walkId}` with the old familyId — they no
+// longer appear in `/app/walks` (which filters by currentFamilyId),
+// but `recomputeWalkerLeaderboards` still counts them via the
+// `where walkerUid == X` index. Result: leaderboard shows phantom
+// walks the user can't see anywhere in the UI.
+//
+// "Orphan" = walk attributed to the caller (walkerUid == auth.uid)
+// whose familyId is NOT in the caller's current `user.familyIds[]`
+// and is NOT null (null = personal-mode, which the caller explicitly
+// owns and we never auto-delete). Each delete fires
+// recomputeWalkerLeaderboardsOnDelete so the leaderboard entry
+// auto-recomputes — no manual entry cleanup needed.
+//
+// Always safe to re-run. dryRun=true first to preview the IDs
+// without deleting; flip to false to commit.
+// ─────────────────────────────────────────────────────────────────────
+
+export const purgeMyOrphanWalks = onCall(
+  { region: FUNCTION_REGION, cors: true, invoker: "public" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+    const dryRun = req.data?.dryRun === true;
+
+    // Caller's current family memberships — the "kept" set.
+    const userSnap = await db.doc(`users/${uid}`).get();
+    const familyIds = new Set(
+      ((userSnap.data()?.familyIds as string[] | undefined) ?? []).filter(
+        Boolean,
+      ),
+    );
+
+    const walksSnap = await db
+      .collection("walks")
+      .where("walkerUid", "==", uid)
+      .get();
+
+    type Orphan = {
+      walkId: string;
+      familyId: string;
+      startedAt: string | null;
+    };
+    const orphans: Orphan[] = [];
+    let keptPersonal = 0;
+    let keptCurrentFamily = 0;
+    for (const d of walksSnap.docs) {
+      const w = d.data();
+      const fid = w.familyId;
+      if (fid == null) {
+        keptPersonal++;
+        continue;
+      }
+      if (typeof fid === "string" && familyIds.has(fid)) {
+        keptCurrentFamily++;
+        continue;
+      }
+      orphans.push({
+        walkId: d.id,
+        familyId: typeof fid === "string" ? fid : String(fid),
+        startedAt:
+          w.startedAt instanceof Timestamp
+            ? (w.startedAt as Timestamp).toDate().toISOString()
+            : null,
+      });
+    }
+
+    if (!dryRun && orphans.length > 0) {
+      // Batch in chunks of 400 (Firestore batch limit 500; leave
+      // headroom). Each delete fires the onDelete trigger which
+      // recomputes the leaderboard entry from scratch — no manual
+      // entry cleanup needed.
+      const BATCH = 400;
+      for (let i = 0; i < orphans.length; i += BATCH) {
+        const slice = orphans.slice(i, i + BATCH);
+        const batch = db.batch();
+        for (const o of slice) batch.delete(db.doc(`walks/${o.walkId}`));
+        await batch.commit();
+      }
+    }
+
+    // Audit doc — sortable id (uid + ISO) so multiple invocations sort
+    // together by walker. Persists the orphan list even on dryRun so
+    // we have a record of "what would've been deleted at this moment".
+    const isoNow = new Date().toISOString();
+    await db.doc(`orphanWalkPurges/${uid}_${isoNow}`).set({
+      uid,
+      ranAt: Timestamp.now(),
+      dryRun,
+      familyIds: Array.from(familyIds),
+      keptPersonal,
+      keptCurrentFamily,
+      orphans,
+    });
+
+    logger.info(
+      `purgeMyOrphanWalks: uid=${uid} dryRun=${dryRun} ` +
+        `orphans=${orphans.length} keptPersonal=${keptPersonal} ` +
+        `keptCurrentFamily=${keptCurrentFamily}`,
+    );
+
+    return {
+      dryRun,
+      deleted: dryRun ? 0 : orphans.length,
+      orphans,
+      keptPersonal,
+      keptCurrentFamily,
+    };
   },
 );
 
@@ -3104,6 +3224,124 @@ export const familyGoalMilestone = onDocumentCreated(
       `familyGoalMilestone done — achiever=${achieverUid} family=${familyId} ` +
         `recipients=${recipients.length} sent=${sent} failed=${failed} ` +
         `optOut=${skippedOptOut} noToken=${skippedNoToken}`,
+    );
+  },
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// autoFriendFamilyMembers — onWrite(families/{familyId})
+// Spec: docs/features/auto-friend-family-members.md
+//
+// When a new uid lands in family.memberUids (joinFamilyByCode /
+// addFamilyMember), batch-create mutual friendships between the
+// new member and every other existing member. Idempotent via the
+// createMutualFriendship helper — repeated trigger fires (Eventarc
+// at-least-once delivery) write the same docs and the audit log
+// counts every fire so we can spot abuse / runaway loops.
+//
+// Member removal is INTENTIONALLY a no-op (spec D1 — friendships
+// outlive family membership; social and family lifecycles decoupled).
+// Bail before any reads if the delta is empty or shrinking.
+// ─────────────────────────────────────────────────────────────────────
+
+export const autoFriendFamilyMembers = onDocumentWritten(
+  {
+    document: "families/{familyId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const familyId = event.params.familyId;
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+    // Doc deleted entirely — no friendships to create.
+    if (!after) return;
+
+    const beforeMembers = new Set<string>(
+      Array.isArray(before?.memberUids) ? (before!.memberUids as string[]) : [],
+    );
+    const afterMembers = ((after.memberUids ?? []) as string[]).filter(Boolean);
+
+    const newMembers = afterMembers.filter((uid) => !beforeMembers.has(uid));
+    if (newMembers.length === 0) {
+      // Membership shrunk, or some other field changed (name, inviteCode).
+      // Either way, nothing to do — spec D1 keeps friendships on removal.
+      return;
+    }
+
+    // Build the work-list: every (newMember, otherMember) pair, where
+    // "otherMember" is any other final-state member (this also covers
+    // new ↔ new when N people are added in one write). Deduplicate by
+    // sorted pairId so we don't issue the same write twice when both
+    // sides of a pair are new.
+    const newMemberSet = new Set(newMembers);
+    const pairsToTry = new Map<string, [string, string]>();
+    for (const a of newMembers) {
+      for (const b of afterMembers) {
+        if (a === b) continue;
+        // Skip (newA, newB) where newA > newB — the reciprocal pass
+        // (newB, newA) would re-emit the same pairId. Comparing strings
+        // breaks ties deterministically and keeps the audit log clean.
+        if (newMemberSet.has(b) && a > b) continue;
+        const id = pairId(a, b);
+        if (!pairsToTry.has(id)) pairsToTry.set(id, [a, b]);
+      }
+    }
+
+    let created = 0;
+    let skippedExists = 0;
+    let skippedSelf = 0;
+    let skippedMissingProfile = 0;
+    let failed = 0;
+    const createdPairs: string[] = [];
+    const skippedPairs: { pairId: string; reason: string }[] = [];
+
+    for (const [id, [a, b]] of pairsToTry) {
+      let result: CreateFriendshipResult;
+      try {
+        result = await createMutualFriendship(a, b, db);
+      } catch (err) {
+        failed++;
+        logger.error(`autoFriendFamilyMembers: pair ${id} failed`, err);
+        continue;
+      }
+      if (result.created) {
+        created++;
+        createdPairs.push(id);
+      } else {
+        if (result.reason === "exists") skippedExists++;
+        else if (result.reason === "self") skippedSelf++;
+        else if (result.reason === "missing-profile") skippedMissingProfile++;
+        skippedPairs.push({ pairId: id, reason: result.reason ?? "unknown" });
+      }
+    }
+
+    // Audit doc — one per trigger fire, keyed by {familyId}_{ISO} so
+    // rapid back-to-back joins each leave a record. Mirrors the
+    // engagementPushes/{type}/waves/{ISO} + realtimeLeaderboardUpdates
+    // patterns; rules lock the collection to admin-only read/write.
+    const isoNow = new Date().toISOString();
+    await db.doc(`autoFriendEvents/${familyId}_${isoNow}`).set({
+      familyId,
+      ranAt: Timestamp.now(),
+      newMembers,
+      afterMemberCount: afterMembers.length,
+      pairAttemptCount: pairsToTry.size,
+      created,
+      skippedExists,
+      skippedSelf,
+      skippedMissingProfile,
+      failed,
+      createdPairs,
+      skippedPairs,
+    });
+
+    logger.info(
+      `autoFriendFamilyMembers done — family=${familyId} ` +
+        `new=${newMembers.length} attempted=${pairsToTry.size} ` +
+        `created=${created} exists=${skippedExists} ` +
+        `missingProfile=${skippedMissingProfile} failed=${failed}`,
     );
   },
 );

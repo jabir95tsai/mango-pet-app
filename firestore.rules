@@ -347,6 +347,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ── orphanWalkPurges audit log (server-only) ──
+    // Written by the purgeMyOrphanWalks callable when a user cleans up
+    // walks under a family they've left. One doc per invocation keyed
+    // by {uid}_{ISO}, captures the orphan list even on dryRun.
+    match /orphanWalkPurges/{document=**} {
+      allow read, write: if false;
+    }
+
     // ── userDailyStats — per-user per-day flags (server writes only) ──
     // Currently holds the `goalHitNotifiedAt` field used by the B2
     // family-milestone push to dedupe (one push per achiever per day).
