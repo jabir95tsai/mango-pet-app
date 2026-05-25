@@ -180,35 +180,35 @@ export default function LeaderboardPage() {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      {/* Header row — refresh icon button anchored to the page's
+          top-right corner per user 2026-05-25. Pulled out of
+          RouteHeader's `action` slot so it sits as a sibling, keeping
+          the button visually pinned far-right while the title +
+          subtitle stack hugs the left. items-start so the button stays
+          at the top edge even when the subtitle wraps. */}
+      <div className="mb-4 flex items-start justify-between gap-3">
         <RouteHeader
           title={t("leaderboard")}
           subtitle="加權公式：距離×體型係數 + 時長 + 連續天數"
-          className="mb-0"
-          action={
-            // Refresh button (spec Item #4). Icon spins for 800ms after
-            // click so user gets visible feedback even when the
-            // real-time listener already had fresh data. Disabled while
-            // spinning to debounce rapid taps.
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              aria-label={tLb("refreshButton")}
-              title={tLb("refreshButton")}
-              className="grid size-11 shrink-0 place-items-center rounded-full text-mango-brand-deep transition-colors hover:bg-mango-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep disabled:opacity-60"
-            >
-              <RefreshCw
-                className={
-                  isRefreshing
-                    ? "size-5 animate-spin motion-reduce:animate-none"
-                    : "size-5"
-                }
-                strokeWidth={2}
-              />
-            </button>
-          }
+          className="mb-0 flex-1 min-w-0"
         />
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          aria-label={tLb("refreshButton")}
+          title={tLb("refreshButton")}
+          className="grid size-11 shrink-0 place-items-center rounded-full text-mango-brand-deep transition-colors hover:bg-mango-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep disabled:opacity-60"
+        >
+          <RefreshCw
+            className={
+              isRefreshing
+                ? "size-5 animate-spin motion-reduce:animate-none"
+                : "size-5"
+            }
+            strokeWidth={2}
+          />
+        </button>
       </div>
 
       <div className="mb-3">
