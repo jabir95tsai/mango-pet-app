@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 中午（🎉 Phase 1 v2 walks 全頁重建 + **Family Leaderboard 即時更新** 都 SHIPPED；Epic 5 主動推播觀察至 2026-05-27；**遛狗自動拍照 + 自動發動態 spec GO**；Photo Lightbox + Pets prototype 在跑；家庭邀請連結 follow-up 待 user 排序）
+最後更新：2026-05-25 中午（🎉 Phase 1 v2 walks 全頁重建 + Family Leaderboard 即時更新 都 SHIPPED；**Phase 2 pets prototype review 完 + spec GO**；Epic 5 主動推播觀察至 2026-05-27；3 個 active spec 等動工：pets-v2 / 遛狗自動拍照 / Photo Lightbox；家庭邀請連結 follow-up 待 user 排序）
 
 ## 進行中
 
@@ -32,6 +32,13 @@
   - Deploy 全到位：rules（realtimeLeaderboardUpdates audit）+ functions:recomputeWalkerLeaderboards,aggregateLeaderboards + App Hosting frontend rebuild
   - ⚠️ Mid-session hygiene：commit `d07511c` 訊息誤掛 `feat(leaderboard)` 但內容是 `/join` redirect 修復（前一 session 遺留 working tree）；歷史 cosmetic 髒，無功能影響
   - 👉 **下個動作（user）**：雙瀏覽器實機 test（家人 A 在 leaderboard / 家人 B 完成 walk → 對方 1-2s glow）+ 明天 00:30 cron reconciliation 觀察
+- **Phase 2 pets 全頁重建** — [`docs/features/pets-v2-rebuild.md`](../features/pets-v2-rebuild.md) **GO**（prototype reviewed + spec ready，UI/UX 直接寫）
+  - Prototype 100% spec coverage + 3 個加值：tab-aware FAB / Expense donut + 月比較 / 體重 trend line chart + 完整 EmptyState
+  - 1 critical issue user 已決：**Pet avatar 採真實照片**（不是 prototype 卡通插畫；fallback initial + paw icon）
+  - Workflow = UI/UX 直接寫 src/（同 Phase 1 v2 模式，不走 Claude Design patch 中介）
+  - Scope = 一次 ship 全 6 個 artboard（list 單/多 + detail 3 tabs + empty）
+  - 工作量 L，預估 1-2 session ship，8 commits 拆解
+  - 👉 **下個動作（user）**：開 UI/UX session 用 spec 末段 launch prompt 動工
 - **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](../features/walks-auto-photo-share.md) **GO**（spec ready，Feature Builder 動工）
   - User vision：「加入剛開始跟剛結束遛狗的時候拍一張照自動分享到動態的功能」
   - 3 decisions confirmed：D1 觸發 = prompt 可 skip / D2 發布 = 進 composer preview user 編 caption / D3 包裝 = 各自 1 個 post（user 改 PM default）
@@ -55,7 +62,8 @@
 | **0.5** | Raised center walks tab + bg-mango-card-soft nav surface | S | ✅ **SHIPPED** `e1a7b60` |
 | ~~1~~ | ~~`/app/walks` 套 mockup tone（warm cream bg + brand CTA + leaf success）~~ | S | ⚠️ **SUPERSEDED by Phase 1 v2** — 原 ship `37d1ec4` + `8aebe14` 不 rollback，視覺由 v2 覆蓋 |
 | **1 v2** | `/app/walks` **全頁結構重建** — radial dial hero + week strip + 圈內走路狗 + 主寵物 only pill + Confetti @ 達標 + 「再遛一次」CTA | M | ✅ **SHIPPED** 2026-05-25 — 元件 `c98c939` + page `984be5b` + i18n `110601e` + 紀錄 `33fef7b`；desktop 12 項驗收全過；complete 變體待 user 觸發 |
-| 2 | `/app` + `/app/pets` + `/app/pets/[petId]` | M | 🔓 **ready** — Phase 1 v2 unblock，等 PM spec |
+| **2 v2** | `/app/pets` + `/app/pets/[petId]` **全頁重建** — TopBar + PetHeader (真照片) + sticky 4-tab pill + 概覽 2×2 stat grid + Reminder/Expense/Health tab bodies + Expense donut + 體重 trend chart + tab-aware FAB + 完整 EmptyState + multi-pet switcher | L | 🔄 **prototype reviewed + spec ready** — 待 UI/UX session 動工（[`pets-v2-rebuild.md`](../features/pets-v2-rebuild.md)）|
+| ~~2~~ home page | ~~`/app`~~ 移到 Phase 3 | — | merged into Phase 3 |
 | 3 | `/onboarding` + Landing + sign-in | M | 🔓 ready，等 PM spec |
 | 4 | `/app/settings` + `/app/leaderboard` | M | 🔓 ready，等 PM spec |
 | 5 | Drawer pages: `/app/feed` + `/app/restaurants` (+detail) + `/app/knowledge` (+detail) + `/app/friends` (+/add) + `/app/expenses` | L | 🔓 ready，等 PM spec |

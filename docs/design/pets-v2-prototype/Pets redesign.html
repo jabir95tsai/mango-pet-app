@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>我的寵物 · iPhone 重新設計 (Phase 2)</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #efe6d3; }
+  body { font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; color: #231b14; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="pets-screen.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, IOSDevice, PetsScreen, MP } = window;
+
+// iPhone viewport — matches walks-v2 prototype (402 × 874).
+const IPHONE_W = 402;
+const IPHONE_H = 874;
+const ABW = IPHONE_W + 20;
+const ABH = IPHONE_H + 20;
+
+function Stage({ label, ...props }) {
+  return (
+    <div style={{
+      width: ABW, height: ABH,
+      display: 'grid', placeItems: 'center',
+      background: 'transparent',
+    }}>
+      <IOSDevice width={IPHONE_W} height={IPHONE_H}>
+        <div style={{
+          width: '100%', height: '100%', position: 'relative',
+          background: MP.bg, overflow: 'hidden',
+        }} data-screen-label={label}>
+          {/* Push content below the status bar / dynamic island. */}
+          <div style={{ position: 'absolute', top: 54, left: 0, right: 0, bottom: 0 }}>
+            <PetsScreen {...props}/>
+          </div>
+        </div>
+      </IOSDevice>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection
+        id="pets-list"
+        title="我的寵物 · 列表頁  /app/pets"
+        subtitle="Variant B 分頁聚焦 — 頂部 bar + Pet header + sticky pill tabs + 概覽。單寵物 vs 多寵物。"
+      >
+        <DCArtboard id="A-single" label="A · 單寵物 / 概覽" width={ABW} height={ABH}>
+          <Stage label="A · 我的寵物 · 單寵物 · 概覽" variant="list-single" tab="overview"/>
+        </DCArtboard>
+        <DCArtboard id="B-multi" label="B · 多寵物 / 切換器展開" width={ABW} height={ABH}>
+          <Stage label="B · 我的寵物 · 多寵物 · 切換器展開" variant="list-multi" tab="overview" showDropdown={true}/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="pets-detail"
+        title="寵物詳情 · 同 4 tabs  /app/pets/[petId]"
+        subtitle="提醒 / 開銷 / 健康 — 每個 tab 顯示 per-pet 完整列表，FAB 顏色隨 tab 切換。"
+      >
+        <DCArtboard id="C-reminders" label="C · 詳情 / 提醒" width={ABW} height={ABH}>
+          <Stage label="C · 寵物詳情 · 提醒 list" variant="detail" tab="reminders" petId="mango"/>
+        </DCArtboard>
+        <DCArtboard id="D-expenses" label="D · 詳情 / 開銷" width={ABW} height={ABH}>
+          <Stage label="D · 寵物詳情 · 開銷 list" variant="detail" tab="expenses" petId="mango"/>
+        </DCArtboard>
+        <DCArtboard id="E-health" label="E · 詳情 / 健康" width={ABW} height={ABH}>
+          <Stage label="E · 寵物詳情 · 健康紀錄" variant="detail" tab="health" petId="mango"/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="pets-empty"
+        title="空狀態  /app/pets （首次）"
+        subtitle="尚未建立任何寵物 — 引導第一隻寵物的 CTA。"
+      >
+        <DCArtboard id="F-empty" label="F · 空狀態 / 新手引導" width={ABW} height={ABH}>
+          <Stage label="F · 我的寵物 · 空狀態" variant="empty"/>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
