@@ -14,10 +14,15 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useFamily } from "@/components/family/family-provider";
 import { Button } from "@/components/ui/button";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { Textarea } from "@/components/ui/textarea";
 import { SaveToAlbumButton } from "@/components/ui/save-to-album-button";
+import { PhotoPromptSheet } from "@/components/walks/photo-prompt-sheet";
+import { PostComposer } from "@/components/feed/post-composer";
+import { getAppUser } from "@/lib/firebase/users";
+import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import {
   estimatePetCalories,
   WalkSession,
@@ -136,7 +141,9 @@ export function WalkTrackingView({
   const tW = useTranslations("Walks.core");
   const tP = useTranslations("Walks.photo");
   const tCel = useTranslations("Walks.celebration");
+  const tPP = useTranslations("WalksPhotoPrompt");
   const { user } = useAuth();
+  const { family } = useFamily();
   const router = useRouter();
   const sessionRef = useRef<WalkSession | null>(null);
   const [state, setState] = useState<WalkSessionState | null>(null);
@@ -146,6 +153,23 @@ export function WalkTrackingView({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Captured walkId from onComplete — used by the end-photo flow to
+  // cross-link the resulting post via `post.walkId`. Stays null until
+  // saveWalkOnce succeeds (or save is skipped entirely).
+  const savedWalkIdRef = useRef<string | null>(null);
+
+  // ── Auto-photo-share flow B (walk end) ────────────────────────────
+  // Spec docs/features/walks-auto-photo-share.md flow B. State pulled
+  // up to the component scope because the prompt's "拍照" handler
+  // needs to await saveWalkOnce() before opening the composer.
+  const [autoPhotoEnabled, setAutoPhotoEnabled] = useState(true);
+  const [endPromptOpen, setEndPromptOpen] = useState(false);
+  const [endComposerOpen, setEndComposerOpen] = useState(false);
+  const [endPhoto, setEndPhoto] = useState<File | null>(null);
+  const endPhotoInputRef = useRef<HTMLInputElement | null>(null);
+  // Active-pet list for the composer's pet picker — auto-photo posts
+  // benefit from being tagged with the pet for feed grouping.
+  const [composerPets, setComposerPets] = useState<Pet[]>([]);
 
   // ── Photo capture (spec Phase 1) ────────────────────────────────
   // Generated once per opened session so all photos within a walk share
@@ -198,6 +222,91 @@ export function WalkTrackingView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Read user.walkPrefs.autoPhotoShare once per open so the end-photo
+  // prompt only fires for users who haven't opted out. Absent walkPrefs
+  // → ON by default per spec. Best-effort: on read failure default to
+  // ON so a network hiccup doesn't suppress the prompt.
+  useEffect(() => {
+    if (!open || !user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const u = await getAppUser(user.uid);
+        if (!cancelled) {
+          setAutoPhotoEnabled(u?.walkPrefs?.autoPhotoShare !== false);
+        }
+      } catch {
+        // Default ON
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user]);
+
+  // Pre-fetch the user's pet list once per session so the end-composer's
+  // pet picker is populated. Same query the walks page does — we
+  // duplicate it here rather than threading via props so the
+  // tracking-view stays self-contained for the end-photo flow.
+  useEffect(() => {
+    if (!open || !user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = family
+          ? await listPets(family.familyId)
+          : await listPersonalPets(user.uid);
+        if (!cancelled) setComposerPets(list);
+      } catch {
+        if (!cancelled) setComposerPets([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user, family]);
+
+  // Mount → done-screen → 1s delay → end-photo prompt. The delay lets
+  // the existing confetti / emerald celebration land first so the
+  // sheet doesn't visually interrupt the goal-hit moment.
+  useEffect(() => {
+    if (phase !== "done") {
+      setEndPromptOpen(false);
+      return;
+    }
+    if (!autoPhotoEnabled) return;
+    const t = window.setTimeout(() => setEndPromptOpen(true), 1000);
+    return () => window.clearTimeout(t);
+  }, [phase, autoPhotoEnabled]);
+
+  async function handleEndPromptTake() {
+    setEndPromptOpen(false);
+    // Save the walk first if not yet saved — we need the walkId to
+    // cross-link the post. Silently swallow the failure: if save
+    // doesn't return an id, the post still publishes without walkId.
+    if (!saved) {
+      await saveWalkOnce();
+    }
+    endPhotoInputRef.current?.click();
+  }
+
+  function handleEndPromptSkip() {
+    setEndPromptOpen(false);
+  }
+
+  function handleEndPhotoPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (!file) return; // OS dismissed; no composer
+    setEndPhoto(file);
+    setEndComposerOpen(true);
+  }
+
+  function handleEndComposerClose() {
+    setEndComposerOpen(false);
+    setEndPhoto(null);
+  }
 
   async function handlePhotoPicked(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -317,7 +426,7 @@ export function WalkTrackingView({
         pet,
         streakDays,
       });
-      await onComplete({
+      const result = await onComplete({
         petId: pet.petId,
         petName: pet.name,
         startedAt: state.startedAt,
@@ -331,6 +440,12 @@ export function WalkTrackingView({
           persistedPhotoURLs.length > 0 ? persistedPhotoURLs : undefined,
         score,
       });
+      // onComplete can return void (legacy callers), `null` (caller
+      // didn't get an id back), or `{ walkId }` (walks page handler).
+      // Stash the id for the end-photo flow to cross-link the post.
+      if (result && typeof result === "object" && "walkId" in result) {
+        savedWalkIdRef.current = result.walkId;
+      }
       setSaved(true);
       return true;
     } catch (err) {
@@ -779,6 +894,48 @@ export function WalkTrackingView({
         open={lightboxIdx !== null}
         onClose={() => setLightboxIdx(null)}
       />
+
+      {/* ── Auto-photo-share flow B: walk-end prompt ──
+          Mounts inside the WalkTrackingView portal so the sheet sits
+          above the done-screen confetti (z-60 vs the screen's z-40).
+          The prompt useEffect above fires it 1s after phase === "done"
+          to land after the celebration moment. */}
+      <input
+        ref={endPhotoInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleEndPhotoPicked}
+        aria-hidden="true"
+      />
+      {pet && (
+        <>
+          <PhotoPromptSheet
+            open={endPromptOpen}
+            onSkip={handleEndPromptSkip}
+            onTake={handleEndPromptTake}
+            petName={pet.name}
+            phase="end"
+            walkMinutes={Math.round(state?.durationMin ?? 0)}
+          />
+          <PostComposer
+            open={endComposerOpen}
+            onClose={handleEndComposerClose}
+            pets={composerPets}
+            initialPhoto={endPhoto ?? undefined}
+            initialCaption={
+              endPhoto
+                ? tPP("captionEndDefault", {
+                    pet: pet.name,
+                    min: Math.round(state?.durationMin ?? 0),
+                  })
+                : undefined
+            }
+            walkId={savedWalkIdRef.current ?? undefined}
+          />
+        </>
+      )}
     </div>,
     document.body,
   );
