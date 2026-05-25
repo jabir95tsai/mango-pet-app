@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Trophy, Users } from "lucide-react";
+import { RefreshCw, Trophy, Users } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFamily } from "@/components/family/family-provider";
@@ -36,6 +36,13 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
+  // Manual refresh wiring (spec Item #4). `refreshNonce` flips on click
+  // so the subscribe-leaderboard useEffect re-runs and tears down /
+  // re-creates the Firestore listener; `isRefreshing` drives the icon
+  // spinner + disabled state, auto-clearing after 800ms so the user
+  // gets visible feedback even when the data was already up-to-date.
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Restore last-selected scope from localStorage on first mount.
   // Personal-mode users never see the toggle so this is a no-op for
@@ -68,7 +75,18 @@ export default function LeaderboardPage() {
       () => setLoading(false),
     );
     return () => unsub();
-  }, [familyLoading, family, period]);
+  }, [familyLoading, family, period, refreshNonce]);
+
+  function handleRefresh() {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setRefreshNonce((n) => n + 1);
+    refreshMembers();
+    // Hold the spinner for 800ms so even instant re-subscribe reads as
+    // "I did something." Clearing earlier on data arrival would look
+    // like a flicker.
+    window.setTimeout(() => setIsRefreshing(false), 800);
+  }
 
   // Members: one-shot fetch — family member list rarely changes, no
   // realtime needed. Re-runs if family doc swaps under us.
@@ -167,6 +185,29 @@ export default function LeaderboardPage() {
           title={t("leaderboard")}
           subtitle="加權公式：距離×體型係數 + 時長 + 連續天數"
           className="mb-0"
+          action={
+            // Refresh button (spec Item #4). Icon spins for 800ms after
+            // click so user gets visible feedback even when the
+            // real-time listener already had fresh data. Disabled while
+            // spinning to debounce rapid taps.
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              aria-label={tLb("refreshButton")}
+              title={tLb("refreshButton")}
+              className="grid size-11 shrink-0 place-items-center rounded-full text-mango-brand-deep transition-colors hover:bg-mango-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep disabled:opacity-60"
+            >
+              <RefreshCw
+                className={
+                  isRefreshing
+                    ? "size-5 animate-spin motion-reduce:animate-none"
+                    : "size-5"
+                }
+                strokeWidth={2}
+              />
+            </button>
+          }
         />
       </div>
 
