@@ -53,7 +53,11 @@ export type CreatePostArgs = PostInput & {
 };
 
 export async function createPost(args: CreatePostArgs): Promise<Post> {
-  const docRef = await addDoc(postsCol(), {
+  // walkId is optional + only written when present so legacy posts +
+  // composer posts without a walk source don't carry a stray field.
+  // Spec docs/features/walks-auto-photo-share.md — start/end-photo
+  // posts set this to cross-link the post to its walk doc.
+  const base: Record<string, unknown> = {
     authorUid: args.authorUid,
     authorName: args.authorName,
     authorPhotoURL: args.authorPhotoURL,
@@ -63,7 +67,9 @@ export async function createPost(args: CreatePostArgs): Promise<Post> {
     visibility: args.visibility,
     createdAt: serverTimestamp(),
     reactionCounts: emptyReactionCounts(),
-  });
+  };
+  if (args.walkId) base.walkId = args.walkId;
+  const docRef = await addDoc(postsCol(), base);
 
   // Use allSettled so one failing upload doesn't kill the others. Keep the
   // succeeded URLs; if *all* uploads fail and the post has no text, roll back

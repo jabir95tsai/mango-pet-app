@@ -118,6 +118,22 @@ export async function updateEngagementOptOut(
   );
 }
 
+/** Walks-auto-photo-share toggle. ON ⇒ start + end prompts fire on
+ *  every walk; OFF ⇒ both prompts skipped silently. Absent (= ON by
+ *  default) is normalised here so we can always write an explicit
+ *  boolean — keeps Settings reads + walks-page reads both honest
+ *  about user intent. Spec docs/features/walks-auto-photo-share.md. */
+export async function updateWalkAutoPhotoShare(
+  uid: string,
+  enabled: boolean,
+): Promise<void> {
+  await setDoc(
+    doc(getDb(), "users", uid),
+    { walkPrefs: { autoPhotoShare: enabled } },
+    { merge: true },
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Delete account — D1 (full hard delete cascade)
 // ────────────────────────────────────────────────────────────────────

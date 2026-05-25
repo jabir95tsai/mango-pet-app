@@ -9,6 +9,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   Timestamp,
   where,
   writeBatch,
@@ -43,7 +44,21 @@ export type CreateWalkArgs = WalkInput & {
   walkerName?: string;
   walkerPhotoURL?: string | null;
   score: number;
+  /** Optional pre-minted doc id. Set by the walks-auto-photo-share
+   *  flow so the START post (published BEFORE the walk doc is
+   *  saved) can cross-link to the same walkId the eventual walk doc
+   *  will carry. When omitted, falls back to Firestore's auto id. */
+  walkId?: string;
 };
+
+/** Mint a Firestore-auto walk id without writing yet. Used by the
+ *  walks-auto-photo-share flow so the START post can publish with
+ *  the correct `walkId` cross-link before the walk doc itself
+ *  exists. Returns a string id from `doc(collection)` — Firestore's
+ *  client-side id generator is collision-safe for our scale. */
+export function mintWalkId(): string {
+  return doc(walksCol()).id;
+}
 
 export async function createWalk(args: CreateWalkArgs): Promise<Walk> {
   const data = {
@@ -75,7 +90,16 @@ export async function createWalk(args: CreateWalkArgs): Promise<Walk> {
       createdAt: serverTimestamp(),
     }),
   };
-  const docRef = await addDoc(walksCol(), data);
+  let docRef;
+  if (args.walkId) {
+    // Pre-minted id from the auto-photo-share flow — use setDoc so the
+    // resulting walk lands at the same id the START post already
+    // cross-links to.
+    docRef = walkDoc(args.walkId);
+    await setDoc(docRef, data);
+  } else {
+    docRef = await addDoc(walksCol(), data);
+  }
   // Re-read so caller sees server-set timestamps (and any rule-applied
   // coercion). Worth the extra round-trip — walks are infrequent writes.
   const snap = await getDoc(docRef);

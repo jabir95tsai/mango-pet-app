@@ -45,6 +45,17 @@ export type AppUser = {
      *  "rank-overtake", "family-milestone". */
     engagementOptOut?: string[];
   };
+  /** Walks-related preferences. Namespace reserved so future
+   *  per-walk toggles (e.g., quiet hours, GPS-off mode) don't
+   *  break existing reads. Spec docs/features/walks-auto-photo-
+   *  share.md. */
+  walkPrefs?: {
+    /** Show the "拍張開始/結束照?" prompt at walk start + walk end.
+     *  Absent = treated as TRUE (default ON for everyone, matching
+     *  the spec's "預設 ON" decision). User can toggle in
+     *  Settings → 遛狗自動拍照. */
+    autoPhotoShare?: boolean;
+  };
 };
 
 /** Engagement push type ids, kept in sync with cron / event-trigger
@@ -138,6 +149,13 @@ export type Post = {
   visibility: Visibility;
   createdAt: Timestamp;
   reactionCounts: Record<ReactionEmoji, number>;
+  /** Optional cross-link to a walks/{walkId} doc. Set by the auto-
+   *  photo-share flow when the post is created from the start /
+   *  end walk prompt (docs/features/walks-auto-photo-share.md). May
+   *  point at a future walk doc (start photo is taken before the
+   *  walk is saved) — clients reading this field should tolerate
+   *  the referenced doc being missing or cancelled. */
+  walkId?: string;
 };
 
 export type PostInput = {
@@ -145,6 +163,8 @@ export type PostInput = {
   petIds: string[];
   visibility: Visibility;
   photoURLs: string[];
+  /** See `Post.walkId`. Passed through `createPost`. */
+  walkId?: string;
 };
 
 // ── Health records ──
