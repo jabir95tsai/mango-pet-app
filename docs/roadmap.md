@@ -15,10 +15,15 @@
   - Spec: [`docs/features/walks-v2-rebuild.md`](../features/walks-v2-rebuild.md)
   - Prototype: [`docs/design/walks-v2-prototype/Walks redesign.html`](../design/walks-v2-prototype/Walks%20redesign.html)（視覺/實作參考，不再產 patches/ 中間層）
   - 👉 **下個動作（user）**：開 UI/UX session 用 PM 寫好的 launch prompt（walks-v2-rebuild.md 末段）→ UI/UX 直接寫 src/ + commit + push + ship（5-8 min App Hosting 部署後 production 驗收）
-- **Epic 5: 主動推播 — 提升用戶活躍** — [`docs/features/engagement-push-notifications.md`](../features/engagement-push-notifications.md) ✅ **5 phase 全 SHIPPED**（FB session 5/24 深夜批 ship）
+- **Epic 5: 主動推播 — 提升用戶活躍** — [`docs/features/engagement-push-notifications.md`](../features/engagement-push-notifications.md) ✅ **5 phase 全 SHIPPED + deploy verified**（FB session 5/24 深夜批 ship + 收尾 report）
   - 4 push types 上線：A1 evening reminder 20:00 cron (`1a6fc7f`) / A2 streak warning 22:00 cron (`64f5de7`) / B1 rank-overtake aggregateLeaderboards 改 (`9c6442e`) / B2 family-milestone walks onCreate (`40a7e02`)；schema + UI (`f1e6952`)；PM ship recap (`380786d`)
+  - Deploy 全到位：rules（engagementPushes + userDailyStats）+ 3 個新 functions create + aggregateLeaderboards update + frontend push 完 App Hosting auto-build
   - 1 deviation：`engagementPushes` 路徑改 3-level（`/{type}/waves/{ISO}`，functionally 等價）
-  - 👉 **下個動作（user）**：手動 test 觀察清單跑一輪（spec 內 4 個 test 步驟）→ 3 天看 opt-out 率 → 收尾移到已收尾速覽
+  - 安全網：每 push 4 個守門（tokens > 0 / 未 opt-out / 寵物存在 / family > 1 人 for B2）+ token cleanup arrayRemove + audit doc per wave 留 trace
+  - 👉 **下個動作（user）**：
+    - 即時：手動 test 觀察清單跑一輪（spec 內 4 個 test 步驟）
+    - **觀察至 2026-05-27（3 天）**：每 push opt-out 率 < 20% / A1 開啟率 ≥ 20% / A2 補遛率 ≥ 15% / B1 追上率 ≥ 10% / B2 family 開啟率 ≥ 30% / 同晚 A1+A2 雙推不擾人
+    - 觀察過關 → 收尾移到已收尾速覽；不過關 → 寫 follow-up（throttle / 文案調整 / 時段微調）
 
 ## Epic 4: 視覺重設計 — 芒果主題（user 2026-05-24 vision + 20 個答案）
 
