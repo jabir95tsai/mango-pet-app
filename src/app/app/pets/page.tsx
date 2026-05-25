@@ -2,45 +2,38 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { PawPrint, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFamily } from "@/components/family/family-provider";
-import { RouteHeader } from "@/components/nav/route-header";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
-import { useConfirm } from "@/components/ui/confirm-provider";
-import { PetCard } from "@/components/pets/pet-card";
 import { PetFormDialog } from "@/components/pets/pet-form-dialog";
-import { RemindersOverviewSection } from "@/components/reminders/reminders-overview-section";
-import { ExpensesOverviewSection } from "@/components/expenses/expenses-overview-section";
+import { PetsEmptyState } from "@/components/pets/pets-empty-state";
+import { PetsPageContent } from "@/components/pets/pets-page-content";
 import {
   createPet,
-  deletePet,
   listPersonalPets,
   listPets,
-  updatePet,
 } from "@/lib/firebase/pets";
 import type { Pet, PetInput } from "@/lib/types";
 
+/**
+ * Pets list entry. Phase 2 v2 redesign — replaces the previous
+ * grid-of-pet-cards layout with the new tabbed mango view (sticky
+ * pills, stat grid, per-tab body). Renders `<PetsEmptyState>` when the
+ * user has no pets yet; otherwise hands off to the shared
+ * `<PetsPageContent>` in `list` mode (first pet is the default; user
+ * can switch via the dropdown without leaving this route).
+ */
 export default function PetsPage() {
-  const t = useTranslations("Nav");
-  const tPet = useTranslations("Pet");
-  const tCommon = useTranslations("Common");
-  const askConfirm = useConfirm();
+  const tC = useTranslations("Common");
   const { user } = useAuth();
   const { family, loading: familyLoading } = useFamily();
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Pet | undefined>();
+  const [addingPet, setAddingPet] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      // Personal mode (family === null) reads from the user's own
-      // namespace via the ownerUid-indexed query; family mode reads
-      // family-scoped pets as before.
       setPets(
         family
           ? await listPets(family.familyId)
@@ -56,97 +49,36 @@ export default function PetsPage() {
     refresh();
   }, [familyLoading, refresh]);
 
-  function handleAdd() {
-    setEditing(undefined);
-    setDialogOpen(true);
-  }
-
-  function handleEdit(pet: Pet) {
-    setEditing(pet);
-    setDialogOpen(true);
-  }
-
-  async function handleDelete(pet: Pet) {
-    const ok = await askConfirm({
-      title: `${tCommon("delete")}: ${pet.name}`,
-      message: "刪除後相關的健康紀錄與貼文照片仍會保留，但寵物本身會被移除。",
-      confirmText: tCommon("delete"),
-      cancelText: tCommon("cancel"),
-      danger: true,
-    });
-    if (!ok) return;
-    await deletePet(pet.petId);
-    await refresh();
-  }
-
-  async function handleSubmit(input: PetInput, avatar?: File) {
+  async function handleAddPet(input: PetInput, avatar?: File) {
     if (!user) return;
-    if (editing) {
-      await updatePet(editing.petId, input, user.uid, avatar);
-    } else {
-      // family === null → personal mode (passes null, write goes to the
-      // creator's personal namespace; permission gated by ownerUid).
-      await createPet(family?.familyId ?? null, user.uid, input, avatar);
-    }
+    await createPet(family?.familyId ?? null, user.uid, input, avatar);
+    setAddingPet(false);
     await refresh();
+  }
+
+  if (loading) {
+    return <p className="text-sm text-mango-ink-3">{tC("loading")}</p>;
+  }
+
+  if (pets.length === 0) {
+    return (
+      <>
+        <PetsEmptyState onAddPet={() => setAddingPet(true)} />
+        <PetFormDialog
+          open={addingPet}
+          onClose={() => setAddingPet(false)}
+          onSubmit={handleAddPet}
+        />
+      </>
+    );
   }
 
   return (
-    <>
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <RouteHeader title={t("pets")} className="mb-0" />
-        <Button onClick={handleAdd} size="md" className="w-full sm:w-auto">
-          <Plus className="size-4" />
-          {tPet("addPet")}
-        </Button>
-      </div>
-
-      {/* Reminders moved here from /app per spec
-          docs/features/reminders-to-pets-page.md (B2). Self-fetching; only
-          needs `pets` for petId→name lookup on the cards. Renders nothing
-          when pets.length === 0 so the "Add your first pet" empty state
-          below stays the only thing on screen. */}
-      <RemindersOverviewSection pets={pets} />
-
-      {/* Expenses overview (spec B2, 2026-05-24 update). Latest 10 across
-          pets — full archive + scanner + monthly summary stay at
-          /app/expenses via the "查看更多" link. Same hide-when-no-pets
-          guard as reminders. */}
-      <ExpensesOverviewSection pets={pets} />
-
-      {loading ? (
-        <p className="text-sm text-zinc-500">{tCommon("loading")}</p>
-      ) : pets.length === 0 ? (
-        <EmptyState
-          icon={PawPrint}
-          title={tPet("addPet")}
-          description="新增第一隻寵物來開始紀錄體重、餵食、疫苗等健康資料。"
-          action={
-            <Button onClick={handleAdd} size="md">
-              <Plus className="size-4" />
-              {tPet("addPet")}
-            </Button>
-          }
-        />
-      ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {pets.map((pet) => (
-            <PetCard
-              key={pet.petId}
-              pet={pet}
-              onEdit={() => handleEdit(pet)}
-              onDelete={() => handleDelete(pet)}
-            />
-          ))}
-        </div>
-      )}
-
-      <PetFormDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        initial={editing}
-        onSubmit={handleSubmit}
-      />
-    </>
+    <PetsPageContent
+      mode="list"
+      pets={pets}
+      initialPetId={pets[0].petId}
+      onPetsChanged={refresh}
+    />
   );
 }

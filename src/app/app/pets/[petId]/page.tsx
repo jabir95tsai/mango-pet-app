@@ -3,283 +3,56 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Bell, Pencil, Plus, PawPrint, Wallet } from "lucide-react";
+import { ArrowLeft, PawPrint } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFamily } from "@/components/family/family-provider";
-import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Tabs } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useConfirm } from "@/components/ui/confirm-provider";
-import { PetFormDialog } from "@/components/pets/pet-form-dialog";
-import { HealthRecordFormDialog } from "@/components/health/health-record-form-dialog";
-import { HealthRecordCard } from "@/components/health/health-record-card";
-import { WeightChart } from "@/components/health/weight-chart";
-import { ReminderFormDialog } from "@/components/reminders/reminder-form-dialog";
-import { ReminderCard } from "@/components/reminders/reminder-card";
-import { ExpenseCard } from "@/components/expenses/expense-card";
-import { ExpenseFormDialog } from "@/components/expenses/expense-form-dialog";
-import { getPet, updatePet } from "@/lib/firebase/pets";
-import {
-  createRecord,
-  deleteRecord,
-  listRecords,
-  listWeightSeries,
-} from "@/lib/firebase/health-records";
-import {
-  completeReminder,
-  createReminder,
-  deleteReminder,
-  listPersonalReminders,
-  listRecentlyCompletedReminders,
-  listReminders,
-  updateReminder,
-} from "@/lib/firebase/reminders";
-import {
-  createExpense,
-  deleteExpense,
-  listExpenses,
-  listPersonalExpenses,
-  updateExpense,
-} from "@/lib/firebase/expenses";
-import { listFamilyMembers } from "@/lib/firebase/families";
-import type {
-  Expense,
-  ExpenseInput,
-  FamilyMember,
-  HealthRecord,
-  HealthRecordInput,
-  HealthRecordType,
-  Pet,
-  PetInput,
-  Reminder,
-  ReminderInput,
-} from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { PetsPageContent } from "@/components/pets/pets-page-content";
+import { listPersonalPets, listPets } from "@/lib/firebase/pets";
+import type { Pet } from "@/lib/types";
 
-type Tab = "health" | "reminders" | "expenses";
-type TypeFilter = HealthRecordType | "all";
-const FILTER_TYPES: TypeFilter[] = ["all", "weight", "feeding", "vaccine", "vet", "medication"];
-
+/**
+ * Pet detail entry — same UI as list mode but title is "寵物資料" and
+ * the switcher hard-navigates to `/app/pets/[newPetId]` instead of
+ * swapping in place. Tab state lives in `?tab=...` so deep links land
+ * on the right body.
+ */
 export default function PetDetailPage() {
   const router = useRouter();
   const params = useParams<{ petId: string }>();
   const petId = params.petId;
-  const { user } = useAuth();
-  const { family } = useFamily();
-
-  const tH = useTranslations("Health");
-  const tR = useTranslations("Reminder");
-  const tE = useTranslations("Expense");
-  const tC = useTranslations("Common");
   const tPet = useTranslations("Pet");
-  const askConfirm = useConfirm();
-
-  const [pet, setPet] = useState<Pet | null>(null);
-  const [records, setRecords] = useState<HealthRecord[]>([]);
-  const [weights, setWeights] = useState<{ date: number; kg: number }[]>([]);
-  const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [todayDone, setTodayDone] = useState<Reminder[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [membersById, setMembersById] = useState<Map<string, FamilyMember>>(
-    () => new Map(),
-  );
-  const [tab, setTab] = useState<Tab>("health");
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const tC = useTranslations("Common");
+  const { user } = useAuth();
+  const { family, loading: familyLoading } = useFamily();
+  const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [editingPet, setEditingPet] = useState(false);
-  const [addingRecord, setAddingRecord] = useState(false);
-  const [addingReminder, setAddingReminder] = useState(false);
-  const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
-  const [addingExpense, setAddingExpense] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<Expense | undefined>(
-    undefined,
-  );
 
   const refresh = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     try {
-      // allSettled so one slow query doesn't blank the whole page.
-      // Personal mode skips done-attribution + members lookups (same
-      // reasoning as the home page — single-owner attribution is noise).
-      const [petR, recsR, wR, remR, doneR, exR, membersR] =
-        await Promise.allSettled([
-          getPet(petId),
-          listRecords(petId),
-          listWeightSeries(petId),
-          family
-            ? listReminders(family.familyId, { petId })
-            : listPersonalReminders(user.uid, { petId }),
-          family
-            ? listRecentlyCompletedReminders(family.familyId, { petId })
-            : Promise.resolve([] as Reminder[]),
-          family
-            ? listExpenses(family.familyId, { petId })
-            : listPersonalExpenses(user.uid, { petId }),
-          family
-            ? listFamilyMembers(family)
-            : Promise.resolve([] as FamilyMember[]),
-        ]);
-      setPet(petR.status === "fulfilled" ? petR.value : null);
-      setRecords(recsR.status === "fulfilled" ? recsR.value : []);
-      setWeights(wR.status === "fulfilled" ? wR.value : []);
-      setReminders(remR.status === "fulfilled" ? remR.value : []);
-      setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
-      setExpenses(exR.status === "fulfilled" ? exR.value : []);
-      setMembersById(
-        membersR.status === "fulfilled"
-          ? new Map(membersR.value.map((m) => [m.uid, m]))
-          : new Map(),
+      setPets(
+        family
+          ? await listPets(family.familyId)
+          : await listPersonalPets(user.uid),
       );
     } finally {
       setLoading(false);
     }
-  }, [user, family, petId]);
-
-  const refreshReminders = useCallback(async () => {
-    if (!user) return;
-    const [remR, doneR] = await Promise.allSettled([
-      family
-        ? listReminders(family.familyId, { petId })
-        : listPersonalReminders(user.uid, { petId }),
-      family
-        ? listRecentlyCompletedReminders(family.familyId, { petId })
-        : Promise.resolve([] as Reminder[]),
-    ]);
-    setReminders(remR.status === "fulfilled" ? remR.value : []);
-    setTodayDone(doneR.status === "fulfilled" ? doneR.value : []);
-  }, [user, family, petId]);
+  }, [family, user]);
 
   useEffect(() => {
+    if (familyLoading) return;
     refresh();
-  }, [refresh]);
-
-  async function handlePetUpdate(input: PetInput, avatar?: File) {
-    if (!user) return;
-    await updatePet(petId, input, user.uid, avatar);
-    await refresh();
-  }
-
-  async function handleAddRecord(input: HealthRecordInput) {
-    if (!user) return;
-    await createRecord(petId, user.uid, input);
-    await refresh();
-  }
-
-  async function handleDeleteRecord(record: HealthRecord) {
-    const ok = await askConfirm({
-      title: tC("delete"),
-      message: tH(`types.${record.type}`),
-      confirmText: tC("delete"),
-      cancelText: tC("cancel"),
-      danger: true,
-    });
-    if (!ok) return;
-    await deleteRecord(petId, record.recordId);
-    await refresh();
-  }
-
-  async function handleAddReminder(input: ReminderInput) {
-    if (!user) return;
-    await createReminder({
-      ...input,
-      petId,
-      familyId: family?.familyId ?? null,
-      createdByUid: user.uid,
-    });
-    await refreshReminders();
-  }
-
-  async function handleUpdateReminder(input: ReminderInput) {
-    if (!editingReminder) return;
-    const scheduleChanged =
-      editingReminder.triggerAt.toMillis() !== input.triggerAt.getTime() ||
-      editingReminder.notifyBeforeMinutes !== input.notifyBeforeMinutes;
-    await updateReminder(
-      editingReminder.reminderId,
-      {
-        title: input.title,
-        description: input.description,
-        petId: input.petId,
-        triggerAt: input.triggerAt,
-        repeat: input.repeat,
-        notifyBeforeMinutes: input.notifyBeforeMinutes,
-      },
-      { resetNotification: scheduleChanged },
-    );
-    setEditingReminder(null);
-    await refreshReminders();
-  }
-
-  async function handleCompleteReminder(reminder: Reminder) {
-    if (!user) return;
-    try {
-      await completeReminder(reminder, user.uid);
-    } catch (err) {
-      console.error("[completeReminder] failed:", err);
-      await askConfirm({
-        title: "標記完成失敗",
-        message: err instanceof Error ? err.message : "未知錯誤",
-        confirmText: "知道了",
-        cancelText: tC("cancel"),
-      });
-      return;
-    }
-    await refreshReminders();
-  }
-
-  async function handleDeleteReminder(reminder: Reminder) {
-    const ok = await askConfirm({
-      title: tC("delete"),
-      message: reminder.title,
-      confirmText: tC("delete"),
-      cancelText: tC("cancel"),
-      danger: true,
-    });
-    if (!ok) return;
-    await deleteReminder(reminder.reminderId);
-    await refreshReminders();
-  }
-
-  async function handleAddExpense(input: ExpenseInput) {
-    if (!user) return;
-    // Force petId — even if the form lets you change it, this page is
-    // scoped to one pet.
-    await createExpense({
-      ...input,
-      petId,
-      familyId: family?.familyId ?? null,
-      payerUid: user.uid,
-      payerName: user.displayName ?? undefined,
-    });
-    await refresh();
-  }
-
-  async function handleUpdateExpense(input: ExpenseInput) {
-    if (!editingExpense) return;
-    await updateExpense(editingExpense.expenseId, input);
-    setEditingExpense(undefined);
-    await refresh();
-  }
-
-  async function handleDeleteExpense(expense: Expense) {
-    const ok = await askConfirm({
-      title: tC("delete"),
-      message: `${expense.vendor || tE(`categories.${expense.category}`)} · NT$ ${expense.amount.toLocaleString()}`,
-      confirmText: tC("delete"),
-      cancelText: tC("cancel"),
-      danger: true,
-    });
-    if (!ok) return;
-    await deleteExpense(expense.expenseId);
-    await refresh();
-  }
+  }, [familyLoading, refresh]);
 
   if (loading) {
-    return <p className="text-sm text-zinc-500">{tC("loading")}</p>;
+    return <p className="text-sm text-mango-ink-3">{tC("loading")}</p>;
   }
 
+  const pet = pets.find((p) => p.petId === petId);
   if (!pet) {
     return (
       <EmptyState
@@ -296,224 +69,11 @@ export default function PetDetailPage() {
   }
 
   return (
-    <>
-      <div className="flex items-center gap-2 mb-4">
-        <button
-          type="button"
-          onClick={() => router.push("/app/pets")}
-          className="rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          aria-label={tC("back")}
-        >
-          <ArrowLeft className="size-5" />
-        </button>
-      </div>
-
-      <header className="mb-6 flex items-center gap-4 rounded-lg border border-zinc-200/80 bg-white p-5 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-        <Avatar src={pet.photoURL} name={pet.name} size={80} />
-        <div className="flex-1 min-w-0">
-          <h1 className="truncate text-xl font-bold">{pet.name}</h1>
-          <div className="text-sm text-zinc-500 flex gap-2 flex-wrap mt-1">
-            <span>{tPet(`species.${pet.species}`)}</span>
-            {pet.breed && <span>· {pet.breed}</span>}
-            {pet.weightKg != null && <span>· {pet.weightKg} kg</span>}
-          </div>
-          {pet.bio && (
-            <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{pet.bio}</p>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setEditingPet(true)}
-          className="self-start rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          aria-label={tC("edit")}
-        >
-          <Pencil className="size-4" />
-        </button>
-      </header>
-
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <Tabs<Tab>
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: "health", label: tH("title") },
-            { value: "reminders", label: tR("title") },
-            { value: "expenses", label: tE("title") },
-          ]}
-        />
-        {tab === "health" ? (
-          <Button onClick={() => setAddingRecord(true)} size="sm">
-            <Plus className="size-4" />
-            {tH("addRecord")}
-          </Button>
-        ) : tab === "reminders" ? (
-          <Button onClick={() => setAddingReminder(true)} size="sm">
-            <Plus className="size-4" />
-            {tR("add")}
-          </Button>
-        ) : (
-          <Button onClick={() => setAddingExpense(true)} size="sm">
-            <Plus className="size-4" />
-            {tE("add")}
-          </Button>
-        )}
-      </div>
-
-      {tab === "health" ? (
-        <div className="flex flex-col gap-4">
-          <WeightChart data={weights} />
-
-          {records.length > 0 && (
-            <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-              {FILTER_TYPES.map((t) => {
-                const active = typeFilter === t;
-                const label = t === "all" ? tC("none") : tH(`types.${t}`);
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTypeFilter(t)}
-                    aria-pressed={active}
-                    className={cn(
-                      "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
-                      active
-                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                        : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-800",
-                    )}
-                  >
-                    {t === "all" ? "全部" : label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {records.length === 0 ? (
-            <EmptyState
-              icon={PawPrint}
-              title={tH("noRecords")}
-              description="新增第一筆健康紀錄"
-            />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {records
-                .filter((r) => typeFilter === "all" || r.type === typeFilter)
-                .map((r) => (
-                  <HealthRecordCard
-                    key={r.recordId}
-                    record={r}
-                    onDelete={() => handleDeleteRecord(r)}
-                  />
-                ))}
-            </div>
-          )}
-        </div>
-      ) : tab === "reminders" ? (
-        <div className="flex flex-col gap-3">
-          {reminders.length === 0 && todayDone.length === 0 ? (
-            <EmptyState
-              icon={Bell}
-              title={tR("noReminders")}
-              description="新增第一個提醒"
-            />
-          ) : (
-            <>
-              {reminders.map((r) => (
-                <ReminderCard
-                  key={r.reminderId}
-                  reminder={r}
-                  pet={pet}
-                  members={membersById}
-                  onComplete={() => handleCompleteReminder(r)}
-                  onDelete={() => handleDeleteReminder(r)}
-                  onEdit={() => setEditingReminder(r)}
-                />
-              ))}
-              {todayDone.length > 0 && (
-                <>
-                  <p className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                    {tR("todayDone")}
-                  </p>
-                  {todayDone.map((r) => (
-                    <ReminderCard
-                      key={r.reminderId}
-                      reminder={r}
-                      pet={pet}
-                      members={membersById}
-                      onComplete={() => handleCompleteReminder(r)}
-                      onDelete={() => handleDeleteReminder(r)}
-                    />
-                  ))}
-                </>
-              )}
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {expenses.length === 0 ? (
-            <EmptyState
-              icon={Wallet}
-              title={tE("title")}
-              description="目前沒有開銷紀錄"
-              action={
-                <Button size="sm" onClick={() => setAddingExpense(true)}>
-                  <Plus className="size-4" />
-                  {tE("add")}
-                </Button>
-              }
-            />
-          ) : (
-            expenses.map((e) => (
-              <ExpenseCard
-                key={e.expenseId}
-                expense={e}
-                onEdit={() => setEditingExpense(e)}
-                onDelete={() => handleDeleteExpense(e)}
-              />
-            ))
-          )}
-        </div>
-      )}
-
-      <PetFormDialog
-        open={editingPet}
-        onClose={() => setEditingPet(false)}
-        initial={pet}
-        onSubmit={handlePetUpdate}
-      />
-      <HealthRecordFormDialog
-        open={addingRecord}
-        onClose={() => setAddingRecord(false)}
-        onSubmit={handleAddRecord}
-      />
-      <ReminderFormDialog
-        open={addingReminder}
-        onClose={() => setAddingReminder(false)}
-        pets={pet ? [pet] : []}
-        defaultPetId={petId}
-        onSubmit={handleAddReminder}
-      />
-      <ReminderFormDialog
-        open={editingReminder !== null}
-        onClose={() => setEditingReminder(null)}
-        pets={pet ? [pet] : []}
-        initial={editingReminder ?? undefined}
-        onSubmit={handleUpdateReminder}
-      />
-      <ExpenseFormDialog
-        open={addingExpense}
-        onClose={() => setAddingExpense(false)}
-        pets={pet ? [pet] : []}
-        onSubmit={handleAddExpense}
-      />
-      <ExpenseFormDialog
-        open={editingExpense !== undefined}
-        onClose={() => setEditingExpense(undefined)}
-        pets={pet ? [pet] : []}
-        initial={editingExpense}
-        onSubmit={handleUpdateExpense}
-      />
-    </>
+    <PetsPageContent
+      mode="detail"
+      pets={pets}
+      initialPetId={pet.petId}
+      onPetsChanged={refresh}
+    />
   );
 }
