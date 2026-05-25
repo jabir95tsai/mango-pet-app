@@ -18,6 +18,7 @@ import {
   Timestamp,
   type Firestore,
 } from "firebase-admin/firestore";
+import { logger } from "firebase-functions/v2";
 
 /** Internal aggregation shape — mirrors the cron's `UserAccum`.
  *  Re-exported so the cron + trigger can pass the result to
@@ -108,22 +109,44 @@ export async function computeWalkerPeriodScore(
   let totalDurationMin = 0;
   let walkCount = 0;
   const walkDays = new Set<number>();
+  // Diagnostic: track every doc id we encountered + why it was kept
+  // or skipped, so when an entry's walkCount doesn't match what the
+  // user sees in /app/walks we can immediately spot the leaking doc.
+  // Cheap (few docs per walker per period); remove after the
+  // post-onDelete-trigger ghost-walk investigation closes.
+  const audit: Array<{ id: string; kept: boolean; reason?: string; familyId?: unknown }> = [];
 
   for (const d of snap.docs) {
-    if (excludeWalkId && d.id === excludeWalkId) continue;
+    if (excludeWalkId && d.id === excludeWalkId) {
+      audit.push({ id: d.id, kept: false, reason: "excludeWalkId" });
+      continue;
+    }
     const w = d.data();
     // Personal-mode filter — same semantics as the cron's
     // `where("familyId", "!=", null)`. Skipping in-memory keeps the
     // composite-index requirement to (walkerUid, startedAt) only.
-    if (w.familyId == null) continue;
+    if (w.familyId == null) {
+      audit.push({ id: d.id, kept: false, reason: "familyId==null", familyId: w.familyId });
+      continue;
+    }
     const startedAt = w.startedAt as Timestamp | undefined;
-    if (!startedAt) continue;
+    if (!startedAt) {
+      audit.push({ id: d.id, kept: false, reason: "no startedAt", familyId: w.familyId });
+      continue;
+    }
     totalScore += Number(w.score) || 0;
     totalDistanceKm += Number(w.distanceKm) || 0;
     totalDurationMin += Number(w.durationMin) || 0;
     walkCount += 1;
     walkDays.add(Math.floor(startedAt.toMillis() / 86_400_000));
+    audit.push({ id: d.id, kept: true, familyId: w.familyId });
   }
+
+  logger.info(
+    `computeWalkerPeriodScore: walker=${walkerUid} period=${period} ` +
+      `snapSize=${snap.size} walkCount=${walkCount} ` +
+      `audit=${JSON.stringify(audit)}`,
+  );
 
   if (walkCount === 0) return null;
 
