@@ -466,7 +466,12 @@
     "back": "返回",
     "none": "無",
     "privacy": "隱私權政策",
-    "terms": "服務條款"
+    "terms": "服務條款",
+    "saveToAlbum": {
+      "label": "存到相簿",
+      "saved": "已存 ✓",
+      "failed": "存取失敗"
+    }
   },
   "PhotoLightbox": {
     "close": "關閉",

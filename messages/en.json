@@ -466,7 +466,12 @@
     "back": "Back",
     "none": "None",
     "privacy": "Privacy Policy",
-    "terms": "Terms of Service"
+    "terms": "Terms of Service",
+    "saveToAlbum": {
+      "label": "Save to Photos",
+      "saved": "Saved ✓",
+      "failed": "Save failed"
+    }
   },
   "PhotoLightbox": {
     "close": "Close",
