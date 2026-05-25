@@ -16,6 +16,7 @@ import { WalksWeekStrip } from "@/components/walks/walks-week-strip";
 import { WalksConfettiDecor } from "@/components/walks/walks-confetti-decor";
 import { StreakChip } from "@/components/walks/streak-chip";
 import { WalkRow } from "@/components/walks/walk-row";
+import { PetPickerDropdown } from "@/components/walks/pet-picker-dropdown";
 import {
   createWalk,
   deleteWalk,
@@ -28,14 +29,15 @@ import {
   getTodayProgress,
   getWeeklyAvgMinutes,
 } from "@/lib/walk-tracking";
+import { getPetWalkGoalMinutes } from "@/lib/walk-goals";
 import { cn } from "@/lib/utils";
 import type { Pet, Walk, WalkInput } from "@/lib/types";
 import type { Timestamp } from "firebase/firestore";
 
 // Spec decisions:
-const TODAY_GOAL_MIN = 30;
 const WEEK_GOAL_COUNT = 5;
 const RECENT_WALKS_LIMIT = 5;
+const LAST_PET_ID_STORAGE_KEY = "mango.walks.lastPetId";
 
 // CTA family — ink on brand mango (7.6:1 AAA). Shared across hero CTA
 // (desktop), sticky CTA (mobile), and the empty-state inline link.
@@ -120,6 +122,16 @@ export default function WalksPage() {
   // doesn't camp at the top of the page forever (user feedback
   // 2026-05-25 "彩帶動畫完後不要留在頁面上").
   const [showConfetti, setShowConfetti] = useState(false);
+  // Multi-pet picker state — per per-pet-walk-goal spec D2, the
+  // chevron-down Phase 1 v2 deferred is now active. activePetId
+  // persists across sessions via localStorage; reconciliation with
+  // the actual pet list happens in the activePet useMemo below.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [storedPetId, setStoredPetId] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof localStorage === "undefined") return;
+    setStoredPetId(localStorage.getItem(LAST_PET_ID_STORAGE_KEY));
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -141,9 +153,10 @@ export default function WalksPage() {
     refresh();
   }, [familyLoading, refresh]);
 
-  // Primary pet = earliest createdAt. Spec edge case "多 pet user
-  // → top-bar only shows primary pet; multi-pet picker DEFERRED".
-  // Single-pet user falls through to the same code path.
+  // Primary pet = earliest createdAt. Anchored fallback for activePet
+  // resolution AND for the cloud-functions push (which also uses
+  // "earliest createdAt" — kept aligned so the user's experience
+  // matches the push copy).
   const primaryPet = useMemo<Pet | null>(() => {
     if (pets.length === 0) return null;
     return [...pets].sort((a, b) => {
@@ -154,9 +167,23 @@ export default function WalksPage() {
   }, [pets]);
   const hasMultiplePets = pets.length > 1;
 
+  // Active pet = stored localStorage choice if it still resolves to a
+  // real pet, else fall back to primary. Stored-pet-deleted case is
+  // covered here automatically (lookup returns undefined → fallback).
+  const activePet = useMemo<Pet | null>(() => {
+    if (pets.length === 0) return null;
+    if (storedPetId) {
+      const found = pets.find((p) => p.petId === storedPetId);
+      if (found) return found;
+    }
+    return primaryPet;
+  }, [pets, storedPetId, primaryPet]);
+
+  const goalMin = useMemo(() => getPetWalkGoalMinutes(activePet), [activePet]);
+
   const todayProgress = useMemo(
-    () => getTodayProgress(walks, TODAY_GOAL_MIN),
-    [walks],
+    () => getTodayProgress(walks, goalMin),
+    [walks, goalMin],
   );
 
   const streakDays = useMemo(
@@ -168,8 +195,8 @@ export default function WalksPage() {
   );
 
   const weekDayFlags = useMemo(
-    () => getWeekDayDoneFlags(walks, TODAY_GOAL_MIN),
-    [walks],
+    () => getWeekDayDoneFlags(walks, goalMin),
+    [walks, goalMin],
   );
   const weekKm = useMemo(() => getWeekKm(walks), [walks]);
   const weekCount = useMemo(() => getWeekWalkCount(walks), [walks]);
@@ -233,7 +260,7 @@ export default function WalksPage() {
 
   const remainingMin = Math.max(
     0,
-    TODAY_GOAL_MIN - Math.round(todayProgress.minutes),
+    goalMin - Math.round(todayProgress.minutes),
   );
   const goalHit = todayProgress.percent >= 100;
 
@@ -251,7 +278,7 @@ export default function WalksPage() {
     return () => clearTimeout(t);
   }, [goalHit]);
   const doneMin = Math.round(todayProgress.minutes);
-  const petName = primaryPet?.name ?? "";
+  const petName = activePet?.name ?? "";
 
   // Hero copy — title + sub-line. Spec format:
   //   "再走 {min} 分鐘" / "達標了 🎉"
@@ -274,44 +301,68 @@ export default function WalksPage() {
         </div>
       )}
 
-      {/* Top bar — title (left) + Mango pill (multi-pet primary) +
-          streak chip (right). Spec: chevron is decoration only;
-          multi-pet picker is DEFERRED to a follow-up spec. */}
+      {/* Top bar — title (left) + Mango pill (active pet, opens picker
+          when multi-pet) + streak chip (right). Per per-pet-walk-goal
+          spec D2, the chevron-down is now active and opens a dropdown
+          listing each pet + its daily goal chip. Single-pet users see
+          the pill but no chevron — the button is non-interactive in
+          that case to keep the UX uncluttered. */}
       <div className="relative z-10 mb-3 flex items-center gap-2.5">
         <h1 className="text-[22px] font-bold tracking-tight text-mango-ink">
           {t("walks")}
         </h1>
-        {primaryPet && (
-          <button
-            type="button"
-            disabled={!hasMultiplePets}
-            aria-label={
-              hasMultiplePets
-                ? tP("multiPetHint", { pet: primaryPet.name })
-                : primaryPet.name
-            }
-            title={hasMultiplePets ? tP("multiPetHint", { pet: primaryPet.name }) : undefined}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border border-mango-hairline bg-mango-card py-1 pl-1 pr-2.5 text-[13px] font-semibold text-mango-ink",
-              hasMultiplePets
-                ? "cursor-default opacity-100"
-                : "cursor-default",
-            )}
-          >
-            <span
-              aria-hidden="true"
-              className="grid h-[22px] w-[22px] place-items-center overflow-hidden rounded-full bg-[#f7c168] text-[13px]"
+        {activePet && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={hasMultiplePets ? () => setPickerOpen((v) => !v) : undefined}
+              disabled={!hasMultiplePets}
+              aria-haspopup={hasMultiplePets ? "menu" : undefined}
+              aria-expanded={hasMultiplePets ? pickerOpen : undefined}
+              aria-label={
+                hasMultiplePets
+                  ? tP("petPicker.openLabel", { pet: activePet.name })
+                  : activePet.name
+              }
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border border-mango-hairline bg-mango-card py-1 pl-1 pr-2.5 text-[13px] font-semibold text-mango-ink transition-colors",
+                hasMultiplePets
+                  ? "hover:bg-mango-bg-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+                  : "cursor-default",
+              )}
             >
-              🐶
-            </span>
-            <span className="truncate max-w-[6.5rem]">{primaryPet.name}</span>
-            {hasMultiplePets && (
-              <ChevronDown
-                className="size-3 text-mango-ink-3"
+              <span
                 aria-hidden="true"
+                className="grid h-[22px] w-[22px] place-items-center overflow-hidden rounded-full bg-[#f7c168] text-[13px]"
+              >
+                🐶
+              </span>
+              <span className="truncate max-w-[6.5rem]">{activePet.name}</span>
+              {hasMultiplePets && (
+                <ChevronDown
+                  className={cn(
+                    "size-3 text-mango-ink-3 transition-transform",
+                    pickerOpen && "rotate-180",
+                  )}
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+            {pickerOpen && hasMultiplePets && (
+              <PetPickerDropdown
+                pets={pets}
+                currentPetId={activePet.petId}
+                onSelect={(p) => {
+                  setStoredPetId(p.petId);
+                  if (typeof localStorage !== "undefined") {
+                    localStorage.setItem(LAST_PET_ID_STORAGE_KEY, p.petId);
+                  }
+                  setPickerOpen(false);
+                }}
+                onClose={() => setPickerOpen(false)}
               />
             )}
-          </button>
+          </div>
         )}
         <div className="flex-1" />
         <StreakChip
@@ -341,7 +392,7 @@ export default function WalksPage() {
           percent={todayProgress.percent}
           complete={goalHit}
           doneMin={todayProgress.minutes}
-          goalMin={TODAY_GOAL_MIN}
+          goalMin={goalMin}
         />
       </div>
 
@@ -469,10 +520,10 @@ export default function WalksPage() {
       <WalkTrackingView
         open={sessionOpen}
         onClose={() => setSessionOpen(false)}
-        pet={primaryPet}
+        pet={activePet}
         streakDays={streakDays}
         storedTodayMin={todayProgress.minutes}
-        goalMin={TODAY_GOAL_MIN}
+        goalMin={goalMin}
         weeklyAvgMin={weeklyAvgMin}
         onComplete={handleCreate}
       />
