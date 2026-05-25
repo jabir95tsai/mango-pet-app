@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldLabel } from "@/components/ui/select";
+import { SaveToAlbumButton } from "@/components/ui/save-to-album-button";
 import { createPost } from "@/lib/firebase/posts";
 import { useAuth } from "@/components/auth/auth-provider";
 import { IMAGE_PRESETS, processImage } from "@/lib/image-processing";
@@ -164,6 +165,17 @@ export function PostComposer({ open, onClose, pets, onCreated }: Props) {
                 >
                   <X className="size-4" />
                 </button>
+                {/* Per-photo save-to-album — bottom-right so close X
+                    stays prominent. Spec: each photo in a multi-pick
+                    composer gets its own button (Web Share API takes
+                    one file at a time; batch save was rejected in
+                    "不在這次範圍"). */}
+                {photos[i] && (
+                  <SaveToAlbumButton
+                    file={photos[i]}
+                    className="absolute bottom-1 right-1 size-8"
+                  />
+                )}
               </div>
             ))}
           </div>
