@@ -12,9 +12,21 @@ function getNextPath(next: string | string[] | undefined): string {
   const value = Array.isArray(next) ? next[0] : next;
 
   // Honour the original requested path when RequireAuth bounced the user
-  // through here (?next=/app/...) — they explicitly tried to reach that
-  // page, so post-sign-in we should deliver them there.
-  if (value === "/app" || value?.startsWith("/app/")) {
+  // through here — they explicitly tried to reach that page, so post-
+  // sign-in we should deliver them there.
+  //
+  // Allowlist: `/app[/...]` covers the main authed surface. `/join/...`
+  // is the family-invite deep-link landing (/join/[code]/page.tsx) —
+  // forgetting it here meant a shared invite URL would sign the user in
+  // and then drop them on /app/walks, never hitting joinFamilyByCode,
+  // so the invitee was never actually added. Both subtrees are internal
+  // and have no user-controllable onward redirect, so they're safe to
+  // allowlist without an open-redirect risk.
+  if (
+    value === "/app" ||
+    value?.startsWith("/app/") ||
+    value?.startsWith("/join/")
+  ) {
     return value;
   }
 
