@@ -304,3 +304,77 @@ Repo: C:\Users\jabir\Hacker_J\mango_pet_app
 
 開工。
 ```
+
+---
+
+## SHIPPED — 2026-05-25
+
+**狀態：SHIPPED ✅**
+推送：2026-05-25 18:18（main，8 commits）
+驗收：production via Chrome MCP DOM 探針（CSS chunk hash `xxqi90ns8c → 123doanyjnwwq` 確認部署完成 18:27）
+
+### Commits（8 個，按 spec 拆解）
+
+| # | Hash | Scope | Review note |
+|---|---|---|---|
+| 1 | `cbd95df` | `feat(pets)` | pet-avatar (photoURL + brand-tint initial + paw overlay fallback) + pets-top-bar + pet-header (含 chevron-down) + pet-switcher-dropdown (click-outside + Esc) |
+| 2 | `b24c17c` | `feat(pets)` | pet-tabs sticky pill + use-pet-tab URL hook (router.replace, scroll false) + pet-stat-grid 2×2 + pet-overview-body |
+| 3 | `fbc4bcf` | `feat(pets)` | pet-reminder-card 42px tinted icon, tint keyword-derived (疫苗/驅蟲/美容) + pet-reminders-body (summary row + sort hint + empty) |
+| 4 | `5e14f15` | `feat(pets)` | pet-expense-card mango palette + pet-expense-donut hand-rolled SVG (1.2° gap, center label, no chart library) + pet-expenses-body (month bar + ±% chip + legend) |
+| 5 | `a40481a` | `feat(pets)` | pet-health-record-card type pill + dashed detail row + pet-weight-trend-chart SVG area+line+circles (1:1 port) + pet-health-body (delta + insufficient placeholder) |
+| 6 | `46c62e2` | `feat(pets)` | pet-floating-add 56px FAB fixed bottom-right above bottom-nav, 4 gradient tones (brand/cookie/leaf), mobile-only |
+| 7 | `9d7956a` | `feat(pets)` | pets-empty-state hero + pets-page-content shared host (mode='list'/'detail') + integrate page.tsx + [petId]/page.tsx (full rebuild) |
+| 8 | `c8c14cf` | `chore(i18n)` | PetsPage.* keys (zh-TW + en): title.list/detail, addPet, 4 tabs, 4 stat tiles, overview/reminders/expenses/health bodies, FAB labels, switcher, empty hero |
+
+### Chrome MCP 驗收結果（production）
+
+**`/app/pets` (list mode, user has 1 pet "Mango")**
+- ✅ `h1: "我的寵物"` (title.list)
+- ✅ `"+ 寵物"` pill button rendered
+- ✅ PetHeader real photoURL avatar rendered (firebasestorage URL confirmed)
+- ✅ 4 sticky pill tabs: 概覽 / 提醒 / 開銷 / 健康
+- ✅ Active tab default = 概覽
+- ✅ Stat grid 2×2 with REAL data: 下次提醒 11 天後 驅蟲藥 / 本月開銷 0 NT$ / 體重 22.4 公斤 / 散步天數 1 天
+
+**Tab switching (each click)**
+- ✅ 提醒 → URL `?tab=reminders`, FAB label `新增提醒`, summary `本月 1 條`, 1 reminder card rendered
+- ✅ 開銷 → URL `?tab=expenses`, FAB label `新增開銷` (cookie tone), 0 expenses → `本月還沒有開銷` empty state CTA ✓
+- ✅ 健康 → URL `?tab=health`, FAB label `新增健康紀錄` (leaf tone), 體重趨勢 card + 近 6 個月 label + insufficient placeholder `資料不足` (user has 1 weight reading, <2 → chart hidden, correct edge case)
+
+**`/app/pets/[petId]?tab=reminders` (detail mode)**
+- ✅ URL preserved
+- ✅ `h1: "寵物資料"` (title.detail — flips from list)
+- ✅ Active tab = 提醒 (URL param honored on cold load)
+- ✅ FAB label = 新增提醒
+- ✅ Pet name = Mango
+- ✅ `刪除 Mango` button rendered at bottom (detail-mode only)
+
+**`/app/pets/[non_existent_id]` (not-found)**
+- ✅ Renders "not found" empty state with back button
+
+### Spec deviations / known gaps
+
+- **Multi-pet switcher dropdown** — DOM-wired but visually untested in production (user only has 1 pet "Mango"). Switcher hidden behind `multi >= 2` so single-pet households never see it. Will exercise next time the user adds a second pet.
+- **0-pet hero empty state** — DOM-wired but visually untested in production (user has 1 pet). Hero block uses paw icon + radial gradient instead of prototype's cartoon shiba per spec D1 (no illustrated pets).
+- **Donut chart visual** — code-wired but visually untested in production (0 expenses this month → empty state renders instead). Will exercise once user logs an expense.
+- **Family-mode reminders/expenses** — code paths in place for both family + personal mode (matches existing pages); user is personal-mode so family branch untested this session.
+
+### 護欄 compliance
+
+- ✅ 不動既有 Pet / Reminder / Expense / HealthRecord schema
+- ✅ 不動既有 firebase logic (`src/lib/firebase/*` untouched)
+- ✅ 不動 shared Button / EmptyState 元件 (new `pets-empty-state.tsx` is separate)
+- ✅ 不動 mango tokens (`globals.css` untouched)
+- ✅ 不動 walks page / walk-tracking-view (Phase 1 v2 SHIPPED intact)
+- ✅ 不動 bottom nav (Phase 0.5 SHIPPED intact)
+- ✅ 不引入新 chart library — donut + weight chart both hand-rolled SVG
+- ✅ 不引入新 animation library — transitions via Tailwind + `motion-reduce:` classes
+- ✅ Pet avatar real photoURL with initial+paw fallback per spec D1
+
+### Untested follow-ups for PM backlog
+
+- Multi-pet switcher visual + onClick verification
+- 0-pet hero visual
+- Donut chart visual (need ≥1 expense this month)
+- Family-mode data fetch path
+- Lighthouse a11y formal run (skipped — no dev tooling on production; manual a11y checked via DOM probes: role=tab, aria-selected, aria-label all wired)
