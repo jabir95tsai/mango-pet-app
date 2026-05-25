@@ -2,18 +2,23 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-24（🎉 Epic 1-3 全收尾；user 2026-05-24 提全 app visual redesign → Epic 4 開工，spec 6 phases ready）
+最後更新：2026-05-24 深夜（🎉 Epic 5 主動推播 5 phase 全 SHIPPED；Epic 4 walks v2 prototype 拿到 → 原 Phase 1 superseded by Phase 1 v2 全頁重建，待 Claude Design 產 production patch；Q11 寵物動效 retracted — 圈內限定 OK）
 
 ## 進行中
 
 > 這個 sprint 已經在做。每條連到 `docs/features/{slug}.md` 或具體 commit。
 
-- **Epic 4: 視覺重設計（芒果主題）** — Phase 0 + 0.5 + 1 ✅ SHIPPED；**暫停**（user 切到推播設定工作）
-- **Epic 5: 主動推播 — 提升用戶活躍**（新）— [`docs/features/engagement-push-notifications.md`](../features/engagement-push-notifications.md) **GO**
-  - 第一波 4 push types：A1 晚上遛狗提醒（20:00）+ A2 斷 streak 警告（22:00）+ B1 排名被超越 + B2 家人達標
-  - 5 decisions confirmed（user 加碼 A2 + B2），per-type opt-out 預設 ON，i18n zh/en
-  - PM 自我修正：上一輪 push-notification-settings.md 誤讀為「settings polish」已刪；本 spec 取代
-  - 👉 **下個動作（user）**：開新 Feature Builder session 用 PM 寫好的 launch prompt 動工，拆 phase ship（先 schema+UI → A1 → A2 → B1 → B2）
+- **Epic 4: 視覺重設計（芒果主題）** — Phase 0/0.5/(原 Phase 1) ✅ SHIPPED；**Phase 1 v2 全頁重建** prototype 已 review，待 Claude Design 產 production patch
+  - 原 Phase 1 palette swap **superseded by Phase 1 v2**（walks 頁結構重建 — radial dial + week strip + 圈內走路狗 + 主寵物 only pill + Confetti @ 達標 + 「再遛一次」CTA）
+  - User 推翻 Q11：圈內限定走路狗動效 OK（roadmap not-do 第 118 行 retract，見「不做」段）
+  - 多 pet picker DEFERRED — 主寵物 only，多 pet 設計之後再 spec
+  - Spec: [`docs/features/walks-v2-rebuild.md`](../features/walks-v2-rebuild.md)
+  - Prototype: [`docs/design/walks-v2-prototype/Walks redesign.html`](../design/walks-v2-prototype/Walks%20redesign.html)
+  - 👉 **下個動作（user）**：開 Claude Design session 用 PM 寫好的 prompt（walks-v2-rebuild.md 末段）→ 之後 Code session apply patch + ship
+- **Epic 5: 主動推播 — 提升用戶活躍** — [`docs/features/engagement-push-notifications.md`](../features/engagement-push-notifications.md) ✅ **5 phase 全 SHIPPED**（FB session 5/24 深夜批 ship）
+  - 4 push types 上線：A1 evening reminder 20:00 cron (`1a6fc7f`) / A2 streak warning 22:00 cron (`64f5de7`) / B1 rank-overtake aggregateLeaderboards 改 (`9c6442e`) / B2 family-milestone walks onCreate (`40a7e02`)；schema + UI (`f1e6952`)；PM ship recap (`380786d`)
+  - 1 deviation：`engagementPushes` 路徑改 3-level（`/{type}/waves/{ISO}`，functionally 等價）
+  - 👉 **下個動作（user）**：手動 test 觀察清單跑一輪（spec 內 4 個 test 步驟）→ 3 天看 opt-out 率 → 收尾移到已收尾速覽
 
 ## Epic 4: 視覺重設計 — 芒果主題（user 2026-05-24 vision + 20 個答案）
 
@@ -21,14 +26,15 @@
 |---|---|---|---|
 | **0** | Design tokens（globals.css @theme inline mango palette + :root radius/motion vars — Tailwind v4 collapsed from spec's tailwind.config.ts plan）| S | ✅ **SHIPPED** `7baff73` |
 | **0.5** | Raised center walks tab + bg-mango-card-soft nav surface | S | ✅ **SHIPPED** `e1a7b60` |
-| 1 | `/app/walks` 套 mockup tone（warm cream bg + brand CTA + leaf success）| S | ✅ **SHIPPED** `37d1ec4` + polish `8aebe14`（drop raised-disc label + sticky CTA lift）|
-| 2 | `/app` + `/app/pets` + `/app/pets/[petId]` | M | 等 Phase 0 |
-| 3 | `/onboarding` + Landing + sign-in | M | 等 Phase 0 |
-| 4 | `/app/settings` + `/app/leaderboard` | M | 等 Phase 0 |
-| 5 | Drawer pages: `/app/feed` + `/app/restaurants` (+detail) + `/app/knowledge` (+detail) + `/app/friends` (+/add) + `/app/expenses` | L | 等 Phase 0 |
+| ~~1~~ | ~~`/app/walks` 套 mockup tone（warm cream bg + brand CTA + leaf success）~~ | S | ⚠️ **SUPERSEDED by Phase 1 v2** — 原 ship `37d1ec4` + `8aebe14` 不 rollback，視覺由 v2 覆蓋 |
+| **1 v2** | `/app/walks` **全頁結構重建** — radial dial hero + week strip + 圈內走路狗 + 主寵物 only pill + Confetti @ 達標 + 「再遛一次」CTA | M | 🔄 **prototype reviewed**，待 Claude Design 產 production patch |
+| 2 | `/app` + `/app/pets` + `/app/pets/[petId]` | M | 等 Phase 1 v2 |
+| 3 | `/onboarding` + Landing + sign-in | M | 等 Phase 1 v2 |
+| 4 | `/app/settings` + `/app/leaderboard` | M | 等 Phase 1 v2 |
+| 5 | Drawer pages: `/app/feed` + `/app/restaurants` (+detail) + `/app/knowledge` (+detail) + `/app/friends` (+/add) + `/app/expenses` | L | 等 Phase 1 v2 |
 | 6 | Polish — 一致性 audit + loading/error tone + reduced-motion verify | S | 等 Phase 1-5 |
 
-**Spec**: [`docs/features/visual-redesign-mango.md`](../features/visual-redesign-mango.md)
+**Spec**: [`docs/features/visual-redesign-mango.md`](../features/visual-redesign-mango.md) + Phase 1 v2 addendum [`walks-v2-rebuild.md`](../features/walks-v2-rebuild.md)
 
 **User 20 個 decisions 重點**：
 - 主黃 **#FFCA28**（Material Amber 400，user 自訂；比 PM 預設亮）
@@ -36,7 +42,7 @@
 - Accent **桃粉 #FFB3BA**
 - 圓角 rounded-2xl + 按鈕 rounded-full
 - 動效 medium（CSS keyframes，no library）
-- **不做**寵物 wiggling 動效（Q11 user push back）
+- ~~**不做**寵物 wiggling 動效（Q11 user push back）~~ → **retract 2026-05-24 深夜**：1 個圈內限定走路狗 OK（v2 prototype dial 中心 232px 範圍內）
 - **跳過 dark mode 第一輪**（Q18 — light first；dark 之後迭代）
 - 100% 保留既有功能
 - WCAG AA accessibility
@@ -51,7 +57,7 @@
 | 上架收尾 + backlog P2 | 2026-05-23 | 5/5 ship |
 | 核心體驗 v2（user 2026-05-24 vision） | 2026-05-24 | 🎉 6/6 全 SHIPPED |
 
-**累計**：4 epic / ~19 work items / ~50 commits / 3 天
+**累計**：4 epic / ~19 work items / ~50 commits / 3 天（Epic 5 + Phase 1 v2 收尾後再加總）
 
 ## 下個方向候選（Epic 4 視覺重設計 收完後）
 
@@ -70,10 +76,10 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 
 ### Option C: walks 延伸 follow-ups
 
-- 遛狗推播提醒「今天還沒遛」
 - 追蹤中 reload 恢復 tracking state
 - 歷史紀錄分頁查看更多
 - Family mode 加總 walk 進度
+- ~~遛狗推播提醒「今天還沒遛」~~（Epic 5 A1 已 ship）
 
 ### Option D: 新方向
 
@@ -83,6 +89,9 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 
 ## 想做但還沒規格
 
+- Quiet hours / per-pet opt-out push 設定（Epic 5 follow-up，pushPrefs namespace 已預埋）
+- 多 pet picker UX（walks 頁 Phase 1 v2 ship 後 follow-up）
+- Push throttle（A1 + A2 同晚雙推觀察後決定）
 - Dark mode follow-up（Epic 4 後評估）
 - 餐廳 Google Places 整合
 - 知識庫持續產出
@@ -91,7 +100,6 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 - App Check 防 API key 盜用
 - Lighthouse Perf audit
 - 隱私 / 服務條款內容審查
-- 遛狗推播提醒「今天還沒遛」
 - 追蹤中 reload 恢復 tracking state
 - 歷史紀錄分頁查看更多
 - Family mode 加總 walk 進度
@@ -115,7 +123,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 - 開始遛狗按鈕真的移到下方（沒上方 hero CTA）（2026-05-24 PM push-back，user 選解 A）
 - 首頁 feed 只顯示家庭內 posts（2026-05-24 IA reorg D2 預設）
 - /app/feed 或 /app/expenses 整頁刪除（2026-05-24 user 確認 D4/D5 都保留）
-- **Visual redesign 內加寵物 wiggling / wagging 動效**（2026-05-24 Q11 user 拿掉）
+- ~~**Visual redesign 內加寵物 wiggling / wagging 動效**（2026-05-24 Q11 user 拿掉）~~ → **retract 2026-05-24 深夜**：v2 prototype 採用圈內限定走路動畫（dial 中心 232px 範圍內 6 個 keyframes），user OK；整頁 wiggle 仍 not-do，但限定區域 walking dog 解禁
 - **Visual redesign 內做 dark mode 第一輪**（2026-05-24 Q18 user 延後）
 - **Visual redesign 內加 mascot 芒果角色 / page transition / Material ripple / Google Font / animation library**（2026-05-24 Q9/12/13/15 排除）
 
