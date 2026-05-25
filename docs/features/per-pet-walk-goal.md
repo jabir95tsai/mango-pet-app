@@ -1,11 +1,43 @@
 # Per-pet 自訂散步目標（per-pet walk goal）
 
-狀態：**GO**（user 2026-05-25 中午 3 個 decisions confirmed）
+狀態：**SHIPPED 2026-05-25**（6 commits `1d0f51b` → `985a547`；A1+B2 deployed asia-east1；Phase 1 v2 DEFERRED chevron 已 unlock 為 active picker）
 建立日期：2026-05-25
 最後更新：2026-05-25
 規格作者：PM session @ `fbadd50`
 角色：**Feature Builder**（整 stack — schema + Pet edit UI + walks page pet picker + push functions cascade + i18n）
 工作量：**M-L**（跨 4 surface：pets edit / walks page picker / push functions / leaderboard 確認）
+
+## SHIPPED bookkeeping
+
+| Commit | What |
+|---|---|
+| `1d0f51b` | feat(types): Pet.walkGoal schema + getPetWalkGoalMinutes helper — optional `walkGoal: { minutes, source }` on Pet/PetInput; `src/lib/walk-goals.ts` exposes DEFAULT_WALK_GOAL_MINUTES=30 + clamp [5, 180] + format helper + future `computeWalkGoalFromBreed` stub |
+| `ee9bb1a` | feat(pets): updatePet walkGoal passthrough + updatePetWalkGoal helper — splice outside `clean()` so map field survives; focused single-field write reserved for future inline-edit surfaces. Rules unchanged (existing pet-update covers walkGoal per spec "跟 Pet.name 同") |
+| `8ac764f` | feat(pets): pet-walk-goal-input stepper + PetFormDialog integration — hand-rolled −/＋ stepper, no new dep; form seeds from existing pet via helper so legacy pets default to 30. PetEdit.walkGoal.{label,unit,hint,computedChip} i18n keys added |
+| `9606f80` | feat(walks): pet-picker-dropdown component + i18n keys — mirrors PetSwitcherDropdown click-outside/Esc pattern; each row shows goalChip. Walks.page.petPicker.{manageLink,goalChip,openLabel} (nested under existing Walks.page.* rather than new top-level WalksPage) |
+| `313af47` | feat(walks): activate chevron picker + thread activePet goal through page — Phase 1 v2 DEFERRED chevron now ACTIVE. activePet from localStorage(`mango.walks.lastPetId`) with primary-pet fallback when stored id is stale; dial/week-strip/hero/WalkTrackingView all use `getPetWalkGoalMinutes(activePet)`. Stale `multiPetHint` i18n removed |
+| `985a547` | feat(push): A1 + B2 use per-pet walkGoal (primary pet only) — A1 restructured so pet lookup happens BEFORE threshold check; A2 untouched (streak ⊥ goal). Inlined helper mirrors src/lib/walk-goals.ts (functions can't cross-import). `Push.eveningWalkReminder.body` interpolates `{goalMin}`. Deployed asia-east1 |
+
+### Phase 1 v2 DEFERRED status
+
+**ACTIVATED** — `src/app/app/walks/page.tsx` chevron-down is now interactive on multi-pet users (single-pet users see a static pill, no chevron). Picker dropdown lists each pet + its daily goal chip; selection persists across sessions via localStorage.
+
+### 後續驗證 / 觀察
+
+- Pet edit: 設 walkGoal=45 → save → Firestore pet doc has `walkGoal: { minutes: 45, source: 'manual' }` ✅ (logic verified by typecheck; live test pending)
+- Walks page single-pet user: dial/hero/week-strip use the pet's goal; chevron hidden ✅ (typecheck; live test pending)
+- Walks page multi-pet user: chevron opens dropdown → select → dial/goal updates + lastPetId persists ✅ (typecheck; live test pending)
+- A1 push 20:00 cron tonight: threshold should match primary pet's walkGoal (not hardcoded 30) — observable in next eveningWalkReminder wave audit doc
+- B2 push: family member completes primary pet's walkGoal → push fires (observable in familyGoalMilestone trigger logs)
+- A2 streakBreakWarning: unchanged — should still fire on streak ≥3 + 0 walks today regardless of goal
+- Leaderboard scoring: untouched per spec (raw minutes, not goal-based)
+
+### Known follow-ups (PM backlog candidates)
+
+- Per-pet pushes (A1/B2 fire once per pet) — would need careful rate-limit/dedupe to not overwhelm
+- Inline goal-stepper in picker dropdown (uses `updatePetWalkGoal` already wired)
+- Breed/age/weight computed goal (helper stub + `source: 'computed'` namespace already pre-laid)
+- Goal change history / audit doc (no schema for it yet)
 
 ## User Vision（原話保留）
 
