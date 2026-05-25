@@ -210,3 +210,45 @@ Phase 1 v2 比原 Phase 1 工作量大（M vs S）但仍在合理範圍。**Work
 - 沒有 patches/ 中介層 = 少 1 步 hand-off
 
 UI/UX session 自驗主要在「tracking flow 不破 + done screen 不破」— 這兩個是 Phase 1 v2 沒動但容易意外踩到的區域。
+
+## Phase 1 v2 SHIPPED 紀錄
+
+**Ship 時間**：2026-05-25 ~09:15 push → App Hosting build ~6 分鐘後
+
+### 3 個 commit（user 給的 commit message 範本對齊 step boundary）
+
+| Step | SHA | 內容 |
+|---|---|---|
+| 1 | `c98c939` | 6 個新元件：`walks-pet-walking` / `walks-dial` / `walks-week-strip` / `streak-chip` / `walks-confetti-decor` / `walk-row` — 全 scope 自己的 keyframes 與 prefers-reduced-motion media query，**0 行進 globals.css** |
+| 2 | `984be5b` | `src/app/app/walks/page.tsx` 全頁重寫 — top bar (title + Mango pill + StreakChip) / Hero copy / WalksDial / WalksWeekStrip / WalkRow 列表 / 變體 sticky CTA (incomplete orange gradient ▶「開始遛狗」/ complete white pill +「再遛一次」) / desktop CTA / 條件 WalksConfettiDecor。舊 hero card + linear progress + pet picker chips bar 拿掉。Page-local helpers (`startOfWeekLocal` / `todayIdxLocal` / `getWeekDayDoneFlags` / `getWeekKm` / `getWeekWalkCount`) 因 spec 不動 `walk-tracking.ts` 而 inline |
+| 3 | `110601e` | 9 個 `Walks.page.*` i18n keys (zh-TW + en) — heroIncomplete / heroComplete / heroSub / heroSubNoPet / weekLabel / recentTitle / viewAll / walkAgain / multiPetHint |
+
+### Chrome MCP 驗收（desktop @ 1456×819 production，今天 user = Mango 主寵物 + 1 day streak + 0 today min）
+
+| 驗收項 | 結果 |
+|---|---|
+| Hero copy「再走 30 分鐘」+ sub-line「Mango 今天走了 0 分 · 連續 1 天」 | ✅ heroText 對 |
+| WalksDial (232px radial + 走路狗 SVG) | ✅ hasDial / hasRingSvg / hasDogSvg / dogLegs=4 |
+| Dial numeric pill「0 / 30 分」 | ✅ numericText="0" |
+| WalksWeekStrip 7 day cells | ✅ weekDayCells=7、今日 (一/Monday) 高亮 brand-tint + dot |
+| Top-bar Mango pill (primary pet) | ✅ mangoPillText="🐶Mango" |
+| StreakChip "1 天" muted variant (<3 days) | ✅ streakChipText="1 天" |
+| Confetti not shown (goal not hit) | ✅ confettiCount=0 |
+| WalkRow recent walks (1 entry from yesterday) | ✅ recentRowCount=1 |
+| Sticky CTA incomplete = orange gradient ▶「開始遛狗」(force-show on desktop) | ✅ `background: linear-gradient(rgb(243,152,0) 0%, rgb(215,123,0) 100%)` |
+| Tracking phase 1 palette 不破 | ✅ click 開始遛狗 → trackingOpen true、00:04 timer、status pill brand-tint + brand-deep + pulsing brand dot、camera + 紅停止全完整 |
+| Done screen confetti / emerald celebration 不變 | ✅ source grep 15 個 markers 全保留 (walk-confetti / emerald / Trophy / finalGoalHit / walk-streak-pop) — 本 session 完全沒動 walk-tracking-view.tsx |
+| Phase 0.5 raised disc + Phase 1 sticky 上移 + Phase 1 v2 sticky CTA 變體 三者堆疊正確 | ✅ sticky bottom 92px (5.75rem) + 73px tall + 透明 backdrop blur + disc top -16px 之上 |
+
+### Phase 1 v2 沒能直接驗證
+
+- ⚠️ **complete 變體** (goal hit + confetti decor + dial leaf 環 + WalkAgain CTA) — 今日 user 還沒走滿 30 分鐘無法觸發；需 user 真實達標後驗收
+- ⚠️ Mobile 真實 viewport (iPhone 14 Pro Max 430×932) — Chrome MCP 老問題 maximized window 不能 resize；force-show 已模擬 sticky CTA + tab bar
+- ⚠️ Dark mode — Q18 spec 跳過第一輪；`dark:` classes 在新元件中未補（spec 不要求）
+- ⚠️ Streak chip ≥7 天 leaf gradient variant — user 還沒到 7 天
+
+### Spec deviations
+
+- **無**（user decisions 4 個全 adopted；prototype 元件 1:1 port；keyframes 全 scope；done screen 不動；shared Button / EmptyState 不動；walk-tracking.ts 不動）
+- Note：spec 開放問題說「StatPill 元件不採用」— 已遵守，prototype 內 StatPill code 沒被 port
+- Note：「全部 →」link 對應的 walks history 頁未實作（spec 不在 v2 範圍） — 目前是純標籤無 href
