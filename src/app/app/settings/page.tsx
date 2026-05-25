@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
@@ -8,6 +9,7 @@ import {
   MoreHorizontal,
   ShieldCheck,
   Trash2,
+  Users,
 } from "lucide-react";
 import { RouteHeader } from "@/components/nav/route-header";
 import { LanguageSwitcher } from "@/components/nav/language-switcher";
@@ -27,6 +29,7 @@ export default function SettingsPage() {
   const tAuth = useTranslations("Auth");
   const tPd = useTranslations("Settings.privacyData");
   const tDz = useTranslations("Settings.dangerZone");
+  const tS = useTranslations("Settings");
   const { user } = useAuth();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { open: drawerOpen, setOpen: setDrawerOpen } = useNavDrawer();
@@ -58,10 +61,23 @@ export default function SettingsPage() {
               name={user?.displayName ?? "Guest"}
               size={48}
             />
-            <div>
-              <p className="font-medium">{user?.displayName ?? "Guest"}</p>
-              <p className="text-sm text-zinc-500">{user?.email ?? "—"}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{user?.displayName ?? "Guest"}</p>
+              <p className="truncate text-sm text-zinc-500">{user?.email ?? "—"}</p>
             </div>
+            {/* Friends entry — moved here from the nav sidebar/drawer per
+                docs/features/ui-polish-bundle-2026-05-25.md Item #1. The
+                Users icon disc sits in the user-avatar box's right edge
+                so it reads as "you ↔ your people". 44×44 hit area
+                (size-11) for mobile a11y. */}
+            <Link
+              href="/app/friends"
+              aria-label={tS("friendsLink")}
+              title={tS("friendsLink")}
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-mango-brand-tint text-mango-brand-deep transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+            >
+              <Users className="size-5" strokeWidth={1.8} />
+            </Link>
           </div>
           {user && (
             <button

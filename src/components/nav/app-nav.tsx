@@ -68,8 +68,11 @@ const MOBILE_PRIMARY_KEYS: NavKey[] = [
 // in the desktop sidebar). Feed left the drawer per spec
 // docs/features/reminders-to-pets-page.md (Home + Pets IA reorg, C
 // section) because the home page now IS the feed — the drawer entry
-// duplicated the destination.
-const MOBILE_DRAWER_EXCLUDE: NavKey[] = ["feed"];
+// duplicated the destination. Friends left the drawer + sidebar per
+// docs/features/ui-polish-bundle-2026-05-25.md Item #1 — the new entry
+// is the Users icon button next to the user avatar in /app/settings.
+const MOBILE_DRAWER_EXCLUDE: NavKey[] = ["feed", "friends"];
+const DESKTOP_SIDEBAR_EXCLUDE: NavKey[] = ["friends"];
 
 function isActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
@@ -121,7 +124,9 @@ export function AppNav() {
         </div>
 
         <ul className="flex flex-col gap-1 p-3">
-          {ALL_ITEMS.map(({ href, key, icon: Icon }) => {
+          {ALL_ITEMS.filter(
+            (i) => !DESKTOP_SIDEBAR_EXCLUDE.includes(i.key),
+          ).map(({ href, key, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
               <li key={href}>
