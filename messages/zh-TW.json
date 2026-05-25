@@ -358,6 +358,17 @@
       "streakKeep": "連續 {days} 天！別斷掉 🔥",
       "petWaiting": "{name} 已經等你 {hours} 小時了 🐶",
       "lastWalkYesterday": "{name} 上次散步是昨天，今天該動了"
+    },
+    "page": {
+      "heroIncomplete": "再走 {min} 分鐘",
+      "heroComplete": "達標了 🎉",
+      "heroSub": "{pet} 今天走了 {done} 分 · 連續 {streak} 天",
+      "heroSubNoPet": "今天走了 {done} 分 · 連續 {streak} 天",
+      "weekLabel": "本週",
+      "recentTitle": "最近紀錄",
+      "viewAll": "全部",
+      "walkAgain": "再遛一次",
+      "multiPetHint": "目前顯示主寵物 {pet}；多寵物切換開發中"
     }
   },
   "Push": {

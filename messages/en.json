@@ -358,6 +358,17 @@
       "streakKeep": "{days}-day streak! Don't break it 🔥",
       "petWaiting": "{name} has been waiting {hours}h 🐶",
       "lastWalkYesterday": "{name}'s last walk was yesterday — time to move"
+    },
+    "page": {
+      "heroIncomplete": "{min} more minutes",
+      "heroComplete": "Goal hit 🎉",
+      "heroSub": "{pet} walked {done} min today · {streak}-day streak",
+      "heroSubNoPet": "Walked {done} min today · {streak}-day streak",
+      "weekLabel": "This week",
+      "recentTitle": "Recent walks",
+      "viewAll": "View all",
+      "walkAgain": "Walk again",
+      "multiPetHint": "Showing primary pet {pet}; multi-pet picker coming soon"
     }
   },
   "Push": {
