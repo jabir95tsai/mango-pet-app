@@ -15,6 +15,7 @@ import { RouteHeader } from "@/components/nav/route-header";
 import { LanguageSwitcher } from "@/components/nav/language-switcher";
 import { PushToggle } from "@/components/settings/push-toggle";
 import { EngagementPushSection } from "@/components/settings/engagement-push-section";
+import { WalkAutoPhotoSection } from "@/components/settings/walk-auto-photo-section";
 import { FamilySection } from "@/components/family/family-section";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ExportDataButton } from "@/components/settings/export-data-button";
@@ -104,6 +105,18 @@ export default function SettingsPage() {
         {user && (
           <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
             <EngagementPushSection />
+          </section>
+        )}
+
+        {/* Walks auto-photo-share toggle. Per spec, sits between the
+            engagement-push section (which is push-focused) and the
+            Language/Privacy/Danger trio (account-focused) so the
+            walks-related setting groups with the rest of in-app
+            behaviour. Hidden when signed-out — toggle persists per
+            user. */}
+        {user && (
+          <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+            <WalkAutoPhotoSection />
           </section>
         )}
 
