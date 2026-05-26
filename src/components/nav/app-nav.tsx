@@ -13,7 +13,6 @@ import {
   BookOpen,
   Users,
   Newspaper,
-  Wallet,
   Settings,
   X,
 } from "lucide-react";
@@ -27,7 +26,6 @@ type NavKey =
   | "feed"
   | "walks"
   | "leaderboard"
-  | "expenses"
   | "restaurants"
   | "knowledge"
   | "friends"
@@ -35,12 +33,15 @@ type NavKey =
 
 type Item = { href: string; key: NavKey; icon: LucideIcon };
 
+// `expenses` entry removed 2026-05-26 — full expense management now
+// lives inside the pets detail 開銷 tab (spec
+// docs/features/expenses-into-pets-page.md). /app/expenses still
+// redirects to /app/pets for old bookmarks.
 const ALL_ITEMS: Item[] = [
   { href: "/app", key: "home", icon: Home },
   { href: "/app/pets", key: "pets", icon: PawPrint },
   { href: "/app/walks", key: "walks", icon: Footprints },
   { href: "/app/feed", key: "feed", icon: Newspaper },
-  { href: "/app/expenses", key: "expenses", icon: Wallet },
   { href: "/app/leaderboard", key: "leaderboard", icon: Trophy },
   { href: "/app/restaurants", key: "restaurants", icon: MapPin },
   { href: "/app/knowledge", key: "knowledge", icon: BookOpen },
