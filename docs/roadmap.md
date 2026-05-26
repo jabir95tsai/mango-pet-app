@@ -66,11 +66,15 @@
   - User 路徑：**4 tap → 2 tap** ✅
   - 已知 follow-up：`ExpensesOverviewSection` 死碼決定 (a) 刪 or (b) 終於 mount 到 pets page（PM 排序）
   - 👉 **下個動作（user）**：實機驗證 2-tap path（settings → 拍收據 card → scanner 自動開）
-- **首頁設計優化** — Claude Design prototype-first（同 walks v2 / pets v2 pattern）
-  - 現有 `/app` home page: 首頁 title + pets list + 10 feed posts mixed (family + friends + public) + post composer
-  - Phase 3 visual-redesign-mango.md spec 太薄（只 line 284-287），需 prototype 探索具體 layout
-  - Workflow：Claude Design 產 prototype → PM review → user decisions → spec → UI/UX 直接寫
-  - 👉 **下個動作（user）**：開 Claude Design session 用 PM 寫好的 launch prompt 動工，產 prototype 到 `docs/design/home-v2-prototype/`
+- **/app 首頁 v3 — Feed-first + IG Stories pets bar** — [`docs/features/home-v3-feed-first.md`](../features/home-v3-feed-first.md) **GO**（user 2026-05-26 prototype review 後 3 decisions confirmed）
+  - Claude Design prototype 完成（[`docs/design/home-v2-prototype/`](../design/home-v2-prototype/) 含 5 variants，HTML show 2 artboards: B1 + D1）
+  - PM review + 3 decisions：D1 ✅ B1 Feed-first 推進 / D2 ⚠️ composer entry = IG 模式（user 頭像在 stories bar 開頭 + 右下角 + icon overlay → tap 開 composer）/ D3 ✅ UI/UX 直接寫 src/
+  - 4 variants: B1 主 / D1 empty (0 pets) / Personal (no family + ≥1 pet) / No posts edge
+  - 新元件 5 個（home/）：stories-bar / home-top-bar / home-empty-state / invite-family-card / feed-section-header
+  - reuse 既有 PostCard / PostComposer / listPets / listFeedPosts / useFamily
+  - 新 hook useTodayWalkStatus（沿用 getPetWalkGoalMinutes 算 today walk done/pending/tracking per pet）
+  - 工作量 M，1 session ship，6 commits 拆解
+  - 👉 **下個動作（user）**：開 UI/UX session 用 spec 末段 launch prompt 動工
 - **開銷完全搬進寵物頁** — [`docs/features/expenses-into-pets-page.md`](../features/expenses-into-pets-page.md) **GO**（user 2026-05-26 4 decisions confirmed）
   - User vision：「剛剛開銷的部分我的想法是就完全搬到寵物那一頁，也不要再設定那邊，可以就是按加號就是自動打開相機 AI 掃描，或選擇手動輸入」
   - 4 decisions confirmed：D1 /app/expenses 整頁拿掉（redirect）/ D2 FAB 直接開相機（手動輸入是 secondary link）/ D3 revert Bug Hunter fix #1（settings quick-action 移除）/ D4 完全 per-pet view 不做家庭加總
