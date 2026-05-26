@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Camera, Plus, Receipt, Wallet } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -53,6 +54,7 @@ export default function ExpensesPage() {
   const askConfirm = useConfirm();
   const { user } = useAuth();
   const { family, loading: familyLoading } = useFamily();
+  const searchParams = useSearchParams();
 
   const [pets, setPets] = useState<Pet[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -88,6 +90,20 @@ export default function ExpensesPage() {
     if (familyLoading) return;
     refresh();
   }, [familyLoading, refresh]);
+
+  // Deep-link: settings 的「拍收據」quick-action 帶 ?action=scan 進來，
+  // 等 pets 載完（scanner 在 pets.length === 0 時 disabled）再自動開
+  // 一次。Ref 守住「只開一次」— user 手動關掉 scanner 不會被 effect
+  // 再彈開，但完整 page reload 仍會重彈（URL deep-link 行為）。
+  const autoOpenedScannerRef = useRef(false);
+  useEffect(() => {
+    if (loading || pets.length === 0) return;
+    if (autoOpenedScannerRef.current) return;
+    if (searchParams?.get("action") === "scan") {
+      autoOpenedScannerRef.current = true;
+      setScannerOpen(true);
+    }
+  }, [searchParams, loading, pets.length]);
 
   const filtered = useMemo(() => {
     return expenses.filter((e) => {
