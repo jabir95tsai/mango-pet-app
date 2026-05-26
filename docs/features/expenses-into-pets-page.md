@@ -1,11 +1,51 @@
 # 開銷完全搬進寵物頁（expenses → pets page IA migration）
 
-狀態：**GO**（user 2026-05-26 早上 4 個 decisions confirmed）
+狀態：**SHIPPED 2026-05-26**（5 commits `16f23d9` → `22bee39`；frontend 一個 push；Bug Hunter `e972cf8` reverted；無 functions / 無 schema / 無 rules 改動）
 建立日期：2026-05-26 早上
 最後更新：2026-05-26 早上
 規格作者：PM session @ `11e52a9`
 角色：**Feature Builder**（整 stack — IA migration + camera 直開 + route 刪 + settings revert + i18n）
 工作量：**M-L**（跨 4 surface：pets detail「開銷」tab 大改 + /app/expenses page 刪 + settings quick-action revert + drawer link 清理）
+
+## SHIPPED bookkeeping
+
+| Commit | What |
+|---|---|
+| `16f23d9` | feat(pets): pet-expenses-body category filter pills + filter-empty hint. Totals + donut stay full-month (big picture intact); list narrows by category. `PetsPage.expenses.{filterEmpty, manualEntry}` i18n added (manualEntry pre-laid for next commit). |
+| `0d672d3` | feat(pets): FAB direct-to-camera + ReceiptScanner `initialFile` / `defaultPetId` / `onManualEntry` props + ExpenseFormDialog `defaultPetId` prop. Hidden capture="environment" input lives in pets-page-content so FAB triggers iOS camera DIRECTLY (no scanner intro detour). Camera dismissed → scanner falls into intro UI so user can still pick 從相簿 / 手動輸入. Scan → ExpenseFormDialog opens with AI prefill + active pet pre-selected. `PetsPage.fab.expenses` copy flipped to "拍收據" / "Scan receipt". |
+| `261d588` | chore(routes): `/app/expenses` page replaced with server-side Next.js `redirect('/app/pets')`. Bookmarks + the Bug Hunter `?action=scan` deep-link both survive (no 404, no client flash). `expense-summary.tsx` deleted (had only the deleted page as consumer). |
+| `5726640` | revert(settings): removes the Bug Hunter quick-action card (commit `e972cf8`). Stopgap was solving the 4-tap path from settings, which no longer exists (camera FAB on pets 開銷 tab is now 2 taps from anywhere). Camera lucide import dropped. |
+| `22bee39` | chore(nav): drops `expenses` from `app-nav` ALL_ITEMS (was in both desktop sidebar + mobile drawer). Deletes dead `expenses-overview-section.tsx` (last in-source `/app/expenses` link). `Nav.expenses` i18n key left in locale files — harmless, no live consumers. |
+
+### 後續驗證 / 觀察
+
+- iOS PWA real-device test (the camera-first flow only works meaningfully on iOS Safari/PWA):
+  - Pets `/app/pets/[petId]?tab=expenses` → see month bar + donut + filter pills + ExpenseCard list + FAB ⏳
+  - FAB → iOS camera opens directly → photo → ReceiptScanner preview → AI 辨識 → ExpenseFormDialog with prefill + active pet pre-picked → save → list updates ⏳
+  - 手動輸入 link inside ReceiptScanner → close scanner → ExpenseFormDialog blank with active pet pre-picked ⏳
+  - Camera dismissed → ReceiptScanner intro shows (拍照 / 從相簿選 / 手動輸入) — no awkward dead-end ⏳
+  - Multi-pet switcher → switch pet → 開銷 tab shows that pet's expenses only (per-pet isolation) ⏳
+  - Settings page → no 拍收據 quick-action card visible ✅ (typecheck)
+  - Desktop sidebar + mobile drawer → no 「開銷」link ✅ (typecheck)
+  - `/app/expenses` URL bar → redirects to `/app/pets` (server-side, no flash) ⏳
+- `npx tsc --noEmit` clean ✅
+- Filter-empty hint shows when category narrows out (e.g., user with only food expenses clicks "medical") ⏳
+
+### Edge cases handled
+
+- Camera permission denied (iOS) → file picker returns empty → scanner intro UI takes over (fallback path explicit per spec)
+- AI scan failure → existing ReceiptScanner error state + 手動輸入 link still present in preview footer
+- User opens scanner via FAB → previews → decides not to scan → 手動輸入 link in preview footer also routes to form
+- Multi-pet user mid-scan switches pet → spec calls this out as FB-choice; current behaviour: scanner stays open with the original initialFile, but `defaultPetId` reflects the NEW active pet on ExpenseFormDialog open (the form picks the newly-selected pet — acceptable, matches D4 per-pet auto-attach semantics)
+- Personal mode 0 pets → pets page EmptyState; FAB doesn't render (consistent with existing pets v2 behaviour)
+- Old bookmark `/app/expenses?action=scan` → server redirect strips the query and lands on `/app/pets` (Bug Hunter stopgap path naturally dead)
+
+### Known follow-ups (PM backlog candidates)
+
+- Family-wide expense aggregate view (D4 explicitly per-pet only this round) — spec calls out "future 若要可另開 spec"
+- `Nav.expenses` i18n key cleanup (harmless leftover, defer to next housekeeping pass)
+- Mid-scan pet-switch UX (current behaviour acceptable, spec said FB self-chooses; if real users hit it we can refine)
+- Telemetry on `/app/expenses` redirect hit rate (low priority — once it's clearly ~0 we can delete the redirect file entirely)
 
 ## User Vision（原話保留）
 
