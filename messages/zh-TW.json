@@ -499,6 +499,47 @@
     "next": "下一張",
     "counter": "{current} / {total}"
   },
+  "Home": {
+    "stories": {
+      "yourStory": "發文",
+      "doneWalk": "已遛 ✓",
+      "pendingWalk": "待遛",
+      "tracking": "遛狗中",
+      "filterFutureHint": "依寵物篩選 — 開發中"
+    },
+    "feed": {
+      "title": "最新動態",
+      "subtitle": "家人 · 朋友",
+      "viewAll": "查看更多",
+      "viewAllLong": "查看更多動態",
+      "emptyTitle": "動態還空空的",
+      "emptyHint": "點上方頭像 + 發第一篇貼文，分享給家人"
+    },
+    "empty": {
+      "title": "歡迎來到 Mango Pet",
+      "body": "新增第一隻寵物，開始記錄你家寶貝的散步、開銷、健康",
+      "cta": "新增第一隻寵物",
+      "joinFamily": "加入家庭",
+      "step1": {
+        "title": "新增寵物",
+        "sub": "名字 · 品種 · 體重"
+      },
+      "step2": {
+        "title": "邀請家人",
+        "sub": "一起紀錄"
+      },
+      "step3": {
+        "title": "開始遛狗",
+        "sub": "解鎖數據與排行"
+      }
+    },
+    "inviteFamily": {
+      "title": "邀請家人加入",
+      "body": "一起紀錄 {petName} 的散步、開銷與健康",
+      "bodyGeneric": "一起紀錄寵物的散步、開銷與健康",
+      "cta": "邀請"
+    }
+  },
   "PetsPage": {
     "title": {
       "list": "我的寵物",

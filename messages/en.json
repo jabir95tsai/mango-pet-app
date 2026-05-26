@@ -499,6 +499,47 @@
     "next": "Next",
     "counter": "{current} / {total}"
   },
+  "Home": {
+    "stories": {
+      "yourStory": "Your story",
+      "doneWalk": "Walked ✓",
+      "pendingWalk": "Needs walk",
+      "tracking": "Walking now",
+      "filterFutureHint": "Filter by pet — coming soon"
+    },
+    "feed": {
+      "title": "Latest",
+      "subtitle": "Family · Friends",
+      "viewAll": "View all",
+      "viewAllLong": "View all posts",
+      "emptyTitle": "No posts yet",
+      "emptyHint": "Tap your avatar + share your first post"
+    },
+    "empty": {
+      "title": "Welcome to Mango Pet",
+      "body": "Add your first pet to start tracking walks, expenses, and health.",
+      "cta": "Add first pet",
+      "joinFamily": "Join family",
+      "step1": {
+        "title": "Add a pet",
+        "sub": "Name · Breed · Weight"
+      },
+      "step2": {
+        "title": "Invite family",
+        "sub": "Share the load"
+      },
+      "step3": {
+        "title": "Start walks",
+        "sub": "Unlock stats & ranks"
+      }
+    },
+    "inviteFamily": {
+      "title": "Invite family",
+      "body": "Track {petName}'s walks, expenses & health together",
+      "bodyGeneric": "Track your pet's walks, expenses & health together",
+      "cta": "Invite"
+    }
+  },
   "PetsPage": {
     "title": {
       "list": "My Pets",
