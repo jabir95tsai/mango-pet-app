@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
-  Camera,
   Globe,
   MoreHorizontal,
   ShieldCheck,
@@ -92,40 +91,12 @@ export default function SettingsPage() {
           )}
         </section>
 
-        {/* 拍收據 quick-action — top-level entry restored 2026-05-26
-            per docs/features/bug-receipt-ai-missing.md. The mobile
-            bottom-nav reorg (2026-05-23 commit e34640a) dropped the
-            「開銷」slot, and the overflow drawer now lives behind the
-            settings-page header trigger — so AI receipt scanning had
-            quietly become a 4-tap path (user 回報「不見了」). This card
-            puts a 1-tap deep-link at the top of settings; the matching
-            ?action=scan handler in /app/expenses auto-opens the
-            ReceiptScanner on arrival. */}
-        {user && (
-          <Link
-            href="/app/expenses?action=scan"
-            className="group flex items-center gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 transition-colors hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none dark:hover:bg-zinc-900"
-          >
-            <span
-              aria-hidden="true"
-              className="grid size-11 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-            >
-              <Camera className="size-5" strokeWidth={2.2} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">拍收據 AI 自動記帳</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                一拍就辨識金額、商家、類別
-              </p>
-            </div>
-            <span
-              aria-hidden="true"
-              className="text-zinc-400 transition-transform group-hover:translate-x-1"
-            >
-              →
-            </span>
-          </Link>
-        )}
+        {/* 拍收據 quick-action removed 2026-05-26 — spec
+            docs/features/expenses-into-pets-page.md D3 reverts the
+            Bug Hunter stopgap (e972cf8). The real entry point is now
+            the camera FAB on the pets 開銷 tab; the 4-tap path the
+            stopgap solved no longer exists since /app/expenses is
+            redirected away. */}
 
         <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
           <FamilySection />
