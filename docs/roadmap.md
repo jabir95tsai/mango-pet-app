@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 傍晚（🎉 今日批量 SHIPPED — Phase 1 v2 + Family Leaderboard 即時 + Per-pet walk goal + save-photo-to-album + UI Polish Bundle + auto-friend-family-members + **Phase 2 pets 7 commits + Photo Lightbox 5 commits** 全 SHIPPED；剩 1 active spec：遛狗自動拍照；Epic 5 觀察至 2026-05-27；今日 ~9 個大 bundle ship）
+最後更新：2026-05-25 晚（🎉 今日 10 個大 bundle 全 SHIPPED — Phase 1 v2 + Family Leaderboard 即時 + Per-pet walk goal + save-photo-to-album + UI Polish Bundle + auto-friend-family-members + Phase 2 pets + Photo Lightbox + **遛狗自動拍照 + 自動發動態 6 commits**；0 active spec；**1 OPEN BUG**：拍收據 AI 辨識不見了（PM 寫好 Bug Hunter recon spec）；Epic 5 觀察至 2026-05-27）
 
 ## 進行中
 
@@ -55,14 +55,15 @@
   - ⭐ 同 commit 順手 ship `purgeMyOrphanWalks` callable（leaderboard data hygiene tool，無獨立 spec — FB session 主動修補）
   - 退家 friendship 仍保留（per D1）；trigger 對 N 人 join + missing profile + 重複 join 都 idempotent
   - 👉 **下個動作（user）**：2 帳號 join 同 family live test → friends 頁互相看到
-- **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](../features/walks-auto-photo-share.md) **GO**（spec ready，Feature Builder 動工）
-  - User vision：「加入剛開始跟剛結束遛狗的時候拍一張照自動分享到動態的功能」
-  - 3 decisions confirmed：D1 觸發 = prompt 可 skip / D2 發布 = 進 composer preview user 編 caption / D3 包裝 = 各自 1 個 post（user 改 PM default）
-  - 新元件：photo-prompt-sheet bottom sheet + walk-auto-photo-section settings toggle
-  - reuse：post-composer（加 3 個 optional props）+ camera capture（既有 walks pattern）+ Firebase Storage
-  - Schema：AppUser.walkPrefs.autoPhotoShare 預設 ON + Post.walkId optional reference
-  - 工作量 M，預估 1-2 session ship，6 commits 拆解
-  - 👉 **下個動作（user）**：開 Feature Builder session 用 spec 末段 launch prompt 動工
+- **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](../features/walks-auto-photo-share.md) ✅ **SHIPPED 2026-05-25**（FB session 6 commits + 無 functions / 無 rules 改動）
+  - `5ecbe38` schema (walkPrefs.autoPhotoShare + Post.walkId + mintWalkId helper) / `f0fdd61` PhotoPromptSheet bottom sheet + i18n + slide-up keyframe / `22801f9` PostComposer 加 3 optional props / `9e8f7ae` start-photo flow / `94135f5` end-photo flow (1s delay after confetti) / `a03caf9` settings toggle (default ON)
+  - START + END 各自 1 post 含同 walkId cross-link
+  - 👉 **下個動作（user）**：iOS PWA real-device 4 flows test（START 拍/跳 + END 拍/跳）+ camera 拒權 fallback + settings OFF → 0 prompts
+- **🐛 拍收據 AI 辨識不見了** — [`docs/features/bug-receipt-ai-missing.md`](../features/bug-receipt-ai-missing.md) **OPEN BUG**（user 2026-05-25 傍晚 回報）
+  - PM recon：code 完整在（receipt-scanner.tsx + extractReceipt callable + expenses page mount 全 verified）— root cause 必是 UI 入口 / IA / nav 問題
+  - 5 個推測 root cause：pets v2 IA 副作用 / drawer 入口隱 / walks v2 拿掉 link / settings 沒 shortcut / PWA cache stale
+  - PM 推薦 fix #2：pets「開銷」tab 加 FAB「拍收據」（對齊「我的寵物的開銷」心智）
+  - 👉 **下個動作（user）**：開 Bug Hunter session 用 spec 末段 launch prompt 動工
 - **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
   - `b1c925e` photo-lightbox 元件（carousel + swipe + 三招關閉 + a11y）/ `bc7b6cf` post-card 接 / `97df9b5` walk-row + walk-tracking-view done screen 接 / `69160c4` i18n keys / `9da6883` UI/UX SHIPPED record
   - 👉 **下個動作（user）**：feed post 點 photo / walks recent 點 photo / done screen 點 photo — 3 處驗收 lightbox 開
