@@ -245,6 +245,31 @@ export default function WalksPage() {
 
   const weeklyAvgMin = useMemo(() => getWeeklyAvgMinutes(walks), [walks]);
 
+  // goalHit + showConfetti effect MUST sit above the 0-pet early-return
+  // below — every hook in this component has to run on every render or
+  // React throws #300 ("Rendered fewer hooks than expected"). User
+  // reproduce 2026-05-26: PWA add-to-home-screen → /app/walks crashed
+  // with React #300 on iOS Safari when the user transiently rendered
+  // through (loading === false && pets.length === 0) — e.g. cold-start
+  // Firestore IndexedDB race, or a genuinely 0-pet account. Previously
+  // this useEffect lived BELOW the early-return, so on that branch it
+  // never ran and the hook count dropped by one between renders. Bug
+  // Hunter session @ commit (this) — see docs/team/backlog.md React #300
+  // entry.
+  const goalHitEarly = useMemo(
+    () => todayProgress.percent >= 100,
+    [todayProgress.percent],
+  );
+  useEffect(() => {
+    if (!goalHitEarly) {
+      setShowConfetti(false);
+      return;
+    }
+    setShowConfetti(true);
+    const t = setTimeout(() => setShowConfetti(false), 4000);
+    return () => clearTimeout(t);
+  }, [goalHitEarly]);
+
   async function handleCreate(input: WalkInput & { score: number }) {
     if (!user) return null;
     const { score, ...rest } = input;
@@ -365,21 +390,11 @@ export default function WalksPage() {
     0,
     goalMin - Math.round(todayProgress.minutes),
   );
-  const goalHit = todayProgress.percent >= 100;
-
-  // Brief confetti celebration: show on every page mount when the user
-  // is already at goal-hit, then auto-hide after 4 seconds. Re-runs
-  // when goalHit transitions (e.g. user finishes a walk that pushes
-  // them over the line) so the moment-of-celebration is captured.
-  useEffect(() => {
-    if (!goalHit) {
-      setShowConfetti(false);
-      return;
-    }
-    setShowConfetti(true);
-    const t = setTimeout(() => setShowConfetti(false), 4000);
-    return () => clearTimeout(t);
-  }, [goalHit]);
+  // Re-aliased here so the downstream render-time consts stay readable.
+  // The actual useEffect that drives showConfetti now lives ABOVE the
+  // 0-pet early-return (see goalHitEarly + useEffect block); see the
+  // comment up there for why.
+  const goalHit = goalHitEarly;
   const doneMin = Math.round(todayProgress.minutes);
   const petName = activePet?.name ?? "";
 
