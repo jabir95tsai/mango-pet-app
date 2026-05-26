@@ -32,7 +32,26 @@ P3 = 也許永遠不做的「想法」。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 
-_2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 2 條 deviation。2026-05-23 Bug Hunter session 加 1 條 push UX。2026-05-25 Feature Builder 加 1 條家庭邀請連結 follow-up。_
+_2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 2 條 deviation。2026-05-23 Bug Hunter session 加 1 條 push UX。2026-05-25 Feature Builder 加 1 條家庭邀請連結 follow-up。2026-05-26 Bug Hunter session 加 2 條 walks-auto-photo-share polish 觀察。_
+
+### walks-auto-photo-share：短 walk (< 1 min) 結束 prompt body 顯示「走了 0 分」
+- **發現於**：2026-05-26、Bug Hunter session（驗 walks-auto-photo-share 5-commit epic 時，跑 0.4 分鐘 test walk 觸發到）
+- **類型**：體驗 / polish
+- **重現 / 觀察**：在 production `/app/walks` 點開始遛狗 → [跳過] start prompt → 等任意秒數 → 點停止 → 1s 後 end prompt 升起、body 文字「Mango 今天走了 0 分，留個紀念」。**只發生在 walk durationMinutes < 1 的情境**（人不會這樣走，但短 demo / 取消式測試會踩到）。Root: `WalksPhotoPrompt.captionEndDefault` interp `{min}` 拿到 `Math.floor(seconds/60) = 0`。Spec line 152 預期文字「{pet} 今天走了 {min} 分，留個紀念」沒處理 < 1 min case。
+- **建議交付給**：UI/UX（i18n copy）或 Bug Hunter（一行改 `Math.max(1, Math.floor(...))` 或 `Math.round`）
+  - 改點：`src/components/walks/walk-tracking-view.tsx` end-photo flow 傳 `walkMinutes` prop 給 `PhotoPromptSheet` 那行；或在 `PhotoPromptSheet` 內 clamp
+- **優先級提示**：P3（真實使用者不會走 0.4 分鐘；短 walk 也少；只是 polish）
+- **PM 排序提示**：等下次 PM session 看是否升給 UI/UX 順手一行
+
+### walks-auto-photo-share spec doc：line 91 privacy default 描述與 composer 實際行為不符
+- **發現於**：2026-05-26、Bug Hunter session
+- **類型**：技術債 / doc accuracy（非 production bug）
+- **重現 / 觀察**：`docs/features/walks-auto-photo-share.md` line 91 寫「Privacy 預設 family-only（對齊既有 post composer default）」。實際 `src/components/feed/post-composer.tsx:62-65` 寫 `// Default visibility: 'public' per docs/features/ui-polish-bundle-...` + `useState<Visibility>("public")`。Composer 'public' default 是 ui-polish-bundle 早就決定的 intentional behavior — walks-auto-photo-share 接 composer 拿到 'public' default 是對的，不是 epic regression。Spec doc 描述需修正。
+- **建議交付給**：PM（spec doc edit, 1 行）
+- **優先級提示**：P3（doc accuracy；不影響 production）
+- **PM 排序提示**：下次 PM session 順手修
+
+
 
 ### `/join/{code}` 在 LINE→iOS Safari context 下偶發 React #300（cannot reproduce desktop）
 - **發現於**：2026-05-25、Bug Hunter session（修完 `getNextPath` allowlist 後實測抓到）

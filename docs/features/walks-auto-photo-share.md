@@ -20,16 +20,24 @@
 
 ### 後續驗證 / 觀察
 
+Bug Hunter session 2026-05-26 desktop Chrome MCP 驗：
 - iOS PWA real-device test (4 flows, the only environment that exercises capture="environment"):
-  - START prompt → 拍照 → composer → publish → /app/feed ⏳
-  - START prompt → 跳過 → tracking ⏳
-  - END prompt (1s after confetti) → 拍照 → composer → publish → /app/feed ⏳
-  - END prompt → 跳過 → done screen interactive ⏳
-- Settings toggle OFF → next walk: zero prompts at either phase ⏳
-- Camera permission denied: OS dismissed file picker → treated as Skip, tracking starts (start) / done screen stays interactive (end) ⏳
-- Two posts in feed with same `walkId` (pre-minted on START, used by createWalk on save, used by END composer) ⏳
+  - START prompt → 拍照 → composer → publish → /app/feed ⏳ (需 iPhone)
+  - START prompt → 跳過 → tracking ✅ (desktop: prompt sheet 升起、點跳過 → tracking 00:03 開始)
+  - END prompt (1s after confetti) → 拍照 → composer → publish → /app/feed ⏳ (需 iPhone)
+  - END prompt → 跳過 → done screen interactive ✅ (desktop: 1s delay 後 prompt 升起、點跳過 → done screen 仍可點 [回到遛狗] [查看排行榜])
+- Settings toggle OFF → next walk: zero prompts at either phase ✅ (desktop: toggle 翻 OFF persist 過、回 walks 點開始遛狗直進 tracking、點停止 done screen render 等 3s 無 end prompt)
+- Camera permission denied: OS dismissed file picker → treated as Skip, tracking starts (start) / done screen stays interactive (end) ⏳ (需 iPhone real perm denial; desktop 上 fake-file inject 過 composer flow 對)
+- Two posts in feed with same `walkId` (pre-minted on START, used by createWalk on save, used by END composer) ✅ code review — walks/page.tsx:149/264/687、post-composer.tsx:151、posts.ts:71 wire-up 完整 (運行時驗證需 iPhone publish 後 query feed)
 - reduced-motion users: sheet snap-appears (no slide-up) per global rule ⏳
+- composer initialPhoto + initialCaption pre-fill ✅ (desktop: inject 1×1 PNG → composer 開、caption「Mango 開始遛狗 🐾」+ 1/4 photo preview + Mango/錢錢 pet tags)
+- composer cancel → tracking auto-start edge case ✅ (desktop: 點取消 → tracking 00:04 計時器跑)
+- console clean of real errors (Chrome extension noise excluded) ✅
 - `npx tsc --noEmit` clean ✅
+
+Polish 觀察（非 spec 範圍、寫進 backlog 等 PM 排序）：
+- 短 walk (< 1 min) 結束 prompt body 顯示「走了 0 分」— `Math.floor(seconds/60)` round down，可考慮 `Math.max(1, ...)` 或 round to nearest
+- Spec line 91 寫「Privacy 預設 family-only（對齊既有 post composer default）」與實際 composer default `public` 不符 — composer default 'public' 是 ui-polish-bundle spec 決定的 intentional behavior，不是 walks-auto-photo-share epic 的 regression；spec doc 描述需修
 
 ### Edge cases handled
 
