@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Bell, Home as HomeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,15 +26,17 @@ export function HomeTopBar({
   userDisplayName,
   notifyCount = 0,
 }: Props) {
+  const tApp = useTranslations("App");
   const label = familyName ?? userDisplayName ?? null;
 
   return (
     <div className="flex items-center gap-2.5 pb-1 pt-1.5">
-      <div
-        className="text-[26px] font-extrabold leading-none tracking-[-0.6px] text-mango-ink"
-        aria-hidden="true"
-      >
-        🥭 <span className="ml-0.5">Mango</span>
+      {/* Brand title — uses the locale-aware App.name ("芒果寵物" /
+          "Mango Pet") per user 2026-05-26 rename. Mango emoji prefix
+          stays as the visual hook. */}
+      <div className="text-[24px] font-extrabold leading-none tracking-[-0.6px] text-mango-ink">
+        <span aria-hidden="true">🥭</span>{" "}
+        <span className="ml-0.5">{tApp("name")}</span>
       </div>
       {label && (
         <span className="inline-flex items-center gap-1 rounded-full border border-mango-hairline bg-mango-card px-2.5 py-1 text-[12.5px] font-bold text-mango-ink-2 shadow-[0_1px_0_rgba(0,0,0,0.02)]">
