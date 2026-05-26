@@ -1,10 +1,42 @@
 # 🐛 拍收據 AI 自動辨識功能不見了（regression hunt）
 
-狀態：**OPEN BUG**（user 2026-05-25 傍晚 主動回報）
+狀態：**✅ SHIPPED 2026-05-26**（Bug Hunter session — fix #1 settings quick-action ship `e972cf8`）
 建立日期：2026-05-25 傍晚
+最後更新：2026-05-26
 規格作者：PM session @ `efa52a1`
 角色：**Bug Hunter**（live reproduce + root cause + fix or 升級 spec）
 工作量：**S**（純調查；若是 IA 入口問題，加 1 個 link / 移 button 即可）
+
+## SHIPPED bookkeeping
+
+Bug Hunter session 2026-05-26 走完 launch prompt 4 步：
+
+- **Step 1 reproduce 結果**：root cause 鎖定 = mobile bottom-nav reorg (2026-05-23 `e34640a`) 拿掉「開銷」slot，drawer trigger 又被搬到 settings 頁右上角 = AI 拍收據 變成 4-tap 路徑（settings→更多 icon→drawer→開銷→拍收據）。Pets page 完全沒 expense 入口 — `ExpensesOverviewSection` 是 dead code（grep src/ 整個 codebase 只 self-reference、從未 import）。原 2026-05-23 backlog 條目 line 199-205 PM 已預警此 surface UX 風險，user 回報恰好證實預測。
+- **Step 2 reachability 驗**：`/app/expenses` 直達 URL render 正常；點 [拍收據] CTA → ReceiptScanner Dialog 開啟、z-60 不被遮、標題 + 副文 + [拍照] [從相簿選] 全 render。**邏輯層 100% intact**。
+- **Step 3 functions log**：skip（dialog 都開、callable wire-up 在 source code 完整、bug 純 IA 層、無 invocation 失敗線索價值）。
+- **Step 4 fix**：選 PM #1（最小、不破 IA）。PM #2「pets 開銷 tab FAB」前提**不成立** — `ExpensesOverviewSection` 沒被任何頁 mount，要做 #2 等於先新建 mount 點 + 加 FAB = 工作量從 S 升 L，且 BH session 不該做新 feature。
+
+### Commits
+
+| Commit | What |
+|---|---|
+| `e972cf8` | fix(settings): 拍收據 quick-action — restore 1-tap path after nav reorg. 2 files：(a) settings page 帳號區下方加 Camera-icon quick-action card → `/app/expenses?action=scan`；(b) expenses page 加 `useSearchParams` + ref-guarded `useEffect` 等 pets 載完自動開 `setScannerOpen(true)`。 Ref guard 保證關 dialog 不重彈；full page reload 仍重彈（intended deep-link 行為）。 |
+
+### Production verification
+
+App Hosting build ~6.5 min（attempt 5 at 08:48:49 needle「一拍就辨識金額」found in chunk `_next/static/chunks/1143t1a2zksbj.js`）。Chrome MCP 走完：
+
+- ✅ `/app/settings` render → 帳號區下方出現新 quick-action card（Camera icon + 「拍收據 AI 自動記帳」+ 「一拍就辨識金額、商家、類別」+ → arrow）
+- ✅ 點 card → URL → `/app/expenses?action=scan` + ReceiptScanner Dialog **自動開啟**（user 沒點任何東西）
+- ✅ 點 X 關 dialog → URL 仍 `?action=scan`、dialog 不重彈（ref guard work）+ page 正常 render 開銷列表 + 圓餅圖
+- ✅ 原 expenses 頁的橘色「拍收據」CTA 仍在背景，無 regression
+
+User 路徑：**4 tap → 2 tap**（settings→quick-action card→scanner 自動開）。
+
+### 後續觀察 / 給 PM
+
+- 修是 minimal patch；長期 IA 仍可考慮 PM #2 / #3 / #4 任一（pets overview / walks secondary CTA / bottom-nav reorg）— 但這條 OPEN BUG 已關，後續優化進 roadmap 排序
+- `ExpensesOverviewSection` 死碼觀察寫進 backlog 給 PM 決定 (a) 刪除 dead code or (b) 終於 mount 到 pets page
 
 ## User Vision（原話保留）
 
