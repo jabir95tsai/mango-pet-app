@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-25 晚（🎉 今日 10 個大 bundle 全 SHIPPED — Phase 1 v2 + Family Leaderboard 即時 + Per-pet walk goal + save-photo-to-album + UI Polish Bundle + auto-friend-family-members + Phase 2 pets + Photo Lightbox + **遛狗自動拍照 + 自動發動態 6 commits**；0 active spec；**1 OPEN BUG**：拍收據 AI 辨識不見了（PM 寫好 Bug Hunter recon spec）；Epic 5 觀察至 2026-05-27）
+最後更新：2026-05-26 早上（🎉 昨日 10 個大 bundle + 今早 bug 收尾 = 11 個 ship — Bug Hunter 修拍收據 AI 入口（fix #1 settings quick-action `e972cf8`，4-tap → 2-tap）；0 active spec；新增「首頁設計優化」prototype 動作開 Claude Design；Epic 5 觀察至 2026-05-27）
 
 ## 進行中
 
@@ -59,11 +59,18 @@
   - `5ecbe38` schema (walkPrefs.autoPhotoShare + Post.walkId + mintWalkId helper) / `f0fdd61` PhotoPromptSheet bottom sheet + i18n + slide-up keyframe / `22801f9` PostComposer 加 3 optional props / `9e8f7ae` start-photo flow / `94135f5` end-photo flow (1s delay after confetti) / `a03caf9` settings toggle (default ON)
   - START + END 各自 1 post 含同 walkId cross-link
   - 👉 **下個動作（user）**：iOS PWA real-device 4 flows test（START 拍/跳 + END 拍/跳）+ camera 拒權 fallback + settings OFF → 0 prompts
-- **🐛 拍收據 AI 辨識不見了** — [`docs/features/bug-receipt-ai-missing.md`](../features/bug-receipt-ai-missing.md) **OPEN BUG**（user 2026-05-25 傍晚 回報）
-  - PM recon：code 完整在（receipt-scanner.tsx + extractReceipt callable + expenses page mount 全 verified）— root cause 必是 UI 入口 / IA / nav 問題
-  - 5 個推測 root cause：pets v2 IA 副作用 / drawer 入口隱 / walks v2 拿掉 link / settings 沒 shortcut / PWA cache stale
-  - PM 推薦 fix #2：pets「開銷」tab 加 FAB「拍收據」（對齊「我的寵物的開銷」心智）
-  - 👉 **下個動作（user）**：開 Bug Hunter session 用 spec 末段 launch prompt 動工
+- **🐛 拍收據 AI 辨識不見了** — [`docs/features/bug-receipt-ai-missing.md`](../features/bug-receipt-ai-missing.md) ✅ **SHIPPED 2026-05-26**（Bug Hunter 走完 4 步 + fix #1 ship `e972cf8`）
+  - Root cause = mobile bottom-nav reorg (`e34640a` 2026-05-23) 拿掉「開銷」slot + drawer 搬到 settings 頁右上角 → AI 拍收據 變 4-tap 路徑
+  - Bug Hunter 選 fix #1（最小，不破 IA）— PM #2 前提不成立：`ExpensesOverviewSection` 是 dead code（grep 整 codebase 從未 import，只 self-reference）
+  - Fix：settings 帳號區下方加 Camera quick-action card → `/app/expenses?action=scan` + useSearchParams ref-guarded useEffect 自動開 ReceiptScanner
+  - User 路徑：**4 tap → 2 tap** ✅
+  - 已知 follow-up：`ExpensesOverviewSection` 死碼決定 (a) 刪 or (b) 終於 mount 到 pets page（PM 排序）
+  - 👉 **下個動作（user）**：實機驗證 2-tap path（settings → 拍收據 card → scanner 自動開）
+- **首頁設計優化** — Claude Design prototype-first（同 walks v2 / pets v2 pattern）
+  - 現有 `/app` home page: 首頁 title + pets list + 10 feed posts mixed (family + friends + public) + post composer
+  - Phase 3 visual-redesign-mango.md spec 太薄（只 line 284-287），需 prototype 探索具體 layout
+  - Workflow：Claude Design 產 prototype → PM review → user decisions → spec → UI/UX 直接寫
+  - 👉 **下個動作（user）**：開 Claude Design session 用 PM 寫好的 launch prompt 動工，產 prototype 到 `docs/design/home-v2-prototype/`
 - **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
   - `b1c925e` photo-lightbox 元件（carousel + swipe + 三招關閉 + a11y）/ `bc7b6cf` post-card 接 / `97df9b5` walk-row + walk-tracking-view done screen 接 / `69160c4` i18n keys / `9da6883` UI/UX SHIPPED record
   - 👉 **下個動作（user）**：feed post 點 photo / walks recent 點 photo / done screen 點 photo — 3 處驗收 lightbox 開
