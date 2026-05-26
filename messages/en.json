@@ -545,7 +545,9 @@
       "donutLabel": "This month",
       "itemCount": "{count} items",
       "empty": "No expenses this month",
-      "addCta": "Add expense"
+      "addCta": "Add expense",
+      "filterEmpty": "No items in this category this month",
+      "manualEntry": "Enter manually"
     },
     "health": {
       "weightTrend": "Weight trend",

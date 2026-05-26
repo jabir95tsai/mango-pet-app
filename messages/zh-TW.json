@@ -545,7 +545,9 @@
       "donutLabel": "本月合計",
       "itemCount": "{count} 項",
       "empty": "本月還沒有開銷",
-      "addCta": "新增開銷"
+      "addCta": "新增開銷",
+      "filterEmpty": "此分類本月無項目",
+      "manualEntry": "手動輸入開銷"
     },
     "health": {
       "weightTrend": "體重趨勢",

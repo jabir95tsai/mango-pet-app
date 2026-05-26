@@ -1,11 +1,25 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Wallet } from "lucide-react";
 import type { Expense, ExpenseCategory, Pet } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { PetExpenseCard } from "./pet-expense-card";
 import { PetExpenseDonut } from "./pet-expense-donut";
+
+type CategoryFilter = ExpenseCategory | "all";
+
+const FILTERS: CategoryFilter[] = [
+  "all",
+  "food",
+  "medical",
+  "grooming",
+  "toy",
+  "training",
+  "insurance",
+  "other",
+];
 
 /**
  * 開銷 tab body — month-total bar (NT$ X + +12% chip vs last month) +
@@ -50,6 +64,11 @@ export function PetExpensesBody({
 }: Props) {
   const tPP = useTranslations("PetsPage");
   const tE = useTranslations("Expense");
+  const tF = useTranslations("Filter");
+  // Category filter pills — narrow the list view only. Total bar +
+  // donut still show the full month's data so the user sees the
+  // big picture independent of the filter.
+  const [filter, setFilter] = useState<CategoryFilter>("all");
 
   const data = useMemo(() => {
     const monthStart = startOfMonth();
@@ -177,15 +196,54 @@ export function PetExpensesBody({
         </div>
       )}
 
+      {/* Category filter pills — port from /app/expenses page. Active
+          pill picks the brand-tint highlight to match the rest of
+          pets v2's pill family (PetTabs / filter chips). */}
+      <div className="mt-1 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+        {FILTERS.map((f) => {
+          const active = filter === f;
+          const label =
+            f === "all" ? tF("all") : tE(`categories.${f}`);
+          return (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              aria-pressed={active}
+              className={cn(
+                "h-8 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep",
+                active
+                  ? "bg-mango-brand text-mango-ink shadow-sm"
+                  : "bg-mango-card text-mango-ink-2 ring-1 ring-mango-hairline hover:bg-mango-bg-alt",
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="mt-2 flex flex-col gap-2.5">
-        {data.thisMonth.map((e) => (
-          <PetExpenseCard
-            key={e.expenseId}
-            expense={e}
-            onEdit={() => onEdit(e)}
-            onDelete={() => onDelete(e)}
-          />
-        ))}
+        {data.thisMonth
+          .filter((e) => filter === "all" || e.category === filter)
+          .map((e) => (
+            <PetExpenseCard
+              key={e.expenseId}
+              expense={e}
+              onEdit={() => onEdit(e)}
+              onDelete={() => onDelete(e)}
+            />
+          ))}
+        {/* When the filter narrows everything out, show a quiet hint
+            rather than collapsing to empty (the total bar + donut
+            above still show non-zero numbers, so the user shouldn't
+            be left wondering where their data went). */}
+        {filter !== "all" &&
+          data.thisMonth.every((e) => e.category !== filter) && (
+            <p className="text-center text-xs text-mango-ink-3">
+              {tPP("expenses.filterEmpty")}
+            </p>
+          )}
       </div>
     </div>
   );
