@@ -3,26 +3,40 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Newspaper, PawPrint, PenSquare, Plus } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFamily } from "@/components/family/family-provider";
-import { RouteHeader } from "@/components/nav/route-header";
-import { Avatar } from "@/components/ui/avatar";
 import { useConfirm } from "@/components/ui/confirm-provider";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
+import { HomeTopBar } from "@/components/home/home-top-bar";
+import { StoriesBar } from "@/components/home/stories-bar";
+import { FeedSectionHeader } from "@/components/home/feed-section-header";
+import { HomeEmptyState } from "@/components/home/home-empty-state";
+import { InviteFamilyCard } from "@/components/home/invite-family-card";
+import { NoPostsHint } from "@/components/home/no-posts-hint";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { deletePost, listFeedPosts } from "@/lib/firebase/posts";
 import { listFriends } from "@/lib/firebase/friends";
 import type { Pet, Post } from "@/lib/types";
 
+/**
+ * Home page v3 — B1 Feed-first + IG Stories pets bar
+ * Spec: docs/features/home-v3-feed-first.md
+ *
+ * Renders four variants driven by pets / family / posts state:
+ *   - 0 pets                       → HomeEmptyState hero
+ *   - ≥1 pet, no family            → Stories + InviteFamilyCard + Feed
+ *   - ≥1 pet, family, 0 posts      → Stories + NoPostsHint
+ *   - ≥1 pet, family, ≥1 posts (B1) → Stories + Feed + 「查看更多」
+ *
+ * Stories bar 1st slot is the user's "Your Story" avatar with a brand
+ * `+` overlay — tap opens PostComposer (IG mode per user D2 override
+ * of the PM default).
+ */
 export default function AppHome() {
-  const tApp = useTranslations("App");
-  const tNav = useTranslations("Nav");
-  const tPet = useTranslations("Pet");
   const tC = useTranslations("Common");
+  const tH = useTranslations("Home");
   const askConfirm = useConfirm();
   const { user } = useAuth();
   const { family, loading: familyLoading } = useFamily();
@@ -42,9 +56,9 @@ export default function AppHome() {
       setPets(petR.status === "fulfilled" ? petR.value : []);
       const friends = friendsR.status === "fulfilled" ? friendsR.value : [];
       try {
-        // Spec docs/features/reminders-to-pets-page.md D2: home page now
-        // surfaces the latest 10 posts (family + friends + public mixed),
-        // with a "查看更多" CTA into /app/feed for the full timeline.
+        // Spec reminders-to-pets-page.md D2: home surfaces the latest
+        // 10 posts (family + friends + public mixed), with a "查看更多"
+        // CTA into /app/feed for the full timeline.
         const feed = await listFeedPosts(
           user.uid,
           friends.map((f) => f.uid),
@@ -78,94 +92,58 @@ export default function AppHome() {
   }
 
   if (loading) {
-    return <p className="text-sm text-zinc-500">{tC("loading")}</p>;
+    return <p className="text-sm text-mango-ink-3">{tC("loading")}</p>;
   }
+
+  // ── Variant D1: 0 pets → hero empty state ───────────────────────
+  if (pets.length === 0) {
+    return (
+      <>
+        <HomeTopBar
+          familyName={family?.name ?? null}
+          userDisplayName={user?.displayName ?? null}
+        />
+        <HomeEmptyState />
+        <PostComposer
+          open={composerOpen}
+          onClose={() => setComposerOpen(false)}
+          pets={pets}
+          onCreated={refresh}
+        />
+      </>
+    );
+  }
+
+  const isPersonal = !family;
+  const hasPosts = feedPosts.length > 0;
 
   return (
     <>
-      <RouteHeader title={`🥭 ${tApp("name")}`} subtitle={tApp("tagline")} />
+      <HomeTopBar
+        familyName={family?.name ?? null}
+        userDisplayName={user?.displayName ?? null}
+      />
 
-      <section className="mb-6 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-            {tNav("pets")}
-          </h2>
-          <Link
-            href="/app/pets"
-            className="text-xs font-medium text-amber-700 hover:underline dark:text-amber-300"
-          >
-            {tC("edit")} →
-          </Link>
+      <div className="pt-1">
+        <StoriesBar
+          pets={pets}
+          onComposerOpen={() => setComposerOpen(true)}
+        />
+      </div>
+
+      {/* Personal-mode upsell (≥1 pet + no family) — inserted between
+          stories and the feed so users always see it without scroll
+          past their pets. */}
+      {isPersonal && (
+        <div className="mt-3">
+          <InviteFamilyCard pet={pets[0]} />
         </div>
-        {pets.length === 0 ? (
-          <EmptyState
-            icon={PawPrint}
-            title={tPet("noPets")}
-            description="新增第一隻寵物開始紀錄。"
-            action={
-              <Link href="/app/pets">
-                <Button size="sm">
-                  <Plus className="size-4" />
-                  {tPet("addPet")}
-                </Button>
-              </Link>
-            }
-          />
-        ) : (
-          <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
-            {pets.map((p) => (
-              <Link
-                key={p.petId}
-                href={`/app/pets/${p.petId}`}
-                className="group flex shrink-0 flex-col items-center gap-1.5 rounded-lg p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-              >
-                <Avatar
-                  src={p.photoURL}
-                  name={p.name}
-                  size={64}
-                  className="ring-2 ring-transparent group-hover:ring-amber-400"
-                />
-                <span className="text-xs font-medium max-w-[64px] truncate">
-                  {p.name}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+      )}
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-            {tNav("feed")}
-          </h2>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setComposerOpen(true)}>
-              <PenSquare className="size-4" />
-              發文
-            </Button>
-            <Link
-              href="/app/feed"
-              className="text-xs font-medium text-amber-700 hover:underline dark:text-amber-300"
-            >
-              查看更多 →
-            </Link>
-          </div>
-        </div>
+      <FeedSectionHeader />
 
-        {feedPosts.length === 0 ? (
-          <EmptyState
-            icon={Newspaper}
-            title="尚無動態"
-            description="發第一篇貼文，或等好友的公開動態。"
-            action={
-              <Button size="sm" onClick={() => setComposerOpen(true)}>
-                <PenSquare className="size-4" />
-                發文
-              </Button>
-            }
-          />
-        ) : (
+      {hasPosts ? (
+        <>
           <div className="flex flex-col gap-3">
             {user &&
               feedPosts.map((post) => (
@@ -177,8 +155,19 @@ export default function AppHome() {
                 />
               ))}
           </div>
-        )}
-      </section>
+          {/* 「查看更多」CTA — even at exactly 10 posts we still link
+              to the full archive because there could be more behind. */}
+          <Link
+            href="/app/feed"
+            className="mt-4 inline-flex w-full items-center justify-center gap-1 rounded-full border border-mango-hairline bg-mango-card px-5 py-3 text-[13px] font-extrabold text-mango-brand-deep shadow-card transition-colors hover:bg-mango-bg-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+          >
+            {tH("feed.viewAllLong")}
+            <ChevronRight className="size-3.5" strokeWidth={2.4} />
+          </Link>
+        </>
+      ) : (
+        <NoPostsHint onCompose={() => setComposerOpen(true)} />
+      )}
 
       <PostComposer
         open={composerOpen}
