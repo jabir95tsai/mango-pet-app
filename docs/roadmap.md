@@ -71,6 +71,13 @@
   - Phase 3 visual-redesign-mango.md spec 太薄（只 line 284-287），需 prototype 探索具體 layout
   - Workflow：Claude Design 產 prototype → PM review → user decisions → spec → UI/UX 直接寫
   - 👉 **下個動作（user）**：開 Claude Design session 用 PM 寫好的 launch prompt 動工，產 prototype 到 `docs/design/home-v2-prototype/`
+- **開銷完全搬進寵物頁** — [`docs/features/expenses-into-pets-page.md`](../features/expenses-into-pets-page.md) **GO**（user 2026-05-26 4 decisions confirmed）
+  - User vision：「剛剛開銷的部分我的想法是就完全搬到寵物那一頁，也不要再設定那邊，可以就是按加號就是自動打開相機 AI 掃描，或選擇手動輸入」
+  - 4 decisions confirmed：D1 /app/expenses 整頁拿掉（redirect）/ D2 FAB 直接開相機（手動輸入是 secondary link）/ D3 revert Bug Hunter fix #1（settings quick-action 移除）/ D4 完全 per-pet view 不做家庭加總
+  - 跨 4 surface：pets「開銷」tab 大改 + /app/expenses 刪 + settings revert + drawer 清理
+  - PM 觀察：Bug Hunter `e972cf8` fix 是 24h stopgap，本 spec 是 long-term 正解
+  - 工作量 M-L，預估 1-2 session ship，6 commits 拆解
+  - 👉 **下個動作（user）**：開 Feature Builder session 用 spec 末段 launch prompt 動工
 - **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
   - `b1c925e` photo-lightbox 元件（carousel + swipe + 三招關閉 + a11y）/ `bc7b6cf` post-card 接 / `97df9b5` walk-row + walk-tracking-view done screen 接 / `69160c4` i18n keys / `9da6883` UI/UX SHIPPED record
   - 👉 **下個動作（user）**：feed post 點 photo / walks recent 點 photo / done screen 點 photo — 3 處驗收 lightbox 開
