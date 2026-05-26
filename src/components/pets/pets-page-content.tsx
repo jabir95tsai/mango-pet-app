@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type {
   Expense,
   ExpenseInput,
+  ExtractedReceipt,
   HealthRecord,
   HealthRecordInput,
   Pet,
@@ -20,6 +21,7 @@ import { useConfirm } from "@/components/ui/confirm-provider";
 import { PetFormDialog } from "@/components/pets/pet-form-dialog";
 import { ReminderFormDialog } from "@/components/reminders/reminder-form-dialog";
 import { ExpenseFormDialog } from "@/components/expenses/expense-form-dialog";
+import { ReceiptScanner } from "@/components/expenses/receipt-scanner";
 import { HealthRecordFormDialog } from "@/components/health/health-record-form-dialog";
 import {
   createPet,
@@ -155,6 +157,20 @@ export function PetsPageContent({
   const [addingExpense, setAddingExpense] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
   const [addingRecord, setAddingRecord] = useState(false);
+
+  // ── Camera-first scanner flow (spec expenses-into-pets-page D2) ─
+  // FAB on expenses tab triggers a hidden capture="environment" input
+  // → file picked → ReceiptScanner opens with the file pre-loaded
+  // (skips its 拍照/從相簿選 intro) → AI scan → ExpenseFormDialog
+  // pre-fills + defaults to the active pet.
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerInitialFile, setScannerInitialFile] = useState<File | null>(
+    null,
+  );
+  const [expensePrefill, setExpensePrefill] = useState<ExtractedReceipt | null>(
+    null,
+  );
+  const scannerFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
@@ -324,9 +340,54 @@ export function PetsPageContent({
 
   // ── FAB target — tab decides which form opens ───────────────────
   function handleFab() {
-    if (tab === "expenses") setAddingExpense(true);
-    else if (tab === "health") setAddingRecord(true);
+    if (tab === "expenses") {
+      // Camera-first per spec D2: trigger hidden capture input
+      // directly. iOS Safari opens the back camera; desktop falls
+      // back to a normal file picker. Manual entry stays one tap
+      // away via the link inside ReceiptScanner.
+      setExpensePrefill(null);
+      setScannerInitialFile(null);
+      scannerFileInputRef.current?.click();
+    } else if (tab === "health") setAddingRecord(true);
     else setAddingReminder(true);
+  }
+
+  function handleScannerFilePicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (!file) {
+      // User dismissed the OS camera sheet — fall into ReceiptScanner's
+      // intro view so they can choose "從相簿選" or 手動輸入 instead
+      // of stranding them with no follow-up. Spec calls out this
+      // fallback path explicitly.
+      setScannerInitialFile(null);
+      setScannerOpen(true);
+      return;
+    }
+    setScannerInitialFile(file);
+    setScannerOpen(true);
+  }
+
+  function handleScannerManualEntry() {
+    setScannerOpen(false);
+    setScannerInitialFile(null);
+    setExpensePrefill(null);
+    setAddingExpense(true);
+  }
+
+  function handleExtracted(data: ExtractedReceipt) {
+    // Scanner finished — close it and open the form with AI prefill.
+    // defaultPetId on the form falls back to the active pet so the
+    // pet-picker doesn't surprise-swap to pets[0].
+    setExpensePrefill(data);
+    setAddingExpense(true);
+  }
+
+  // Reset prefill when the expense dialog closes so the next manual
+  // "add expense" doesn't accidentally inherit AI-extracted values.
+  function handleAddExpenseClose() {
+    setAddingExpense(false);
+    setExpensePrefill(null);
   }
 
   if (!pet) return null;
@@ -456,8 +517,10 @@ export function PetsPageContent({
       />
       <ExpenseFormDialog
         open={addingExpense}
-        onClose={() => setAddingExpense(false)}
+        onClose={handleAddExpenseClose}
         pets={pets}
+        prefill={expensePrefill}
+        defaultPetId={pet.petId}
         onSubmit={handleAddExpense}
       />
       <ExpenseFormDialog
@@ -471,6 +534,35 @@ export function PetsPageContent({
         open={addingRecord}
         onClose={() => setAddingRecord(false)}
         onSubmit={handleAddRecord}
+      />
+
+      {/* Camera-first scanner flow (spec D2). Hidden input lives here
+          (not inside the scanner) so the FAB can trigger native iOS
+          camera *before* the scanner dialog opens — going straight
+          to the preview / scan view with the captured file. */}
+      <input
+        ref={scannerFileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        capture="environment"
+        className="hidden"
+        onChange={handleScannerFilePicked}
+        aria-hidden="true"
+      />
+      <ReceiptScanner
+        open={scannerOpen}
+        onClose={() => {
+          setScannerOpen(false);
+          setScannerInitialFile(null);
+        }}
+        onExtracted={(data) => {
+          setScannerOpen(false);
+          setScannerInitialFile(null);
+          handleExtracted(data);
+        }}
+        initialFile={scannerInitialFile}
+        defaultPetId={pet.petId}
+        onManualEntry={handleScannerManualEntry}
       />
     </div>
   );

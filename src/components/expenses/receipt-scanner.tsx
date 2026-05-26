@@ -15,11 +15,35 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onExtracted: (data: ExtractedReceipt) => void;
+  /** Skip the 拍照/從相簿選 intro and land straight on the preview /
+   *  scan view with this file. Used by the pets-page-content
+   *  camera-first FAB flow which captures the photo OUTSIDE the
+   *  scanner and hands the resulting File in. Spec docs/features/
+   *  expenses-into-pets-page.md D2. */
+  initialFile?: File | null;
+  /** Active pet on the calling surface — kept for spec compliance
+   *  and forwarded to the manual-entry path so the form picks the
+   *  right pet by default. The scanner itself doesn't read this for
+   *  the AI scan (extractReceipt is pet-agnostic). */
+  defaultPetId?: string;
+  /** Optional secondary action under the scan UI: closes the scanner
+   *  and signals the parent to open a blank ExpenseFormDialog instead
+   *  (defaultPetId still applies). When absent, the link is hidden —
+   *  /app/expenses legacy flows that pre-date this never showed it. */
+  onManualEntry?: () => void;
 };
 
-export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
+export function ReceiptScanner({
+  open,
+  onClose,
+  onExtracted,
+  initialFile,
+  defaultPetId: _defaultPetId,
+  onManualEntry,
+}: Props) {
   const tE = useTranslations("Expense");
   const tC = useTranslations("Common");
+  const tPP = useTranslations("PetsPage");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,6 +58,38 @@ export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
       if (previewURL) URL.revokeObjectURL(previewURL);
     };
   }, [previewURL]);
+
+  // Camera-first flow: parent captures the photo (capture="environment"
+  // input lives in pets-page-content) and hands it in via initialFile.
+  // We process + preview it on open so the scanner lands directly on
+  // the [開始辨識] view, skipping the 拍照/從相簿選 intro. Triggers
+  // only on the open→initialFile transition so re-opens with the same
+  // file don't re-process.
+  useEffect(() => {
+    if (!open || !initialFile) return;
+    let cancelled = false;
+    (async () => {
+      setScanning(true);
+      setError(null);
+      try {
+        const processed = await processImage(
+          initialFile,
+          IMAGE_PRESETS.receipt,
+        );
+        if (cancelled) return;
+        setFile(processed);
+        setPreviewURL(URL.createObjectURL(processed));
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "圖片處理失敗");
+      } finally {
+        if (!cancelled) setScanning(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, initialFile]);
 
   function reset() {
     setFile(null);
@@ -121,6 +177,15 @@ export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
             >
               從相簿選
             </Button>
+            {onManualEntry && (
+              <button
+                type="button"
+                onClick={onManualEntry}
+                className="mt-1 text-center text-sm font-medium text-mango-brand-deep underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+              >
+                {tPP("expenses.manualEntry")}
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -173,6 +238,18 @@ export function ReceiptScanner({ open, onClose, onExtracted }: Props) {
                 </>
               )}
             </Button>
+            {/* Mirror manual-entry link on the preview view too so
+                users who decide mid-scan that AI isn't worth it can
+                fall back without re-opening the dialog. */}
+            {onManualEntry && (
+              <button
+                type="button"
+                onClick={onManualEntry}
+                className="text-center text-sm font-medium text-mango-brand-deep underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+              >
+                {tPP("expenses.manualEntry")}
+              </button>
+            )}
           </div>
         )}
       </div>

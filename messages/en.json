@@ -565,7 +565,7 @@
     "fab": {
       "overview": "Add reminder",
       "reminders": "Add reminder",
-      "expenses": "Add expense",
+      "expenses": "Scan receipt",
       "health": "Add health record"
     }
   }

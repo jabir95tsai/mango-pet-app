@@ -28,6 +28,13 @@ type Props = {
   pets: Pet[];
   initial?: Expense;
   prefill?: ExtractedReceipt | null;
+  /** Pre-select this pet when opening a fresh form (no initial, no
+   *  prefill picks it). Spec docs/features/expenses-into-pets-page.md
+   *  D4: per-pet view auto-attaches the active pet so the user
+   *  doesn't have to re-pick after entering the dialog from a
+   *  pet-specific surface. Falls back to `pets[0]` when absent
+   *  (legacy behaviour). */
+  defaultPetId?: string;
   onSubmit: (input: ExpenseInput) => Promise<void>;
 };
 
@@ -47,6 +54,7 @@ export function ExpenseFormDialog({
   pets,
   initial,
   prefill,
+  defaultPetId,
   onSubmit,
 }: Props) {
   const tE = useTranslations("Expense");
@@ -75,7 +83,14 @@ export function ExpenseFormDialog({
       setItems(initial.items ?? []);
       setSource(initial.source);
     } else {
-      setPetId(pets[0]?.petId ?? "");
+      // defaultPetId wins over the first-pet fallback when the
+      // caller passed one (per-pet entry surface); otherwise behave
+      // as before for legacy callers / freehand-compose path.
+      const seedPetId =
+        defaultPetId && pets.some((p) => p.petId === defaultPetId)
+          ? defaultPetId
+          : pets[0]?.petId ?? "";
+      setPetId(seedPetId);
       setAmount(prefill?.amount ? String(prefill.amount) : "");
       setVendor(prefill?.vendor ?? "");
       setCategory(prefill?.category ?? "other");
@@ -85,7 +100,7 @@ export function ExpenseFormDialog({
       setSource(prefill ? "ai_scan" : "manual");
     }
     setError(null);
-  }, [open, initial, prefill, pets]);
+  }, [open, initial, prefill, defaultPetId, pets]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
