@@ -65,15 +65,13 @@ _2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 
 ### `/join/{code}` 在 LINE→iOS Safari context 下偶發 React #300（cannot reproduce desktop）
 - **發現於**：2026-05-25、Bug Hunter session（修完 `getNextPath` allowlist 後實測抓到）
 - **類型**：bug / 環境相依 / 未確認是否真實
-- **重現 / 觀察**：使用者從 LINE 點分享出去的 `/join/{6位數}` 連結 → LINE 把 user 帶到 iOS Safari（網址列頂端有「◀LINE」返回鍵）→ 頁面跳 `🥭💔 出了點狀況` + `Minified React error #300; visit https://react.dev/errors/300`。React 19 的 #300 = 「Rendered fewer hooks than expected. This may be caused by an accidental early return statement.」典型成因是某個 component render 之間 hook 數量不同。
+- **✅ 2026-05-26 update — 可能已根治**：同日 user 從 Safari 加 PWA 到主畫面 → 開 PWA → /app/walks 也撞同款 React #300（不再只是 /join、不再只是 LINE referer）。Bug Hunter session 抓到真兇 = `src/app/app/walks/page.tsx` 的 confetti `useEffect` 寫在 0-pet 早 return **之下**，hook count 38 vs 37 在 transition path 上會 mismatch。Fix `ad90acf` (commit `fix(walks): React #300 — confetti useEffect ran after 0-pet early return`) 把 useEffect 搬到早 return 上面。
+  推測 5/25 /join 那次也是這條 — `/join` 自身 OK，但成功 redirect 到 `/app/walks` 那一刻撞上 walks page cold-start race（loading false + pets [] 一瞬間）→ React #300。Bug Hunter audit `/join` render tree 都沒問題符合：根本不在 /join，是 redirect 之後落地的 walks 頁。
+- **重現 / 觀察（歷史紀錄）**：使用者從 LINE 點分享出去的 `/join/{6位數}` 連結 → LINE 把 user 帶到 iOS Safari（網址列頂端有「◀LINE」返回鍵）→ 頁面跳 `🥭💔 出了點狀況` + `Minified React error #300; visit https://react.dev/errors/300`。React 19 的 #300 = 「Rendered fewer hooks than expected. This may be caused by an accidental early return statement.」典型成因是某個 component render 之間 hook 數量不同。
   Bug Hunter 已 audit `/join` render tree 全部 component（`RootLayout` providers / `RequireAuth` / `JoinInner` / `ConfirmProvider` / `Dialog` / `AuthProvider` / `FamilyProvider`）— 全都無條件呼叫 hooks、順序固定。Desktop Chrome MCP 訪問 `/join/123456` 完全不重現（顯示「邀請碼無效」是 expected）。SSR HTML 用 iOS UA spoof curl 出來內容也正常（含 `joining` / `loading` / `signIn` 各分支）。
   使用者最後**成功加入**（不確定走哪條路徑 — 可能 React #300 是 stale chunk transient、可能改走 settings 內手動輸入 6 位數 dialog 繞過）。
-- **建議交付給**：Bug Hunter（如果之後再復發）
-  - 必要：先請使用者連 Mac Web Inspector 抓 **unminified** stack trace、或在 `src/app/error.tsx` 暫加 `console.error(error.stack)` 並 deploy 後叫使用者重現
-  - 可能 root cause 排查方向：(a) iOS Safari 從 LINE 過來時 `navigator.language` / cookies / `referer` 觸發某個 `typeof window` / `useSyncExternalStore` race；(b) firebase 在 LINE referer 的 Safari context 下 init 行為不同導致 `useFamily` / `useAuth` 在某 render hook count diff；(c) Next.js 16 + React 19 hydration race 在 cold iOS Safari 才會中
-  - workaround（user 已知）：被邀請的人到 settings → 加入家庭 dialog → 手動貼 6 位數邀請碼，完全繞過 `/join/{code}` 路由
-- **優先級提示**：P2 暫定（user 已能加入；但分享連結是核心邀請 UX，下次有人回報就要升 P1）
-- **PM 排序**：下個 PM session 看是否升 spec — 如果只是 stale chunk transient 就 dismiss 入 Deferred；如果再有人回報，升 Bug Hunter 接
+- **建議交付給**：Bug Hunter（如果 user 清完 PWA cache 重裝後仍復發 → 不是 walks 那個 anti-pattern，再挖）
+- **優先級提示**：~~P2~~ → 待 user 驗 (見下方 expected verification 步驟)；若驗 OK 條目可挪 Deferred / Closed
 
 ### 家庭邀請連結 follow-up — minimal slice 已 ship，PM 後續排序「進階版」
 - **發現於**：2026-05-25、Feature Builder session（user 直接要求 minimal slice 動工 + 同時要 backlog 條目留 paper trail）
