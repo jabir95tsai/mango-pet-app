@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const BLOCKED_CLI_USER_AGENT_PREFIXES = ["curl/"];
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const userAgent = request.headers.get("user-agent") ?? "";
   const isBlockedCliRequest = BLOCKED_CLI_USER_AGENT_PREFIXES.some((prefix) =>
     userAgent.startsWith(prefix),
