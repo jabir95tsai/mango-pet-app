@@ -425,7 +425,7 @@ export default function WalksPage() {
           listing each pet + its daily goal chip. Single-pet users see
           the pill but no chevron — the button is non-interactive in
           that case to keep the UX uncluttered. */}
-      <div className="relative z-10 mb-3 flex items-center gap-2.5">
+      <div className="relative z-40 mb-3 flex items-center gap-2.5">
         {/* Topic size aligned with PetsTopBar (我的寵物) + family-aligned
             pages — 26px extrabold, -0.5px tracking. User feedback
             2026-05-25: previous 22px read smaller than 我的寵物 + 排行榜. */}
