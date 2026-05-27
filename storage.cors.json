@@ -1,0 +1,15 @@
+[
+  {
+    "origin": [
+      "https://mango-pet--mango-pet-app.asia-east1.hosted.app",
+      "https://mango-pet-app.firebaseapp.com",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://127.0.0.1:3000",
+      "http://127.0.0.1:3001"
+    ],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type", "Content-Length"],
+    "maxAgeSeconds": 3600
+  }
+]
