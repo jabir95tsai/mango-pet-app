@@ -160,8 +160,9 @@ export function WalkTrackingView({
 
   // ── Auto-photo-share flow B (walk end) ────────────────────────────
   // Spec docs/features/walks-auto-photo-share.md flow B. State pulled
-  // up to the component scope because the prompt's "拍照" handler
-  // needs to await saveWalkOnce() before opening the composer.
+  // up to the component scope because the native camera must be opened
+  // synchronously from the prompt's "拍照" click, then the picked file
+  // waits for saveWalkOnce() before opening the composer.
   const [autoPhotoEnabled, setAutoPhotoEnabled] = useState(true);
   const [endPromptOpen, setEndPromptOpen] = useState(false);
   const [endComposerOpen, setEndComposerOpen] = useState(false);
@@ -289,14 +290,10 @@ export function WalkTrackingView({
     return () => window.clearTimeout(t);
   }, [phase, autoPhotoEnabled]);
 
-  async function handleEndPromptTake() {
+  function handleEndPromptTake() {
     setEndPromptOpen(false);
-    // Save the walk first — the end photo must never publish without
-    // its walk doc, or we recreate the orphan-post data loss path.
-    if (!saved) {
-      const ok = await saveWalkOnce();
-      if (!ok) return;
-    }
+    // Must stay synchronous with the user click. Mobile browsers can block
+    // camera/file pickers after an awaited Firestore write.
     endPhotoInputRef.current?.click();
   }
 
@@ -304,10 +301,16 @@ export function WalkTrackingView({
     setEndPromptOpen(false);
   }
 
-  function handleEndPhotoPicked(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleEndPhotoPicked(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     e.target.value = "";
     if (!file) return; // OS dismissed; no composer
+    // Save after the native picker returns. The end photo must never publish
+    // without its walk doc, or we recreate the orphan-post data loss path.
+    if (!saved) {
+      const ok = await saveWalkOnce();
+      if (!ok) return;
+    }
     setEndPhoto(file);
     setEndComposerOpen(true);
   }
