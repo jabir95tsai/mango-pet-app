@@ -7,6 +7,7 @@
     "home": "Home",
     "pets": "My Pets",
     "walks": "Walks",
+    "photos": "Photos",
     "leaderboard": "Leaderboard",
     "expenses": "Expenses",
     "restaurants": "Restaurants",
@@ -248,6 +249,7 @@
   },
   "Settings": {
     "friendsLink": "Friends",
+    "photosLink": "Photos",
     "privacyData": {
       "title": "Privacy & Data",
       "subtitle": "Download a full copy of your Mango Pet data as JSON — pets, records, family memberships, and more. Photos are referenced by URL.",
@@ -498,6 +500,54 @@
     "prev": "Previous",
     "next": "Next",
     "counter": "{current} / {total}"
+  },
+  "Photos": {
+    "title": "Photos",
+    "subtitle": "{total} photos · {remaining} not saved yet",
+    "shareTitle": "Mango Pet photos",
+    "partialError": "Some photo sources could not load right now. The rest are still available.",
+    "newBadge": "New",
+    "downloaded": "Saved",
+    "select": "Select photo",
+    "deselect": "Deselect photo",
+    "saveOne": "Save photo",
+    "openPhoto": "Open photo: {title}",
+    "filters": {
+      "all": "All",
+      "post": "Feed",
+      "walk": "Walks",
+      "petAvatar": "Pets",
+      "expenseReceipt": "Receipts"
+    },
+    "sources": {
+      "post": "Feed",
+      "walk": "Walks",
+      "petAvatar": "Pet",
+      "expenseReceipt": "Receipt"
+    },
+    "actions": {
+      "saveRemaining": "Save {count} unsaved photos",
+      "saveSelected": "Save {count} selected",
+      "saveOne": "Save",
+      "allSaved": "All saved",
+      "saving": "Saving..."
+    },
+    "status": {
+      "saved": "Saved {count} photos.",
+      "partial": "Saved {count} photos. Some photos could not be saved.",
+      "cancelled": "Saved {count} photos. Remaining photos were not saved.",
+      "failed": "Photo save failed. Please try again later."
+    },
+    "empty": {
+      "title": "No photos yet",
+      "description": "Your own feed photos, walk photos, pet avatars, and existing receipt photos will appear here.",
+      "feedCta": "Post a photo",
+      "walkCta": "Start a walk"
+    },
+    "emptyFilter": {
+      "title": "No photos in this category",
+      "description": "Switch back to All, or come back after adding this type of photo."
+    }
   },
   "Home": {
     "stories": {

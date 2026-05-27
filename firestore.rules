@@ -63,6 +63,31 @@ service cloud.firestore {
       match /knowledgeBookmarks/{articleId} {
         allow read, write: if request.auth.uid == uid;
       }
+
+      match /photoDownloadState/{photoAssetId} {
+        allow read: if request.auth.uid == uid;
+        allow create, update: if request.auth.uid == uid
+          && request.resource.data.keys().hasOnly([
+            "assetId",
+            "source",
+            "sourceId",
+            "urlHash",
+            "downloadedAt",
+            "mode"
+          ])
+          && request.resource.data.assetId == photoAssetId
+          && request.resource.data.source in [
+            "post",
+            "walk",
+            "pet-avatar",
+            "expense-receipt"
+          ]
+          && request.resource.data.sourceId is string
+          && request.resource.data.urlHash is string
+          && request.resource.data.downloadedAt == request.time
+          && request.resource.data.mode in ["share", "download"];
+        allow delete: if false;
+      }
     }
 
     // ── Families ──

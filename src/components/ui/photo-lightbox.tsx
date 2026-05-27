@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { X } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,6 +38,12 @@ type Props = {
   initialIdx: number;
   open: boolean;
   onClose: () => void;
+  downloadAction?: {
+    label: string;
+    busyLabel?: string;
+    disabled?: boolean;
+    onClick: (photoUrl: string, index: number) => void | Promise<void>;
+  };
 };
 
 type Drag = {
@@ -68,11 +74,18 @@ const SWIPE_H_THRESHOLD = 50;
  *  room to start a swipe and bail out before committing. */
 const SWIPE_V_CLOSE_THRESHOLD = 100;
 
-export function PhotoLightbox({ photos, initialIdx, open, onClose }: Props) {
+export function PhotoLightbox({
+  photos,
+  initialIdx,
+  open,
+  onClose,
+  downloadAction,
+}: Props) {
   const t = useTranslations("PhotoLightbox");
   const [currentIdx, setCurrentIdx] = useState(initialIdx);
   const [drag, setDrag] = useState<Drag>(NO_DRAG);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   // True for the synthetic click that fires right after a touch/mouse
@@ -325,6 +338,37 @@ export function PhotoLightbox({ photos, initialIdx, open, onClose }: Props) {
       </div>
 
       {/* Top-right close button */}
+      {downloadAction && (
+        <button
+          type="button"
+          onClick={async (e) => {
+            e.stopPropagation();
+            if (downloadAction.disabled || actionBusy) return;
+            try {
+              setActionBusy(true);
+              await downloadAction.onClick(photos[currentIdx], currentIdx);
+            } finally {
+              setActionBusy(false);
+            }
+          }}
+          disabled={downloadAction.disabled || actionBusy}
+          aria-label={
+            actionBusy
+              ? (downloadAction.busyLabel ?? downloadAction.label)
+              : downloadAction.label
+          }
+          className="absolute left-4 z-10 inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full bg-black/40 px-3 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/60 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+          style={{ top: "max(env(safe-area-inset-top), 1rem)" }}
+        >
+          <Download className="size-5" />
+          <span className="hidden sm:inline">
+            {actionBusy
+              ? (downloadAction.busyLabel ?? downloadAction.label)
+              : downloadAction.label}
+          </span>
+        </button>
+      )}
+
       <button
         ref={closeBtnRef}
         type="button"

@@ -11,6 +11,7 @@ import {
   Trophy,
   MapPin,
   BookOpen,
+  Images,
   Users,
   Newspaper,
   Settings,
@@ -25,6 +26,7 @@ type NavKey =
   | "pets"
   | "feed"
   | "walks"
+  | "photos"
   | "leaderboard"
   | "restaurants"
   | "knowledge"
@@ -41,6 +43,7 @@ const ALL_ITEMS: Item[] = [
   { href: "/app", key: "home", icon: Home },
   { href: "/app/pets", key: "pets", icon: PawPrint },
   { href: "/app/walks", key: "walks", icon: Footprints },
+  { href: "/app/photos", key: "photos", icon: Images },
   { href: "/app/feed", key: "feed", icon: Newspaper },
   { href: "/app/leaderboard", key: "leaderboard", icon: Trophy },
   { href: "/app/restaurants", key: "restaurants", icon: MapPin },

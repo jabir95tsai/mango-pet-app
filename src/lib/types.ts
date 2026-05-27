@@ -487,6 +487,37 @@ export type ExpenseInput = {
   source: ExpenseSource;
 };
 
+// ── Photo gallery ──
+export type GalleryPhotoSource =
+  | "post"
+  | "walk"
+  | "pet-avatar"
+  | "expense-receipt";
+
+export type GalleryPhotoAsset = {
+  /** Stable per-photo id. Used as the downloaded-state document id. */
+  id: string;
+  source: GalleryPhotoSource;
+  url: string;
+  title: string;
+  createdAt: Timestamp;
+  sourceId: string;
+  petId?: string;
+  petName?: string;
+  fileName: string;
+};
+
+export type PhotoDownloadMode = "share" | "download";
+
+export type PhotoDownloadState = {
+  assetId: string;
+  source: GalleryPhotoSource;
+  sourceId: string;
+  urlHash: string;
+  downloadedAt: Timestamp;
+  mode: PhotoDownloadMode;
+};
+
 /** AI-extracted data before user confirms. */
 export type ExtractedReceipt = {
   amount?: number;

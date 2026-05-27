@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   Globe,
+  Images,
   MoreHorizontal,
   ShieldCheck,
   Trash2,
@@ -78,6 +79,14 @@ export default function SettingsPage() {
               className="grid size-11 shrink-0 place-items-center rounded-full bg-mango-brand-tint text-mango-brand-deep transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
             >
               <Users className="size-5" strokeWidth={1.8} />
+            </Link>
+            <Link
+              href="/app/photos"
+              aria-label={tS("photosLink")}
+              title={tS("photosLink")}
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-mango-card-soft text-mango-brand-deep ring-1 ring-mango-hairline transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+            >
+              <Images className="size-5" strokeWidth={1.8} />
             </Link>
           </div>
           {user && (

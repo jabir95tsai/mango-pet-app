@@ -7,6 +7,7 @@
     "home": "首頁",
     "pets": "我的寵物",
     "walks": "遛狗",
+    "photos": "照片圖庫",
     "leaderboard": "排行榜",
     "expenses": "開銷",
     "restaurants": "餐廳地圖",
@@ -248,6 +249,7 @@
   },
   "Settings": {
     "friendsLink": "好友",
+    "photosLink": "照片圖庫",
     "privacyData": {
       "title": "資料與隱私",
       "subtitle": "下載一份你在 Mango Pet 上的完整資料副本（JSON 格式）。包含寵物、紀錄、家庭關係等；照片以 URL 形式存放。",
@@ -498,6 +500,54 @@
     "prev": "上一張",
     "next": "下一張",
     "counter": "{current} / {total}"
+  },
+  "Photos": {
+    "title": "照片圖庫",
+    "subtitle": "共 {total} 張照片 · {remaining} 張尚未儲存",
+    "shareTitle": "Mango Pet 照片",
+    "partialError": "部分照片暫時無法載入，其他來源仍可使用。",
+    "newBadge": "新",
+    "downloaded": "已儲存",
+    "select": "選取照片",
+    "deselect": "取消選取",
+    "saveOne": "儲存照片",
+    "openPhoto": "開啟照片：{title}",
+    "filters": {
+      "all": "全部",
+      "post": "動態",
+      "walk": "遛狗",
+      "petAvatar": "寵物",
+      "expenseReceipt": "收據"
+    },
+    "sources": {
+      "post": "動態",
+      "walk": "遛狗",
+      "petAvatar": "寵物",
+      "expenseReceipt": "收據"
+    },
+    "actions": {
+      "saveRemaining": "儲存 {count} 張尚未下載的照片",
+      "saveSelected": "儲存選取的 {count} 張",
+      "saveOne": "儲存",
+      "allSaved": "全部已儲存",
+      "saving": "儲存中..."
+    },
+    "status": {
+      "saved": "已完成 {count} 張照片。",
+      "partial": "已完成 {count} 張照片，部分照片未能儲存。",
+      "cancelled": "已完成 {count} 張照片，剩餘照片未儲存。",
+      "failed": "照片儲存失敗，請稍後再試。"
+    },
+    "empty": {
+      "title": "還沒有照片",
+      "description": "你自己發過的動態照片、遛狗照片、寵物頭像和已存在的收據照片會出現在這裡。",
+      "feedCta": "去發動態",
+      "walkCta": "開始遛狗"
+    },
+    "emptyFilter": {
+      "title": "這個分類還沒有照片",
+      "description": "切回全部，或之後新增這類照片再回來查看。"
+    }
   },
   "Home": {
     "stories": {
