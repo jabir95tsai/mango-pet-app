@@ -170,6 +170,12 @@ export function WalkTrackingView({
   // Active-pet list for the composer's pet picker — auto-photo posts
   // benefit from being tagged with the pet for feed grouping.
   const [composerPets, setComposerPets] = useState<Pet[]>([]);
+  const activePetId = pet?.petId ?? null;
+  const activePetIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    activePetIdRef.current = activePetId;
+  }, [activePetId]);
 
   // ── Photo capture (spec Phase 1) ────────────────────────────────
   // Generated once per opened session so all photos within a walk share
@@ -183,11 +189,14 @@ export function WalkTrackingView({
   const [photos, setPhotos] = useState<PhotoSlot[]>([]);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
-  // Open → spin up session, auto-start. Close → tear down + release wake lock
-  // (handled inside session.stop()).
+  // Open → spin up session once, auto-start. Close → tear down + release wake
+  // lock. This effect intentionally depends only on `open`: save/refresh and
+  // family/pet reloads replace prop identities while the done screen is still
+  // open, and re-running this effect would turn the finished walk into a new
+  // active session.
   useEffect(() => {
     if (!open) return;
-    if (!pet) return;
+    if (!activePetIdRef.current) return;
     const session = new WalkSession();
     sessionRef.current = session;
     const unsub = session.on(setState);
@@ -211,7 +220,7 @@ export function WalkTrackingView({
       sessionRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, pet]);
+  }, [open]);
 
   // Free object URLs the moment a thumbnail goes away. Without this we'd
   // hold the original (potentially many-MB) bitmaps in memory for the
@@ -282,11 +291,11 @@ export function WalkTrackingView({
 
   async function handleEndPromptTake() {
     setEndPromptOpen(false);
-    // Save the walk first if not yet saved — we need the walkId to
-    // cross-link the post. Silently swallow the failure: if save
-    // doesn't return an id, the post still publishes without walkId.
+    // Save the walk first — the end photo must never publish without
+    // its walk doc, or we recreate the orphan-post data loss path.
     if (!saved) {
-      await saveWalkOnce();
+      const ok = await saveWalkOnce();
+      if (!ok) return;
     }
     endPhotoInputRef.current?.click();
   }
