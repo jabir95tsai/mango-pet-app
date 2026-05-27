@@ -81,6 +81,7 @@ export class WalkSession {
    *  re-acquire on visibilitychange. Falls back to the existing
    *  "請保持畫面開啟" warning on browsers without the Wake Lock API. */
   private wakeLock: WakeLockSentinel | null = null;
+  private wakeLockRequestSeq = 0;
 
   on(listener: WalkSessionListener): () => void {
     this.listeners.add(listener);
@@ -145,17 +146,34 @@ export class WalkSession {
     void this.requestWakeLock();
   }
 
-  private async requestWakeLock(): Promise<void> {
+  private async requestWakeLock(options?: { force?: boolean }): Promise<void> {
     if (typeof navigator === "undefined" || !("wakeLock" in navigator)) return;
-    if (this.wakeLock) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    const staleLock = this.wakeLock;
+    if (staleLock && !options?.force) return;
+    this.wakeLock = null;
+    if (staleLock) {
+      try {
+        await staleLock.release();
+      } catch {
+        /* stale lock may already be released by the OS — ignore */
+      }
+    }
+    const requestSeq = ++this.wakeLockRequestSeq;
     try {
-      this.wakeLock = await navigator.wakeLock.request("screen");
+      const lock = await navigator.wakeLock.request("screen");
+      const hidden = typeof document !== "undefined" && document.hidden;
+      if (!this.state.isTracking || hidden || requestSeq !== this.wakeLockRequestSeq) {
+        await lock.release();
+        return;
+      }
+      this.wakeLock = lock;
       // The OS releases the lock automatically when the tab is hidden,
       // when the page is unloaded, or when the user dismisses it via
       // system UI. Clearing the field so the next visibilitychange
       // re-acquire path runs cleanly.
-      this.wakeLock.addEventListener("release", () => {
-        this.wakeLock = null;
+      lock.addEventListener("release", () => {
+        if (this.wakeLock === lock) this.wakeLock = null;
       });
     } catch (err) {
       // Most likely: user agent disallowed (e.g. fullscreen-only policy)
@@ -167,6 +185,7 @@ export class WalkSession {
   }
 
   private async releaseWakeLock(): Promise<void> {
+    this.wakeLockRequestSeq += 1;
     const lock = this.wakeLock;
     if (!lock) return;
     this.wakeLock = null;
@@ -231,8 +250,10 @@ export class WalkSession {
         errorKind: null,
       });
       // Wake Lock auto-releases on hide; re-acquire so a second auto-lock
-      // attempt during the same walk is also blocked.
-      void this.requestWakeLock();
+      // attempt during the same walk is also blocked. Some browsers fire the
+      // old sentinel's "release" after visibilitychange, so force a fresh
+      // request instead of trusting a possibly stale `this.wakeLock`.
+      void this.requestWakeLock({ force: true });
     }
   }
 
@@ -482,4 +503,3 @@ export function getEncouragementHint(args: {
   // 3. Default — no walks today, no streak.
   return { key: "noWalksToday", vars: { name } };
 }
-
