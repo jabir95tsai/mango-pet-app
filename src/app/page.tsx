@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
+import { AuthProvider } from "@/components/auth/auth-provider";
 import { SignInButtons } from "@/components/auth/sign-in-buttons";
 import { LanguageSwitcher } from "@/components/nav/language-switcher";
 
@@ -76,7 +77,9 @@ export default async function Home({ searchParams }: Props) {
               {tAuth("subtitle")}
             </p>
           </div>
-          <SignInButtons nextPath={nextPath} />
+          <AuthProvider>
+            <SignInButtons nextPath={nextPath} />
+          </AuthProvider>
         </div>
       </section>
 

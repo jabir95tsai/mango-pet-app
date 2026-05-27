@@ -67,7 +67,7 @@ git fetch && git log -5 --stat origin/main
 ### ⑤ 部署後再驗一次
 
 - `git push origin main` → 等 App Hosting build（5–8 分鐘）
-- 期間用 `curl + grep` 確認新 chunk 含關鍵字串（例：找新加的字串 / 變數名）
+- 期間先用本機 build artifacts 確認新 chunk 含關鍵字串（例：找新加的字串 / 變數名）。不要對 production 重複抓全部 chunks，這會燒 App Hosting 流量。
 - 部署完用 Chrome MCP **跑回第 ① 步同樣步驟**，這次應該不再失敗。
 - 失敗？沒修好。回 ① 重新分析，不要關 session。
 
@@ -94,29 +94,22 @@ git fetch && git log -5 --stat origin/main
 
 ### 確認 deploy 完成（找新 commit 的特徵字串）
 
+優先查本機 `.next/static/chunks`。如果真的要查 production，只能做一次首頁或單一目標 chunk 檢查；不要寫迴圈抓 production 全部 chunks。
+
 **Bash / Git Bash:**
 
 ```bash
-HOST=https://mango-pet--mango-pet-app.asia-east1.hosted.app
 NEEDLE='你的特徵字串'      # 例：'mango.migrated' / '走的' / 'sendTestPush'
-CHUNKS=$(curl -s "$HOST/app" | grep -oE '_next/static/chunks/[^"]*\.js' | sort -u)
-for c in $CHUNKS; do
-  curl -s "$HOST/$c" | grep -q "$NEEDLE" && echo "FOUND in $c"
-done
+grep -R "$NEEDLE" .next/static/chunks && echo "FOUND in local build"
 ```
 
 **PowerShell:**
 
 ```powershell
-$host = 'https://mango-pet--mango-pet-app.asia-east1.hosted.app'
 $needle = '你的特徵字串'
-$page = (Invoke-WebRequest "$host/app" -UseBasicParsing).Content
-$chunks = ([regex]'_next/static/chunks/[^"]*\.js').Matches($page) `
-  | ForEach-Object { $_.Value } | Sort-Object -Unique
-foreach ($c in $chunks) {
-  $body = (Invoke-WebRequest "$host/$c" -UseBasicParsing).Content
-  if ($body -match [regex]::Escape($needle)) { Write-Host "FOUND in $c" }
-}
+Get-ChildItem .next\static\chunks -Recurse -Filter *.js |
+  Select-String -SimpleMatch $needle |
+  Select-Object -First 5
 ```
 
 ### 部署（兩邊指令一樣）

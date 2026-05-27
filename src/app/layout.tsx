@@ -2,9 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AuthProvider } from "@/components/auth/auth-provider";
-import { FamilyProvider } from "@/components/family/family-provider";
-import { ConfirmProvider } from "@/components/ui/confirm-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,6 +16,7 @@ const geistMono = Geist_Mono({
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mango-pet.app";
 const LOGO_IMAGE = "/icons/mango-pet-logo.png";
+const SOCIAL_IMAGE = "/og-image.jpg";
 const PWA_ICON_192 = "/web-app-manifest-192x192.png";
 
 export const metadata: Metadata = {
@@ -42,13 +40,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "zh_TW",
     siteName: "Mango Pet",
-    images: [{ url: LOGO_IMAGE, width: 1254, height: 1254, alt: "Mango Pet" }],
+    images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630, alt: "Mango Pet" }],
   },
   twitter: {
     card: "summary",
     title: "Mango Pet — 芒果寵物",
     description: "Your pet life companion.",
-    images: [LOGO_IMAGE],
+    images: [SOCIAL_IMAGE],
   },
   icons: {
     icon: [
@@ -89,11 +87,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-zinc-900 dark:text-zinc-100">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <AuthProvider>
-            <FamilyProvider>
-              <ConfirmProvider>{children}</ConfirmProvider>
-            </FamilyProvider>
-          </AuthProvider>
+          {children}
         </NextIntlClientProvider>
       </body>
     </html>
