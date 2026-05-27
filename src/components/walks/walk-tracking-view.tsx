@@ -157,6 +157,7 @@ export function WalkTrackingView({
   // cross-link the resulting post via `post.walkId`. Stays null until
   // saveWalkOnce succeeds (or save is skipped entirely).
   const savedWalkIdRef = useRef<string | null>(null);
+  const saveWalkPromiseRef = useRef<Promise<boolean> | null>(null);
 
   // ── Auto-photo-share flow B (walk end) ────────────────────────────
   // Spec docs/features/walks-auto-photo-share.md flow B. State pulled
@@ -295,6 +296,10 @@ export function WalkTrackingView({
     // Must stay synchronous with the user click. Mobile browsers can block
     // camera/file pickers after an awaited Firestore write.
     endPhotoInputRef.current?.click();
+    // Start saving in parallel with the native picker. If the user captures a
+    // photo, handleEndPhotoPicked awaits this same in-flight write before
+    // opening the composer.
+    void ensureWalkSavedOnce();
   }
 
   function handleEndPromptSkip() {
@@ -307,10 +312,8 @@ export function WalkTrackingView({
     if (!file) return; // OS dismissed; no composer
     // Save after the native picker returns. The end photo must never publish
     // without its walk doc, or we recreate the orphan-post data loss path.
-    if (!saved) {
-      const ok = await saveWalkOnce();
-      if (!ok) return;
-    }
+    const ok = await ensureWalkSavedOnce();
+    if (!ok) return;
     setEndPhoto(file);
     setEndComposerOpen(true);
   }
@@ -468,13 +471,23 @@ export function WalkTrackingView({
     }
   }
 
+  function ensureWalkSavedOnce(): Promise<boolean> {
+    if (saved) return Promise.resolve(true);
+    if (!saveWalkPromiseRef.current) {
+      saveWalkPromiseRef.current = saveWalkOnce().finally(() => {
+        saveWalkPromiseRef.current = null;
+      });
+    }
+    return saveWalkPromiseRef.current;
+  }
+
   async function handleBackToWalking() {
-    const ok = await saveWalkOnce();
+    const ok = await ensureWalkSavedOnce();
     if (ok) onClose();
   }
 
   async function handleViewLeaderboard() {
-    const ok = await saveWalkOnce();
+    const ok = await ensureWalkSavedOnce();
     if (ok) {
       onClose();
       router.push("/app/leaderboard");
