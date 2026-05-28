@@ -73,6 +73,8 @@ export class WalkSession {
   /** Timestamp (ms) when tab was last hidden, or null if visible. */
   private hiddenSince: number | null = null;
   private visibilityHandler: (() => void) | null = null;
+  private pageHideHandler: (() => void) | null = null;
+  private resumeHandler: (() => void) | null = null;
   /** Screen Wake Lock — keeps the device from auto-locking during a walk.
    *  Without this, phones sleep after their idle timeout (~30s default on
    *  iOS), the browser suspends the tab, and `watchPosition` stops firing
@@ -82,6 +84,7 @@ export class WalkSession {
    *  "請保持畫面開啟" warning on browsers without the Wake Lock API. */
   private wakeLock: WakeLockSentinel | null = null;
   private wakeLockRequestSeq = 0;
+  private wakeLockRetryTimers = new Set<ReturnType<typeof setTimeout>>();
 
   on(listener: WalkSessionListener): () => void {
     this.listeners.add(listener);
@@ -138,12 +141,43 @@ export class WalkSession {
       this.visibilityHandler = () => this.handleVisibilityChange();
       document.addEventListener("visibilitychange", this.visibilityHandler);
     }
+    if (typeof window !== "undefined") {
+      this.pageHideHandler = () => this.handlePageHidden();
+      this.resumeHandler = () => this.handlePageVisible();
+      window.addEventListener("pagehide", this.pageHideHandler);
+      window.addEventListener("pageshow", this.resumeHandler);
+      window.addEventListener("focus", this.resumeHandler);
+      window.addEventListener("pointerdown", this.resumeHandler);
+      window.addEventListener("touchstart", this.resumeHandler);
+    }
 
     // Request screen wake lock so the phone stays awake for the whole walk.
     // Best-effort: unsupported browsers (iOS < 16.4, older Android) fall
     // through to the existing background-pause warning. Fire-and-forget
     // — we don't want to delay start() if this races.
     void this.requestWakeLock();
+  }
+
+  private clearWakeLockRetryTimers(): void {
+    for (const timer of this.wakeLockRetryTimers) {
+      clearTimeout(timer);
+    }
+    this.wakeLockRetryTimers.clear();
+  }
+
+  private scheduleWakeLockReacquire(): void {
+    this.clearWakeLockRetryTimers();
+    const delays = [0, 750, 2500];
+    delays.forEach((delay, idx) => {
+      const timer = setTimeout(() => {
+        this.wakeLockRetryTimers.delete(timer);
+        if (!this.state.isTracking) return;
+        if (typeof document !== "undefined" && document.hidden) return;
+        if (this.wakeLock && idx > 0) return;
+        void this.requestWakeLock({ force: idx === 0 });
+      }, delay);
+      this.wakeLockRetryTimers.add(timer);
+    });
   }
 
   private async requestWakeLock(options?: { force?: boolean }): Promise<void> {
@@ -234,13 +268,28 @@ export class WalkSession {
   private handleVisibilityChange() {
     if (!this.state.isTracking) return;
     if (document.hidden) {
-      this.hiddenSince = Date.now();
-      this.update({
-        isPaused: true,
-        lastError: "App 在背景時 GPS 會暫停，請保持畫面開啟",
-        errorKind: "backgrounded",
-      });
-    } else if (this.hiddenSince !== null) {
+      this.handlePageHidden();
+    } else {
+      this.handlePageVisible();
+    }
+  }
+
+  private handlePageHidden() {
+    if (!this.state.isTracking) return;
+    this.clearWakeLockRetryTimers();
+    this.hiddenSince = Date.now();
+    void this.releaseWakeLock();
+    this.update({
+      isPaused: true,
+      lastError: "App 在背景時 GPS 會暫停，請保持畫面開啟",
+      errorKind: "backgrounded",
+    });
+  }
+
+  private handlePageVisible() {
+    if (!this.state.isTracking) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    if (this.hiddenSince !== null) {
       const delta = Date.now() - this.hiddenSince;
       this.hiddenSince = null;
       this.update({
@@ -249,12 +298,17 @@ export class WalkSession {
         lastError: null,
         errorKind: null,
       });
-      // Wake Lock auto-releases on hide; re-acquire so a second auto-lock
-      // attempt during the same walk is also blocked. Some browsers fire the
-      // old sentinel's "release" after visibilitychange, so force a fresh
-      // request instead of trusting a possibly stale `this.wakeLock`.
-      void this.requestWakeLock({ force: true });
+    } else {
+      this.update({
+        isPaused: false,
+        lastError: null,
+        errorKind: null,
+      });
     }
+    // Wake Lock auto-releases on hide; re-acquire so a second auto-lock
+    // attempt during the same walk is also blocked. iOS/PWA restore can run
+    // before Wake Lock is requestable again, so schedule a few short retries.
+    this.scheduleWakeLockReacquire();
   }
 
   stop(): WalkSessionState {
@@ -270,6 +324,20 @@ export class WalkSession {
       document.removeEventListener("visibilitychange", this.visibilityHandler);
       this.visibilityHandler = null;
     }
+    if (typeof window !== "undefined") {
+      if (this.pageHideHandler) {
+        window.removeEventListener("pagehide", this.pageHideHandler);
+        this.pageHideHandler = null;
+      }
+      if (this.resumeHandler) {
+        window.removeEventListener("pageshow", this.resumeHandler);
+        window.removeEventListener("focus", this.resumeHandler);
+        window.removeEventListener("pointerdown", this.resumeHandler);
+        window.removeEventListener("touchstart", this.resumeHandler);
+        this.resumeHandler = null;
+      }
+    }
+    this.clearWakeLockRetryTimers();
     // Release the wake lock so the phone can sleep normally again
     // after the walk ends. Fire-and-forget — caller doesn't await stop().
     void this.releaseWakeLock();
