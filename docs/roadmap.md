@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-26 早上（🎉 昨日 10 個大 bundle + 今早 bug 收尾 = 11 個 ship — Bug Hunter 修拍收據 AI 入口（fix #1 settings quick-action `e972cf8`，4-tap → 2-tap）；0 active spec；新增「首頁設計優化」prototype 動作開 Claude Design；Epic 5 觀察至 2026-05-27）
+最後更新：2026-05-28（PM 狀態同步：Home v3、開銷 IA migration、照片圖庫 + 照片儲存已 SHIPPED；遛狗紀錄「全部」已改為互動展開按鈕並顯示遛狗人）
 
 ## 進行中
 
@@ -66,25 +66,21 @@
   - User 路徑：**4 tap → 2 tap** ✅
   - 已知 follow-up：`ExpensesOverviewSection` 死碼決定 (a) 刪 or (b) 終於 mount 到 pets page（PM 排序）
   - 👉 **下個動作（user）**：實機驗證 2-tap path（settings → 拍收據 card → scanner 自動開）
-- **/app 首頁 v3 — Feed-first + IG Stories pets bar** — [`docs/features/home-v3-feed-first.md`](../features/home-v3-feed-first.md) **GO**（user 2026-05-26 prototype review 後 3 decisions confirmed）
-  - Claude Design prototype 完成（[`docs/design/home-v2-prototype/`](../design/home-v2-prototype/) 含 5 variants，HTML show 2 artboards: B1 + D1）
-  - PM review + 3 decisions：D1 ✅ B1 Feed-first 推進 / D2 ⚠️ composer entry = IG 模式（user 頭像在 stories bar 開頭 + 右下角 + icon overlay → tap 開 composer）/ D3 ✅ UI/UX 直接寫 src/
-  - 4 variants: B1 主 / D1 empty (0 pets) / Personal (no family + ≥1 pet) / No posts edge
-  - 新元件 5 個（home/）：stories-bar / home-top-bar / home-empty-state / invite-family-card / feed-section-header
-  - reuse 既有 PostCard / PostComposer / listPets / listFeedPosts / useFamily
-  - 新 hook useTodayWalkStatus（沿用 getPetWalkGoalMinutes 算 today walk done/pending/tracking per pet）
-  - 工作量 M，1 session ship，6 commits 拆解
-  - 👉 **下個動作（user）**：開 UI/UX session 用 spec 末段 launch prompt 動工
-- **開銷完全搬進寵物頁** — [`docs/features/expenses-into-pets-page.md`](../features/expenses-into-pets-page.md) **GO**（user 2026-05-26 4 decisions confirmed）
-  - User vision：「剛剛開銷的部分我的想法是就完全搬到寵物那一頁，也不要再設定那邊，可以就是按加號就是自動打開相機 AI 掃描，或選擇手動輸入」
-  - 4 decisions confirmed：D1 /app/expenses 整頁拿掉（redirect）/ D2 FAB 直接開相機（手動輸入是 secondary link）/ D3 revert Bug Hunter fix #1（settings quick-action 移除）/ D4 完全 per-pet view 不做家庭加總
-  - 跨 4 surface：pets「開銷」tab 大改 + /app/expenses 刪 + settings revert + drawer 清理
-  - PM 觀察：Bug Hunter `e972cf8` fix 是 24h stopgap，本 spec 是 long-term 正解
-  - 工作量 M-L，預估 1-2 session ship，6 commits 拆解
-  - 👉 **下個動作（user）**：開 Feature Builder session 用 spec 末段 launch prompt 動工
+- **/app 首頁 v3 — Feed-first + IG Stories pets bar** — [`docs/features/home-v3-feed-first.md`](../features/home-v3-feed-first.md) ✅ **SHIPPED 2026-05-26**（UI/UX session 6 commits + 1 locale polish）
+  - `38d847c` stories bar + your-story/pet-story avatars + `useTodayWalkStatus` / `2428507` top bar + feed header + empty/no-posts states / `e13812a` invite-family card / `fdd567a` page integration + 4 variants / `3063707` i18n / `2d63b98` locale-aware App.name top-bar polish
+  - Reuses PostCard / PostComposer / listPets / listFeedPosts / useFamily；stories pet tap remains no-op future hook per spec
+  - 👉 **下個動作（user）**：production 實機驗 4 variants（family+posts / 0 pets / personal / no posts）+ 點 user avatar 開 composer + stories ring 狀態
+- **開銷完全搬進寵物頁** — [`docs/features/expenses-into-pets-page.md`](../features/expenses-into-pets-page.md) ✅ **SHIPPED 2026-05-26**（Feature Builder 5 commits，無 functions / rules / schema 改動）
+  - `16f23d9` pet-expenses-body category filter / `0d672d3` FAB direct-to-camera + ReceiptScanner `initialFile/defaultPetId/onManualEntry` / `261d588` `/app/expenses` redirect / `5726640` remove settings quick-action / `22bee39` drop expenses nav + delete dead overview section
+  - 產品決策已落地：開銷 IA 完全折進 pets「開銷」tab；per-pet only；舊 `/app/expenses` redirect 到 `/app/pets`
+  - 👉 **下個動作（user）**：iOS PWA 真機驗 FAB → camera → AI scan → save → 該 pet list 更新；manual entry fallback；multi-pet 切換隔離；`/app/expenses` redirect
 - **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
   - `b1c925e` photo-lightbox 元件（carousel + swipe + 三招關閉 + a11y）/ `bc7b6cf` post-card 接 / `97df9b5` walk-row + walk-tracking-view done screen 接 / `69160c4` i18n keys / `9da6883` UI/UX SHIPPED record
   - 👉 **下個動作（user）**：feed post 點 photo / walks recent 點 photo / done screen 點 photo — 3 處驗收 lightbox 開
+- **照片圖庫 + 照片儲存** — [`docs/features/photo-gallery-downloads.md`](../features/photo-gallery-downloads.md) ✅ **SHIPPED 2026-05-27**（Feature Builder `e76f97c`）
+  - 新增 `/app/photos`「我的照片」集中圖庫；聚合自己的 post / walk / pet avatar / existing receiptURL；點圖沿用 PhotoLightbox；支援單張、多張、一鍵儲存尚未下載
+  - `src/lib/photo-download.ts` 走 Web Share files 優先、desktop fallback Blob download；`users/{uid}/photoDownloadState/{assetId}` 記錄 downloaded state；nav + settings entry + i18n 已接
+  - 👉 **下個動作（user）**：production / iOS PWA 驗單張、多張、一鍵儲存未下載，刷新後 downloaded state 不再計入未下載
 
 ## Epic 4: 視覺重設計 — 芒果主題（user 2026-05-24 vision + 20 個答案）
 
@@ -144,7 +140,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 ### Option C: walks 延伸 follow-ups
 
 - 追蹤中 reload 恢復 tracking state
-- 歷史紀錄分頁查看更多（**Phase 1 v2「全部 →」link 目前無 href，配對這個 spec 才有意義**）
+- 獨立 walks history page（非必要；2026-05-28 已先把「全部」改成當頁互動展開完整列表）
 - Family mode 加總 walk 進度
 - ~~遛狗推播提醒「今天還沒遛」~~（Epic 5 A1 已 ship）
 
@@ -161,7 +157,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 - **breed/age/weight 自動計算 walk goal**（per-pet-walk-goal spec ship 後 follow-up，schema source: 'computed' 已預埋）
 - **餐廳照片 lightbox**（Photo Lightbox ship 後接 restaurants page，sharing same 元件）
 - Push throttle（A1 + A2 同晚雙推觀察後決定）
-- walks 頁「全部 →」link 對應的 walks history 頁（Phase 1 v2 留下的 UX gap — 純標籤無 href）
+- 獨立 walks history page（若未來需要搜尋/篩選/分頁再開；目前「全部」已可展開完整列表）
 - Dark mode follow-up（Epic 4 後評估）
 - 餐廳 Google Places 整合
 - 知識庫持續產出
@@ -171,9 +167,10 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 - Lighthouse Perf audit
 - 隱私 / 服務條款內容審查
 - 追蹤中 reload 恢復 tracking state
-- 歷史紀錄分頁查看更多
+- 歷史紀錄搜尋 / 篩選 / 分頁（當資料量大到當頁展開不夠用時再做）
 - Family mode 加總 walk 進度
 - Orphan walk photos GC
+- 照片圖庫批次 ZIP 下載（v1 後看使用量）
 
 ## 不做（拒絕清單）
 
@@ -196,6 +193,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 - ~~**Visual redesign 內加寵物 wiggling / wagging 動效**（2026-05-24 Q11 user 拿掉）~~ → **retract 2026-05-24 深夜**：v2 prototype 採用圈內限定走路動畫（dial 中心 232px 範圍內 6 個 keyframes），user OK；整頁 wiggle 仍 not-do，但限定區域 walking dog 解禁（已 ship 在 `walks-pet-walking.tsx`）
 - **Visual redesign 內做 dark mode 第一輪**（2026-05-24 Q18 user 延後）
 - **Visual redesign 內加 mascot 芒果角色 / page transition / Material ripple / Google Font / animation library**（2026-05-24 Q9/12/13/15 排除）
+- 照片圖庫 v1 自動無提示寫入 iOS Photos / Android MediaStore（Web/PWA 不允許；只能由 user 透過 share sheet 或 browser download 明確儲存）
 
 ## 北極星指標
 

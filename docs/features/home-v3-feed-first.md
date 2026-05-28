@@ -1,11 +1,29 @@
 # /app 首頁 v3 — Feed-first + Instagram Stories pets bar (Phase 3 part 1)
 
-狀態：**GO**（user 2026-05-26 早上 prototype review 後 3 decisions confirmed）
+狀態：**SHIPPED 2026-05-26**（UI/UX session 6 commits + 1 locale polish；見 SHIPPED bookkeeping）
 建立日期：2026-05-26 早上
-最後更新：2026-05-26 早上
+最後更新：2026-05-28 PM status sync
 規格作者：PM session @ `ece6c4c`
 角色：**UI/UX**（整 stack — 元件設計 + 寫 src/ + 自驗 + per-phase commit + ship）
 工作量：**M**（home page 全頁重建 + 新 stories bar 元件 + 不影響其他頁）
+
+## SHIPPED bookkeeping
+
+| Commit | What |
+|---|---|
+| `38d847c` | StoriesBar + YourStoryAvatar + PetStoryAvatar + `useTodayWalkStatus`，以 daily walk status 驅動 pet ring。 |
+| `2428507` | HomeTopBar compact + FeedSectionHeader + HomeEmptyState + NoPostsHint。 |
+| `e13812a` | InviteFamilyCard for personal-mode upsell。 |
+| `fdd567a` | `/app` page integration：stories + feed-first + 4 variants。 |
+| `3063707` | `Home.*` i18n keys for zh-TW + en。 |
+| `2d63b98` | Home top-bar brand title 改用 locale-aware `App.name`。 |
+
+### 後續驗證 / 觀察
+
+- Production iPhone / PWA 驗 4 variants：family+posts、0 pets、personal、no posts。
+- 點 Your story avatar 開 PostComposer。
+- Pet story ring 顯示 pending / done / tracking 狀態。
+- Pet avatar tap 保持 no-op + aria future hook。
 
 ## 背景
 
@@ -186,7 +204,7 @@ BottomNav (active = 'home' tab[0])
 - **per-pet-walk-goal.md (SHIPPED)**：StoriesBar 算 today walk status 用 `getPetWalkGoalMinutes(pet)`
 - **family-leaderboard-realtime.md (SHIPPED)**：無直接關聯但同 family aware
 - **reminders-to-pets-page.md (D2)**：本 spec 沿用 D2「home 顯示 latest 10 posts + 查看更多 CTA → /app/feed」結構
-- **expenses-into-pets-page.md (GO)**：home 不顯示 expenses entry（per IA 折到 pets）
+- **expenses-into-pets-page.md (SHIPPED)**：home 不顯示 expenses entry（per IA 折到 pets）
 - **既有 PostCard / PostComposer**：本 spec reuse 不動
 
 ## PM 觀察

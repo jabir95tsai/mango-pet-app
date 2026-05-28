@@ -1,8 +1,8 @@
 # Walks page v2 — 全頁結構重建（Phase 1 v2）
 
-狀態：**GO**（user 2026-05-24 深夜 prototype review 後 3 個 decisions confirmed；workflow 改 UI/UX 直接 coding，不走 Claude Design 中介）
+狀態：**SHIPPED 2026-05-25**（Phase 1 v2；元件 `c98c939` + page `984be5b` + i18n `110601e` + SHIPPED record `33fef7b`；2026-05-28 follow-up `d633d3d` 讓 recent「全部」可互動並顯示遛狗人）
 建立日期：2026-05-24
-最後更新：2026-05-24
+最後更新：2026-05-28 PM status sync
 規格作者：PM session @ `134016f`
 角色：**UI/UX**（整 stack — 元件設計 + 寫 src/ + 自驗 + per-phase commit + ship）
 工作量：**M**（整頁結構重建，但不影響 walks logic / tracking flow / done screen）
