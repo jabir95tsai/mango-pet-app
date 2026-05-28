@@ -401,6 +401,8 @@
       "weekLabel": "本週",
       "recentTitle": "最近紀錄",
       "viewAll": "全部",
+      "showRecent": "收合",
+      "walkedBy": "遛狗人：{name}",
       "walkAgain": "再遛一次",
       "petPicker": {
         "manageLink": "管理寵物",

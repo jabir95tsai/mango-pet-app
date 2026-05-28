@@ -11,6 +11,7 @@ import {
   serverTimestamp,
   setDoc,
   Timestamp,
+  type QueryConstraint,
   where,
   writeBatch,
 } from "firebase/firestore";
@@ -31,6 +32,13 @@ function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(obj).filter(([, v]) => v !== undefined && v !== ""),
   ) as Partial<T>;
+}
+
+function withOptionalLimit(
+  constraints: QueryConstraint[],
+  max: number | null,
+): QueryConstraint[] {
+  return max === null ? constraints : [...constraints, fsLimit(max)];
 }
 
 export type CreateWalkArgs = WalkInput & {
@@ -106,13 +114,17 @@ export async function createWalk(args: CreateWalkArgs): Promise<Walk> {
   return { ...(snap.data() as Walk), walkId: docRef.id };
 }
 
-export async function listWalks(familyId: string, max = 50): Promise<Walk[]> {
+export async function listWalks(
+  familyId: string,
+  max: number | null = 50,
+): Promise<Walk[]> {
   const snap = await getDocs(
     query(
       walksCol(),
-      where("familyId", "==", familyId),
-      orderBy("startedAt", "desc"),
-      fsLimit(max),
+      ...withOptionalLimit(
+        [where("familyId", "==", familyId), orderBy("startedAt", "desc")],
+        max,
+      ),
     ),
   );
   return snap.docs.map((d) => ({ ...(d.data() as Walk), walkId: d.id }));
@@ -123,15 +135,19 @@ export async function listWalks(familyId: string, max = 50): Promise<Walk[]> {
  *  `(walkerUid ASC, familyId ASC, startedAt DESC)`. */
 export async function listPersonalWalks(
   walkerUid: string,
-  max = 50,
+  max: number | null = 50,
 ): Promise<Walk[]> {
   const snap = await getDocs(
     query(
       walksCol(),
-      where("walkerUid", "==", walkerUid),
-      where("familyId", "==", null),
-      orderBy("startedAt", "desc"),
-      fsLimit(max),
+      ...withOptionalLimit(
+        [
+          where("walkerUid", "==", walkerUid),
+          where("familyId", "==", null),
+          orderBy("startedAt", "desc"),
+        ],
+        max,
+      ),
     ),
   );
   return snap.docs.map((d) => ({ ...(d.data() as Walk), walkId: d.id }));

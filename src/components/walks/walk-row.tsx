@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Clock, Hand, Route, Star, Trash2 } from "lucide-react";
 import type { Timestamp } from "firebase/firestore";
 import type { Walk } from "@/lib/types";
+import { Avatar } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ type Props = {
 export function WalkRow({ walk, onDelete }: Props) {
   const locale = useLocale();
   const tC = useTranslations("Common");
+  const tP = useTranslations("Walks.page");
   const tPL = useTranslations("PhotoLightbox");
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
 
@@ -51,6 +53,7 @@ export function WalkRow({ walk, onDelete }: Props) {
   // Detailed timestamp for the title attribute — hover/long-press
   // reveals the exact moment without taking row space.
   const exact = format(start, "yyyy-MM-dd HH:mm", { locale: dateLocale });
+  const walkerName = walk.walkerName?.trim() || null;
 
   return (
     <article
@@ -101,6 +104,19 @@ export function WalkRow({ walk, onDelete }: Props) {
             <span className="tabular-nums">{walk.score.toFixed(1)}</span>
           </span>
         </div>
+        {walkerName && (
+          <div className="mt-1.5 inline-flex max-w-full items-center gap-1.5 text-[11.5px] font-medium text-mango-ink-3">
+            <Avatar
+              src={walk.walkerPhotoURL}
+              name={walkerName}
+              size={18}
+              className="ring-1 ring-mango-hairline"
+            />
+            <span className="truncate">
+              {tP("walkedBy", { name: walkerName })}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Photo thumbnail — only renders when the walk has photos.

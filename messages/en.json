@@ -401,6 +401,8 @@
       "weekLabel": "This week",
       "recentTitle": "Recent walks",
       "viewAll": "View all",
+      "showRecent": "Show recent",
+      "walkedBy": "Walker: {name}",
       "walkAgain": "Walk again",
       "petPicker": {
         "manageLink": "Manage pets",

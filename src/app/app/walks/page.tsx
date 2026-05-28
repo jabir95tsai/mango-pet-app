@@ -123,6 +123,7 @@ export default function WalksPage() {
   const [loading, setLoading] = useState(true);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [showAllWalks, setShowAllWalks] = useState(false);
   // Confetti decor — fires a brief celebration then auto-hides so it
   // doesn't camp at the top of the page forever (user feedback
   // 2026-05-25 "彩帶動畫完後不要留在頁面上").
@@ -180,7 +181,9 @@ export default function WalksPage() {
     try {
       const [petR, walkR] = await Promise.allSettled([
         family ? listPets(family.familyId) : listPersonalPets(user.uid),
-        family ? listWalks(family.familyId) : listPersonalWalks(user.uid),
+        family
+          ? listWalks(family.familyId, null)
+          : listPersonalWalks(user.uid, null),
       ]);
       setPets(petR.status === "fulfilled" ? petR.value : []);
       setWalks(walkR.status === "fulfilled" ? walkR.value : []);
@@ -407,6 +410,10 @@ export default function WalksPage() {
   const heroSub = petName
     ? tP("heroSub", { pet: petName, done: doneMin, streak: streakDays })
     : tP("heroSubNoPet", { done: doneMin, streak: streakDays });
+  const canToggleAllWalks = walks.length > RECENT_WALKS_LIMIT;
+  const visibleWalks = showAllWalks
+    ? walks
+    : walks.slice(0, RECENT_WALKS_LIMIT);
 
   return (
     <>
@@ -539,8 +546,9 @@ export default function WalksPage() {
         />
       </section>
 
-      {/* Recent walks — compact rows (max 5). "全部" → /app/walks history
-          page is OUT of scope for v2 (placeholder text only for now). */}
+      {/* Recent walks — compact rows by default; "全部" expands the
+          current list so family members can inspect older records in
+          the same flow. */}
       {loading ? (
         <p className="text-sm text-mango-ink-2">{tC("loading")}</p>
       ) : walks.length === 0 ? (
@@ -555,15 +563,19 @@ export default function WalksPage() {
             <h3 className="text-sm font-semibold text-mango-ink">
               {tP("recentTitle")}
             </h3>
-            {/* "View all" link — TODO: target the future history page
-                when one exists. For now it just labels intent so the
-                user understands the list is truncated. */}
-            <span className="text-xs font-semibold text-mango-brand-deep">
-              {tP("viewAll")}
-            </span>
+            {canToggleAllWalks && (
+              <button
+                type="button"
+                onClick={() => setShowAllWalks((v) => !v)}
+                aria-expanded={showAllWalks}
+                className="rounded-full px-2 py-1 text-xs font-semibold text-mango-brand-deep transition-colors hover:bg-mango-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+              >
+                {showAllWalks ? tP("showRecent") : tP("viewAll")}
+              </button>
+            )}
           </div>
           <div className="flex flex-col gap-2">
-            {walks.slice(0, RECENT_WALKS_LIMIT).map((w) => (
+            {visibleWalks.map((w) => (
               <WalkRow
                 key={w.walkId}
                 walk={w}
