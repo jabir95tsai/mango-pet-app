@@ -93,7 +93,7 @@ Repo: C:\Users\jabir\Hacker_J\mango_pet_app
 2. 確認 .gitignore 含 __pycache__/
 3. npx tsc --noEmit pass
 4. npm run build (or next build) pass — 確認 knowledge route conflict 消失
-5. 若有任何失敗，回報 PM / iOS Builder；不要順手 refactor
+5. 若有任何失敗，回報 PM / iOS PM；不要順手 refactor
 
 護欄
 - 純刪除 + .gitignore + build verify

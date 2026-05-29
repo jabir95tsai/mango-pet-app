@@ -1,6 +1,8 @@
 # Mango Pet 開發角色分工
 
-開新 Claude session 前，先決定**這個 session 是什麼角色**。把對應檔案塞進 context（複製貼上，或叫 Claude `read docs/team/{role}.md`）。**一個 session 只當一個角色**，跨角色的事丟到該角色的 backlog 等下次。
+開新 Claude / Codex session 前，先決定**這個 session 是哪個平台軌道 + 哪個角色**。把通用初始 prompt 和對應角色檔案塞進 context（複製貼上，或叫 agent `read docs/team/{role}.md`）。**一個 session 只當一個角色**，跨角色的事丟到該角色的 backlog 等下次。
+
+通用初始 prompt：[`session-start-prompt.md`](./session-start-prompt.md)
 
 ## 決策樹
 
@@ -26,15 +28,28 @@
 
 → **[PM / 策略](./pm.md)** — 排序、決定不做什麼、寫 spec 給其他角色
 
+> 我要決定 Web/PWA 與 iOS 兩邊是否要一起改、誰先做、如何保持同一個產品 →
+
+→ **[Cross-platform PM](./cross-platform-pm.md)** — 雙平台共同規格、parity、取捨與 handoff
+
+> 我要開始 iOS app / React Native / Expo / monorepo / TestFlight →
+
+→ 先選 iOS 五角色之一：
+- 沒寫好 phase / scope → **[iOS PM](./ios-pm.md)**
+- 要做 iOS 新 feature parity → **[iOS Feature Builder](./ios-feature-builder.md)**
+- 要調 iOS 原生畫面 / safe area / a11y → **[iOS UI/UX](./ios-ui-ux.md)**
+- iOS simulator / 真機 bug → **[iOS Bug Hunter](./ios-bug-hunter.md)**
+- Firebase native / APNs / shared data layer → **[iOS Backend](./ios-backend.md)**
+
 ## 5 個角色一覽
 
-| 角色 | 一句話 | 主要碰 | 主要不碰 |
+| 角色 | Web/PWA role file | iOS role file | 一句話 |
 |---|---|---|---|
-| **Bug Hunter** | 重現 + 最小修法 + 部署驗證 | 任何檔案（但只為修一個重現過的 bug） | 不順手 refactor、不加新功能、不調視覺 |
-| **UI/UX 工程師** | 視覺層級、響應式、a11y、動效 | `src/app/**/*.tsx`、`src/components/**`、`globals.css`、i18n | `src/lib/firebase/*`、`functions/`、rules |
-| **Feature Builder** | 端到端新功能 | 整 stack（type → firebase lib → page → component → rules → index） | 別 piggyback 修 unrelated bug |
-| **Backend / 資料** | schema、rules、indexes、functions、migration | `src/lib/firebase/*`、`functions/`、rules、indexes | UI、不亂改 API 簽名 |
-| **PM / 策略** | 規格、優先序、roadmap、不做清單 | `docs/*` | 所有 production code |
+| **PM / 策略** | [`pm.md`](./pm.md) / [`cross-platform-pm.md`](./cross-platform-pm.md) | [`ios-pm.md`](./ios-pm.md) / [`cross-platform-pm.md`](./cross-platform-pm.md) | 規格、優先序、roadmap、不做清單；Cross-platform PM 管雙平台共同真相 |
+| **Bug Hunter** | [`bug-hunter.md`](./bug-hunter.md) | [`ios-bug-hunter.md`](./ios-bug-hunter.md) | 重現 + 最小修法 + 回驗 |
+| **UI/UX 工程師** | [`ui-ux.md`](./ui-ux.md) | [`ios-ui-ux.md`](./ios-ui-ux.md) | 視覺層級、響應式 / safe area、a11y、動效 |
+| **Feature Builder** | [`feature-builder.md`](./feature-builder.md) | [`ios-feature-builder.md`](./ios-feature-builder.md) | 端到端新功能 / iOS parity feature |
+| **Backend / 資料** | [`backend.md`](./backend.md) | [`ios-backend.md`](./ios-backend.md) | schema、rules、indexes、functions、native Firebase / shared data |
 
 ## 為什麼這樣分
 
@@ -54,6 +69,8 @@
 - **Feature Builder** 做到一半發現 schema 不夠 → 暫停，回到當下 session 寫一段「需要 Backend 先做 X」，丟出去等 Backend 處理完再繼續
 - **Backend** 跑完 migration → 通知所有角色舊路徑可以清了
 - **PM** 是 fan-out 端點：所有「想做但沒人實作」最終都要回到 PM 排序
+- **Cross-platform PM** 管 Web/PWA 與 iOS 的共同規格、platform policy、parity checklist；不寫 code
+- **iOS Feature Builder / UI/UX / Bug Hunter** 需要 backend/schema change → 先寫 handoff 給 iOS Backend 或 Backend；需要產品取捨 → 回 iOS PM；看到 Web bug → 丟 Web Bug Hunter
 
 ## 並行模式（兩個 session 同時開的 git 紀律）
 
@@ -81,9 +98,11 @@ git fetch && git pull --rebase origin main && git push origin main
 |---|---|
 | **Backend / PM** + **UI/UX** | 一個動 `firestore/functions/lib/`、一個動 `app/components/`，撞檔案機率近 0 |
 | **Bug Hunter (前端 bug)** + **Backend** | 一個查 UI、一個整 schema |
-| **PM** + 任何一個其他角色 | PM 只動 `docs/`，零碰 production code |
+| **PM / Cross-platform PM** + 任何一個其他角色 | PM 只動 `docs/`，零碰 production code |
+| **iOS Feature Builder** + **Web UI/UX** | P0 後一個主要動 `apps/ios/`，一個動 web UI；但 shared packages 要先溝通 |
 | ❌ 兩邊都 **Bug Hunter** | 都可動任何檔案，撞 src/ 機率高 |
 | ❌ 兩邊都 **UI/UX** 或 **Feature Builder** | 同 lane 必撞 |
+| ❌ **iOS P0 monorepo migration** + 任何 production code session | P0 搬路徑期間會碰 repo shape，先暫停其他 code session |
 
 ### 規則 3（會省下半小時痛苦）：Session 開頭 pre-flight
 
@@ -108,7 +127,7 @@ git -C mango_pet_app worktree add ../mango_pet_app-codex main
 - Codex 開 `C:\Users\jabir\Hacker_J\mango_pet_app-codex\`
 - 兩邊獨立 working tree，共用 `.git`，push 時還是回到規則 1
 
-家庭 epic 收尾期不必，等下一階段（同時多功能開發）再啟動。
+iOS 長期開發期間建議啟動 worktree。尤其 P0 完成後，Web/PWA 維護和 iOS feature parity 會長期並行。
 
 ## 共用工具備忘
 
@@ -129,14 +148,33 @@ npx firebase deploy --only functions:函式名
 # URL: https://mango-pet--mango-pet-app.asia-east1.hosted.app
 ```
 
-## 第一次起跑：Bug Hunter
+## iOS 階段新增工具備忘
 
-[bug-hunter.md](./bug-hunter.md) 已準備好「起手式」清單：
+```bash
+# Firebase iOS app / config
+npx firebase apps:list IOS --project mango-pet-app
+npx firebase apps:create IOS "Mango Pet iOS" --bundle-id com.mangopet.app --project mango-pet-app
+npx firebase apps:sdkconfig IOS <APP_ID> --project mango-pet-app
 
-1. 驗證 Phase 3+4 已修 5 個 issue（寵物刪、提醒打勾、圓餅縫、遛狗按鈕、QR 加好友）
-2. Production 全頁掃（10 個路由 × desktop + mobile）
-3. Migration 健康度檢查
-4. 整理 backlog
-5. 修 3–5 個就停
+# Expo / EAS（P0 建立 apps/ios 後才用）
+npx expo start
+npx eas build --platform ios
+```
 
-開新 session 第一句說：「我是 Bug Hunter，幫我讀 `docs/team/bug-hunter.md` 然後跑起手式」即可。
+P0 monorepo migration 前，這些指令只是目標狀態；實際 script 以 iOS 五角色文件和當時 `package.json` 為準。
+
+## 第一次起跑：iOS 五角色
+
+接下來進 iOS app 開發時，用 [`session-start-prompt.md`](./session-start-prompt.md) 的 iOS P0 起手範例。
+
+第一個 iOS session 建議是 **Cross-platform PM** 或 **iOS PM**，不要直接大搬家，先做：
+
+1. 讀 `docs/features/ios-app-strategy.md`
+2. 檢查 repo shape / package scripts / App Hosting 設定
+3. 列 P0 monorepo migration 的最小安全步驟
+4. 確認 Web/PWA 回滾策略
+5. 產出 handoff 給 iOS Feature Builder / iOS Backend，再開始 `apps/ios` / `packages/*` foundation
+
+選擇方式：如果問題是「iOS 自己怎麼排 P0」用 iOS PM；如果問題是「Web/PWA 與 iOS 共同產品策略怎麼走」用 Cross-platform PM。
+
+舊的 Bug Hunter 起手式仍在 [`bug-hunter.md`](./bug-hunter.md)；需要 production bug sweep 時再開 Bug Hunter session。

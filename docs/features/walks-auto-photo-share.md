@@ -37,7 +37,7 @@ Bug Hunter session 2026-05-26 desktop Chrome MCP 驗：
 
 Polish 觀察（非 spec 範圍、寫進 backlog 等 PM 排序）：
 - 短 walk (< 1 min) 結束 prompt body 顯示「走了 0 分」— `Math.floor(seconds/60)` round down，可考慮 `Math.max(1, ...)` 或 round to nearest
-- Spec line 91 寫「Privacy 預設 family-only（對齊既有 post composer default）」與實際 composer default `public` 不符 — composer default 'public' 是 ui-polish-bundle spec 決定的 intentional behavior，不是 walks-auto-photo-share epic 的 regression；spec doc 描述需修
+- ~~Spec 內「Privacy 預設 family-only」與實際 composer default `public` 不符~~ → ✅ **2026-05-29 PM 已修**：上方「拍完進 composer」步驟改寫為「Privacy 預設 public（沿用既有 post composer default — 該 default 由 ui-polish-bundle-2026-05-25 決定）」。composer default 'public' 是 ui-polish-bundle 的 intentional behavior，非本 epic regression
 
 ### Edge cases handled
 
@@ -94,7 +94,7 @@ Polish 觀察（非 spec 範圍、寫進 backlog 等 PM 排序）：
 6. 拍完 → 進 post composer preview（複用 post-composer）：
    - Photo 預載
    - Caption 預填「Mango 開始遛狗 🐾」(可編)
-   - Privacy 預設 family-only（對齊既有 post composer default）
+   - Privacy 預設 public（沿用既有 post composer default — 該 default 由 ui-polish-bundle-2026-05-25 決定）
    - [發布] → 上傳 photo + create post doc with `walkId` → close composer
    - [取消] → discard photo（不上傳 Storage 省 quota）→ close composer
 7. Walk tracking 開始（既有 flow，不變）

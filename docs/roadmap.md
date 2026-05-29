@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-29（🍎 iOS app 戰略轉向 + **iOS pre-pivot audit sync** — PM re-audit 確認 pre-ios cleanup 原列 route conflict / dead code / junk 目前都不存在；補 `.gitignore` 防 `__pycache__/`；修正 stale READY-FOR-DEV headers）
+最後更新：2026-05-29（🍎 Cross-platform PM / iOS PM — **P0 monorepo migration spec READY-FOR-DEV**：[`ios-p0-monorepo-migration.md`](../features/ios-p0-monorepo-migration.md)；user 確認 package manager = **npm workspaces**（非原案 pnpm）；含 App Hosting rootDir 雙改點 + 回滾策略 + iOS Backend / Feature Builder handoff）｜先前：iOS 戰略轉向 + pre-pivot audit sync）
 
 ## 進行中
 
@@ -87,14 +87,17 @@
   - **🏁 Web-first PWA Phase 完成** — 15 個 SHIPPED features 全在 production
   - ⚠️ **依賴 pre-ios-cleanup 先完成**（清乾淨再 monorepo migration）
   - 4 decisions：D1 RN cross-platform 重寫 / D2 Apple Dev account 已買 / D3 並行 PWA + iOS / D4 feature parity 一次到位
-  - Tech stack PM 預設：Expo Managed + Expo Router + @react-native-firebase + TanStack Query + Zustand + EAS Build + Monorepo (pnpm)
+  - Tech stack PM 預設：Expo Managed + Expo Router + @react-native-firebase + TanStack Query + Zustand + EAS Build + Monorepo (**npm workspaces**)
   - 8 phases × 13 週 (~3 個月) solo 估計：P0 Foundation / P1 Walks / P2 Pets / P3 Home+Feed / P4 Leaderboard+Family / P5 Push+Settings / P6 Social / P7 Polish+App Store submit
   - Monorepo migration P0 first：apps/web (既有 Next.js) + apps/ios (新 Expo) + packages/{shared-types, shared-firebase, shared-business, shared-i18n, shared-tokens}
   - 並行維護策略：每 P-phase iOS 收尾 catch up 期間 web 新 feature
   - 工作量 **XL**，3-5 個月 conservative；solo founder vibe-coding 高度依賴 Cursor / Claude Code 加速
+  - **P0 已規格化** → [`ios-p0-monorepo-migration.md`](../features/ios-p0-monorepo-migration.md) READY-FOR-DEV（npm workspaces；apps/web + apps/ios + packages/*；App Hosting rootDir 雙改點；回滾策略；iOS Backend + Feature Builder handoff + 驗收清單）
   - 👉 **下個動作（user）**：
-    - Pre-work: 確認 Apple Developer Account 可進 + Firebase Console 加 iOS app 下載 `GoogleService-Info.plist`
-    - 開新 iOS Builder session 用 spec 末段 launch prompt 動工
+    - Pre-work: 確認 Apple Developer Account 可進 + （P0 spec 已含 Firebase iOS app 註冊指令，交 iOS Backend 執行）
+    - **開 iOS Backend session** 執行 P0 Step 1-6（migration 主導，全程在 `ios-p0-monorepo` branch，App Hosting branch build 全綠才 merge）
+    - 之後 **開 iOS Feature Builder session** 執行 P0 Step 7（apps/ios Expo scaffold）
+    - ⚠️ P0 期間暫停其他 production-code session（README 並行規則：P0 搬路徑會碰 repo shape）
 - **照片圖庫 + 照片儲存** — [`docs/features/photo-gallery-downloads.md`](../features/photo-gallery-downloads.md) ✅ **SHIPPED 2026-05-27**（Feature Builder `e76f97c`）
   - 新增 `/app/photos`「我的照片」集中圖庫；聚合自己的 post / walk / pet avatar / existing receiptURL；點圖沿用 PhotoLightbox；支援單張、多張、一鍵儲存尚未下載
   - `src/lib/photo-download.ts` 走 Web Share files 優先、desktop fallback Blob download；`users/{uid}/photoDownloadState/{assetId}` 記錄 downloaded state；nav + settings entry + i18n 已接

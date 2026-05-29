@@ -2,9 +2,9 @@
 
 狀態：**STRATEGY GO**（user 2026-05-28 4 個 strategic decisions confirmed）
 建立日期：2026-05-28
-最後更新：2026-05-28
+最後更新：2026-05-29
 規格作者：PM session @ `f5c1732`
-角色：**iOS Builder**（新 role — RN + Expo 整 stack；solo founder 自己跑 OR 開新 session）
+角色：**PM / 策略 + iOS 五角色**（Cross-platform PM / iOS PM / iOS Feature Builder / iOS UI/UX / iOS Backend / iOS Bug Hunter）
 工作量：**XL** — 3 個月（13 週）solo 估計；可能 5 個月 conservative
 
 ## User Vision
@@ -42,7 +42,7 @@ PM 不建議改 decisions（user 已 explicit），但會在 plan 內標注 risk
 | **Firebase SDK** | **`@react-native-firebase/*`** native modules | 原生 APNs push（vs FCM web 在 iOS 不完整）+ background FCM + native auth；替代 = Firebase JS SDK (bundle 大 / push 殘廢) |
 | **State** | **TanStack Query (server state) + Zustand (client state)** | 跟 Web app 同心智模型；輕量；替代 = Redux (重) / Context only (不夠) |
 | **Build / Deploy** | **EAS Build + EAS Submit** | Expo 官方雲端 build（不用 macOS local Xcode build）+ 自動 submit TestFlight；solo founder 不維護 CI/CD |
-| **Code sharing** | **Monorepo** (pnpm workspace) | `packages/shared` 含 types + schema + business logic helpers (`walk-goals.ts` 等)；web + ios import 同 package；替代 = git submodule (麻煩) / 兩 repo copy-paste (絕對不行) |
+| **Code sharing** | **Monorepo** (**npm workspaces** — user 2026-05-29 改) | `packages/shared` 含 types + schema + business logic helpers (`walk-goals.ts` 等)；web + ios import 同 package；**原案 pnpm，2026-05-29 user 確認改 npm workspaces**（沿用既有 `package-lock.json`、App Hosting build 風險最低，見 [`ios-p0-monorepo-migration.md`](./ios-p0-monorepo-migration.md)）；替代 = git submodule (麻煩) / 兩 repo copy-paste (絕對不行) |
 | **UI library** | **None — 自寫 mango palette components** | 已 ship 的 web mango design tokens 直接搬 (radius / spacing / colors)；不用 NativeBase / NativeWind 第三方避免限制；可考慮 NativeWind (Tailwind for RN) 若 user 想保留 Tailwind 寫法 |
 | **Image / Photo** | `expo-image-picker` + `expo-camera` | 既有 PWA web file input → RN 對應 native module |
 | **Maps / GPS** | `expo-location` + `react-native-maps` | 既有 PWA Geolocation API → native CoreLocation |
@@ -68,13 +68,13 @@ mango_pet_app/                  ← 既有 web repo 升級為 monorepo
 └── docs/                      ← 不動 (PM spec)
 ```
 
-**重要**：monorepo migration 是 **P0 第一步**，要小心不破現有 Web ship pipeline (App Hosting build path)。建議用 **pnpm workspace** + 維持 `apps/web` 為 default working dir，App Hosting build script 改指 `apps/web`。
+**重要**：monorepo migration 是 **P0 第一步**，要小心不破現有 Web ship pipeline (App Hosting build path)。用 **npm workspaces**（user 2026-05-29 決定，非原案 pnpm）+ 維持 `apps/web` 為 web app root，App Hosting `rootDir` + Console backend Root directory 改指 `apps/web`。可執行細化見 [`ios-p0-monorepo-migration.md`](./ios-p0-monorepo-migration.md)。
 
 ## 📅 Phase breakdown（13 週估計，敏捷可調）
 
 ### P0 — Foundation (2 週)
 
-- [ ] Monorepo migration (pnpm workspace + apps/web + apps/ios + packages/*)
+- [ ] Monorepo migration (npm workspaces + apps/web + apps/ios + packages/*)
 - [ ] App Hosting build pipeline 改指 apps/web — 確保 web ship 不破
 - [ ] Expo init in apps/ios (Expo Managed + Expo Router)
 - [ ] Firebase init in apps/ios (@react-native-firebase + same project config)
@@ -233,21 +233,34 @@ P0 開始前：
 
 ## 🤖 開新 session 建議
 
-PM 建議開 **新固定 role: iOS Builder** session（區隔 web Feature Builder）：
+PM 建議 iOS 也維持 **5 個固定角色**，不要用單一萬能角色：
 
-- 該 session focus 在 apps/ios/ 內 work
-- 沿用同一個 monorepo + git repo
-- Per-phase ship + commit + PR
-- 跟 web Feature Builder 不衝突（兩 apps 並行）
+- **iOS PM**：P0-P7 phase spec、parity checklist、App Store / TestFlight scope
+- **Cross-platform PM**：Web/PWA 與 iOS 共同規格、platform policy、catch-up sprint、誰先 ship 的取捨
+- **iOS Feature Builder**：apps/ios feature parity 端到端實作
+- **iOS UI/UX**：React Native 原生畫面、safe area、a11y、互動 polish
+- **iOS Backend**：native Firebase、shared packages、APNs/FCM、schema 相容
+- **iOS Bug Hunter**：simulator / 真機 bug 重現、最小修法、回驗
 
-## Launch prompt（user 開 iOS Builder session copy 用）
+每個 session 仍固定一個角色；沿用同一個 monorepo + git repo；per-phase ship + commit + PR。
+
+## Launch prompt（user 開 iOS session copy 用）
+
+Canonical 版本已移到 [`docs/team/session-start-prompt.md`](../team/session-start-prompt.md)，iOS 五角色邊界已整理到 `docs/team/ios-*.md`。
+
+以下保留本 spec 專用的 P0 精簡起手版：
 
 ```
-本 session 固定角色：iOS Builder — 用 React Native + Expo 跨平台重寫 Mango Pet 為 iOS app，
-feature parity with web PWA，並行維護 web。
+本 session 固定平台：Cross-platform
+本 session 固定角色：PM / 策略
+
+目標：規劃 React Native + Expo iOS app P0 Foundation 對 Web/PWA 的影響，定義 feature parity policy，並產出 iOS PM / iOS Backend / iOS Feature Builder handoff。
 Repo: C:\Users\jabir\Hacker_J\mango_pet_app (即將 migrate to monorepo)
 
 ⚠️ 必讀
+- docs/team/session-start-prompt.md（通用初始 prompt）
+- docs/team/README.md（5 roles × Web/iOS tracks）
+- docs/team/cross-platform-pm.md（本次角色邊界）
 - Spec: docs/features/ios-app-strategy.md（PM 寫好，含 4 strategic decisions + tech stack + 8 phase plan + risks）
 - 既有 web app: src/ (含 14+ SHIPPED features)；目標把這些 features 100% port 到 RN
 - 既有 Firebase backend: functions/src/index.ts + firestore.rules — 100% reuse (iOS 接同 backend)
@@ -255,23 +268,14 @@ Repo: C:\Users\jabir\Hacker_J\mango_pet_app (即將 migrate to monorepo)
 - 既有 design tokens: src/app/globals.css mango palette — 即將抽到 packages/shared-tokens
 - 必讀 AGENTS.md：Next.js 16 + Tailwind v4 (web side 不能破)
 
-護欄
-- 動 apps/ios/* (新檔)、packages/* (新檔) OK
-- 動 pnpm-workspace.yaml + 根 package.json OK
-- 動 apphosting.yaml build script 指 apps/web OK（App Hosting build pipeline 不能破）
-- 不動 functions/src/* (backend 共用)
-- 不動 firestore.rules / indexes (共用)
-- 不動 既有 src/* until monorepo migration complete (P0 step 1 才搬到 apps/web/)
-- 不引入新 Firebase project (用既有 mango-pet-app)
-
-P0 第一週優先順序
-1. pnpm workspace init + monorepo 結構
-2. 把 src/ 搬到 apps/web/src/ + 確認 npm run dev 仍 work
-3. App Hosting build pipeline 改指 apps/web/ + push branch + verify build 全綠
-4. Expo init in apps/ios + Expo Router setup
-5. Firebase iOS app 在 Firebase Console 加 + 下載 GoogleService-Info.plist
-6. @react-native-firebase 安裝 + auth + firestore + storage + messaging
-7. BottomNav 5-tab skeleton + Mango palette tokens 共用
+本 session 不直接搬檔。先產出：
+1. P0 monorepo migration spec
+2. Web/PWA build 不破的回滾策略
+3. Web/PWA 影響與 freeze / catch-up policy
+4. iOS PM handoff
+5. iOS Feature Builder handoff
+6. iOS Backend handoff
+7. P0 驗收清單
 
 每 P-phase 完成必做
 - Real iOS simulator 跑全 flow 過
