@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-28（🍎 **iOS app 戰略轉向** — Web-first PWA Phase 完成 15 個 SHIPPED features；user 拍板 React Native + Expo + Feature parity + 並行 PWA；新 spec [`ios-app-strategy.md`](../features/ios-app-strategy.md) 13 週 plan ready 等動工）
+最後更新：2026-05-28（🍎 iOS app 戰略轉向 + **iOS pre-pivot audit 完成** — PM + agent 逐條驗 15 SHIPPED specs vs code；發現 1 route conflict (本地) + 2 dead code + 1 junk + 5 doc drift；doc drift PM 已修，src/ 清理寫成 [`pre-ios-cleanup.md`](../features/pre-ios-cleanup.md) 給 Bug Hunter）
 
 ## 進行中
 
@@ -77,8 +77,16 @@
 - **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
   - `b1c925e` photo-lightbox 元件（carousel + swipe + 三招關閉 + a11y）/ `bc7b6cf` post-card 接 / `97df9b5` walk-row + walk-tracking-view done screen 接 / `69160c4` i18n keys / `9da6883` UI/UX SHIPPED record
   - 👉 **下個動作（user）**：feed post 點 photo / walks recent 點 photo / done screen 點 photo — 3 處驗收 lightbox 開
+- **🧹 Pre-iOS Cleanup（audit 清理）** — [`docs/features/pre-ios-cleanup.md`](../features/pre-ios-cleanup.md) **GO**（PM 2026-05-28 audit 後開，monorepo migration 前置）
+  - PM + general-purpose agent 逐條驗 15 SHIPPED specs vs git + code
+  - 發現：1 route conflict（knowledge `[id]` local untracked 孤兒 break 本地 build，production 乾淨）+ 2 dead code（expense-summary / expenses-overview-section，0 import）+ 1 junk（walks/__pycache__）+ 5 doc drift
+  - Doc drift PM 已修（reminders-to-pets-page / visual-redesign-mango / bug-receipt-ai-missing / expenses-into-pets-page header）
+  - src/ 刪除 + build verify 給 Bug Hunter（純刪除，不改 live feature）
+  - ⚠️ **iOS P0 monorepo migration 前必做** — 否則把垃圾帶進新結構
+  - 👉 **下個動作（user）**：開 Bug Hunter session 用 spec 末段 launch prompt 清理
 - **🍎 iOS app 戰略 — React Native + Expo + Feature parity 並行 PWA** — [`docs/features/ios-app-strategy.md`](../features/ios-app-strategy.md) **STRATEGY GO**（user 2026-05-28 4 個 strategic decisions confirmed）
   - **🏁 Web-first PWA Phase 完成** — 15 個 SHIPPED features 全在 production
+  - ⚠️ **依賴 pre-ios-cleanup 先完成**（清乾淨再 monorepo migration）
   - 4 decisions：D1 RN cross-platform 重寫 / D2 Apple Dev account 已買 / D3 並行 PWA + iOS / D4 feature parity 一次到位
   - Tech stack PM 預設：Expo Managed + Expo Router + @react-native-firebase + TanStack Query + Zustand + EAS Build + Monorepo (pnpm)
   - 8 phases × 13 週 (~3 個月) solo 估計：P0 Foundation / P1 Walks / P2 Pets / P3 Home+Feed / P4 Leaderboard+Family / P5 Push+Settings / P6 Social / P7 Polish+App Store submit

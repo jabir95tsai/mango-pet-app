@@ -1,6 +1,8 @@
 # 🐛 拍收據 AI 自動辨識功能不見了（regression hunt）
 
-狀態：**✅ SHIPPED 2026-05-26**（Bug Hunter session — fix #1 settings quick-action ship `e972cf8`）
+狀態：**✅ SHIPPED 2026-05-26 → 🔄 fix #1 已 OBSOLETED 2026-05-26**（Bug Hunter fix #1 `e972cf8` 為 24h stopgap，已被 expenses-into-pets-page.md 的 `5726640` revert；root cause 真正修在「開銷 IA 完全折進 pets + FAB camera-first」long-term 正解）
+
+> ⚠️ PM audit 2026-05-28：本 bug 的 fix #1（settings quick-action）已不存在於 code（被 expenses migration 移除）。Bug 本身（拍收據找不到入口）已由 expenses-into-pets-page 永久解決。本 spec 保留供 audit trail；不需再動。
 建立日期：2026-05-25 傍晚
 最後更新：2026-05-26
 規格作者：PM session @ `efa52a1`
