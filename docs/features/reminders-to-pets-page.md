@@ -2,9 +2,9 @@
 
 > 檔名 `reminders-to-pets-page.md` 是歷史殘留 — 2026-05-24 user 加 2 個需求後 PM 擴展為「Home + Pets IA 重組」epic-level spec，但保留檔名以維持 roadmap link 連續性。
 
-狀態：READY-FOR-DEV（user 2026-05-24 主動要 3 件重組；PM 預設 + 2 個開放問題待 user 決定）
+狀態：**SUPERSEDED / SPLIT-SHIPPED 2026-05-29 audit**（原 IA 重組被拆到 pets-v2、home-v3、expenses-into-pets、nav reshuffle 等 spec；本檔保留歷史脈絡，不再給 Feature Builder 直接動工）
 建立日期：2026-05-24
-最後更新：2026-05-24
+最後更新：2026-05-29 PM audit sync
 規格作者：PM session
 角色：UI/UX 工程師 — 動 `src/app/app/page.tsx`、`src/app/app/pets/page.tsx`、`src/app/app/pets/[petId]/page.tsx`、`src/components/nav/app-nav.tsx`、`messages/*`；**不碰** firebase lib / functions / schema / rules
 

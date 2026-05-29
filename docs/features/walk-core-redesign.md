@@ -1,8 +1,8 @@
 # 遛狗主頁 + 追蹤畫面核心重設計
 
-狀態：READY-FOR-DEV（user 2026-05-23 主動提供完整 vision + 5 decisions；PM 補 edge cases）
+狀態：**SHIPPED 2026-05-24**（walk-core v1：`2355c09` + `229361b` + `1cf48cc` + `54ee219` + `63c397c`；SHIPPED record `822ce69`）
 建立日期：2026-05-23
-最後更新：2026-05-23
+最後更新：2026-05-29 PM audit sync
 規格作者：PM session @ 331e125（基於 user 2026-05-23 vision message）
 角色：UI/UX 工程師（主）— 可動 `src/app/app/walks/*`、`src/components/walks/*`、`src/lib/walk-tracking.ts`、`messages/*`；**不碰** `src/lib/firebase/*` / `functions/` / `firestore.rules` / `firestore.indexes.json` / schema
 

@@ -1,8 +1,8 @@
 # 家庭 leaderboard 切換
 
-狀態：READY-FOR-DEV（2026-05-23 PM update — 加 personal-mode 行為 + Phase 0 prereq）
+狀態：**SHIPPED 2026-05-23**（Phase 0 `32c4feb` + scope/personal-mode UI `37ac063`；realtime follow-up later shipped in `family-leaderboard-realtime.md`）
 建立日期：2026-05-22
-最後更新：2026-05-23
+最後更新：2026-05-29 PM audit sync
 規格作者：PM session @ 3298731；2026-05-23 update by PM @ 7f8c97d
 角色：Feature Builder（整 stack — 含 functions/src/index.ts 的 prereq fix）
 

@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-28（🍎 iOS app 戰略轉向 + **iOS pre-pivot audit 完成** — PM + agent 逐條驗 15 SHIPPED specs vs code；發現 1 route conflict (本地) + 2 dead code + 1 junk + 5 doc drift；doc drift PM 已修，src/ 清理寫成 [`pre-ios-cleanup.md`](../features/pre-ios-cleanup.md) 給 Bug Hunter）
+最後更新：2026-05-29（🍎 iOS app 戰略轉向 + **iOS pre-pivot audit sync** — PM re-audit 確認 pre-ios cleanup 原列 route conflict / dead code / junk 目前都不存在；補 `.gitignore` 防 `__pycache__/`；修正 stale READY-FOR-DEV headers）
 
 ## 進行中
 
@@ -64,7 +64,7 @@
   - Bug Hunter 選 fix #1（最小，不破 IA）— PM #2 前提不成立：`ExpensesOverviewSection` 是 dead code（grep 整 codebase 從未 import，只 self-reference）
   - Fix：settings 帳號區下方加 Camera quick-action card → `/app/expenses?action=scan` + useSearchParams ref-guarded useEffect 自動開 ReceiptScanner
   - User 路徑：**4 tap → 2 tap** ✅
-  - 已知 follow-up：`ExpensesOverviewSection` 死碼決定 (a) 刪 or (b) 終於 mount 到 pets page（PM 排序）
+  - 2026-05-29 audit sync：`ExpensesOverviewSection` 已刪（`22bee39`），此 bug spec 保留為 stopgap 事故紀錄；long-term 正解已由 expenses-into-pets-page ship
   - 👉 **下個動作（user）**：實機驗證 2-tap path（settings → 拍收據 card → scanner 自動開）
 - **/app 首頁 v3 — Feed-first + IG Stories pets bar** — [`docs/features/home-v3-feed-first.md`](../features/home-v3-feed-first.md) ✅ **SHIPPED 2026-05-26**（UI/UX session 6 commits + 1 locale polish）
   - `38d847c` stories bar + your-story/pet-story avatars + `useTodayWalkStatus` / `2428507` top bar + feed header + empty/no-posts states / `e13812a` invite-family card / `fdd567a` page integration + 4 variants / `3063707` i18n / `2d63b98` locale-aware App.name top-bar polish
@@ -77,13 +77,12 @@
 - **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
   - `b1c925e` photo-lightbox 元件（carousel + swipe + 三招關閉 + a11y）/ `bc7b6cf` post-card 接 / `97df9b5` walk-row + walk-tracking-view done screen 接 / `69160c4` i18n keys / `9da6883` UI/UX SHIPPED record
   - 👉 **下個動作（user）**：feed post 點 photo / walks recent 點 photo / done screen 點 photo — 3 處驗收 lightbox 開
-- **🧹 Pre-iOS Cleanup（audit 清理）** — [`docs/features/pre-ios-cleanup.md`](../features/pre-ios-cleanup.md) **GO**（PM 2026-05-28 audit 後開，monorepo migration 前置）
+- **🧹 Pre-iOS Cleanup（audit 清理）** — [`docs/features/pre-ios-cleanup.md`](../features/pre-ios-cleanup.md) ✅ **RESOLVED 2026-05-29 audit sync**
   - PM + general-purpose agent 逐條驗 15 SHIPPED specs vs git + code
-  - 發現：1 route conflict（knowledge `[id]` local untracked 孤兒 break 本地 build，production 乾淨）+ 2 dead code（expense-summary / expenses-overview-section，0 import）+ 1 junk（walks/__pycache__）+ 5 doc drift
-  - Doc drift PM 已修（reminders-to-pets-page / visual-redesign-mango / bug-receipt-ai-missing / expenses-into-pets-page header）
-  - src/ 刪除 + build verify 給 Bug Hunter（純刪除，不改 live feature）
-  - ⚠️ **iOS P0 monorepo migration 前必做** — 否則把垃圾帶進新結構
-  - 👉 **下個動作（user）**：開 Bug Hunter session 用 spec 末段 launch prompt 清理
+  - 2026-05-29 re-audit：原列 knowledge `[id]` orphan / walks `__pycache__` / expense-summary / expenses-overview-section 都不存在；`expense-summary` 刪除 commit `261d588`、`expenses-overview-section` 刪除 commit `22bee39`
+  - 已補 `.gitignore` `__pycache__/`；doc drift headers 已修（walk-core / family-leaderboard / reminders-to-pets-page / visual-redesign-mango / pre-ios-cleanup）
+  - 驗證：`npx tsc --noEmit` pass；`npm run build` pass（first sandbox run failed on Google Fonts network, network-enabled retry passed）
+  - 👉 **下個動作（user）**：可進 iOS P0 monorepo migration
 - **🍎 iOS app 戰略 — React Native + Expo + Feature parity 並行 PWA** — [`docs/features/ios-app-strategy.md`](../features/ios-app-strategy.md) **STRATEGY GO**（user 2026-05-28 4 個 strategic decisions confirmed）
   - **🏁 Web-first PWA Phase 完成** — 15 個 SHIPPED features 全在 production
   - ⚠️ **依賴 pre-ios-cleanup 先完成**（清乾淨再 monorepo migration）

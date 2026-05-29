@@ -34,7 +34,7 @@ P3 = 也許永遠不做的「想法」。
 
 _2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 2 條 deviation。2026-05-23 Bug Hunter session 加 1 條 push UX。2026-05-25 Feature Builder 加 1 條家庭邀請連結 follow-up。2026-05-26 Bug Hunter session 加 2 條 walks-auto-photo-share polish 觀察 + 1 條 expenses-overview dead code。_
 
-### `ExpensesOverviewSection` 元件是 dead code（從未被任何頁 import）
+### `ExpensesOverviewSection` 元件是 dead code（從未被任何頁 import） — ✅ RESOLVED
 - **發現於**：2026-05-26、Bug Hunter session（修「拍收據不見了」bug 時 grep 確認）
 - **類型**：技術債 / 死碼
 - **重現 / 觀察**：`src/components/expenses/expenses-overview-section.tsx` 約 175 行（含註解寫「Lives at the top of /app/pets per spec docs/features/reminders-to-pets-page.md (Home + Pets IA reorg, B section)」）— **全 src/ grep `ExpensesOverviewSection` 跟 `expenses-overview-section` 只 self-reference**，沒被 `src/app/app/pets/page.tsx` 或任何 page import / mount。所以 pets page 對 expenses 完全零提及。原本 PM 在 bug-receipt-ai-missing 預設 fix #2「pets 開銷 tab 加 FAB」前提就是這個 overview 存在 — 實際前提不在。
@@ -42,6 +42,7 @@ _2026-05-22 PM session 已清空。2026-05-23 Feature Builder #2 ship 後新增 
 - **改到的檔案**：(a) 直接刪 `src/components/expenses/expenses-overview-section.tsx`；(b) `src/app/app/pets/page.tsx` 加 import + `<ExpensesOverviewSection pets={pets} />` 在 spec 指定位置
 - **優先級提示**：P3（不影響使用、無 visible bug）
 - **PM 排序提示**：下次 PM session 對齊 reminders-to-pets-page.md spec B section 是否仍想做；若否就刪
+- **2026-05-29 PM audit sync**：已刪除。`src/components/expenses/expenses-overview-section.tsx` 不存在，`git log --diff-filter=D` 顯示刪除 commit `22bee39`。保留此條目作為歷史 audit trail，不再需要 PM 排序。
 
 ### walks-auto-photo-share：短 walk (< 1 min) 結束 prompt body 顯示「走了 0 分」
 - **發現於**：2026-05-26、Bug Hunter session（驗 walks-auto-photo-share 5-commit epic 時，跑 0.4 分鐘 test walk 觸發到）

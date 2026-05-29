@@ -1,8 +1,8 @@
 # 視覺重設計 — 芒果主題（Mango Visual Redesign）
 
-狀態：READY-FOR-DEV（user 2026-05-24 提供 ZIP mockup + 「喜歡 Variant B」+「底部中間凸顯」→ PM v2 重寫；Claude Design 2026-05-24 產 Phase 0+0.5 patch in `patches/` 含 6 個 PM-accepted resolutions）
+狀態：**PARTIAL SHIPPED / SUPERSEDED BY PHASE SPECS**（Phase 0/0.5/1/1v2/2v2 已 ship；後續頁面以 `walks-v2-rebuild.md`、`pets-v2-rebuild.md`、`home-v3-feed-first.md` 等 granular specs 為準）
 建立日期：2026-05-24
-最後更新：2026-05-24（v2.1 — Claude Design adapt notes 加進 spec 反映 6 resolutions）
+最後更新：2026-05-29 PM audit sync（v2.1 仍保留 Claude Design adapt notes；此檔不再作為單一 READY-FOR-DEV launch spec）
 
 ## ⚠️ Claude Design 2026-05-24 的 6 個 resolutions（PM 全接受）
 
