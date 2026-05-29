@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-28（PM 狀態同步：Home v3、開銷 IA migration、照片圖庫 + 照片儲存已 SHIPPED；遛狗紀錄「全部」已改為互動展開按鈕並顯示遛狗人）
+最後更新：2026-05-28（🍎 **iOS app 戰略轉向** — Web-first PWA Phase 完成 15 個 SHIPPED features；user 拍板 React Native + Expo + Feature parity + 並行 PWA；新 spec [`ios-app-strategy.md`](../features/ios-app-strategy.md) 13 週 plan ready 等動工）
 
 ## 進行中
 
@@ -77,6 +77,17 @@
 - **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
   - `b1c925e` photo-lightbox 元件（carousel + swipe + 三招關閉 + a11y）/ `bc7b6cf` post-card 接 / `97df9b5` walk-row + walk-tracking-view done screen 接 / `69160c4` i18n keys / `9da6883` UI/UX SHIPPED record
   - 👉 **下個動作（user）**：feed post 點 photo / walks recent 點 photo / done screen 點 photo — 3 處驗收 lightbox 開
+- **🍎 iOS app 戰略 — React Native + Expo + Feature parity 並行 PWA** — [`docs/features/ios-app-strategy.md`](../features/ios-app-strategy.md) **STRATEGY GO**（user 2026-05-28 4 個 strategic decisions confirmed）
+  - **🏁 Web-first PWA Phase 完成** — 15 個 SHIPPED features 全在 production
+  - 4 decisions：D1 RN cross-platform 重寫 / D2 Apple Dev account 已買 / D3 並行 PWA + iOS / D4 feature parity 一次到位
+  - Tech stack PM 預設：Expo Managed + Expo Router + @react-native-firebase + TanStack Query + Zustand + EAS Build + Monorepo (pnpm)
+  - 8 phases × 13 週 (~3 個月) solo 估計：P0 Foundation / P1 Walks / P2 Pets / P3 Home+Feed / P4 Leaderboard+Family / P5 Push+Settings / P6 Social / P7 Polish+App Store submit
+  - Monorepo migration P0 first：apps/web (既有 Next.js) + apps/ios (新 Expo) + packages/{shared-types, shared-firebase, shared-business, shared-i18n, shared-tokens}
+  - 並行維護策略：每 P-phase iOS 收尾 catch up 期間 web 新 feature
+  - 工作量 **XL**，3-5 個月 conservative；solo founder vibe-coding 高度依賴 Cursor / Claude Code 加速
+  - 👉 **下個動作（user）**：
+    - Pre-work: 確認 Apple Developer Account 可進 + Firebase Console 加 iOS app 下載 `GoogleService-Info.plist`
+    - 開新 iOS Builder session 用 spec 末段 launch prompt 動工
 - **照片圖庫 + 照片儲存** — [`docs/features/photo-gallery-downloads.md`](../features/photo-gallery-downloads.md) ✅ **SHIPPED 2026-05-27**（Feature Builder `e76f97c`）
   - 新增 `/app/photos`「我的照片」集中圖庫；聚合自己的 post / walk / pet avatar / existing receiptURL；點圖沿用 PhotoLightbox；支援單張、多張、一鍵儲存尚未下載
   - `src/lib/photo-download.ts` 走 Web Share files 優先、desktop fallback Blob download；`users/{uid}/photoDownloadState/{assetId}` 記錄 downloaded state；nav + settings entry + i18n 已接
