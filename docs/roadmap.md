@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-29（🍎 Cross-platform PM — **iOS parity checklist + Web/PWA 並行 policy 落地**：[`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（web 全 20 路由 → P0–P7 對齊;抓出餐廳/知識庫/照片圖庫 3 個 phase plan gap + 5 open questions）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（P0 hard freeze / P1–P7 parallel guarded + catch-up 節奏）｜先前：P0 monorepo migration spec READY-FOR-DEV + npm workspaces + iOS 五角色結構落地）
+最後更新：2026-05-30（🍎 Cross-platform PM — **iOS parity 5 open questions 拍板**：餐廳/知識庫 deferred-v1、照片圖庫排 P3、**背景 GPS 升 P1 committed**、D4 收斂為核心 parity + native 擴張;strategy + checklist 同步更新｜先前 05-29：**iOS parity checklist + Web/PWA 並行 policy 落地**：[`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（web 全 20 路由 → P0–P7 對齊;抓出餐廳/知識庫/照片圖庫 3 個 phase plan gap + 5 open questions）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（P0 hard freeze / P1–P7 parallel guarded + catch-up 節奏）｜先前：P0 monorepo migration spec READY-FOR-DEV + npm workspaces + iOS 五角色結構落地）
 
 ## 進行中
 
@@ -94,7 +94,7 @@
   - 工作量 **XL**，3-5 個月 conservative；solo founder vibe-coding 高度依賴 Cursor / Claude Code 加速
   - **P0 已規格化** → [`ios-p0-monorepo-migration.md`](../features/ios-p0-monorepo-migration.md) READY-FOR-DEV（npm workspaces；apps/web + apps/ios + packages/*；App Hosting rootDir 雙改點；回滾策略；iOS Backend + Feature Builder handoff + 驗收清單）
   - **Parity + 並行 policy 已落地**（Cross-platform PM 2026-05-29）→ [`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（single source of truth：每個 web feature → phase → policy → iOS 狀態）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（freeze / catch-up）
-    - ⚠️ **5 個 open questions 待 user 拍板**：Q1 餐廳進不進首版 / Q2 知識庫進不進 / Q3 照片圖庫排 P3 / Q4 iOS 背景 GPS 做不做 / Q5 D4「parity 一次到位」是否收斂為「核心 parity + 餐廳/知識庫 post-launch catch-up」
+    - ✅ **5 個 open questions 已拍板（2026-05-30）**：Q1 餐廳 **不進首版**(deferred-v1) / Q2 知識庫 **不進首版**(deferred-v1) / Q3 照片圖庫 **排 P3** / Q4 iOS 背景 GPS **要做且重要 → 升 P1 committed scope**(+App Store 背景定位審查注意) / Q5 D4 **收斂為核心 parity + 背景 GPS native 擴張**。strategy spec + parity checklist 已同步更新
   - 👉 **下個動作（user）**：
     - Pre-work: 確認 Apple Developer Account 可進 + （P0 spec 已含 Firebase iOS app 註冊指令，交 iOS Backend 執行）
     - **開 iOS Backend session** 執行 P0 Step 1-6（migration 主導，全程在 `ios-p0-monorepo` branch，App Hosting branch build 全綠才 merge）

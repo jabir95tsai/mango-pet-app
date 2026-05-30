@@ -49,7 +49,7 @@
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
 | Walks 全頁(radial dial + week strip + 圈內走路狗) | [`walks-v2-rebuild.md`](./walks-v2-rebuild.md) `984be5b` | parity | ⬜ |
-| GPS tracking + timer + stop | walk-core | parity + **背景 GPS native upgrade**（web PWA 做不到,見 Open Q4） | ⬜ |
+| GPS tracking + timer + stop | walk-core | **parity + 背景 GPS（committed,Q4 已拍板「要做且重要」2026-05-30）** — CoreLocation 背景追蹤,web PWA 做不到的 iOS-only 殺手能力。見 §F handoff(App Store 背景定位審查 + 耗電) | ⬜ |
 | Done screen + confetti + 達標變體 | walks-v2 | parity | ⬜ |
 | 手動 walk dialog | walk-core | parity | ⬜ |
 | Per-pet 自訂散步目標 + pet picker | [`per-pet-walk-goal.md`](./per-pet-walk-goal.md) | parity | ⬜ |
@@ -115,14 +115,14 @@
 
 ## B. ⚠️ Web feature **未被任何 iOS phase 涵蓋**（parity gap）
 
-> 這些是實際存在的 web 路由 / feature,但 [`ios-app-strategy.md`](./ios-app-strategy.md) P0–P7 **完全沒提**。D4「feature parity 一次到位」與此矛盾。
-> **以下 policy 是 Cross-platform PM 的「建議預設」,標 ⚠️ 待 user 拍板**(見 Open Questions),我不替 user 偷定義。
+> 這些是實際存在的 web 路由 / feature,但 [`ios-app-strategy.md`](./ios-app-strategy.md) P0–P7 原本**完全沒提**。
+> **2026-05-30 user 已拍板**(見 §D),policy 已從「建議」轉為「定案」。
 
-| Web feature | Web 路由 | 建議 policy | 理由 |
+| Web feature | Web 路由 | policy（已定案） | 理由 |
 |---|---|---|---|
-| **餐廳** | `/app/restaurants` + `/app/restaurants/[id]` | ⏸️ **deferred-v1**（建議） | 戰略 spec 零提及;roadmap 把「餐廳 Google Places 整合」列為未來「新方向候選」,代表此 feature 本身仍未深化。第一版 iOS 不做、ship 後 catch-up。 |
-| **知識庫** | `/app/knowledge` + `/app/knowledge/[id]` | ⏸️ **deferred-v1**（建議） | 同上;roadmap「知識庫持續產出」仍是候選方向,內容導向、非核心遛狗 loop。 |
-| **照片圖庫** | `/app/photos` | parity,**排進 P3**（建議） | 晚於 baseline ship(`e76f97c` 2026-05-27);與 feed/lightbox 同源,自然併入 P3 Home+Feed。iOS 用 PhotosKit 取代 web download(native upgrade)。 |
+| **餐廳** | `/app/restaurants` + `/app/restaurants/[id]` | ⏸️ **deferred-v1**（✅ 2026-05-30 確認不做首版） | 戰略 spec 零提及;roadmap 把「餐廳 Google Places 整合」列為未來「新方向候選」,本身仍未深化。第一版 iOS 不做、ship 後 catch-up。 |
+| **知識庫** | `/app/knowledge` + `/app/knowledge/[id]` | ⏸️ **deferred-v1**（✅ 2026-05-30 確認不做首版） | 同上;roadmap「知識庫持續產出」仍是候選方向,內容導向、非核心遛狗 loop。 |
+| **照片圖庫** | `/app/photos` | parity,**排進 P3**（✅ 2026-05-30 確認） | 晚於 baseline ship(`e76f97c` 2026-05-27);與 feed/lightbox 同源,併入 P3 Home+Feed。iOS 用 PhotosKit 取代 web download(native upgrade)。 |
 | **Onboarding 畫面** | `/onboarding` | parity-lite,**併 P0 auth flow** | 第一次登入導引;iOS 至少要有等價首登流程,內容可精簡。 |
 
 ---
@@ -136,36 +136,44 @@
 | Push 通道 | FCM web push(iOS PWA 支援殘缺) | APNs native | iOS 更好,acceptable |
 | 存照片到相簿 | `navigator.share` / Blob download | PhotosKit 直接存 | iOS 更好,acceptable |
 | 登入方式 | Google | Google **+ Apple Sign-In** | Apple guideline 強制,acceptable |
-| 遛狗背景定位 | 不做(roadmap 明列「不做 Web 內背景 GPS」) | CoreLocation 可背景追蹤 | **見 Open Q4** — 要不要解禁成 iOS-only 能力 |
+| 遛狗背景定位 | 不做(roadmap 明列「不做 Web 內背景 GPS」) | CoreLocation 背景追蹤 | ✅ **已拍板要做且重要(2026-05-30)** — iOS-only 殺手能力,列 **P1 committed scope**;非 drift,是刻意的 native 擴張。實作 + 審查注意見 §F |
 | HEIC / Live Photos | 不適用 | 接受 native limitation,不特別支援 | risk table 已認 |
 | 路由 | Next.js App Router(URL) | Expo Router(native stack/tab) | 實作差異,UX 對齊即可 |
 
 ---
 
-## D. Open Questions（需 user 拍板,Cross-platform PM 不偷定義）
+## D. 決策紀錄（user 2026-05-30 拍板,原 Open Questions）
 
-- **Open Q1 — 餐廳是否進第一版 iOS?**
-  建議 **deferred-v1**(ship 後 catch-up)。若 user 認為餐廳是核心體驗一部分,則要插進某個 phase(預估 +1 週)。
-- **Open Q2 — 知識庫是否進第一版 iOS?**
-  建議 **deferred-v1**。同餐廳。內容型 feature,對「遛狗為核心」的第一版優先級低。
-- **Open Q3 — 照片圖庫(`/app/photos`)排哪?**
-  建議併 **P3**。確認後我更新 strategy phase plan 的 P3 清單(交 iOS PM 改 spec,我只記 policy)。
-- **Open Q4 — iOS 遛狗要不要做背景 GPS?**
-  web 明確「不做背景 GPS」。iOS native 做得到。但 D4 是 *parity*(對齊),不是 *expansion*(擴張)。
-  - 選項 A:第一版只做前景追蹤(嚴格 parity,最快 ship)。
-  - 選項 B:第一版就做背景追蹤(iOS 殺手級差異,但增加 P1 工作量 + App Store 背景定位審查風險)。
-  建議 **A**(先 ship parity,背景 GPS 留 iOS-only follow-up)。
-- **Open Q5 — D4「parity 一次到位」是否正式收斂為「核心 parity 一次到位 + 餐廳/知識庫 catch-up」?**
-  若 Q1+Q2 都 deferred,則第一版 iOS 嚴格說不是 100% parity。建議把 D4 措辭調成「**核心 feature parity 一次到位**(walks/pets/home/feed/leaderboard/family/social/push),餐廳+知識庫列 post-launch catch-up」。我可代為更新 strategy doc 的 D4 註記。
+| # | 問題 | 決定 | 含意 |
+|---|---|---|---|
+| **Q1** | 餐廳進第一版 iOS? | **No** | deferred-v1;ship 後 post-launch catch-up sprint。 |
+| **Q2** | 知識庫進第一版 iOS? | **No** | deferred-v1;同餐廳。 |
+| **Q3** | 照片圖庫排哪? | **Yes,排 P3** | 補進 strategy P3 清單(交 iOS PM 改 spec)。 |
+| **Q4** | iOS 遛狗背景 GPS? | **要做,且「很重要」** | 從 follow-up 升級為 **P1 committed scope**。iOS-only 殺手能力。實作 + 審查注意見 §F。 |
+| **Q5** | D4 措辭收斂? | **OK** | D4 → 「**核心 feature parity 一次到位**(walks/pets/home/feed/leaderboard/family/social/push)+ 背景 GPS native 擴張;餐廳 + 知識庫列 post-launch catch-up」。 |
 
 ---
 
 ## E. Handoff
 
-- **iOS PM**：看 §B + §D。Q3 確認後把照片圖庫補進 strategy P3;Q1/Q2 確認後在 strategy 標 deferred-v1 清單。
+- **iOS PM**：Q3 → 照片圖庫補進 strategy P3;Q1/Q2 → strategy 標 deferred-v1 清單;Q4 → P1 加背景 GPS 工作項 + 工期重估(見 §F);Q5 → 更新 D4 措辭。**(本 session 已代為更新 strategy doc,iOS PM 接手後 review。)**
 - **iOS Feature Builder**：做任一 feature 前回查本表該列 policy + web spec 連結;native upgrade 項(push/save-photo/auth)依 §C 實作,不算 deviation。
+- **iOS Backend**：背景 GPS 的 native 設定(`UIBackgroundModes: location`、Always vs WhenInUse 權限、Info.plist usage strings)由你接,見 §F。
 - **Web 側**：PWA 每新 ship feature → 通知 Cross-platform PM 在 §A/§B 新增列(避免 iOS 漏 catch-up)。
+
+## F. 背景 GPS（Q4 committed）— 實作 + 審查注意事項
+
+> Cross-platform PM 設 policy「P1 committed」;以下是交給 iOS Feature Builder / iOS Backend 的已知約束,不是實作細節(那是他們的事)。
+
+- **能力定位**:遛狗中即使鎖屏 / 切到背景,仍持續記錄路徑 + 時長。web PWA 根本做不到,屬刻意的 iOS-only 擴張(D5 收斂後正式承認非嚴格 parity)。
+- **權限**:需從 `When In Use` 升到 `Always`(或 expo-location 的背景權限);Info.plist 寫清楚 `NSLocationAlwaysAndWhenInUseUsageDescription` 用途字串。
+- **背景模式**:`UIBackgroundModes` 含 `location`;Expo config plugin 設定。
+- **⚠️ App Store 審查風險**:背景定位是 Apple 重點審查項。必須:(a) 用途字串講清楚「記錄遛狗路線」;(b) 只在遛狗 session 進行中啟用背景定位,結束即停;(c) 不可常駐背景定位。最常見拒絕原因 = 背景定位用途不充分。
+- **耗電 / UX**:背景高頻定位耗電;walk 結束自動關閉 + 提供前景 fallback。
+- **工期影響**:P1 原估 2 週(前景追蹤);背景 GPS + 權限流程 + 審查預留,**P1 建議 +0.5～1 週 buffer**(交 iOS PM 重估)。
+- **roadmap「不做」清單**:既有「不做 Web 內背景 GPS」**僅限 web**(PWA 技術做不好);iOS native 不在該禁令內,無矛盾。
 
 ## 維護紀錄
 
 - 2026-05-29 建立(Cross-platform PM):盤點 web 全 20 路由 → 對齊 P0–P7;抓出餐廳/知識庫/照片圖庫 3 個 phase plan gap;列 5 個 open questions。
+- 2026-05-30 決策落定(Cross-platform PM):user 拍板 Q1–Q5。餐廳 + 知識庫 deferred-v1;照片圖庫 → P3;**背景 GPS 升 P1 committed scope**(+§F 審查注意);D4 收斂為核心 parity + native 擴張。

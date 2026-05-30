@@ -2,7 +2,7 @@
 
 狀態：**STRATEGY GO**（user 2026-05-28 4 個 strategic decisions confirmed）
 建立日期：2026-05-28
-最後更新：2026-05-29
+最後更新：2026-05-30（Cross-platform PM：D4 收斂 + P1 背景 GPS committed + P3 照片圖庫 + 餐廳/知識庫 deferred-v1;parity 細節見 [`ios-parity-checklist.md`](./ios-parity-checklist.md)）
 規格作者：PM session @ `f5c1732`
 角色：**PM / 策略 + iOS 五角色**（Cross-platform PM / iOS PM / iOS Feature Builder / iOS UI/UX / iOS Backend / iOS Bug Hunter）
 工作量：**XL** — 3 個月（13 週）solo 估計；可能 5 個月 conservative
@@ -18,7 +18,7 @@
 | **D1** | iOS app 採哪條路 | **React Native (cross-platform 重寫)** | Component 邏輯重寫（無法 reuse Next.js routes / DOM 元件），原生 UI 手感，未來可延伸 Android 0 成本 |
 | **D2** | Apple Developer Account | 已買 / 隨時可付 $99 | TestFlight + App Store 都能上 |
 | **D3** | PWA 命運 | **並行維護**（PWA + iOS 都推） | 雙 codebase 同步 ship feature，需建工作流；不能讓 PWA stale |
-| **D4** | First iOS ship scope | **Feature parity 一次到位** | 14+ SHIPPED features 全 port；不接受 MVP slice |
+| **D4** | First iOS ship scope | **核心 feature parity 一次到位 + 背景 GPS native 擴張**（2026-05-30 收斂） | 核心 14 features 全 port（walks/pets/home/feed/leaderboard/family/social/push）；不接受 MVP slice。**餐廳 + 知識庫 deferred-v1**（post-launch catch-up）；**遛狗背景 GPS 為 iOS-only 擴張**（web 做不到）。詳見 [`ios-parity-checklist.md`](./ios-parity-checklist.md) §D |
 
 ## ⚠️ Reality check（PM 直白）
 
@@ -89,6 +89,7 @@ mango_pet_app/                  ← 既有 web repo 升級為 monorepo
 - [ ] WalksHomeScreen with dial + week strip + 卡通走路狗
 - [ ] PetPickerDropdown (sourced from per-pet-walk-goal SHIPPED)
 - [ ] Start walk → GPS tracking (expo-location)
+- [ ] **背景 GPS 追蹤（committed 2026-05-30 — iOS-only 殺手能力）**：鎖屏 / 背景仍記錄路徑;`UIBackgroundModes: location` + Always 權限 + Info.plist 用途字串;⚠️ App Store 背景定位審查注意,見 [`ios-parity-checklist.md`](./ios-parity-checklist.md) §F。**P1 +0.5～1 週 buffer**
 - [ ] WalkTrackingScreen (timer + GPS + stop button)
 - [ ] DoneScreen + confetti + emerald celebration
 - [ ] Manual walk dialog
@@ -123,7 +124,8 @@ mango_pet_app/                  ← 既有 web repo 升級為 monorepo
 - [ ] /app/feed full timeline page
 - [ ] PhotoLightbox (carousel + swipe + 三招關閉)
 - [ ] SaveToAlbumButton (iOS native share API)
-- [ ] **Milestone**: feed + posts 全 work
+- [ ] **照片圖庫 `/app/photos`（committed 2026-05-30 排 P3）**：聚合 post/walk/pet avatar/receipt 照片;點圖沿用 PhotoLightbox;iOS 用 PhotosKit 存(取代 web download)。對應 web [`photo-gallery-downloads.md`](./photo-gallery-downloads.md)
+- [ ] **Milestone**: feed + posts + 照片圖庫 全 work
 
 ### P4 — Leaderboard + Family (1 週)
 
@@ -292,7 +294,8 @@ Repo: C:\Users\jabir\Hacker_J\mango_pet_app (即將 migrate to monorepo)
 
 ## 跟其他 spec 的關聯
 
-- **All 14+ SHIPPED web specs**：本 spec 要 iOS port 每一個（walks v2 / pets v2 / home v3 / leaderboard / 4 push types / family / auto-friend / save-photo / photo-lightbox / per-pet-walk-goal / walks-auto-photo-share / expenses-into-pets / UI polish / etc.）
+- **核心 SHIPPED web specs**：本 spec iOS port（walks v2 / pets v2 / home v3 / leaderboard / 4 push types / family / auto-friend / save-photo / photo-lightbox / per-pet-walk-goal / walks-auto-photo-share / expenses-into-pets / photo-gallery / UI polish）— 完整對齊 + 狀態見 [`ios-parity-checklist.md`](./ios-parity-checklist.md)
+- **Deferred-v1（2026-05-30 決定不進首版,post-launch catch-up）**：餐廳(`/app/restaurants`)、知識庫(`/app/knowledge`)— 非核心遛狗 loop,內容導向
 - **visual-redesign-mango.md (Epic 4 partial)**：Phase 0-3 已 ship，Phase 4-6 暫停 — 因 iOS pivot 改變 priority；iOS plan 內 phase 對齊 web 已 ship 的 feature surface
 - **既有 backend (functions / rules / indexes)**：100% reuse，不動
 
