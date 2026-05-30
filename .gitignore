@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -14,7 +14,7 @@
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
@@ -49,11 +49,14 @@ skills-lock.json
 *.tsbuildinfo
 next-env.d.ts
 
-# generated FCM service worker (rebuilt by scripts/generate-fcm-sw.mjs)
-/public/firebase-messaging-sw.js
+# generated FCM service worker (rebuilt by apps/web/scripts/generate-fcm-sw.mjs)
+apps/web/public/firebase-messaging-sw.js
 
 # firebase
 firebase-debug.log
+# iOS native Firebase config — regenerate any time with:
+#   npx firebase-tools@latest apps:sdkconfig IOS 1:722604603606:ios:7ebf5714db084a9111f177 --project mango-pet-app
+apps/ios/GoogleService-Info.plist
 firestore-debug.log
 .firebase
 /functions/lib

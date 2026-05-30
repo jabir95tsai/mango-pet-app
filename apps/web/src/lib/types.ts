@@ -1,7 +1,11 @@
 import type { Timestamp } from "firebase/firestore";
+import type { Gender, Pet, Species } from "@mango/shared-types";
 
-export type Species = "dog" | "cat" | "other";
-export type Gender = "male" | "female" | "unknown";
+// Pet / Species / Gender now live in @mango/shared-types (cross-platform
+// single source of truth). Re-exported here so existing `@/lib/types`
+// imports keep working unchanged.
+export type { Gender, Pet, Species };
+
 export type Visibility = "private" | "friends" | "public";
 export type AuthProviderKind = "google" | "apple" | "facebook";
 
@@ -87,42 +91,6 @@ export type FamilyMember = {
   photoURL: string | null;
   /** When this user joined the family. */
   joinedAt: Timestamp;
-};
-
-export type Pet = {
-  petId: string;
-  /** Family this pet belongs to. All members of the family can read/write.
-   *  `null` means **personal mode** — the pet lives in the creator's
-   *  personal namespace; permission gated by `ownerUid == request.auth.uid`
-   *  instead of family membership. Created via `createPet(null, uid, …)`. */
-  familyId: string | null;
-  /** The user who originally created the pet. In family mode this is for
-   *  attribution; in personal mode (`familyId === null`) it is **the
-   *  permission boundary** — only this user can read/write. */
-  ownerUid: string;
-  name: string;
-  species: Species;
-  breed?: string;
-  birthday?: Timestamp;
-  gender?: Gender;
-  weightKg?: number;
-  photoURL?: string;
-  bio?: string;
-  createdAt: Timestamp;
-  /** Per-pet daily walk-minute goal. Drives the walks-page dial, week-
-   *  strip done flags, A1 evening reminder threshold, and B2 family-
-   *  milestone threshold (all of which historically hardcoded 30).
-   *
-   *  Absent on legacy pets — every read site MUST go through
-   *  `getPetWalkGoalMinutes()` in `@/lib/walk-goals` which falls back
-   *  to `DEFAULT_WALK_GOAL_MINUTES` (30). Don't read `pet.walkGoal.minutes`
-   *  directly without the fallback or legacy pets will throw nil-ptr.
-   *
-   *  `source: 'computed'` namespace is reserved for a future spec that
-   *  derives a recommendation from breed/age/weight; this round only
-   *  ever writes `'manual'`. UI may render a "建議值（可覆蓋）" chip on
-   *  `'computed'` so user knows it's overridable. */
-  walkGoal?: { minutes: number; source: "manual" | "computed" };
 };
 
 export type PetInput = {

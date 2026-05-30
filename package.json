@@ -1,53 +1,16 @@
 {
-  "name": "mango_pet_app",
+  "name": "mango-pet-monorepo",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "predev": "node scripts/generate-fcm-sw.mjs",
-    "dev": "next dev",
-    "prebuild": "node scripts/generate-fcm-sw.mjs",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "typecheck": "tsc --noEmit",
-    "generate-sw": "node scripts/generate-fcm-sw.mjs"
-  },
-  "dependencies": {
-    "@googlemaps/js-api-loader": "^2.0.2",
-    "@hookform/resolvers": "^5.2.2",
-    "@serwist/next": "^9.5.11",
-    "@swc/helpers": "^0.5.21",
-    "@types/qrcode": "^1.5.6",
-    "browser-image-compression": "^2.0.2",
-    "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
-    "firebase": "^12.13.0",
-    "heic2any": "^0.0.4",
-    "lucide-react": "^1.14.0",
-    "next": "16.2.6",
-    "next-intl": "^4.11.2",
-    "qrcode": "^1.5.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "react-hook-form": "^7.75.0",
-    "react-markdown": "^10.1.0",
-    "recharts": "^3.8.1",
-    "remark-gfm": "^4.0.1",
-    "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3",
-    "zustand": "^5.0.13"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@tailwindcss/typography": "^0.5.19",
-    "@types/google.maps": "^3.64.0",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
-    "serwist": "^9.5.11",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "start": "npm run start -w apps/web",
+    "lint": "npm run lint -w apps/web",
+    "typecheck": "npm run typecheck -w apps/web"
   }
 }
