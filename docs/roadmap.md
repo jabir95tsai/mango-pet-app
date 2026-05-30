@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-30（🍎 Cross-platform PM — **iOS parity 5 open questions 拍板**：餐廳/知識庫 deferred-v1、照片圖庫排 P3、**背景 GPS 升 P1 committed**、D4 收斂為核心 parity + native 擴張;strategy + checklist 同步更新｜先前 05-29：**iOS parity checklist + Web/PWA 並行 policy 落地**：[`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（web 全 20 路由 → P0–P7 對齊;抓出餐廳/知識庫/照片圖庫 3 個 phase plan gap + 5 open questions）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（P0 hard freeze / P1–P7 parallel guarded + catch-up 節奏）｜先前：P0 monorepo migration spec READY-FOR-DEV + npm workspaces + iOS 五角色結構落地）
+最後更新：2026-05-31（🍎 Cross-platform PM — **P0 Foundation 完成 + hard-freeze 解除**：monorepo migration merge main(`3961f19`)、App Hosting build `c94c384` 修綠、exit criteria 全達成,進入 §2 parallel guarded;放行 iOS Feature Builder P0 Step 7｜先前 05-30 iOS PM — **phase plan 算清**：P1 工期重估含背景 GPS buffer → 累計 **13.5–14 週**;deferred-v1 餐廳/知識庫正式列 post-launch catch-up sprint;parallel-policy §5 拍板維持「critical + polish」｜先前同日 Cross-platform PM — **iOS parity 5 open questions 拍板**：餐廳/知識庫 deferred-v1、照片圖庫排 P3、**背景 GPS 升 P1 committed**、D4 收斂為核心 parity + native 擴張;strategy + checklist 同步更新｜先前 05-29：**iOS parity checklist + Web/PWA 並行 policy 落地**：[`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（web 全 20 路由 → P0–P7 對齊;抓出餐廳/知識庫/照片圖庫 3 個 phase plan gap + 5 open questions）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（P0 hard freeze / P1–P7 parallel guarded + catch-up 節奏）｜先前：P0 monorepo migration spec READY-FOR-DEV + npm workspaces + iOS 五角色結構落地）
 
 ## 進行中
 
@@ -88,18 +88,19 @@
   - ⚠️ **依賴 pre-ios-cleanup 先完成**（清乾淨再 monorepo migration）
   - 4 decisions：D1 RN cross-platform 重寫 / D2 Apple Dev account 已買 / D3 並行 PWA + iOS / D4 feature parity 一次到位
   - Tech stack PM 預設：Expo Managed + Expo Router + @react-native-firebase + TanStack Query + Zustand + EAS Build + Monorepo (**npm workspaces**)
-  - 8 phases × 13 週 (~3 個月) solo 估計：P0 Foundation / P1 Walks / P2 Pets / P3 Home+Feed / P4 Leaderboard+Family / P5 Push+Settings / P6 Social / P7 Polish+App Store submit
+  - 8 phases × **13.5–14 週** (~3 個月) solo 估計（**2026-05-30 iOS PM 重估**：P1 含背景 GPS +0.5–1 週 buffer → P1 2.5–3 週）：P0 Foundation / P1 Walks / P2 Pets / P3 Home+Feed / P4 Leaderboard+Family / P5 Push+Settings / P6 Social / P7 Polish+App Store submit
   - Monorepo migration P0 first：apps/web (既有 Next.js) + apps/ios (新 Expo) + packages/{shared-types, shared-firebase, shared-business, shared-i18n, shared-tokens}
   - 並行維護策略：每 P-phase iOS 收尾 catch up 期間 web 新 feature
   - 工作量 **XL**，3-5 個月 conservative；solo founder vibe-coding 高度依賴 Cursor / Claude Code 加速
-  - **P0 已規格化** → [`ios-p0-monorepo-migration.md`](../features/ios-p0-monorepo-migration.md) READY-FOR-DEV（npm workspaces；apps/web + apps/ios + packages/*；App Hosting rootDir 雙改點；回滾策略；iOS Backend + Feature Builder handoff + 驗收清單）
+  - ✅ **P0 Foundation migration 完成 + freeze 解除（2026-05-31）** → [`ios-p0-monorepo-migration.md`](../features/ios-p0-monorepo-migration.md)：npm workspaces monorepo 已 merge main（`3961f19` migrate + `c8d7c90`/`c94c384` App Hosting fix）。原 05-30 App Hosting build 紅(Cloud Build FAILED_PRECONDITION) 由 `c94c384`「normalize standalone output」修綠。iOS Backend 2026-05-31 驗證 exit criteria 全達成(build 綠 + tsc pass + apps/web dev 正常 + production golden path 驗 web 沒壞)→ Cross-platform PM 解除 P0 hard-freeze,進入 §2 parallel guarded。⚠️ 過程偏離:migration 直推 main(非 branch-first),production build 紅約 44 分(靠 last-good 撐著無斷線);下次 repo-shape 大改回 branch-first。
   - **Parity + 並行 policy 已落地**（Cross-platform PM 2026-05-29）→ [`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（single source of truth：每個 web feature → phase → policy → iOS 狀態）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（freeze / catch-up）
     - ✅ **5 個 open questions 已拍板（2026-05-30）**：Q1 餐廳 **不進首版**(deferred-v1) / Q2 知識庫 **不進首版**(deferred-v1) / Q3 照片圖庫 **排 P3** / Q4 iOS 背景 GPS **要做且重要 → 升 P1 committed scope**(+App Store 背景定位審查注意) / Q5 D4 **收斂為核心 parity + 背景 GPS native 擴張**。strategy spec + parity checklist 已同步更新
+    - ✅ **iOS PM phase plan 算清（2026-05-30）**：P1 工期重估含背景 GPS buffer → P1 2.5–3 週、**累計 13.5–14 週**;deferred-v1(餐廳/知識庫)正式列 strategy §Post-launch catch-up sprint(粗時點 + 估工;餐廳受 web Google Places 成本暫停連動);parallel-policy §5 拍板維持「critical + polish」。phase plan 內部一致性 verified
   - 👉 **下個動作（user）**：
-    - Pre-work: 確認 Apple Developer Account 可進 + （P0 spec 已含 Firebase iOS app 註冊指令，交 iOS Backend 執行）
-    - **開 iOS Backend session** 執行 P0 Step 1-6（migration 主導，全程在 `ios-p0-monorepo` branch，App Hosting branch build 全綠才 merge）
-    - 之後 **開 iOS Feature Builder session** 執行 P0 Step 7（apps/ios Expo scaffold）
-    - ⚠️ P0 期間暫停其他 production-code session（README 並行規則：P0 搬路徑會碰 repo shape）
+    - ✅ P0 migration(Step 1–6) 已完成 + freeze 解除 → 不再凍結其他 session,進入 parallel guarded
+    - **開 iOS Feature Builder session** 執行 **P0 Step 7**（apps/ios Expo scaffold + BottomNav skeleton + shared-tokens 接 RN theme + Google/Apple Sign-In + EAS first build to simulator）— 前置 apps/ios/GoogleService-Info.plist + @mango/shared-types 已就位
+    - 之後依 phase plan 進 **P1 Walks**（含背景 GPS committed,見 [`ios-parity-checklist.md`](../features/ios-parity-checklist.md) §F 審查注意）
+    - Web 側恢復可動,但依 [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md) §2「critical + polish only,新 feature 預設不做」
 - **照片圖庫 + 照片儲存** — [`docs/features/photo-gallery-downloads.md`](../features/photo-gallery-downloads.md) ✅ **SHIPPED 2026-05-27**（Feature Builder `e76f97c`）
   - 新增 `/app/photos`「我的照片」集中圖庫；聚合自己的 post / walk / pet avatar / existing receiptURL；點圖沿用 PhotoLightbox；支援單張、多張、一鍵儲存尚未下載
   - `src/lib/photo-download.ts` 走 Web Share files 優先、desktop fallback Blob download；`users/{uid}/photoDownloadState/{assetId}` 記錄 downloaded state；nav + settings entry + i18n 已接
@@ -175,6 +176,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 
 ## 想做但還沒規格
 
+- 📝 **排行榜 v2 — 計分公式擴充（加品種/年齡/體重）+ 以狗為中心排行榜（朋友/全 app 雙 tab）** — [`docs/features/leaderboard-v2-dog-centric.md`](../features/leaderboard-v2-dog-centric.md) **DRAFT**（user 2026-05-30 要求；3 決策已拍板：公式=混合方向待 PM 提案 sign-off / 人榜+狗榜並存 / 全 app 預設上榜可 opt-out）。含公式提案(weight×age×breed clamp)+ `dogLeaderboards/{period}/entries/{petId}` 資料模型 + 5 個開放問題。**待 user sign-off 公式數值 + 開放問題後升 READY-FOR-DEV；實作排在 iOS P0 穩定後**。
 - Quiet hours / per-pet opt-out push 設定（Epic 5 follow-up，pushPrefs namespace 已預埋）
 - ~~多 pet picker UX~~（per-pet-walk-goal spec 即將解鎖）
 - **breed/age/weight 自動計算 walk goal**（per-pet-walk-goal spec ship 後 follow-up，schema source: 'computed' 已預埋）

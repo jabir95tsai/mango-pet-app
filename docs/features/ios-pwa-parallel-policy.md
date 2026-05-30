@@ -12,12 +12,16 @@
 
 | 期間 | 模式 | web production code 能不能動 |
 |---|---|---|
-| **P0 monorepo migration**（~2 週） | 🔴 **Hard freeze** | **不能**(只有 P0 session 動 repo) |
-| **P1–P7 iOS 開發**（~11 週） | 🟡 **Parallel guarded** | **能,但分級**(見 §2) |
+| ~~**P0 monorepo migration**~~ | ✅ **完成 + 解凍(2026-05-31)** | freeze 已解除,見 §1 |
+| **P1–P7 iOS 開發**（~11 週,👈 **目前在此**） | 🟡 **Parallel guarded** | **能,但分級**(見 §2) |
 
 ---
 
-## 1. P0 Hard Freeze（monorepo migration 期間）
+## 1. P0 Hard Freeze（monorepo migration 期間）— ✅ 已解凍（2026-05-31）
+
+> **狀態:freeze LIFTED**。P0 migration 已 merge main(`3961f19`)、App Hosting build 由 `c94c384` 修綠、exit criteria 全達成(iOS Backend 2026-05-31 驗證:branch/main build 綠 + `tsc --noEmit` pass + `apps/web` dev 正常 + production golden path 驗 web 沒壞)。**現進入 §2 Parallel guarded**。
+> ⚠️ 過程偏離:此次 migration **直接推 main**(非 spec 要求的「先在 `ios-p0-monorepo` branch build 全綠才 merge」),production build 紅約 44 分鐘(靠 last-good rollout 撐著,使用者無斷線)。下次碰 repo shape 的大改回到 branch-first。
+> 以下規則保留作為**未來任何 repo-shape 級大改**(例:再拆 package、再搬路徑)的 reusable freeze playbook。
 
 P0 要把 `src/` 搬進 `apps/web/`、改 App Hosting rootDir、建 `packages/*`。這會碰 **repo shape**,任何同時改 `src/` 的 session 必撞 + rebase 地獄。
 
@@ -93,14 +97,18 @@ iOS 不是即時追 web,而是**有節奏地追**:
 
 ---
 
-## 5. 待 user 確認的 policy 取捨
+## 5. Policy 取捨 — ✅ 已拍板（2026-05-30 iOS PM）
 
 - **PWA 在 iOS 期間是否「凍結新功能」?**
-  本 policy 預設 = **critical + polish only,新 feature 預設不做**。
-  - 若 user 要 PWA 繼續積極 ship 新 feature → iOS ship 日期相應延後,每個新 feature 進 parity checklist 排 catch-up。
-  - 若 user 要**完全集中 iOS**(連 polish 都停)→ 更快 ship iOS,但 web 體驗 3 個月不進步。
-  建議:**維持「critical + polish」中庸**,除非 user 想衝刺 iOS。
+  **✅ 決定 = 維持預設「critical + polish only,新 feature 預設不做」**（user 無特別意見 → 採 Cross-platform PM 中庸預設,iOS PM 2026-05-30 拍板）。
+  - 含意:iOS 開發期間 web 進入「維護 + critical only」;polish 攢著 P7 統一 catch up;新 feature 預設不做,真要做走 §2 決策樹。
+  - 未採用的兩端(保留紀錄,user 日後可 override):
+    - 若改為 **PWA 繼續積極 ship 新 feature** → iOS ship 日期相應延後,每個新 feature 進 parity checklist 排 catch-up。
+    - 若改為 **完全集中 iOS（連 polish 都停）** → 更快 ship iOS,但 web 體驗 3 個月不進步。
+  - **Override 規則**:user 每 override 放行一個 web 新 feature = iOS ship 日期往後推 + 該 feature 進 [`ios-parity-checklist.md`](./ios-parity-checklist.md) 排 catch-up。
 
 ## 維護紀錄
 
 - 2026-05-29 建立(Cross-platform PM):兩層模式(P0 hard freeze / P1–P7 parallel guarded)+ web 改動三級分類 + 新功能誰先做決策樹 + catch-up 節奏 + 1 個 user policy 取捨。
+- 2026-05-30 §5 拍板(iOS PM):user 無意見 → 維持「critical + polish only」預設;open question 結掉,改為 ACTIVE 決策 + override 規則。
+- 2026-05-31 **P0 hard-freeze 解除**(Cross-platform PM):iOS Backend 回報 exit criteria 全達成 → §1 標 LIFTED + 記過程偏離(直推 main、build 紅 44 分)。進入 §2 parallel guarded;放行 iOS Feature Builder P0 Step 7(Expo scaffold)。§1 規則保留為未來 repo-shape 大改的 reusable playbook。
