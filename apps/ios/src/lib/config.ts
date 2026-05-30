@@ -11,5 +11,9 @@
 export const GOOGLE_IOS_CLIENT_ID =
   "722604603606-ai03auqrk0l88utpvb090imkibsqsn4u.apps.googleusercontent.com";
 
+// "Web client (auto created by Google Service)" for project 722604603606,
+// fetched from the Identity Platform google.com IdP config. Public value
+// (it ships in every client) — safe to commit; the matching client *secret*
+// stays server-side only and is NOT stored here.
 export const GOOGLE_WEB_CLIENT_ID =
-  "722604603606-REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com";
+  "722604603606-oepafc9cc8r6i5dgtg9rlk2l75pdv0lr.apps.googleusercontent.com";
