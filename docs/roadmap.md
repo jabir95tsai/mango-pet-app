@@ -117,7 +117,7 @@
 | ~~2~~ home page | ~~`/app`~~ 移到 Phase 3 | — | merged into Phase 3 |
 | 3 | `/onboarding` + Landing + sign-in | M | 🔓 ready，等 PM spec |
 | 4 | `/app/settings` + `/app/leaderboard` | M | 🔓 ready，等 PM spec |
-| 5 | Drawer pages: `/app/feed` + `/app/restaurants` (+detail) + `/app/knowledge` (+detail) + `/app/friends` (+/add) + `/app/expenses` | L | 🔓 ready，等 PM spec |
+| 5 | Drawer pages: `/app/feed` + ~~`/app/restaurants` (+detail)~~ ⏸️ + `/app/knowledge` (+detail) + `/app/friends` (+/add) + `/app/expenses` | L | 🔓 ready，等 PM spec（**`/app/restaurants` 重設計暫停** — user 2026-05-30，見「暫停中（hold）」；其餘 drawer pages 不受影響）|
 | 6 | Polish — 一致性 audit + loading/error tone + reduced-motion verify | S | 等 Phase 2-5 |
 
 **Spec**: [`docs/features/visual-redesign-mango.md`](../features/visual-redesign-mango.md) + Phase 1 v2 addendum [`walks-v2-rebuild.md`](../features/walks-v2-rebuild.md)
@@ -169,7 +169,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 
 ### Option D: 新方向
 
-- 餐廳 Google Places 整合
+- ⏸️ ~~餐廳 Google Places 整合~~ → 移至「暫停中（hold）」（user 2026-05-30 先暫停）
 - 知識庫持續產出
 - Analytics / 北極星指標接線
 
@@ -178,11 +178,11 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 - Quiet hours / per-pet opt-out push 設定（Epic 5 follow-up，pushPrefs namespace 已預埋）
 - ~~多 pet picker UX~~（per-pet-walk-goal spec 即將解鎖）
 - **breed/age/weight 自動計算 walk goal**（per-pet-walk-goal spec ship 後 follow-up，schema source: 'computed' 已預埋）
-- **餐廳照片 lightbox**（Photo Lightbox ship 後接 restaurants page，sharing same 元件）
+- ⏸️ ~~**餐廳照片 lightbox**（Photo Lightbox ship 後接 restaurants page，sharing same 元件）~~ → 移至「暫停中（hold）」（user 2026-05-30 先暫停）
 - Push throttle（A1 + A2 同晚雙推觀察後決定）
 - 獨立 walks history page（若未來需要搜尋/篩選/分頁再開；目前「全部」已可展開完整列表）
 - Dark mode follow-up（Epic 4 後評估）
-- 餐廳 Google Places 整合
+- ⏸️ ~~餐廳 Google Places 整合~~ → 移至「暫停中（hold）」（user 2026-05-30 先暫停）
 - 知識庫持續產出
 - Analytics / 北極星指標接線
 - 自訂網域 + DNS（要花錢）
@@ -194,6 +194,21 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 - Family mode 加總 walk 進度
 - Orphan walk photos GC
 - 照片圖庫批次 ZIP 下載（v1 後看使用量）
+
+## ⏸️ 暫停中（hold — 非永久不做）
+
+> 暫時不投入、但保留未來重啟空間的方向。比丟「不做」好 — 等時機到再從這裡撿回來。
+
+### 餐廳功能（user 2026-05-30「先暫停」）
+- **決策**：暫停所有餐廳功能的**新投入**。
+- **理由（Why）**：餐廳功能依賴 Google Places API，會**增加持續性 API 支出**。solo founder 階段先控成本 → 暫停以避免 spend 增加。此理由也是判斷重啟時機的依據：在有營收 / 使用量證明 ROI 前不重啟。
+- **暫停範圍**：
+  - 餐廳 Google Places 整合（原 Option D / 想做但還沒規格）
+  - 餐廳照片 lightbox（原想做但還沒規格 — Photo Lightbox 元件複用）
+  - Epic 4 Phase 5 視覺重設計內的 `/app/restaurants`（+detail）改版 — 暫不規格化（Phase 5 其餘 drawer pages 不受影響）
+- **不在暫停範圍（維持現狀）**：既有 production `/app/restaurants` 頁**保持上線**，不下架、不從 nav / drawer 移除。「暫停」= 停止新投入，不是拔功能。（若 user 想連既有頁也隱藏 → 另開 UI/UX handoff，本決策預設不動。）
+- **iOS 連動**：本決策同時回答 iOS parity **Q1（餐廳不進 iOS 首版）**、支持 **Q5 收斂為「核心 parity + 餐廳/知識庫 post-launch catch-up」**。→ **handoff 給 iOS PM**：在 [`ios-parity-checklist.md`](../features/ios-parity-checklist.md) 把餐廳標為 post-launch catch-up、結掉 Q1。
+- **重啟條件**：user 主動撿回，或核心 parity（walks/pets/home/feed/leaderboard）上線後評估 post-launch catch-up 時。
 
 ## 不做（拒絕清單）
 
