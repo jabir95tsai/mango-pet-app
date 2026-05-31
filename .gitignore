@@ -54,9 +54,11 @@ apps/web/public/firebase-messaging-sw.js
 
 # firebase
 firebase-debug.log
-# iOS native Firebase config — regenerate any time with:
+# NOTE: apps/ios/GoogleService-Info.plist IS committed — it's iOS Firebase
+# CLIENT config (ships in every app binary, not a secret; security is via
+# Firestore rules + App Check). EAS Build needs it in the repo to upload to
+# the builder (app.json ios.googleServicesFile points at it). Regenerate with:
 #   npx firebase-tools@latest apps:sdkconfig IOS 1:722604603606:ios:7ebf5714db084a9111f177 --project mango-pet-app
-apps/ios/GoogleService-Info.plist
 firestore-debug.log
 .firebase
 /functions/lib
