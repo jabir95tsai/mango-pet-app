@@ -1,6 +1,6 @@
 # iOS P0 — User Setup Tracker（手動步驟 + 收集到的值）
 
-狀態：**IN PROGRESS**（2026-05-31）
+狀態：**✅ P0 COMPLETE**（2026-05-31 iPhone 實機簽收：Google + Apple 登入通 + 空白 5-tab nav 顯示）
 維護：iOS PM（記錄用；config 寫入由 iOS Backend 執行）
 配合：[`../features/ios-p0-monorepo-migration.md`](../features/ios-p0-monorepo-migration.md)、[`../features/ios-parity-checklist.md`](../features/ios-parity-checklist.md)
 
@@ -29,7 +29,7 @@ export const GOOGLE_WEB_CLIENT_ID =
 - [x] ④ 取得 Google Web client id（見上表，已交付）
 - [x] ② Apple Developer portal → App ID `com.mangopet.app` → 啟用 **Sign In with Apple** capability（2026-05-31 done）
 - [x] ③ Firebase Console → Authentication → Sign-in method → 啟用 **Apple** provider（2026-05-31 done）
-- [ ] ⑤ **EAS internal/dev build → iPhone 實機裝機驗 P0**（見下節）
+- [x] ⑤ **EAS internal/dev build → iPhone 實機裝機驗 P0**（2026-05-31 ✅ 裝機成功 + login Google/Apple + 5-tab nav 全驗）
 
 ## ⚠️ 平台限制：user 無 macOS → P0 驗收走實機（非 simulator）
 

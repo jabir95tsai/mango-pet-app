@@ -41,9 +41,9 @@
 ### P0 — Foundation
 | Web feature | Web spec / 來源 | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| Auth(Google 登入) | `src/app/page.tsx` / sign-in | parity + **Apple Sign-In 必加**（Apple guideline 強制,native upgrade） | ⬜ |
-| BottomNav 5-tab + 中央 raised disc | Epic 4 Phase 0.5 `e1a7b60` | parity | ⬜ |
-| Mango palette design tokens | Epic 4 Phase 0 `7baff73` / globals.css | parity（抽 `packages/shared-tokens`） | ⬜ |
+| Auth(Google 登入) | `src/app/page.tsx` / sign-in | parity + **Apple Sign-In 必加**（Apple guideline 強制,native upgrade） | ✅ 實機驗（2026-05-31 Google + Apple 登入皆通） |
+| BottomNav 5-tab + 中央 raised disc | Epic 4 Phase 0.5 `e1a7b60` | parity | ✅ 實機驗（2026-05-31 空白 5-tab nav 顯示） |
+| Mango palette design tokens | Epic 4 Phase 0 `7baff73` / globals.css | parity（抽 `packages/shared-tokens`） | ✅ `apps/ios/src/theme/theme.ts` import `mangoColors` from `@mango/shared-tokens`（P0 stub；P1+ 漸進填充） |
 
 ### P1 — Walks（核心）
 | Web feature | Web spec | iOS policy | iOS 狀態 |
