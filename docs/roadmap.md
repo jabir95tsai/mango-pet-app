@@ -176,7 +176,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 
 ## 想做但還沒規格
 
-- 📝 **排行榜 v2 — 計分公式擴充（加品種/年齡/體重）+ 以狗為中心排行榜（朋友/全 app 雙 tab）** — [`docs/features/leaderboard-v2-dog-centric.md`](../features/leaderboard-v2-dog-centric.md) **DRAFT**（user 2026-05-30 要求；3 決策已拍板：公式=混合方向待 PM 提案 sign-off / 人榜+狗榜並存 / 全 app 預設上榜可 opt-out）。含公式提案(weight×age×breed clamp)+ `dogLeaderboards/{period}/entries/{petId}` 資料模型 + 5 個開放問題。**待 user sign-off 公式數值 + 開放問題後升 READY-FOR-DEV；實作排在 iOS P0 穩定後**。
+- ✅ **排行榜 v2 — 計分公式擴充（加品種/年齡/體重）+ 以狗為中心排行榜（朋友/全 app 雙 tab）** — [`docs/features/leaderboard-v2-dog-centric.md`](../features/leaderboard-v2-dog-centric.md) **READY-FOR-DEV**（user 2026-05-30：5 決策全拍板 — breed 要做 / personal-mode 狗納入 / opt-out 為 per-user 總開關(public·friends·off 三選一) / 接受歷史分數漂移；公式採 **加權加法** `1+Σ(factorᵢ-1)*0.4` clamp 0.5–3.0 取代乘法，避免疊乘撞頂壓扁差異）。人榜+狗榜並存；`dogLeaderboards/{period}/entries/{petId}` 資料模型。唯一可選微調=加法係數 0.4。**實作排在 iOS P0 穩定後**（README：P0 期間暫停 production-code session）。
 - Quiet hours / per-pet opt-out push 設定（Epic 5 follow-up，pushPrefs namespace 已預埋）
 - ~~多 pet picker UX~~（per-pet-walk-goal spec 即將解鎖）
 - **breed/age/weight 自動計算 walk goal**（per-pet-walk-goal spec ship 後 follow-up，schema source: 'computed' 已預埋）
