@@ -38,7 +38,10 @@ export function DogLeaderboard() {
   const tC = useTranslations("Common");
   const { user } = useAuth();
 
-  const [scope, setScope] = useState<DogScope>("all");
+  // Default to the friends tab — the user story centres on competing in
+  // your friend circle, and your own dogs always show here even before
+  // you add anyone, so it's never a dead end. Persisted per visit.
+  const [scope, setScope] = useState<DogScope>("friends");
   const [period, setPeriod] = useState<LeaderboardPeriod>("weekly");
   const [entries, setEntries] = useState<DogLeaderboardEntry[]>([]);
   const [friendUids, setFriendUids] = useState<Set<string>>(() => new Set());
