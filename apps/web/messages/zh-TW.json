@@ -284,6 +284,23 @@
       "title": "遛狗自動拍照",
       "body": "開始 / 結束遛狗時提示拍照，可一鍵分享到動態"
     },
+    "leaderboardVisibility": {
+      "title": "排行榜可見度",
+      "subtitle": "決定你的狗出現在哪些狗排行榜。你永遠看得到自己的狗。",
+      "loading": "載入中...",
+      "public": {
+        "label": "全部公開",
+        "hint": "全 App 和朋友都看得到你的狗（預設）"
+      },
+      "friends": {
+        "label": "只給朋友看",
+        "hint": "不出現在全 App，朋友的狗榜仍看得到"
+      },
+      "off": {
+        "label": "完全不上榜",
+        "hint": "兩個榜都不出現，只有你自己看得到"
+      }
+    },
     "dangerZone": {
       "title": "危險區",
       "subtitle": "下方操作不可復原。請確認你了解後果再進行。",
@@ -315,6 +332,16 @@
     "errorPrefix": "刪除失敗"
   },
   "Leaderboard": {
+    "title": "排行榜",
+    "dimension": {
+      "human": "人",
+      "dog": "狗"
+    },
+    "period": {
+      "weekly": "本週",
+      "monthly": "本月",
+      "all_time": "總榜"
+    },
     "scope": {
       "all": "全 App",
       "family": "家庭內"
@@ -325,6 +352,26 @@
       "title": "加入家庭看排行榜",
       "subtitle": "排行榜目前只給家庭內互比 — 自己一個人時看自己 stats 才有意義。",
       "cta": "建立 / 加入家庭"
+    },
+    "dog": {
+      "subtitle": "依狗的體型・年齡・品種加權計分，和朋友或全 App 一較高下",
+      "scope": {
+        "friends": "朋友",
+        "all": "全 App"
+      },
+      "walkCount": "{count} 次",
+      "byOwner": "飼主 {owner}",
+      "yours": "我的狗",
+      "scoreUnit": "分",
+      "emptyFriends": {
+        "title": "朋友還沒有狗上榜",
+        "subtitle": "加好友後，他們的狗會出現在這裡一起比分數。",
+        "cta": "加好友"
+      },
+      "emptyAll": {
+        "title": "狗排行榜計算中",
+        "subtitle": "遛狗結束後分數即時更新，每天午夜 (Asia/Taipei) 也會重新聚合一次。先去遛狗幫狗狗累積分數！"
+      }
     }
   },
   "Walks": {

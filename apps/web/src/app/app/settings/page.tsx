@@ -17,6 +17,7 @@ import { LanguageSwitcher } from "@/components/nav/language-switcher";
 import { PushToggle } from "@/components/settings/push-toggle";
 import { EngagementPushSection } from "@/components/settings/engagement-push-section";
 import { WalkAutoPhotoSection } from "@/components/settings/walk-auto-photo-section";
+import { LeaderboardVisibilitySection } from "@/components/settings/leaderboard-visibility-section";
 import { FamilySection } from "@/components/family/family-section";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ExportDataButton } from "@/components/settings/export-data-button";
@@ -133,6 +134,16 @@ export default function SettingsPage() {
         {user && (
           <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
             <WalkAutoPhotoSection />
+          </section>
+        )}
+
+        {/* Dog-leaderboard visibility master switch (leaderboard v2).
+            Sits with the other in-app-behaviour toggles, above the
+            account-focused Language/Privacy/Danger trio. Hidden when
+            signed-out — the preference is per user. */}
+        {user && (
+          <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+            <LeaderboardVisibilitySection />
           </section>
         )}
 

@@ -8,7 +8,11 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./config";
-import type { LeaderboardEntry, LeaderboardPeriod } from "@/lib/types";
+import type {
+  DogLeaderboardEntry,
+  LeaderboardEntry,
+  LeaderboardPeriod,
+} from "@/lib/types";
 import { isoWeekLabel, monthLabel } from "@/lib/scoring";
 
 export function periodKey(period: LeaderboardPeriod, when = new Date()): string {
@@ -50,6 +54,31 @@ export function subscribeLeaderboard(
   return onSnapshot(
     query(ref, orderBy("totalScore", "desc"), limit(max)),
     (snap) => onChange(snap.docs.map((d) => d.data() as LeaderboardEntry)),
+    onError,
+  );
+}
+
+/** Realtime subscription to the dog-centric leaderboard (v2). Mirrors
+ *  `subscribeLeaderboard` but reads `dogLeaderboards/{period}/entries`
+ *  (keyed by petId, written only by the recomputeDogLeaderboards /
+ *  cron functions — see docs/features/leaderboard-v2-dog-centric.md).
+ *  Returns the full ranked set ordered by totalScore desc; the caller
+ *  applies the per-tab visibility + friends filtering client-side
+ *  (entries carry denormalised ownerUid / ownerVisibility for exactly
+ *  this, so no cross-family pet reads are needed). Works in personal
+ *  mode too — dog entries include personal-mode dogs and the
+ *  collection is readable by any signed-in user. */
+export function subscribeDogLeaderboard(
+  period: LeaderboardPeriod,
+  onChange: (entries: DogLeaderboardEntry[]) => void,
+  onError?: (err: unknown) => void,
+  max = 100,
+): Unsubscribe {
+  const key = periodKey(period);
+  const ref = collection(getDb(), "dogLeaderboards", key, "entries");
+  return onSnapshot(
+    query(ref, orderBy("totalScore", "desc"), limit(max)),
+    (snap) => onChange(snap.docs.map((d) => d.data() as DogLeaderboardEntry)),
     onError,
   );
 }

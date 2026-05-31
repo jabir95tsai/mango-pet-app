@@ -1,267 +1,58 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { RefreshCw, Trophy, Users } from "lucide-react";
-import { Timestamp } from "firebase/firestore";
-import { useAuth } from "@/components/auth/auth-provider";
-import { useFamily } from "@/components/family/family-provider";
-import { RouteHeader } from "@/components/nav/route-header";
 import { Tabs } from "@/components/ui/tabs";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
-import { LeaderboardRow } from "@/components/leaderboard/leaderboard-row";
-import { useLeaderboardEntryGlow } from "@/components/leaderboard/use-glow";
-import { subscribeLeaderboard } from "@/lib/firebase/leaderboards";
-import { listFamilyMembers } from "@/lib/firebase/families";
-import type {
-  FamilyMember,
-  LeaderboardEntry,
-  LeaderboardPeriod,
-} from "@/lib/types";
+import { HumanLeaderboard } from "@/components/leaderboard/human-leaderboard";
+import { DogLeaderboard } from "@/components/leaderboard/dog-leaderboard";
 
-type Scope = "all" | "family";
-const SCOPE_STORAGE_KEY = "mango.leaderboard.scope";
+type Dimension = "human" | "dog";
+const DIMENSION_STORAGE_KEY = "mango.leaderboard.dimension";
 
+/**
+ * Leaderboard page — top-level 人/狗 dimension switch (leaderboard v2,
+ * spec ③). The walker (human) board is the original surface, unchanged;
+ * the dog board is the net-new dog-centric ranking. The switch lives
+ * above both so it's reachable in personal mode too (the dog board
+ * includes personal-mode dogs, unlike the family-gated human board).
+ *
+ * Each board is fully self-contained (own header + refresh + scope /
+ * period tabs), so this container only owns the dimension choice and
+ * persists it across visits.
+ */
 export default function LeaderboardPage() {
-  const t = useTranslations("Nav");
-  const tC = useTranslations("Common");
   const tLb = useTranslations("Leaderboard");
-  const { user } = useAuth();
-  const { family, loading: familyLoading } = useFamily();
+  const [dimension, setDimension] = useState<Dimension>("human");
 
-  const [scope, setScope] = useState<Scope>("all");
-  const [period, setPeriod] = useState<LeaderboardPeriod>("weekly");
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  // Manual refresh wiring (spec Item #4). `refreshNonce` flips on click
-  // so the subscribe-leaderboard useEffect re-runs and tears down /
-  // re-creates the Firestore listener; `isRefreshing` drives the icon
-  // spinner + disabled state, auto-clearing after 800ms so the user
-  // gets visible feedback even when the data was already up-to-date.
-  const [refreshNonce, setRefreshNonce] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Restore last-selected scope from localStorage on first mount.
-  // Personal-mode users never see the toggle so this is a no-op for
-  // them — the branch below short-circuits before scope matters.
   useEffect(() => {
     if (typeof localStorage === "undefined") return;
-    const saved = localStorage.getItem(SCOPE_STORAGE_KEY) as Scope | null;
-    if (saved === "family" || saved === "all") setScope(saved);
+    const saved = localStorage.getItem(
+      DIMENSION_STORAGE_KEY,
+    ) as Dimension | null;
+    if (saved === "human" || saved === "dog") setDimension(saved);
   }, []);
 
-  // Entries: realtime listener so the recomputeWalkerLeaderboards
-  // trigger's writes reach the page within 1-2s — letting the glow
-  // hook detect lastUpdatedAt deltas and flash the row. Personal mode
-  // bypasses the listener (the empty-state branch returns before any
-  // row renders).
-  useEffect(() => {
-    if (familyLoading) return;
-    if (!family) {
-      setEntries([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const unsub = subscribeLeaderboard(
-      period,
-      (next) => {
-        setEntries(next);
-        setLoading(false);
-      },
-      () => setLoading(false),
-    );
-    return () => unsub();
-  }, [familyLoading, family, period, refreshNonce]);
-
-  function handleRefresh() {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    setRefreshNonce((n) => n + 1);
-    refreshMembers();
-    // Hold the spinner for 800ms so even instant re-subscribe reads as
-    // "I did something." Clearing earlier on data arrival would look
-    // like a flicker.
-    window.setTimeout(() => setIsRefreshing(false), 800);
-  }
-
-  // Members: one-shot fetch — family member list rarely changes, no
-  // realtime needed. Re-runs if family doc swaps under us.
-  const refreshMembers = useCallback(async () => {
-    if (familyLoading || !family) {
-      setMembers([]);
-      return;
-    }
-    try {
-      const m = await listFamilyMembers(family);
-      setMembers(m);
-    } catch {
-      setMembers([]);
-    }
-  }, [familyLoading, family]);
-
-  useEffect(() => {
-    refreshMembers();
-  }, [refreshMembers]);
-
-  function handleScopeChange(next: Scope) {
-    setScope(next);
+  function handleDimensionChange(next: Dimension) {
+    setDimension(next);
     if (typeof localStorage !== "undefined") {
-      localStorage.setItem(SCOPE_STORAGE_KEY, next);
+      localStorage.setItem(DIMENSION_STORAGE_KEY, next);
     }
   }
-
-  // Build the family-scope view: every family member appears, even those
-  // who never walked (zero-score placeholder). Spec C: "成員 leaderboard
-  // entry 不存在 → 顯示但分數 0、灰底，不要漏人."
-  // Hook stays above the early return so React's rules-of-hooks holds.
-  const familyEntries: LeaderboardEntry[] = useMemo(() => {
-    if (!family || members.length === 0) return [];
-    const entriesByUid = new Map(entries.map((e) => [e.uid, e]));
-    const fakeUpdatedAt = Timestamp.now();
-    return members
-      .map(
-        (m) =>
-          entriesByUid.get(m.uid) ??
-          ({
-            uid: m.uid,
-            displayName: m.displayName,
-            photoURL: m.photoURL,
-            totalScore: 0,
-            totalDistanceKm: 0,
-            totalDurationMin: 0,
-            walkCount: 0,
-            streakDays: 0,
-            updatedAt: fakeUpdatedAt,
-          } as LeaderboardEntry),
-      )
-      .sort((a, b) => b.totalScore - a.totalScore);
-  }, [family, members, entries]);
-
-  // ── Personal mode branch (spec B): empty state + CTA ─────────────
-  // No toggle, no period tabs, no rows — just the explanation card.
-  // Gated on familyLoading so we don't flash the empty state to a
-  // family user while their family doc is loading.
-  if (!familyLoading && !family) {
-    return (
-      <>
-        <RouteHeader title={t("leaderboard")} className="mb-4" />
-        <EmptyState
-          icon={Trophy}
-          title={tLb("personalEmpty.title")}
-          description={tLb("personalEmpty.subtitle")}
-          action={
-            <Link href="/onboarding">
-              <Button>
-                <Users className="size-4" />
-                {tLb("personalEmpty.cta")}
-              </Button>
-            </Link>
-          }
-        />
-      </>
-    );
-  }
-
-  // ── Family mode (toggle + period tabs + rows) ────────────────────
-  const visibleEntries = scope === "family" ? familyEntries : entries;
-  const isFamilyOnlyMe =
-    scope === "family" && members.length === 1 && visibleEntries.length === 1;
-
-  // Glow signal — diff lastUpdatedAt across realtime snapshots. We
-  // feed the source-of-truth `entries` (not `visibleEntries`, which
-  // has the zero-score placeholder rows that never have a real
-  // lastUpdatedAt and would never glow anyway). Family-only-me
-  // single-member case is naturally a no-op — same uid in both arrays.
-  const glowing = useLeaderboardEntryGlow(entries);
 
   return (
     <>
-      {/* Header row — refresh icon button anchored to the page's
-          top-right corner per user 2026-05-25. Pulled out of
-          RouteHeader's `action` slot so it sits as a sibling, keeping
-          the button visually pinned far-right while the title +
-          subtitle stack hugs the left. items-start so the button stays
-          at the top edge even when the subtitle wraps. */}
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <RouteHeader
-          title={t("leaderboard")}
-          subtitle="加權公式：距離×體型係數 + 時長 + 連續天數"
-          className="mb-0 flex-1 min-w-0"
-        />
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          aria-label={tLb("refreshButton")}
-          title={tLb("refreshButton")}
-          className="grid size-11 shrink-0 place-items-center rounded-full text-mango-brand-deep transition-colors hover:bg-mango-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep disabled:opacity-60"
-        >
-          <RefreshCw
-            className={
-              isRefreshing
-                ? "size-5 animate-spin motion-reduce:animate-none"
-                : "size-5"
-            }
-            strokeWidth={2}
-          />
-        </button>
-      </div>
-
-      <div className="mb-3">
-        <Tabs<Scope>
-          value={scope}
-          onChange={handleScopeChange}
-          options={[
-            { value: "all", label: tLb("scope.all") },
-            { value: "family", label: tLb("scope.family") },
-          ]}
-        />
-      </div>
-
       <div className="mb-4">
-        <Tabs<LeaderboardPeriod>
-          value={period}
-          onChange={setPeriod}
+        <Tabs<Dimension>
+          value={dimension}
+          onChange={handleDimensionChange}
           options={[
-            { value: "weekly", label: "本週" },
-            { value: "monthly", label: "本月" },
-            { value: "all_time", label: "總榜" },
+            { value: "human", label: `🧑 ${tLb("dimension.human")}` },
+            { value: "dog", label: `🐕 ${tLb("dimension.dog")}` },
           ]}
         />
       </div>
 
-      {loading || familyLoading ? (
-        <p className="text-sm text-zinc-500">{tC("loading")}</p>
-      ) : visibleEntries.length === 0 ? (
-        <EmptyState
-          icon={Trophy}
-          title="排行榜計算中"
-          description="Cloud Function 每天午夜 (Asia/Taipei) 聚合一次。先去遛狗累積分數！"
-        />
-      ) : (
-        <>
-          <div className="grid gap-2 lg:grid-cols-2">
-            {visibleEntries.map((e, idx) => (
-              <LeaderboardRow
-                key={e.uid}
-                rank={idx + 1}
-                entry={e}
-                highlight={e.uid === user?.uid}
-                isGlowing={glowing.has(e.uid)}
-              />
-            ))}
-          </div>
-          {isFamilyOnlyMe && (
-            <p className="mt-4 text-center text-sm text-zinc-500">
-              {tLb("familyOnlyMe")}
-            </p>
-          )}
-        </>
-      )}
+      {dimension === "human" ? <HumanLeaderboard /> : <DogLeaderboard />}
     </>
   );
 }

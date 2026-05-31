@@ -284,6 +284,23 @@
       "title": "Auto-photo on walks",
       "body": "Prompt to capture + share at walk start & end"
     },
+    "leaderboardVisibility": {
+      "title": "Leaderboard visibility",
+      "subtitle": "Choose which dog leaderboards your dogs appear on. You can always see your own dogs.",
+      "loading": "Loading...",
+      "public": {
+        "label": "Public",
+        "hint": "Your dogs show on the all-app and friends boards (default)"
+      },
+      "friends": {
+        "label": "Friends only",
+        "hint": "Hidden from the all-app board, still visible to friends"
+      },
+      "off": {
+        "label": "Off",
+        "hint": "Hidden from both boards — only you can see your dogs"
+      }
+    },
     "dangerZone": {
       "title": "Danger zone",
       "subtitle": "Actions below cannot be undone. Make sure you understand the consequences first.",
@@ -315,6 +332,16 @@
     "errorPrefix": "Delete failed"
   },
   "Leaderboard": {
+    "title": "Leaderboard",
+    "dimension": {
+      "human": "People",
+      "dog": "Dogs"
+    },
+    "period": {
+      "weekly": "This week",
+      "monthly": "This month",
+      "all_time": "All time"
+    },
     "scope": {
       "all": "All",
       "family": "Family"
@@ -325,6 +352,26 @@
       "title": "Join a family to see leaderboards",
       "subtitle": "Leaderboards work within families. For just-yourself stats, your home page already covers it.",
       "cta": "Create or join a family"
+    },
+    "dog": {
+      "subtitle": "Dogs ranked by a size · age · breed-weighted score — compete with friends or the whole app",
+      "scope": {
+        "friends": "Friends",
+        "all": "All app"
+      },
+      "walkCount": "{count} walks",
+      "byOwner": "by {owner}",
+      "yours": "Yours",
+      "scoreUnit": "pts",
+      "emptyFriends": {
+        "title": "No friends' dogs yet",
+        "subtitle": "Add friends and their dogs show up here to compete on score.",
+        "cta": "Add friends"
+      },
+      "emptyAll": {
+        "title": "Dog leaderboard is warming up",
+        "subtitle": "Scores update right after each walk, with a nightly re-aggregation (Asia/Taipei). Go walk a dog to get on the board!"
+      }
     }
   },
   "Walks": {

@@ -13,7 +13,12 @@ import {
 import { getFunctions, httpsCallable } from "firebase/functions";
 import type { User } from "firebase/auth";
 import { getDb, getFirebaseApp } from "./config";
-import type { AppUser, AuthProviderKind, Pet } from "@/lib/types";
+import type {
+  AppUser,
+  AuthProviderKind,
+  LeaderboardVisibility,
+  Pet,
+} from "@/lib/types";
 
 const FN_REGION = "asia-east1";
 
@@ -130,6 +135,24 @@ export async function updateWalkAutoPhotoShare(
   await setDoc(
     doc(getDb(), "users", uid),
     { walkPrefs: { autoPhotoShare: enabled } },
+    { merge: true },
+  );
+}
+
+/** Dog-leaderboard visibility master switch (leaderboard v2). Writes
+ *  `users/{uid}.leaderboardVisibility`. The backend's
+ *  `syncDogEntryVisibility` onWrite trigger fans the new value out to
+ *  every dog entry's denormalised `ownerVisibility` — the client never
+ *  touches dog entries directly. Absent value is treated as `'public'`
+ *  everywhere it's read, so writing `'public'` is the explicit opt-in.
+ *  Spec docs/features/leaderboard-v2-dog-centric.md ③. */
+export async function updateLeaderboardVisibility(
+  uid: string,
+  value: LeaderboardVisibility,
+): Promise<void> {
+  await setDoc(
+    doc(getDb(), "users", uid),
+    { leaderboardVisibility: value },
     { merge: true },
   );
 }
