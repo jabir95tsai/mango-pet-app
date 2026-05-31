@@ -52,5 +52,12 @@
     "serwist": "^9.5.11",
     "tailwindcss": "^4",
     "typescript": "5.9.3"
+  },
+  "_comment_optionalDependencies": "The root package-lock.json was generated on Windows, which omits foreign-platform optional NATIVE binaries (npm only records the host platform's variant for TRANSITIVE optionals). Firebase App Hosting builds on linux (x64, glibc/gnu) and `npm ci` at the workspace root therefore couldn't install these prebuilt binaries, so `next build` died at config load / CSS build ('No prebuild of @parcel/watcher', 'Cannot find @swc/core-linux-x64-gnu', etc.). Declaring each linux binary as a DIRECT optionalDependency forces a resolved+integrity node into the lockfile (direct deps are always recorded regardless of host OS), so `npm ci` installs them on linux; they're os/cpu-tagged so Windows/macOS local installs skip them. Sources: @parcel/watcher + @swc/core come via next-intl's config plugin; @tailwindcss/oxide + lightningcss via tailwindcss v4 CSS build. ⚠️ Keep each version in lockstep with its parent (@swc/core, @tailwindcss/oxide, lightningcss, @parcel/watcher) — native binaries must match their parent's version exactly.",
+  "optionalDependencies": {
+    "@parcel/watcher-linux-x64-glibc": "2.5.6",
+    "@swc/core-linux-x64-gnu": "1.15.40",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.3.0",
+    "lightningcss-linux-x64-gnu": "1.32.0"
   }
 }
