@@ -2,10 +2,10 @@
 
 狀態：**STRATEGY GO**（user 2026-05-28 4 個 strategic decisions confirmed）
 建立日期：2026-05-28
-最後更新：2026-05-30（Cross-platform PM：D4 收斂 + P1 背景 GPS committed + P3 照片圖庫 + 餐廳/知識庫 deferred-v1;parity 細節見 [`ios-parity-checklist.md`](./ios-parity-checklist.md)）
+最後更新：2026-05-30（iOS PM:P1 工期重估含背景 GPS buffer → P1 2.5–3 週、累計 **13.5–14 週**;deferred-v1 餐廳/知識庫正式列入 post-launch catch-up sprint;parallel-policy §5 拍板維持「critical + polish」。先前同日 Cross-platform PM：D4 收斂 + P1 背景 GPS committed + P3 照片圖庫 + 餐廳/知識庫 deferred-v1;parity 細節見 [`ios-parity-checklist.md`](./ios-parity-checklist.md)）
 規格作者：PM session @ `f5c1732`
 角色：**PM / 策略 + iOS 五角色**（Cross-platform PM / iOS PM / iOS Feature Builder / iOS UI/UX / iOS Backend / iOS Bug Hunter）
-工作量：**XL** — 3 個月（13 週）solo 估計；可能 5 個月 conservative
+工作量：**XL** — 3 個月（**13.5–14 週**,P1 含背景 GPS +0.5–1 週 buffer）solo 估計；可能 5 個月 conservative
 
 ## User Vision
 
@@ -70,7 +70,7 @@ mango_pet_app/                  ← 既有 web repo 升級為 monorepo
 
 **重要**：monorepo migration 是 **P0 第一步**，要小心不破現有 Web ship pipeline (App Hosting build path)。用 **npm workspaces**（user 2026-05-29 決定，非原案 pnpm）+ 維持 `apps/web` 為 web app root，App Hosting `rootDir` + Console backend Root directory 改指 `apps/web`。可執行細化見 [`ios-p0-monorepo-migration.md`](./ios-p0-monorepo-migration.md)。
 
-## 📅 Phase breakdown（13 週估計，敏捷可調）
+## 📅 Phase breakdown（13.5–14 週估計，敏捷可調;P1 含背景 GPS buffer）
 
 ### P0 — Foundation (2 週)
 
@@ -84,7 +84,7 @@ mango_pet_app/                  ← 既有 web repo 升級為 monorepo
 - [ ] EAS Build setup + first build to simulator
 - [ ] **Milestone**: Expo build 跑起來 + login + 看到空白 bottom nav
 
-### P1 — Walks (2 週)
+### P1 — Walks (2.5–3 週 — 原 2 週 + 背景 GPS 0.5–1 週 buffer)
 
 - [ ] WalksHomeScreen with dial + week strip + 卡通走路狗
 - [ ] PetPickerDropdown (sourced from per-pet-walk-goal SHIPPED)
@@ -164,7 +164,22 @@ mango_pet_app/                  ← 既有 web repo 升級為 monorepo
 - [ ] App Store review submit
 - [ ] **Milestone**: 上線 App Store 🎉
 
-**累計**: 13 週 ≈ 3 個月。Realistic 18-20 週（含 buffer）。
+**累計**: **13.5–14 週** ≈ 3 個月（P0 2 + **P1 2.5–3**（含背景 GPS buffer）+ P2 2 + P3 2 + P4 1 + P5 1 + P6 1 + P7 2）。Realistic 18–20 週（含整體 buffer）。
+
+> ⚠️ 累計只含**首版核心 parity + 背景 GPS native 擴張**。**餐廳 + 知識庫(deferred-v1)不在此 13.5–14 週內** — 列 post-launch catch-up sprint，見下方 §Post-launch。
+
+### Post-launch — Deferred-v1 catch-up sprint（首版上架後，不在 13.5–14 週內）
+
+> 2026-05-30 user 拍板:餐廳 + 知識庫**不進首版 iOS**(parity checklist §D Q1/Q2)。首版 ship 上 App Store 後另開 sync sprint 清。
+
+| Feature | Web 路由 | 粗估時點 | 估工 | 前置依賴 |
+|---|---|---|---|---|
+| **餐廳** | `/app/restaurants` (+`[id]`) | **Post-launch sprint 1**（首版上架 + TestFlight 收斂 + 核心 parity 穩定 2–4 週後） | ~1–1.5 週 | ⚠️ **受 Web 側「餐廳暫停新投入」連動**(roadmap §暫停中,控 Google Places API 成本);iOS 餐廳 catch-up **不早於** web 餐廳方向重啟 / user 主動撿回 |
+| **知識庫** | `/app/knowledge` (+`[id]`) | **Post-launch sprint 1**（同上,可獨立排在餐廳之前） | ~1 週 | 無成本顧慮,內容導向;不依賴餐廳 |
+
+- **觸發點**:見 [`ios-pwa-parallel-policy.md`](./ios-pwa-parallel-policy.md) §3「iOS 上架後 → 開 post-launch sync sprint,清 deferred-v1」。
+- **排序建議**:知識庫可先於餐廳(無 API 成本 gate);餐廳等 web 端重啟成本評估通過再 port。
+- **這兩項都不阻擋首版上架** — 首版收斂優先 (strategy RED FLAG mitigation)。
 
 ## 🔄 並行 PWA 維護策略 (D3)
 
@@ -177,7 +192,7 @@ PWA 持續 ship feature 期間，iOS 怎麼 catch up：
 | **小 polish (typo / icon)** | iOS 統一在 P7 polish phase 一次 catch up |
 | **Backend / schema 改動** | 同 PR 改 packages/shared-types — web + ios 同時 affected (檢測 type error) |
 
-**PM 預設**：本 spec 鎖 13 週 phase plan 為「對齊 web `f5c1732` 的 snapshot」；web 期間繼續 ship 的 feature **暫不 block iOS plan**，iOS ship 後另開 sync sprint catch up。
+**PM 預設**：本 spec 鎖 13.5–14 週 phase plan 為「對齊 web `f5c1732` 的 snapshot」；web 期間繼續 ship 的 feature **暫不 block iOS plan**，iOS ship 後另開 sync sprint catch up。
 
 ## 🎯 Code sharing strategy（monorepo packages 細節）
 
@@ -213,7 +228,7 @@ PWA 持續 ship feature 期間，iOS 怎麼 catch up：
 | Monorepo migration 破 web build | P0 第一步先做；先在 branch 測 App Hosting build 全綠才 merge main |
 | @react-native-firebase 跟 Firebase JS SDK 有 API 差異 | 在 shared-firebase 抽 platform-agnostic interface；各自實作 |
 | iOS APNs token vs Web FCM token | 兩 token 都寫進 user.fcmTokens（既有 array 結構支援），functions 端不變 |
-| Native module compatibility issues (HEIC / Live Photos / etc.) | 接受 limitation；iOS only feature 不在 13 週內做 |
+| Native module compatibility issues (HEIC / Live Photos / etc.) | 接受 limitation；iOS only feature 不在 13.5–14 週內做 |
 | App Store review rejection | TestFlight 1 週 beta 找 bug；review guideline 預讀；常見拒絕原因（隱私 / 加密 / metadata）pre-check |
 | Solo founder pace slip | Phase plan 預留 30% buffer；緊急時退到 MVP slice (walks + pets only) |
 | Web shipped 新 feature 期間 iOS 沒有 = user 抱怨 | 並行公告「iOS 仍在 build 中，新功能 next sprint 跟上」+ TestFlight beta 標 alpha 期 |
@@ -295,14 +310,14 @@ Repo: C:\Users\jabir\Hacker_J\mango_pet_app (即將 migrate to monorepo)
 ## 跟其他 spec 的關聯
 
 - **核心 SHIPPED web specs**：本 spec iOS port（walks v2 / pets v2 / home v3 / leaderboard / 4 push types / family / auto-friend / save-photo / photo-lightbox / per-pet-walk-goal / walks-auto-photo-share / expenses-into-pets / photo-gallery / UI polish）— 完整對齊 + 狀態見 [`ios-parity-checklist.md`](./ios-parity-checklist.md)
-- **Deferred-v1（2026-05-30 決定不進首版,post-launch catch-up）**：餐廳(`/app/restaurants`)、知識庫(`/app/knowledge`)— 非核心遛狗 loop,內容導向
+- **Deferred-v1（2026-05-30 決定不進首版,post-launch catch-up）**：餐廳(`/app/restaurants`)、知識庫(`/app/knowledge`)— 非核心遛狗 loop,內容導向。**時點 + 估工見上方 §Post-launch — Deferred-v1 catch-up sprint**;餐廳另受 web 側 Google Places 成本暫停連動
 - **visual-redesign-mango.md (Epic 4 partial)**：Phase 0-3 已 ship，Phase 4-6 暫停 — 因 iOS pivot 改變 priority；iOS plan 內 phase 對齊 web 已 ship 的 feature surface
 - **既有 backend (functions / rules / indexes)**：100% reuse，不動
 
 ## PM 觀察
 
 **這是 Mango Pet 最大 scope 的 epic** — 從 Web-first PWA 戰略轉到 cross-platform native。
-- 工作量 ≈ 13 週 / 3 個月 solo founder
+- 工作量 ≈ 13.5–14 週 / 3 個月 solo founder（P1 含背景 GPS buffer）
 - 並行 web maintenance overhead 不小
 - Apple ecosystem learning curve 對 vibe-coding founder 是新挑戰
 

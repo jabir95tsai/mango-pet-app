@@ -229,9 +229,37 @@ iOS 跑得起來：
 
 ---
 
+## 🚧 P0 BLOCKER：Step 5 App Hosting branch build FAILED（2026-05-30）
+
+**狀態**：BLOCKED — migration 本體 OK，但 App Hosting branch build 紅。Open Question #1 風險命中。
+
+### 已確認（iOS PM triage 2026-05-30）
+- ✅ 本地 `apps/web` build PASS（21 routes 全 compile）。
+- ✅ workspace 接線正確：`apps/web` 宣告 `@mango/shared-types`；`apps/web/src/lib/types.ts` 有 import；root `package-lock.json`(v3) 含 `apps/web` + `packages/shared-types` + `packages/shared-tokens` 三個 workspace entry。
+- ✅ `firebase.json rootDir` = `apps/web`；Console backend `mango-pet` Root directory = `apps/web`（user 已改）。
+- ❌ App Hosting Cloud Build 失敗：build_id `7f8cb75b-6560-41c8-b6e7-aa231576abc5`，Cloud Build status **code 9 = FAILED_PRECONDITION**（audit log，非 step log）。
+
+### Root cause（grounded，未拿到 step log 前的最可能）
+Firebase App Hosting × npm workspaces 的已知坑（firebase-tools issue #9562）：App Hosting 在 Cloud Build 跑 `npm ci` 時，被 hoist 到 repo root 的 workspace / transitive deps 在 isolated build 環境解析失敗 → `EUSAGE` / `Missing <pkg> from lock file`。
+疊加因素：`packages/shared-*` 直接 export 原始 `src/index.ts`（無 build step），App Hosting 的 Next build 需要 **transpile** 這些 workspace 套件，local dev 容忍但 Cloud Build 可能不。
+
+### 先排除（cheap checks，可能根本不是問題）
+1. 失敗 build（14:44Z）是否在 user 改 Console Root directory **之前**觸發？是 → 直接重觸發一次新 build。
+2. 抓 build `7f8cb75b...` 的 **`npm ci` step log 最後 ~15 行** → 區分 (a) `EUSAGE / Missing from lock file`（#9562）還是 (b) adapter "cannot find project" precondition。
+
+### 修法選項（iOS Backend 執行，由低風險到結構性）
+1. **`next.config.ts` 加 `transpilePackages: ['@mango/shared-types','@mango/shared-tokens']`** — 讓 Next 在 Cloud Build 編譯原始 TS workspace 套件（最可能必須）。
+2. **npm 版本 / lockfile**：避開 npm v11.6.1/11.6.2（會從 lockfile 刪 deps，npm/cli#8725）；用最新 npm 重生 root `package-lock.json` 再 commit。
+3. **#9562 workaround**：若仍報 `Missing X from lock file`，把該 hoisted transitive dep 顯式加進 `apps/web/package.json`（brittle，最後手段）。
+4. **結構性 fallback（需回 iOS PM 決策）**：若 App Hosting workspace 支援太脆，改讓 `apps/web` 不在 build 期依賴 hoisted workspace 套件 — 例如 shared 套件改成有 build output（`dist/`）而非 raw src，或 P0 暫時用 path alias 直接指 `packages/*/src` 而不走 npm workspace 解析。
+
+### 護欄
+- 全程在 `ios-p0-monorepo` branch；**App Hosting build 全綠才 merge main**（main 仍是舊單 app 結構，可正常 deploy，web production 未受影響）。
+- 選項 4 動到 code-sharing 機制 = 偏離 spec 既定方向 → 先回 iOS PM 確認再做。
+
 ## ⚠️ Open questions（交 iOS Backend 評估後回 iOS PM）
 
-1. **App Hosting 在 npm workspaces subdir 的 install 行為** — Step 5 branch 實測確認；若 hoisting 導致 build 找不到 web deps，評估是否 web 留 self-contained deps（不 hoist）或調 install 指令。
+1. **App Hosting 在 npm workspaces subdir 的 install 行為** — ⬆️ 已於 2026-05-30 命中，見上方 blocker 段；修法選項已列。
 2. **Apple Sign-In 後端**：iOS 加 Apple Sign-In 後，user doc / auth provider 是否需 backend 任何相容處理（既有 Google flow → 新 provider）。預估僅 client，但要 iOS Backend 確認 `users/{uid}` 寫入路徑相容。
 3. **`packages/shared-tokens` 雙輸出格式**（web Tailwind config + ios theme.ts）落地細節 → P1 再定，P0 只放 stub。
 

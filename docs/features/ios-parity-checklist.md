@@ -156,7 +156,7 @@
 
 ## E. Handoff
 
-- **iOS PM**：Q3 → 照片圖庫補進 strategy P3;Q1/Q2 → strategy 標 deferred-v1 清單;Q4 → P1 加背景 GPS 工作項 + 工期重估(見 §F);Q5 → 更新 D4 措辭。**(本 session 已代為更新 strategy doc,iOS PM 接手後 review。)**
+- **iOS PM**：Q3 → 照片圖庫補進 strategy P3;Q1/Q2 → strategy 標 deferred-v1 清單;Q4 → P1 加背景 GPS 工作項 + 工期重估(見 §F);Q5 → 更新 D4 措辭。**(本 session 已代為更新 strategy doc,iOS PM 接手後 review。)** ✅ **2026-05-30 iOS PM 已接手完成**:P1 工期重估 2.5–3 週(含背景 GPS 0.5–1 週 buffer)、累計 13.5–14 週;deferred-v1 正式列 strategy §Post-launch catch-up sprint(粗時點 + 估工);parallel-policy §5 拍板維持 critical + polish。
 - **iOS Feature Builder**：做任一 feature 前回查本表該列 policy + web spec 連結;native upgrade 項(push/save-photo/auth)依 §C 實作,不算 deviation。
 - **iOS Backend**：背景 GPS 的 native 設定(`UIBackgroundModes: location`、Always vs WhenInUse 權限、Info.plist usage strings)由你接,見 §F。
 - **Web 側**：PWA 每新 ship feature → 通知 Cross-platform PM 在 §A/§B 新增列(避免 iOS 漏 catch-up)。
@@ -177,3 +177,4 @@
 
 - 2026-05-29 建立(Cross-platform PM):盤點 web 全 20 路由 → 對齊 P0–P7;抓出餐廳/知識庫/照片圖庫 3 個 phase plan gap;列 5 個 open questions。
 - 2026-05-30 決策落定(Cross-platform PM):user 拍板 Q1–Q5。餐廳 + 知識庫 deferred-v1;照片圖庫 → P3;**背景 GPS 升 P1 committed scope**(+§F 審查注意);D4 收斂為核心 parity + native 擴張。
+- 2026-05-30 phase plan 算清(iOS PM):接手 §E handoff,完成 §F P1 工期重估 → P1 2.5–3 週、累計 **13.5–14 週**;deferred-v1(餐廳/知識庫)正式列 strategy §Post-launch catch-up sprint(餐廳受 web Google Places 成本暫停連動、知識庫可獨立先排);parallel-policy §5 拍板維持「critical + polish」。phase plan 內部一致性 verified。

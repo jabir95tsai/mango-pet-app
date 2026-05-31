@@ -34,6 +34,19 @@ P3 = 也許永遠不做的「想法」。
 
 _2026-05-29 PWA PM session 已清空一輪：原 Inbox 10 條全 triage 完 — 4 條 SHIPPED/RESOLVED 收進「已處理（audit trail）」、1 條 doc-accuracy 當場修掉、2 條升到對應角色待接、3 條(QR scanner / B4 dormant / settings onboarding link)歸 Deferred。下一個角色 session 新發現的事丟這裡。_
 
+### 🚨 production 早上/下午斷續「進不去」（2026-05-30 user 回報）
+- **發現於**：2026-05-30、PWA PM session（user 回報「今天早上下午好像 app 進不去」）
+- **類型**：bug / production incident / availability
+- **重現 / 觀察**：
+  - User 主觀回報 2026-05-30 早上+下午時段 app 進不去（未提供確切時間 / 錯誤畫面 / 是哪個 URL）。
+  - PWA PM 當下(下午稍晚) triage：prod `https://mango-pet--mango-pet-app.asia-east1.hosted.app/` **HTTP 200 / 0.2s，已恢復**。
+  - origin/main 今天**無任何 production code commit**（最後 code = `23ad3a0`，數天前；今天全是 `docs(pm)` 系列：`4086e93` `ea00f37` `901d010` `0b72bd4` 等）。
+  - working tree 的 `apps/web` 是空目錄、未追蹤、不在 origin/main → 排除「monorepo 搬家弄掛 prod」。
+- **PM 主要假設（待 Bug Hunter 用 App Hosting build log 證實/推翻）**：今天為 docs 連續多次 `git push origin main`，每次都觸發 App Hosting auto-build（~5-8 min/次）。多個 rebuild 窗口期間 revision 切換可能短暫 503 → 對應 user「早上下午斷續進不去」。純 docs 改動觸發前端重部署是 root process 問題。
+- **建議交付給**：Bug Hunter（查 App Hosting build / request log 在 user 回報時段是否有 failed build / 503 / cold-start；確認是否每次 docs push 都重建）；若證實流程問題 → 回 PM 評估「docs-only 改動不該重部署前端」(e.g. App Hosting ignore paths / docs 改走非 main 路徑)
+- **優先級提示**：P0（app 進不去 = 核心可用性；雖當下已恢復，需確認是否會復發 + 是否每次 push 都中斷）
+- **待 user 補充**（幫 Bug Hunter 縮範圍）：確切時間區間？看到的是白畫面 / 轉圈 / 錯誤訊息 / 連不上？手機 PWA 還是瀏覽器？只有自己還是家人也中？
+
 ---
 
 ## 已分類 — Bug Hunter 接
