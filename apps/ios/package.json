@@ -7,7 +7,8 @@
     "start": "expo start",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild --platform ios",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eas-build-post-install": "node scripts/eas-dedupe-react-native.mjs"
   },
   "dependencies": {
     "@mango/shared-tokens": "file:../../packages/shared-tokens",
