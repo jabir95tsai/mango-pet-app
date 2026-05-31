@@ -35,7 +35,13 @@
           }
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mango Pet 需要你的位置來記錄遛狗路線與距離。"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

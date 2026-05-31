@@ -43,3 +43,69 @@ export type Pet = {
    *  ever writes `'manual'`. */
   walkGoal?: { minutes: number; source: "manual" | "computed" };
 };
+
+// ── Visibility + reactions (shared by Post/feed; P1a extraction) ──
+export type Visibility = "private" | "friends" | "public";
+
+export const REACTION_EMOJIS = ["❤️", "😂", "🐶", "👍", "🎉"] as const;
+export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
+
+// ── Walks (P1a — cross-platform single source of truth) ──
+// iOS writes walks/{walkId} with EXACTLY these fields so the existing
+// leaderboard Cloud Functions + web feed keep working. Spec data contract:
+// docs/features/ios-p1-walks.md §Data contract.
+export type WalkPathPoint = { lat: number; lng: number; t: number };
+
+export type Walk = {
+  walkId: string;
+  /** Family the pet belongs to. Optional during migration window.
+   *  `null` for personal-mode walks — permission gated by
+   *  `walkerUid == request.auth.uid` instead of family membership.
+   *  ⚠️ `familyId == null` → recomputeWalkerLeaderboards short-circuits
+   *  (personal walks are NOT on the leaderboard). */
+  familyId?: string | null;
+  /** Member of the family who actually did the walk — drives leaderboard
+   *  credit. Optional during migration (legacy walks use `ownerUid`). */
+  walkerUid?: string;
+  walkerName?: string;
+  walkerPhotoURL?: string | null;
+  /** Legacy/back-compat: alias of walkerUid. */
+  ownerUid: string;
+  petId: string;
+  petName?: string;
+  startedAt: Timestamp;
+  endedAt: Timestamp;
+  distanceKm: number;
+  durationMin: number;
+  /** ≤500 sampled points {lat,lng,t}. */
+  path?: WalkPathPoint[];
+  isManual: boolean;
+  /** Weighted score — computed at write time via the SHARED formula in
+   *  `@mango/shared-business` (computeWalkScore). iOS + web must use the
+   *  same formula or the leaderboard diverges. */
+  score: number;
+  notes?: string;
+  /** Up to 5 Storage download URLs backed by
+   *  `users/{walkerUid}/walks/{sessionId}/photos/{idx}-{ts}.{ext}`. */
+  photoURLs?: string[];
+  createdAt: Timestamp;
+};
+
+// ── Posts (feed + auto-photo-share; P1a extraction) ──
+export type Post = {
+  postId: string;
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL: string | null;
+  petIds: string[];
+  text: string;
+  photoURLs: string[];
+  visibility: Visibility;
+  createdAt: Timestamp;
+  reactionCounts: Record<ReactionEmoji, number>;
+  /** Optional cross-link to a walks/{walkId} doc. Set by the auto-photo-
+   *  share flow. May point at a future walk doc (START post is created
+   *  before the walk is saved) — readers must tolerate a missing/cancelled
+   *  referenced doc. */
+  walkId?: string;
+};

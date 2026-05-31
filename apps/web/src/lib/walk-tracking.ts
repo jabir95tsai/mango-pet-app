@@ -2,25 +2,9 @@
 
 import type { Timestamp } from "firebase/firestore";
 import type { Walk, WalkPathPoint } from "./types";
-
-/**
- * Haversine distance in km.
- */
-function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const lat1 = (a.lat * Math.PI) / 180;
-  const lat2 = (b.lat * Math.PI) / 180;
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-  return 2 * R * Math.asin(Math.sqrt(x));
-}
-
-const MIN_ACCEPTABLE_ACCURACY_M = 50;
-const MIN_DISTANCE_M_BETWEEN_SAMPLES = 5;
-const MAX_PATH_POINTS = 500;
+// Haversine distance + GPS sample filtering moved to @mango/shared-business
+// so web (watchPosition) and iOS (expo-location) sample identically.
+import { addGpsSample } from "@mango/shared-business";
 
 /** Geolocation API error codes (W3C). */
 const GEO_PERMISSION_DENIED = 1;
@@ -376,32 +360,21 @@ export class WalkSession {
   }
 
   private handlePosition(pos: GeolocationPosition) {
-    const accuracy = pos.coords.accuracy ?? Infinity;
-    if (accuracy > MIN_ACCEPTABLE_ACCURACY_M) return;
-
-    const point: WalkPathPoint = {
+    // Delegate accuracy/min-distance filtering, distance accumulation and
+    // path-capping to the shared pure helper (identical to iOS). Returns the
+    // SAME accumulator object when the sample is rejected → no state emit.
+    const acc = {
+      path: this.state.path,
+      totalDistanceKm: this.state.totalDistanceKm,
+    };
+    const next = addGpsSample(acc, {
       lat: pos.coords.latitude,
       lng: pos.coords.longitude,
       t: pos.timestamp,
-    };
-
-    const last = this.state.path[this.state.path.length - 1];
-    if (last) {
-      const distM = distanceKm(last, point) * 1000;
-      if (distM < MIN_DISTANCE_M_BETWEEN_SAMPLES) return;
-
-      const nextDistance = this.state.totalDistanceKm + distM / 1000;
-      const nextPath =
-        this.state.path.length >= MAX_PATH_POINTS
-          ? [...this.state.path.slice(-MAX_PATH_POINTS + 1), point]
-          : [...this.state.path, point];
-      this.update({
-        totalDistanceKm: Math.round(nextDistance * 1000) / 1000,
-        path: nextPath,
-      });
-    } else {
-      this.update({ path: [point] });
-    }
+      accuracy: pos.coords.accuracy ?? Infinity,
+    });
+    if (next === acc) return; // rejected (poor accuracy or < 5m from last)
+    this.update({ path: next.path, totalDistanceKm: next.totalDistanceKm });
   }
 }
 
