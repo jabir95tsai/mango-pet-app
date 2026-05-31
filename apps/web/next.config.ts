@@ -12,7 +12,7 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ["@mango/shared-types"],
+  transpilePackages: ["@mango/shared-types", "@mango/shared-business"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "firebasestorage.googleapis.com" },

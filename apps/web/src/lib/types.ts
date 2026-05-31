@@ -1,16 +1,32 @@
 import type { Timestamp } from "firebase/firestore";
-import type { Gender, Pet, Species } from "@mango/shared-types";
+import type {
+  Gender,
+  Pet,
+  Post,
+  ReactionEmoji,
+  Species,
+  Visibility,
+  Walk,
+  WalkPathPoint,
+} from "@mango/shared-types";
+import { REACTION_EMOJIS } from "@mango/shared-types";
 
-// Pet / Species / Gender now live in @mango/shared-types (cross-platform
-// single source of truth). Re-exported here so existing `@/lib/types`
-// imports keep working unchanged.
-export type { Gender, Pet, Species };
+// These domain types now live in @mango/shared-types (cross-platform single
+// source of truth). Re-exported here so existing `@/lib/types` imports keep
+// working unchanged.
+export type {
+  Gender,
+  Pet,
+  Post,
+  ReactionEmoji,
+  Species,
+  Visibility,
+  Walk,
+  WalkPathPoint,
+};
+export { REACTION_EMOJIS };
 
-export type Visibility = "private" | "friends" | "public";
 export type AuthProviderKind = "google" | "apple" | "facebook";
-
-export const REACTION_EMOJIS = ["❤️", "😂", "🐶", "👍", "🎉"] as const;
-export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 
 export type AppUser = {
   uid: string;
@@ -118,25 +134,7 @@ export type PetInput = {
   walkGoal?: { minutes: number; source: "manual" | "computed" };
 };
 
-export type Post = {
-  postId: string;
-  authorUid: string;
-  authorName: string;
-  authorPhotoURL: string | null;
-  petIds: string[];
-  text: string;
-  photoURLs: string[];
-  visibility: Visibility;
-  createdAt: Timestamp;
-  reactionCounts: Record<ReactionEmoji, number>;
-  /** Optional cross-link to a walks/{walkId} doc. Set by the auto-
-   *  photo-share flow when the post is created from the start /
-   *  end walk prompt (docs/features/walks-auto-photo-share.md). May
-   *  point at a future walk doc (start photo is taken before the
-   *  walk is saved) — clients reading this field should tolerate
-   *  the referenced doc being missing or cancelled. */
-  walkId?: string;
-};
+// `Post` now lives in @mango/shared-types (re-exported at top of file).
 
 export type PostInput = {
   text: string;
@@ -304,40 +302,7 @@ export type RestaurantReviewInput = {
 };
 
 // ── Walks ──
-export type WalkPathPoint = { lat: number; lng: number; t: number };
-
-export type Walk = {
-  walkId: string;
-  /** Family the pet belongs to. Optional during migration window.
-   *  `null` for personal-mode walks — permission gated by
-   *  `walkerUid == request.auth.uid` instead of family membership. */
-  familyId?: string | null;
-  /** Member of the family who actually did the walk — drives leaderboard
-   *  credit. Optional during migration (legacy walks use `ownerUid`). */
-  walkerUid?: string;
-  walkerName?: string;
-  walkerPhotoURL?: string | null;
-  /** Legacy/back-compat: alias of walkerUid. */
-  ownerUid: string;
-  petId: string;
-  petName?: string;
-  startedAt: Timestamp;
-  endedAt: Timestamp;
-  distanceKm: number;
-  durationMin: number;
-  path?: WalkPathPoint[];
-  isManual: boolean;
-  /** Weighted score per scoring formula (see lib/scoring.ts). */
-  score: number;
-  notes?: string;
-  /** Up to 5 user-captured photos taken during the walk (spec D2). Each
-   *  URL is a Firebase Storage download URL backed by
-   *  `users/{walkerUid}/walks/{walkId}/photos/{idx}-{ts}.{ext}`. Old
-   *  walks without this field are fine — every render-site treats
-   *  `photoURLs?.length` defensively. */
-  photoURLs?: string[];
-  createdAt: Timestamp;
-};
+// `Walk` + `WalkPathPoint` now live in @mango/shared-types (re-exported above).
 
 export type WalkInput = {
   petId: string;
