@@ -24,7 +24,11 @@ import { ExportDataButton } from "@/components/settings/export-data-button";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { signOutCurrent } from "@/lib/firebase/auth";
+import {
+  resolveUserDisplayName,
+  resolveUserPhotoURL,
+  signOutCurrent,
+} from "@/lib/firebase/auth";
 import { useNavDrawer } from "@/components/nav/nav-drawer-context";
 
 export default function SettingsPage() {
@@ -60,12 +64,14 @@ export default function SettingsPage() {
         <section className="flex flex-col gap-4 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
           <div className="flex items-center gap-3">
             <Avatar
-              src={user?.photoURL}
-              name={user?.displayName ?? "Guest"}
+              src={resolveUserPhotoURL(user)}
+              name={resolveUserDisplayName(user) ?? "Guest"}
               size={48}
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{user?.displayName ?? "Guest"}</p>
+              <p className="truncate font-medium">
+                {resolveUserDisplayName(user) ?? "Guest"}
+              </p>
               <p className="truncate text-sm text-zinc-500">{user?.email ?? "—"}</p>
             </div>
             {/* Friends entry — moved here from the nav sidebar/drawer per

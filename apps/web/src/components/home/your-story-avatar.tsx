@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth/auth-provider";
+import { resolveUserDisplayName, resolveUserPhotoURL } from "@/lib/firebase/auth";
 
 /**
  * Stories-bar slot 1 — user's "Your Story" avatar with a brand `+`
@@ -43,8 +44,8 @@ export function YourStoryAvatar({ onTap }: Props) {
         />
         <div className="absolute inset-[3px] overflow-hidden rounded-full">
           <Avatar
-            src={user?.photoURL}
-            name={user?.displayName ?? "You"}
+            src={resolveUserPhotoURL(user)}
+            name={resolveUserDisplayName(user) ?? "You"}
             size={58}
           />
         </div>

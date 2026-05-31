@@ -126,3 +126,35 @@ export function clearPendingLink(): void {
 export function getPendingLinkInfo(): { tried: AuthProviderKind } | null {
   return pendingLink ? { tried: pendingLink.tried } : null;
 }
+
+/**
+ * Firebase fills the top-level `user.photoURL` / `user.displayName` from
+ * the account's providers, but for multi-provider accounts (e.g. Google +
+ * Apple linked via `linkWithCredential` above) those top-level fields can
+ * end up null — Apple returns no photoURL and only a one-shot name — even
+ * though a provider entry still carries the real values. Resolve the best
+ * available value: top-level first, then the first provider that has one.
+ *
+ * Use this anywhere we render the *current* user's own avatar / name from
+ * the live Auth object (the denormalised copies stored in Firestore docs
+ * are unaffected, so other people's avatars don't need this).
+ */
+export function resolveUserPhotoURL(user: User | null | undefined): string | null {
+  if (!user) return null;
+  if (user.photoURL) return user.photoURL;
+  for (const p of user.providerData) {
+    if (p?.photoURL) return p.photoURL;
+  }
+  return null;
+}
+
+export function resolveUserDisplayName(
+  user: User | null | undefined,
+): string | null {
+  if (!user) return null;
+  if (user.displayName) return user.displayName;
+  for (const p of user.providerData) {
+    if (p?.displayName) return p.displayName;
+  }
+  return null;
+}
