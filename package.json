@@ -12,5 +12,14 @@
     "start": "npm run start -w apps/web",
     "lint": "npm run lint -w apps/web",
     "typecheck": "npm run typecheck -w apps/web"
+  },
+  "comments": {
+    "overrides": "Monorepo dependency coherence. react-native is forced to a single 0.76.9 so it hoists to the root next to expo (avoids the CocoaPods 'ReactAppDependencyProvider depended upon by ExpoModulesCore' failure caused by expo-hoisted-but-RN-nested split; loose 'react-native:*' peers from @react-native-firebase/expo otherwise pull RN latest). The other three pin apps/web's React-19/Next-16/firebase toolchain to the versions it builds cleanly on, so the clean install required for the RN override doesn't drift web."
+  },
+  "overrides": {
+    "react-native": "0.76.9",
+    "@types/react": "19.2.15",
+    "firebase": "12.13.0",
+    "typescript": "5.9.3"
   }
 }
