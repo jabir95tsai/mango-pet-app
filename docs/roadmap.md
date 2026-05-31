@@ -2,7 +2,7 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-05-31（🍎 iOS PM — **P0 Foundation MILESTONE 全簽收**：iPhone 實機 Google+Apple 登入通 + 空白 5-tab nav + shared-types/tokens 雙端通;parity §A P0 三列 → ✅;下一步規劃 P1 Walks｜先前同日 Cross-platform PM — **P0 Foundation 完成 + hard-freeze 解除**：monorepo migration merge main(`3961f19`)、App Hosting build `c94c384` 修綠、exit criteria 全達成,進入 §2 parallel guarded;放行 iOS Feature Builder P0 Step 7｜先前 05-30 iOS PM — **phase plan 算清**：P1 工期重估含背景 GPS buffer → 累計 **13.5–14 週**;deferred-v1 餐廳/知識庫正式列 post-launch catch-up sprint;parallel-policy §5 拍板維持「critical + polish」｜先前同日 Cross-platform PM — **iOS parity 5 open questions 拍板**：餐廳/知識庫 deferred-v1、照片圖庫排 P3、**背景 GPS 升 P1 committed**、D4 收斂為核心 parity + native 擴張;strategy + checklist 同步更新｜先前 05-29：**iOS parity checklist + Web/PWA 並行 policy 落地**：[`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（web 全 20 路由 → P0–P7 對齊;抓出餐廳/知識庫/照片圖庫 3 個 phase plan gap + 5 open questions）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（P0 hard freeze / P1–P7 parallel guarded + catch-up 節奏）｜先前：P0 monorepo migration spec READY-FOR-DEV + npm workspaces + iOS 五角色結構落地）
+最後更新：2026-05-31（🍎 iOS PM — **P1 Walks spec READY-FOR-DEV** [`ios-p1-walks.md`](../features/ios-p1-walks.md)：data contract（接同 walks/{walkId} + leaderboard trigger 不動）+ 背景 GPS committed + sub-phase P1a–d + 三角色 handoff｜先前同日 **P0 Foundation MILESTONE 全簽收**：iPhone 實機 Google+Apple 登入通 + 空白 5-tab nav + shared-types/tokens 雙端通;parity §A P0 三列 → ✅｜先前同日 Cross-platform PM — **P0 Foundation 完成 + hard-freeze 解除**：monorepo migration merge main(`3961f19`)、App Hosting build `c94c384` 修綠、exit criteria 全達成,進入 §2 parallel guarded;放行 iOS Feature Builder P0 Step 7｜先前 05-30 iOS PM — **phase plan 算清**：P1 工期重估含背景 GPS buffer → 累計 **13.5–14 週**;deferred-v1 餐廳/知識庫正式列 post-launch catch-up sprint;parallel-policy §5 拍板維持「critical + polish」｜先前同日 Cross-platform PM — **iOS parity 5 open questions 拍板**：餐廳/知識庫 deferred-v1、照片圖庫排 P3、**背景 GPS 升 P1 committed**、D4 收斂為核心 parity + native 擴張;strategy + checklist 同步更新｜先前 05-29：**iOS parity checklist + Web/PWA 並行 policy 落地**：[`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（web 全 20 路由 → P0–P7 對齊;抓出餐廳/知識庫/照片圖庫 3 個 phase plan gap + 5 open questions）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（P0 hard freeze / P1–P7 parallel guarded + catch-up 節奏）｜先前：P0 monorepo migration spec READY-FOR-DEV + npm workspaces + iOS 五角色結構落地）
 
 ## 進行中
 
@@ -102,9 +102,16 @@
     - **實機三項全綠**：Google 登入 ✅ / Apple 登入 ✅ / 空白 5-tab bottom nav ✅
     - code-sharing 機制雙端通：`apps/ios` import `@mango/shared-types`(Pet) + `@mango/shared-tokens`(mangoColors via theme.ts)
     - parity-checklist §A P0 三列(Auth / BottomNav / tokens)→ ✅
+  - ✅ **P1 Walks spec READY-FOR-DEV（2026-05-31 iOS PM）** → [`ios-p1-walks.md`](../features/ios-p1-walks.md)
+    - grounded on web walks 實作盤點（Walk schema `walks/{walkId}` + Storage 路徑 + Post walkId cross-link + walk-goals/score/haversine pure helpers + Cloud trigger 不動）
+    - **data contract**：iOS 寫入逐欄位對齊 web，接同 leaderboard trigger；score 公式抽 `@mango/shared-business`（functions 不動）
+    - **背景 GPS（Q4 committed）**：Always 權限 + UIBackgroundModes + session-only + App Store 審查 pre-check
+    - **sub-phase P1a 核心 loop / P1b 結束+補登 / P1c 拍照+自動分享 / P1d 背景 GPS**（2.5–3 週）
+    - 三角色 handoff（Backend / Feature Builder / UI/UX）+ 4 open questions 已列
   - 👉 **下個動作（user）**：
-    - ✅ P0 完成（migration + scaffold + 實機簽收）→ freeze 早已解除,parallel guarded
-    - **開 iOS PM session 規劃 P1 Walks spec**（核心遛狗 flow + 背景 GPS committed,見 [`ios-parity-checklist.md`](../features/ios-parity-checklist.md) §A P1 + §F 背景定位審查注意）→ 再 handoff iOS Feature Builder / iOS Backend 動工
+    - ✅ P0 完成 + P1 spec 寫好 → 進入 P1 執行
+    - **先開 iOS Backend session 跑 P1a 前置**：`@mango/shared-types` 加 Walk/Post + 新建 `@mango/shared-business`（walk-goals/score/haversine）+ `expo-location` 前景設定 → 再 handoff iOS Feature Builder 串 WalksHome + 核心追蹤 loop
+    - 背景 GPS（P1d）排在拍照之後，留審查 buffer
     - Web 側恢復可動,但依 [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md) §2「critical + polish only,新 feature 預設不做」
 - **照片圖庫 + 照片儲存** — [`docs/features/photo-gallery-downloads.md`](../features/photo-gallery-downloads.md) ✅ **SHIPPED 2026-05-27**（Feature Builder `e76f97c`）
   - 新增 `/app/photos`「我的照片」集中圖庫；聚合自己的 post / walk / pet avatar / existing receiptURL；點圖沿用 PhotoLightbox；支援單張、多張、一鍵儲存尚未下載

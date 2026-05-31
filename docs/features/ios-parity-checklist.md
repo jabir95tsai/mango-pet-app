@@ -46,6 +46,8 @@
 | Mango palette design tokens | Epic 4 Phase 0 `7baff73` / globals.css | parity（抽 `packages/shared-tokens`） | ✅ `apps/ios/src/theme/theme.ts` import `mangoColors` from `@mango/shared-tokens`（P0 stub；P1+ 漸進填充） |
 
 ### P1 — Walks（核心）
+> 📋 spec READY-FOR-DEV → [`ios-p1-walks.md`](./ios-p1-walks.md)（iOS PM 2026-05-31，含 data contract + 背景 GPS + sub-phase P1a–d + 三角色 handoff）。下列 8 列待 iOS Backend / Feature Builder / UI/UX 執行。
+
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
 | Walks 全頁(radial dial + week strip + 圈內走路狗) | [`walks-v2-rebuild.md`](./walks-v2-rebuild.md) `984be5b` | parity | ⬜ |
