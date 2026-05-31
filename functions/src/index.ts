@@ -28,7 +28,9 @@ import { getMessaging } from "firebase-admin/messaging";
 import { getStorage } from "firebase-admin/storage";
 import {
   computeWalkerPeriodScore,
+  computeDogPeriodScore,
   type UserAccum,
+  type DogAccum,
 } from "./leaderboard-helpers";
 import {
   createMutualFriendship,
@@ -393,6 +395,16 @@ export const aggregateLeaderboards = onSchedule(
 
     // Phase 2 B1 — rank-overtake push. Runs against all_time only.
     await runRankOvertakePushes(allTimeResult, allTime);
+
+    // Dog-centric board (leaderboard v2) — same batch, same cron, no new
+    // scheduled function (cost rule). Isolated so a dog-pass failure can't
+    // undo the walker aggregation already committed above; the next run
+    // reconciles idempotently.
+    try {
+      await runDogLeaderboardAggregation(now);
+    } catch (err) {
+      logger.error("runDogLeaderboardAggregation failed", err as Error);
+    }
   },
 );
 
@@ -749,6 +761,280 @@ async function writeSingleLeaderboardEntry(
       { merge: true },
     );
 }
+
+// ═════════════════════════════════════════════════════════════════════
+// Dog-centric leaderboard (leaderboard v2)
+// Spec: docs/features/leaderboard-v2-dog-centric.md
+//
+// Mirrors the walker leaderboard but keyed by petId in a separate
+// collection `dogLeaderboards/{period}/entries/{petId}`. Coexists with
+// the walker board — the walker functions above are UNCHANGED. Two
+// behavioural differences live in `computeDogPeriodScore`: personal-mode
+// walks are INCLUDED, and a dog's score sums across all walkers.
+// ═════════════════════════════════════════════════════════════════════
+
+/** Build the persisted dog-entry object from an accumulation + rank. */
+function dogEntryData(a: DogAccum, now: Timestamp, rank?: number) {
+  const data: Record<string, unknown> = {
+    petId: a.petId,
+    petName: a.petName,
+    petPhotoURL: a.petPhotoURL,
+    breed: a.breed,
+    species: a.species,
+    ownerUid: a.ownerUid,
+    ownerName: a.ownerName,
+    familyId: a.familyId,
+    totalScore: Math.round(a.totalScore * 10) / 10,
+    totalDistanceKm: Math.round(a.totalDistanceKm * 100) / 100,
+    totalDurationMin: Math.round(a.totalDurationMin),
+    walkCount: a.walkCount,
+    streakDays: streakFromDays(a.walkDays),
+    ownerVisibility: a.ownerVisibility,
+    updatedAt: now,
+    lastUpdatedAt: now,
+  };
+  if (rank != null) data.previousRank = rank;
+  return data;
+}
+
+/** Full-period dog writer: ranks (totalScore DESC, tie by petId), writes
+ *  every entry with `previousRank`, and deletes entries whose pet dropped
+ *  out of the period. Mirrors `writeLeaderboardWithRanks` (no rank-overtake
+ *  push for dogs, so no diff is returned). */
+async function writeDogLeaderboard(
+  periodKey: string,
+  accums: Map<string, DogAccum>,
+): Promise<void> {
+  const now = Timestamp.now();
+  const collection = db.collection(`dogLeaderboards/${periodKey}/entries`);
+  const existing = await collection.get();
+
+  const sortedPetIds = [...accums.entries()]
+    .sort(([idA, a], [idB, b]) => {
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+      return idA < idB ? -1 : idA > idB ? 1 : 0;
+    })
+    .map(([id]) => id);
+  const newRanks = new Map<string, number>();
+  sortedPetIds.forEach((id, i) => newRanks.set(id, i + 1));
+
+  const currentIds = new Set(accums.keys());
+  const batch = db.batch();
+  for (const doc of existing.docs) {
+    if (!currentIds.has(doc.id)) batch.delete(doc.ref);
+  }
+  for (const a of accums.values()) {
+    batch.set(
+      collection.doc(a.petId),
+      dogEntryData(a, now, newRanks.get(a.petId) ?? 0),
+    );
+  }
+  await batch.commit();
+}
+
+/** Single-entry dog writer for the realtime triggers — `merge:true` so a
+ *  cron-written `previousRank` isn't clobbered between daily runs. */
+async function writeSingleDogLeaderboardEntry(
+  periodKey: string,
+  a: DogAccum,
+): Promise<void> {
+  await db
+    .doc(`dogLeaderboards/${periodKey}/entries/${a.petId}`)
+    .set(dogEntryData(a, Timestamp.now()), { merge: true });
+}
+
+async function deleteDogLeaderboardEntryIfPresent(
+  periodKey: string,
+  petId: string,
+): Promise<void> {
+  const ref = db.doc(`dogLeaderboards/${periodKey}/entries/${petId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return;
+  await ref.delete();
+}
+
+/** Daily full reconcile of the dog board — called from
+ *  `aggregateLeaderboards` so we DON'T open a second scheduled function
+ *  (cost rule). Enumerates every petId that has any walk (INCLUDING
+ *  personal-mode), unlike the walker pass which excludes personal-mode. */
+async function runDogLeaderboardAggregation(now: Date): Promise<void> {
+  const weekKey = isoWeekLabel(now);
+  const monthKey = monthLabel(now);
+
+  // All walks, no familyId filter — personal-mode dogs are on the board.
+  const allWalks = await db.collection("walks").get();
+  const petIds = new Set<string>();
+  for (const d of allWalks.docs) {
+    const pid = d.data().petId as string | undefined;
+    if (pid) petIds.add(pid);
+  }
+  logger.info(
+    `runDogLeaderboardAggregation: walks=${allWalks.size} pets=${petIds.size}`,
+  );
+
+  const weekly = new Map<string, DogAccum>();
+  const monthly = new Map<string, DogAccum>();
+  const allTime = new Map<string, DogAccum>();
+  for (const petId of petIds) {
+    const [w, m, a] = await Promise.all([
+      computeDogPeriodScore(petId, "weekly", db, now),
+      computeDogPeriodScore(petId, "monthly", db, now),
+      computeDogPeriodScore(petId, "all_time", db, now),
+    ]);
+    if (w) weekly.set(petId, w);
+    if (m) monthly.set(petId, m);
+    if (a) allTime.set(petId, a);
+  }
+
+  await Promise.all([
+    writeDogLeaderboard(weekKey, weekly),
+    writeDogLeaderboard(monthKey, monthly),
+    writeDogLeaderboard("all_time", allTime),
+  ]);
+  logger.info(
+    `runDogLeaderboardAggregation done — weekly=${weekly.size}, ` +
+      `monthly=${monthly.size}, all=${allTime.size}`,
+  );
+}
+
+/** onCreate(walks/{walkId}) — realtime dog board update. Unlike the
+ *  walker companion, this does NOT bail on personal-mode walks. */
+export const recomputeDogLeaderboards = onDocumentCreated(
+  {
+    document: "walks/{walkId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const walk = event.data?.data();
+    if (!walk) return;
+    const petId = walk.petId as string | undefined;
+    if (!petId) return;
+
+    const now = new Date();
+    const weekKey = isoWeekLabel(now);
+    const monthKey = monthLabel(now);
+
+    const [w, m, a] = await Promise.all([
+      computeDogPeriodScore(petId, "weekly", db, now),
+      computeDogPeriodScore(petId, "monthly", db, now),
+      computeDogPeriodScore(petId, "all_time", db, now),
+    ]);
+
+    const writes: Array<Promise<unknown>> = [];
+    if (w) writes.push(writeSingleDogLeaderboardEntry(weekKey, w));
+    if (m) writes.push(writeSingleDogLeaderboardEntry(monthKey, m));
+    if (a) writes.push(writeSingleDogLeaderboardEntry("all_time", a));
+    await Promise.all(writes);
+
+    logger.info(
+      `recomputeDogLeaderboards: pet=${petId} walk=${event.params.walkId}`,
+    );
+  },
+);
+
+/** onDelete(walks/{walkId}) — paired dog board recompute. Drops the entry
+ *  when the dog's last qualifying walk in a period is removed. */
+export const recomputeDogLeaderboardsOnDelete = onDocumentDeleted(
+  {
+    document: "walks/{walkId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const walk = event.data?.data();
+    if (!walk) return;
+    const petId = walk.petId as string | undefined;
+    if (!petId) return;
+
+    const now = new Date();
+    const weekKey = isoWeekLabel(now);
+    const monthKey = monthLabel(now);
+    const walkId = event.params.walkId;
+
+    const [w, m, a] = await Promise.all([
+      computeDogPeriodScore(petId, "weekly", db, now, walkId),
+      computeDogPeriodScore(petId, "monthly", db, now, walkId),
+      computeDogPeriodScore(petId, "all_time", db, now, walkId),
+    ]);
+
+    const ops: Array<Promise<unknown>> = [];
+    ops.push(
+      w
+        ? writeSingleDogLeaderboardEntry(weekKey, w)
+        : deleteDogLeaderboardEntryIfPresent(weekKey, petId),
+    );
+    ops.push(
+      m
+        ? writeSingleDogLeaderboardEntry(monthKey, m)
+        : deleteDogLeaderboardEntryIfPresent(monthKey, petId),
+    );
+    ops.push(
+      a
+        ? writeSingleDogLeaderboardEntry("all_time", a)
+        : deleteDogLeaderboardEntryIfPresent("all_time", petId),
+    );
+    await Promise.all(ops);
+
+    logger.info(
+      `recomputeDogLeaderboardsOnDelete: pet=${petId} walk=${walkId}`,
+    );
+  },
+);
+
+/** onWrite(users/{uid}) — when a user flips their
+ *  `leaderboardVisibility` master switch, fan the new value out to every
+ *  dog entry they own (denormalised `ownerVisibility`) so the client's
+ *  friends/all tab filter stays correct without re-aggregating. Cheap:
+ *  short-circuits on every unrelated user write (e.g. hourly lastSeenAt)
+ *  before doing any reads. Matches dog entries only — walker entries have
+ *  no `ownerUid` field so the collectionGroup query skips them. */
+export const syncDogEntryVisibility = onDocumentWritten(
+  {
+    document: "users/{uid}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const after = event.data?.after?.data();
+    if (!after) return; // user deleted — entry cleanup handled elsewhere
+    const before = event.data?.before?.data();
+    const beforeV = (before?.leaderboardVisibility as string) ?? "public";
+    const afterV = (after.leaderboardVisibility as string) ?? "public";
+    if (beforeV === afterV) return; // unrelated user write — no-op
+
+    const uid = event.params.uid;
+    const snap = await db
+      .collectionGroup("entries")
+      .where("ownerUid", "==", uid)
+      .get();
+    if (snap.empty) return;
+
+    const now = Timestamp.now();
+    // Batch in chunks of 450 (< 500 write cap) for users with many dogs
+    // across many periods.
+    let batch = db.batch();
+    let n = 0;
+    for (const doc of snap.docs) {
+      batch.set(
+        doc.ref,
+        { ownerVisibility: afterV, lastUpdatedAt: now },
+        { merge: true },
+      );
+      if (++n % 450 === 0) {
+        await batch.commit();
+        batch = db.batch();
+      }
+    }
+    if (n % 450 !== 0) await batch.commit();
+    logger.info(
+      `syncDogEntryVisibility: uid=${uid} ${beforeV}→${afterV} entries=${snap.size}`,
+    );
+  },
+);
 
 // ─────────────────────────────────────────────────────────────────────
 // rank-overtake push helper — Phase 2 B1

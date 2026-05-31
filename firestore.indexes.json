@@ -42,6 +42,14 @@
       ]
     },
     {
+      "collectionGroup": "walks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "petId", "order": "ASCENDING" },
+        { "fieldPath": "startedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "posts",
       "queryScope": "COLLECTION",
       "fields": [
@@ -186,6 +194,13 @@
     {
       "collectionGroup": "entries",
       "fieldPath": "uid",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "fieldPath": "ownerUid",
       "indexes": [
         { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
       ]

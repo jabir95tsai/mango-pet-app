@@ -60,7 +60,19 @@ export type AppUser = {
      *  Settings → 遛狗自動拍照. */
     autoPhotoShare?: boolean;
   };
+  /** Per-user master switch for the dog-centric leaderboard (v2). Controls
+   *  whether THIS user's dogs appear on the all-app / friends dog boards.
+   *  Absent = treated as `'public'` (default opt-in). Changing it fans the
+   *  new value out to every dog entry's denormalised `ownerVisibility` via
+   *  the `syncDogEntryVisibility` function. Spec
+   *  docs/features/leaderboard-v2-dog-centric.md ③. */
+  leaderboardVisibility?: LeaderboardVisibility;
 };
+
+/** Dog-leaderboard visibility (leaderboard v2). `'public'` = all-app +
+ *  friends; `'friends'` = friends tab only; `'off'` = neither (owner still
+ *  sees their own dog). */
+export type LeaderboardVisibility = "public" | "friends" | "off";
 
 /** Engagement push type ids, kept in sync with cron / event-trigger
  *  function names in functions/src/index.ts. Used as the value space
@@ -368,6 +380,35 @@ export type LeaderboardEntry = {
    *  when a family member's score just jumped. Optional so legacy
    *  entries written before this field existed don't trip the diff. */
   lastUpdatedAt?: Timestamp;
+};
+
+// ── Dog-centric leaderboard (v2) ──
+/** One row of `dogLeaderboards/{period}/entries/{petId}`. Written only by
+ *  Cloud Functions (cron + realtime triggers). `ownerUid` / `ownerName` are
+ *  denormalised so the client can build the friends/all-app tabs without
+ *  cross-family pet reads; `ownerVisibility` (denormalised from the owner's
+ *  `users/{uid}.leaderboardVisibility`) decides which tab the dog shows on.
+ *  Spec docs/features/leaderboard-v2-dog-centric.md ②. */
+export type DogLeaderboardEntry = {
+  petId: string;
+  petName: string;
+  petPhotoURL: string | null;
+  breed: string | null;
+  species: Species;
+  ownerUid: string;
+  ownerName: string;
+  /** `null` for personal-mode dogs (no family). */
+  familyId: string | null;
+  totalScore: number;
+  totalDistanceKm: number;
+  totalDurationMin: number;
+  walkCount: number;
+  /** Consecutive days this dog was walked by ANY walker. */
+  streakDays: number;
+  ownerVisibility: LeaderboardVisibility;
+  updatedAt: Timestamp;
+  lastUpdatedAt?: Timestamp;
+  previousRank?: number;
 };
 
 // ── Knowledge ──

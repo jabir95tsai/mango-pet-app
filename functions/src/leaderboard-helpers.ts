@@ -166,3 +166,129 @@ export async function computeWalkerPeriodScore(
     walkDays,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Dog-centric leaderboard (leaderboard v2) — mirrors the walker helper
+// but groups by petId instead of walkerUid.
+//
+// Spec: docs/features/leaderboard-v2-dog-centric.md
+//
+// Two deliberate differences from the walker path:
+//   1. INCLUDES personal-mode walks (familyId == null). A solo user's dog
+//      still competes. The walker board keeps excluding personal-mode —
+//      that filter is NOT applied here.
+//   2. A dog's score sums walks across ANY walker (family members A + B
+//      both walking the same dog both credit that dog).
+//
+// `ownerVisibility` is denormalised from the pet OWNER's
+// `users/{ownerUid}.leaderboardVisibility` (per-user master switch,
+// default 'public') so the client can filter the friends/all tabs
+// without cross-family pet reads.
+// ─────────────────────────────────────────────────────────────────────
+
+export type DogVisibility = "public" | "friends" | "off";
+
+export type DogAccum = {
+  petId: string;
+  petName: string;
+  petPhotoURL: string | null;
+  breed: string | null;
+  species: string;
+  ownerUid: string;
+  ownerName: string;
+  familyId: string | null;
+  totalScore: number;
+  totalDistanceKm: number;
+  totalDurationMin: number;
+  walkCount: number;
+  /** Day-buckets the dog was walked on by ANY walker — drives the dog's
+   *  own "consecutive days walked" streak via `streakFromDays`. */
+  walkDays: Set<number>;
+  ownerVisibility: DogVisibility;
+};
+
+/** Compute one dog's leaderboard accumulation for one period. Returns
+ *  null when the dog has no qualifying walks in the period (caller then
+ *  knows to skip / clean up the entry). Reads top-level `walks/` by
+ *  `petId` — needs the (petId ASC, startedAt ASC) composite index. */
+export async function computeDogPeriodScore(
+  petId: string,
+  period: LeaderboardPeriod,
+  db: Firestore = getFirestore(),
+  now: Date = new Date(),
+  excludeWalkId?: string,
+): Promise<DogAccum | null> {
+  const startMs = periodStartMs(period, now);
+
+  let q = db
+    .collection("walks")
+    .where("petId", "==", petId) as FirebaseFirestore.Query;
+  if (startMs != null) {
+    q = q.where("startedAt", ">=", Timestamp.fromMillis(startMs));
+  }
+  const snap = await q.get();
+
+  let totalScore = 0;
+  let totalDistanceKm = 0;
+  let totalDurationMin = 0;
+  let walkCount = 0;
+  const walkDays = new Set<number>();
+  // Fallbacks for a deleted pet doc — derive display fields from the
+  // walks themselves (every walk stores petName + ownerUid/walkerUid).
+  let fallbackPetName = "";
+  let fallbackOwnerUid = "";
+  let fallbackFamilyId: string | null = null;
+
+  for (const d of snap.docs) {
+    if (excludeWalkId && d.id === excludeWalkId) continue;
+    const w = d.data();
+    // NOTE: no `familyId == null` skip — personal-mode dogs count here.
+    const startedAt = w.startedAt as Timestamp | undefined;
+    if (!startedAt) continue;
+    totalScore += Number(w.score) || 0;
+    totalDistanceKm += Number(w.distanceKm) || 0;
+    totalDurationMin += Number(w.durationMin) || 0;
+    walkCount += 1;
+    walkDays.add(Math.floor(startedAt.toMillis() / 86_400_000));
+    if (!fallbackPetName && typeof w.petName === "string") fallbackPetName = w.petName;
+    if (!fallbackOwnerUid) {
+      fallbackOwnerUid = (w.ownerUid as string) || (w.walkerUid as string) || "";
+    }
+    if (w.familyId != null) fallbackFamilyId = w.familyId as string;
+  }
+
+  if (walkCount === 0) return null;
+
+  // Pet doc — source of truth for name / photo / breed / species / owner.
+  const petDoc = await db.doc(`pets/${petId}`).get();
+  const pet = petDoc.data() ?? {};
+  const ownerUid = (pet.ownerUid as string) || fallbackOwnerUid;
+
+  // Owner profile — for ownerName + the visibility master switch.
+  let ownerName = "Friend";
+  let ownerVisibility: DogVisibility = "public";
+  if (ownerUid) {
+    const ownerDoc = await db.doc(`users/${ownerUid}`).get();
+    const o = ownerDoc.data() ?? {};
+    ownerName = (o.displayName as string) ?? "Friend";
+    const v = o.leaderboardVisibility;
+    if (v === "public" || v === "friends" || v === "off") ownerVisibility = v;
+  }
+
+  return {
+    petId,
+    petName: (pet.name as string) || fallbackPetName || "毛孩",
+    petPhotoURL: (pet.photoURL as string | null) ?? null,
+    breed: (pet.breed as string | null) ?? null,
+    species: (pet.species as string) || "dog",
+    ownerUid,
+    ownerName,
+    familyId: (pet.familyId as string | null) ?? fallbackFamilyId,
+    totalScore,
+    totalDistanceKm,
+    totalDurationMin,
+    walkCount,
+    walkDays,
+    ownerVisibility,
+  };
+}
