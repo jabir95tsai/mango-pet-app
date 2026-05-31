@@ -14,12 +14,10 @@
     "typecheck": "npm run typecheck -w apps/web"
   },
   "comments": {
-    "overrides": "Monorepo dependency coherence. react-native is forced to a single 0.76.9 so it hoists to the root next to expo (avoids the CocoaPods 'ReactAppDependencyProvider depended upon by ExpoModulesCore' failure caused by expo-hoisted-but-RN-nested split; loose 'react-native:*' peers from @react-native-firebase/expo otherwise pull RN latest). The other three pin apps/web's React-19/Next-16/firebase toolchain to the versions it builds cleanly on, so the clean install required for the RN override doesn't drift web."
+    "overrides": "Monorepo dependency coherence. react-native is forced to a single 0.76.9 so it hoists to the root next to expo (avoids the CocoaPods 'ReactAppDependencyProvider depended upon by ExpoModulesCore' failure caused by expo-hoisted-but-RN-nested split; loose 'react-native:*' peers from @react-native-firebase/expo otherwise pull RN latest). firebase is pinned to 12.13.0 (both apps want it). NOTE (2026-05-31): @types/react + typescript were REMOVED from this global override block. Forcing them onto apps/ios (Expo SDK 52 / RN 0.76 declares @types/react ~18.3 + typescript ~5.3.3) made the committed lockfile fail `npm ci` under App Hosting's npm — ci recomputes apps/ios's un-overridden devDeps (@types/react@18.3.29, typescript@5.3.3, @types/prop-types) and they were absent from the override-collapsed lockfile, so every web deploy failed. These are type-only deps (no native/EAS impact). apps/web now pins its own React-19 types + TS 5.9.3 directly in apps/web/package.json, so web keeps its known-good toolchain while apps/ios keeps its Expo-native types and the lockfile is npm-ci-clean across npm versions."
   },
   "overrides": {
     "react-native": "0.76.9",
-    "@types/react": "19.2.15",
-    "firebase": "12.13.0",
-    "typescript": "5.9.3"
+    "firebase": "12.13.0"
   }
 }
