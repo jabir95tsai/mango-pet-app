@@ -195,6 +195,26 @@ body {
   .leaderboard-row-glow { animation: none; }
 }
 
+/* "開始遛狗" CTA gloss sweep (nav-cta-mango-v2 spec §2). A skewed bright
+ * band sweeps the full pill width, fast-in then easing to a stop, parks
+ * off the right edge for ~2s, then repeats. The band is an absolutely-
+ * positioned <span> inside the overflow-hidden pill; animating `left`
+ * keeps it clipped to the pill. The global prefers-reduced-motion rule
+ * above already collapses the duration, but we also hard-stop it here
+ * for spec compliance ("完全無動態"). */
+.cta-sweep {
+  left: -28%;
+  animation: ctaSweepFull 5.2s linear infinite;
+}
+@keyframes ctaSweepFull {
+  0%   { left: -28%; animation-timing-function: cubic-bezier(0.12, 0.72, 0.1, 1); }
+  52%  { left: 122%; }
+  100% { left: 122%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cta-sweep { animation: none; }
+}
+
 /* Walks photo-prompt bottom sheet — slide-up. Used by the
  * PhotoPromptSheet component via Tailwind arbitrary value
  * animate-[photoPromptSlideUp_220ms_ease-out]. The global

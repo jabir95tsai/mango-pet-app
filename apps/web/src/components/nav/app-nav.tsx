@@ -153,75 +153,134 @@ export function AppNav() {
         </ul>
       </nav>
 
-      {/* Mobile bottom tab bar — Phase 0.5 raised center treatment.
-       *  - Surface: warm soft-card tint + backdrop-blur (matches mockup TabBar)
-       *  - Hairline: mango.hairline (warmer than zinc-200)
-       *  - Walks (index 2) renders a raised circular brand button
-       *    bursting above the bar's top edge via absolute -top-4 + a
-       *    4px ring of mango.bg that visually "cuts" through the bar.
-       *  - Other 4 slots keep the column layout; active/inactive map
-       *    to mango.brand / mango.ink-2 (AA passes against cream bg).
+      {/* Mobile bottom tab bar — Mango v2 notched bar (spec
+       *  docs/features/nav-cta-mango-v2.md §1).
+       *  - Surface: an SVG path with a concave centre notch, filled via
+       *    currentColor (text-mango-card-soft, swaps in dark mode);
+       *    preserveAspectRatio="none" stretches the 390-wide path to any
+       *    phone width while the dip stays centred. drop-shadow gives the
+       *    spec's `0 -8px 22px` top shadow following the contour; a
+       *    non-scaling 1px hairline traces the top edge.
+       *  - Walks (index 2): a 62px gradient disc nests in the notch and
+       *    its top edge breaks above the bar (not a flat overlay), with a
+       *    5px mango-bg ring "cutting" through, white solid paw, and a
+       *    遛狗 label below. active → scale(1.06).
+       *  - Other 4 slots: 24px icon, active = brand-deep + 700 label +
+       *    icon lifted 2px + a 5px brand dot; inactive = ink-2 (AA on
+       *    cream — spec's ink-3 fails AA at 10px). Spring transition.
+       *  - Rendered bar height stays 60px so the layout's existing
+       *    bottom clearance (4.75rem) is unchanged; the disc's 16px
+       *    protrusion uses the same 16px the old raised button did.
        *  - Desktop sidebar above untouched.
        */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-mango-hairline bg-mango-card-soft/92 shadow-[0_-8px_24px_rgba(80,50,10,0.10)] backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-none"
+        className="fixed inset-x-0 bottom-0 z-30 md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <ul className="grid grid-cols-5">
-          {primary.map(({ href, key, icon: Icon }) => {
-            const active = isActive(pathname, href);
-            const isRaised = key === "walks";
+        <div className="relative h-[3.75rem]">
+          <svg
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full text-mango-card-soft dark:text-zinc-950"
+            viewBox="0 0 390 78"
+            preserveAspectRatio="none"
+            style={{ filter: "drop-shadow(0 -8px 22px rgba(80,50,10,0.10))" }}
+          >
+            <path
+              d="M0,0 H143 C169,0 161,40 195,40 C229,40 221,0 247,0 H390 V78 H0 Z"
+              fill="currentColor"
+              stroke="var(--color-mango-hairline)"
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
 
-            if (isRaised) {
-              // ── Raised center: walks ────────────────────────
-              // <li> is the grid cell — relative so the button can
-              // pop upward. <Link> spans the cell; the raised disc
-              // is an absolutely-positioned span inside the link so
-              // the entire surface (disc + label) is the tap target.
+          <ul className="relative grid h-full grid-cols-5">
+            {primary.map(({ href, key, icon: Icon }) => {
+              const active = isActive(pathname, href);
+              const isRaised = key === "walks";
+
+              if (isRaised) {
+                // ── Raised centre: walks ────────────────────────
+                // <li> is the grid cell — relative so the disc can pop
+                // upward. The disc is an absolutely-positioned span so
+                // the whole cell (disc + label) is the tap target.
+                return (
+                  <li key={href} className="relative">
+                    <Link
+                      href={href}
+                      aria-current={active ? "page" : undefined}
+                      aria-label={t(key)}
+                      className="relative flex h-full flex-col items-center justify-end pb-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "absolute left-1/2 top-[-16px] grid size-[62px] -translate-x-1/2 place-items-center rounded-full transition-transform duration-[280ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-95 motion-reduce:transition-none",
+                          active ? "scale-[1.06]" : "scale-100",
+                        )}
+                        style={{
+                          background:
+                            "linear-gradient(160deg, var(--color-mango-brand), var(--color-mango-brand-deep))",
+                          boxShadow:
+                            "0 10px 22px -5px rgba(243,152,0,0.55), 0 0 0 5px var(--color-mango-bg)",
+                        }}
+                      >
+                        <PawPrint
+                          className="size-[26px] text-white"
+                          strokeWidth={2}
+                          fill="currentColor"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span className="text-[10.5px] font-bold leading-none text-mango-brand-deep">
+                        {t(key)}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              }
+
+              // ── Standard slots: home / pets / leaderboard / settings ──
               return (
-                <li key={href} className="relative">
+                <li key={href}>
                   <Link
                     href={href}
                     aria-current={active ? "page" : undefined}
-                    aria-label={t(key)}
-                    className="relative block h-[3.75rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2"
+                    className="flex h-full min-w-0 flex-col items-center justify-center gap-1 px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
                   >
+                    <Icon
+                      className={cn(
+                        "size-6 transition-[transform,color] duration-[280ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none",
+                        active
+                          ? "-translate-y-0.5 text-mango-brand-deep dark:text-amber-300"
+                          : "text-mango-ink-2 dark:text-zinc-400",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span
+                      className={cn(
+                        "max-w-full truncate text-[10px] leading-none transition-colors duration-[280ms] motion-reduce:transition-none",
+                        active
+                          ? "font-bold text-mango-brand-deep dark:text-amber-300"
+                          : "font-medium text-mango-ink-2 dark:text-zinc-400",
+                      )}
+                    >
+                      {t(key)}
+                    </span>
                     <span
                       aria-hidden="true"
-                      className="absolute left-1/2 -top-4 grid size-[60px] -translate-x-1/2 place-items-center rounded-full bg-mango-brand text-mango-ink shadow-mango ring-4 ring-mango-bg transition-transform duration-200 ease-out active:scale-95"
-                    >
-                      <Icon
-                        className="size-[26px]"
-                        strokeWidth={2.4}
-                        aria-hidden="true"
-                      />
-                    </span>
+                      className={cn(
+                        "size-[5px] rounded-full bg-mango-brand transition-opacity duration-[280ms] motion-reduce:transition-none",
+                        active ? "opacity-100" : "opacity-0",
+                      )}
+                    />
                   </Link>
                 </li>
               );
-            }
-
-            // ── Standard slots: home / pets / leaderboard / settings ──
-            return (
-              <li key={href}>
-                <Link
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex h-[3.75rem] min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep",
-                    active
-                      ? "text-mango-brand dark:text-amber-300"
-                      : "text-mango-ink-2 hover:text-mango-ink dark:text-zinc-400 dark:hover:text-zinc-100",
-                  )}
-                >
-                  <Icon className="size-5" />
-                  <span className="max-w-full truncate">{t(key)}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+            })}
+          </ul>
+        </div>
       </nav>
 
       {/* Mobile drawer — UNCHANGED in Phase 0.5 */}

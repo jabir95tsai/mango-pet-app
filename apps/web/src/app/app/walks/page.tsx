@@ -603,8 +603,9 @@ export default function WalksPage() {
 
       {/* Mobile-only spacer — sticky CTA below sits 5.75rem above
           viewport bottom (3.75rem nav + 1rem disc protrusion + 1rem
-          gap), spacer h-24 keeps the tail content above it. */}
-      <div className="h-24 md:hidden" aria-hidden="true" />
+          gap). h-28 (was h-24) accounts for the taller 62px v2 pill so
+          the tail content still clears it. */}
+      <div className="h-28 md:hidden" aria-hidden="true" />
 
       {/* Sticky bottom CTA — always orange-gradient「開始遛狗」regardless
           of goal-hit state (user feedback 2026-05-25: dropped the
@@ -616,20 +617,41 @@ export default function WalksPage() {
           className="fixed inset-x-0 z-20 px-4 py-3 md:hidden"
           style={{ bottom: "calc(env(safe-area-inset-bottom) + 5.75rem)" }}
         >
+          {/* V2 pill (nav-cta-mango-v2 spec §2) — full-width 62px gradient
+              capsule with a white play badge, white 19px/800 label, press
+              scale(.97), and a gloss band that sweeps the full width then
+              parks ~2s (`.cta-sweep`, clipped by overflow-hidden). Tokens
+              only, no raw hex. */}
           <button
             type="button"
             onClick={handleStartWalking}
             disabled={pets.length === 0}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-0 text-base font-bold text-white transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
+            aria-label={tW("startWalking")}
+            className="group relative flex h-[62px] w-full items-center justify-center gap-3 overflow-hidden rounded-[31px] border-0 transition-transform duration-[180ms] ease-[cubic-bezier(0.34,1.4,0.64,1)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60 motion-reduce:transition-none"
             style={{
               background:
-                "linear-gradient(180deg, #f39800 0%, #d77b00 100%)",
-              boxShadow:
-                "0 16px 32px -8px rgba(243,152,0,0.60), 0 4px 10px -4px rgba(180,100,0,0.35), 0 1px 0 rgba(255,255,255,0.3) inset",
+                "linear-gradient(160deg, var(--color-mango-amber), var(--color-mango-brand) 50%, var(--color-mango-brand-deep))",
+              boxShadow: "0 12px 26px -8px rgba(243,152,0,0.6)",
             }}
           >
-            <Play className="size-5" />
-            {tW("startWalking")}
+            <span
+              aria-hidden="true"
+              className="cta-sweep pointer-events-none absolute -top-3 -bottom-3 w-[82px] -skew-x-[18deg]"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.62), transparent)",
+              }}
+            />
+            <span
+              aria-hidden="true"
+              className="relative grid size-10 place-items-center rounded-full"
+              style={{ background: "rgba(255,255,255,0.22)" }}
+            >
+              <Play className="size-5 text-white" fill="currentColor" />
+            </span>
+            <span className="relative text-[19px] font-extrabold tracking-[0.5px] text-white">
+              {tW("startWalking")}
+            </span>
           </button>
         </div>
       )}
