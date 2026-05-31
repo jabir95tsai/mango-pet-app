@@ -114,6 +114,25 @@ git fetch && git log -5 --stat origin/main
 
 讀對方最近 5 個 commit 改了什麼，再決定要不要動同一個檔案。Session 開頭花 30 秒做這件事，省下後面 30 分鐘解衝突。
 
+### 規則 4（血淚換來）：dep / lockfile / repo-shape 改動 → branch-first + linux build gate
+
+> 2026-05-31 web production build 連紅 3 支 build 才發現的教訓。
+
+monorepo 化之後，**任何動到 `package.json` / `package-lock.json` / native dep / repo 結構**的改動，**不准直推 main**。要：
+
+1. **Branch-first**：開 branch 做，main 保持 live 可回滾。
+2. **linux build gate**：push branch 後用
+   ```bash
+   npx firebase apphosting:rollouts:create -b <branch>
+   ```
+   讓 App Hosting 在 **linux** 對該 branch 跑一次真 build。**綠了才 merge main**；紅了留在 branch 改，production 全程穩在上一個 good build。
+3. 嚴格走這套，紅 3 次都不會污染 main / production（已驗證）。
+
+**為什麼一定要 linux gate**：本機是 **Windows**。`npm install` 在 Windows 生的 monorepo lockfile **會漏掉 linux 平台的 transitive optional native binary**（例：`@parcel/watcher-linux-x64-glibc`）。本地 `npm run build` 在 Windows 全綠，App Hosting（linux）卻紅在「找不到原生 binary」。**Windows 本地 build 過 ≠ App Hosting 會過** → 一定要 linux branch build 當 gate。
+
+- 長期更穩：CI/lockfile 改在 linux 生成；或保留 `apps/web` 的 `optionalDependencies` 平台清單（已在 `_comment_optionalDependencies` 寫明）。任一 native dep 升版，記得同步那份 pin。
+- 「直推 main 中招」在 P0 migration + 本次已連續發生 → 這條是硬規則，不是建議。
+
 ### 進階選項：Git Worktree（真要長期雙開）
 
 如果你預期長期雙開、想徹底隔離兩邊的 working tree（連 system-reminder「intentional change」狂噴都消除），用 git worktree：
