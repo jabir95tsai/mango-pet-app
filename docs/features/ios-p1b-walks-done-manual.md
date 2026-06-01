@@ -43,6 +43,7 @@ parity：[`ios-parity-checklist.md`](./ios-parity-checklist.md) §A P1
 - P1b code 完成、tsc 過、無新 dep；**待 iPhone 驗收**（done 達標慶祝 + 捨棄/儲存 + 手動補登 isManual:true 落地 + recent 全部展開）。
 - parity §A P1 可標進度：「**Done screen + confetti + 達標變體**」「**手動 walk dialog**」「**Walks history（recent 全部展開）**」三列 → code 到位，實機驗一趟後可標 ✅。
 - 產品取捨待你定：手動補登要不要補 datetime picker（=新 dep）？目前用「往回推時長」。
+  - **✅ iOS PM 決策（2026-06-01）：暫不做（defer）。** P1b 維持「往回推時長」，不加 `@react-native-community/datetimepicker`（省一個 native dep + gate）。理由：手動補登最常見 =「剛遛完忘了記」→ 往回推已 cover；「補登到指定某天」低頻 → 列 follow-up，有真實需求再 re-open（屆時走 branch+linux gate）。刻意 parity gap，已記錄。
 
 ### → iOS UI/UX
 - done screen 慶祝 / confetti 視覺 polish（目前自寫 Animated，可換更細緻的慶祝、emerald wash 對齊 web、Trophy 圖示）。
