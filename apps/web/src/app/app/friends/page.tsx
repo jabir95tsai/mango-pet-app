@@ -26,6 +26,7 @@ type Tab = "friends" | "requests" | "search";
 export default function FriendsPage() {
   const t = useTranslations("Nav");
   const tC = useTranslations("Common");
+  const tF = useTranslations("Friends");
   const askConfirm = useConfirm();
   const { user } = useAuth();
 
@@ -90,7 +91,7 @@ export default function FriendsPage() {
     const friend = friends.find((f) => f.uid === friendUid);
     const ok = await askConfirm({
       title: tC("delete"),
-      message: friend?.displayName ?? "移除好友？",
+      message: friend?.displayName ?? tF("removeConfirm"),
       confirmText: tC("delete"),
       cancelText: tC("cancel"),
       danger: true,
@@ -113,7 +114,7 @@ export default function FriendsPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <RouteHeader
           title={t("friends")}
-          subtitle="加好友、看彼此的寵物動態"
+          subtitle={tF("subtitle")}
           className="mb-0"
         />
         <Button
@@ -123,7 +124,7 @@ export default function FriendsPage() {
           disabled={!user}
         >
           <QrCode className="size-4" />
-          我的 QR
+          {tF("myQr")}
         </Button>
       </div>
 
@@ -132,9 +133,9 @@ export default function FriendsPage() {
           value={tab}
           onChange={setTab}
           options={[
-            { value: "friends", label: `好友 (${friends.length})` },
-            { value: "requests", label: `邀請 (${requests.length})` },
-            { value: "search", label: "搜尋" },
+            { value: "friends", label: tF("tabs.friends", { count: friends.length }) },
+            { value: "requests", label: tF("tabs.requests", { count: requests.length }) },
+            { value: "search", label: tF("tabs.search") },
           ]}
         />
       </div>
@@ -147,8 +148,8 @@ export default function FriendsPage() {
         ) : friends.length === 0 ? (
           <EmptyState
             icon={Users}
-            title="尚未加任何好友"
-            description="到「搜尋」分頁找飼主，互相加好友看彼此的動態。"
+            title={tF("emptyFriends.title")}
+            description={tF("emptyFriends.subtitle")}
           />
         ) : (
           <div className="flex flex-col gap-3">
@@ -179,7 +180,7 @@ export default function FriendsPage() {
         (loading ? (
           <p className="text-sm text-zinc-500">{tC("loading")}</p>
         ) : requests.length === 0 ? (
-          <EmptyState icon={Users} title="尚無交友邀請" />
+          <EmptyState icon={Users} title={tF("emptyRequests")} />
         ) : (
           <div className="flex flex-col gap-3">
             {requests.map((r) => (
@@ -190,13 +191,13 @@ export default function FriendsPage() {
                 <Avatar src={r.fromPhotoURL} name={r.fromName} size={40} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{r.fromName}</p>
-                  <p className="text-xs text-zinc-500">想加你為好友</p>
+                  <p className="text-xs text-zinc-500">{tF("wantsToAdd")}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleAccept(r.fromUid)}
                   disabled={busy === r.fromUid}
-                  aria-label="accept"
+                  aria-label={tF("accept")}
                   className="rounded-lg bg-emerald-100 p-2 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-400"
                 >
                   <Check className="size-4" />
@@ -205,7 +206,7 @@ export default function FriendsPage() {
                   type="button"
                   onClick={() => handleReject(r.requestId)}
                   disabled={busy === r.requestId}
-                  aria-label="reject"
+                  aria-label={tF("reject")}
                   className="rounded-lg p-2 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
                 >
                   <UserX className="size-4" />

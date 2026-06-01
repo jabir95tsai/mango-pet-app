@@ -195,7 +195,7 @@ export function HumanLeaderboard() {
       <div className="mb-4 flex items-start justify-between gap-3">
         <RouteHeader
           title={t("leaderboard")}
-          subtitle="加權公式：距離×體型係數 + 時長 + 連續天數"
+          subtitle={tLb("humanSubtitle")}
           className="mb-0 flex-1 min-w-0"
         />
         <button
@@ -233,9 +233,9 @@ export function HumanLeaderboard() {
           value={period}
           onChange={setPeriod}
           options={[
-            { value: "weekly", label: "本週" },
-            { value: "monthly", label: "本月" },
-            { value: "all_time", label: "總榜" },
+            { value: "weekly", label: tLb("period.weekly") },
+            { value: "monthly", label: tLb("period.monthly") },
+            { value: "all_time", label: tLb("period.all_time") },
           ]}
         />
       </div>
@@ -245,8 +245,8 @@ export function HumanLeaderboard() {
       ) : visibleEntries.length === 0 ? (
         <EmptyState
           icon={Trophy}
-          title="排行榜計算中"
-          description="Cloud Function 每天午夜 (Asia/Taipei) 聚合一次。先去遛狗累積分數！"
+          title={tLb("computing.title")}
+          description={tLb("computing.subtitle")}
         />
       ) : (
         <>

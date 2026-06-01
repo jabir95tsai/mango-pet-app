@@ -25,16 +25,17 @@ import type { PetFriendlyLevel, Restaurant, RestaurantInput } from "@/lib/types"
 type View = "list" | "map";
 type LevelFilter = PetFriendlyLevel | "all";
 
-const LEVELS: { value: LevelFilter; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "indoor_ok", label: "可進室內" },
-  { value: "outdoor_only", label: "戶外" },
-  { value: "restricted", label: "限制" },
+const LEVEL_VALUES: LevelFilter[] = [
+  "all",
+  "indoor_ok",
+  "outdoor_only",
+  "restricted",
 ];
 
 export default function RestaurantsPage() {
   const tNav = useTranslations("Nav");
   const tC = useTranslations("Common");
+  const tR = useTranslations("Restaurant");
   const { user } = useAuth();
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -107,12 +108,12 @@ export default function RestaurantsPage() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <RouteHeader
           title={tNav("restaurants")}
-          subtitle="寵物友善餐廳地圖"
+          subtitle={tR("subtitle")}
           className="mb-0"
         />
         <Button onClick={() => setAdding(true)} size="sm" className="w-full sm:w-auto">
           <Plus className="size-4" />
-          新增
+          {tR("add")}
         </Button>
       </div>
 
@@ -121,8 +122,8 @@ export default function RestaurantsPage() {
           value={view}
           onChange={setView}
           options={[
-            { value: "list", label: "清單" },
-            { value: "map", label: "地圖" },
+            { value: "list", label: tR("view.list") },
+            { value: "map", label: tR("view.map") },
           ]}
         />
         <button
@@ -136,28 +137,26 @@ export default function RestaurantsPage() {
           )}
         >
           <Heart className={cn("size-3.5", favOnly && "fill-current")} />
-          {favOnly ? "只看收藏" : "全部"}
+          {favOnly ? tR("favOnly") : tR("all")}
         </button>
       </div>
 
       {originFromBrowser === false && (
         <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
           <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-          <span>
-            未取得你的位置 — 使用台北 101 為預設中心點，距離排序可能不正確。請在瀏覽器設定允許定位後重新整理。
-          </span>
+          <span>{tR("geoWarning")}</span>
         </div>
       )}
 
       <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 mb-4">
         <Filter className="size-3.5 text-zinc-400 shrink-0 self-center" />
-        {LEVELS.map((l) => {
-          const active = levelFilter === l.value;
+        {LEVEL_VALUES.map((value) => {
+          const active = levelFilter === value;
           return (
             <button
-              key={l.value}
+              key={value}
               type="button"
-              onClick={() => setLevelFilter(l.value)}
+              onClick={() => setLevelFilter(value)}
               aria-pressed={active}
               className={cn(
                 "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
@@ -166,7 +165,7 @@ export default function RestaurantsPage() {
                   : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-800",
               )}
             >
-              {l.label}
+              {tR(`level.${value}`)}
             </button>
           );
         })}
@@ -177,17 +176,13 @@ export default function RestaurantsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={MapPin}
-          title="尚無餐廳"
-          description={
-            favOnly
-              ? "你還沒有收藏任何餐廳。"
-              : "新增第一筆寵物友善餐廳，或調整篩選條件。"
-          }
+          title={tR("empty.title")}
+          description={favOnly ? tR("empty.favSubtitle") : tR("empty.subtitle")}
           action={
             !favOnly && (
               <Button onClick={() => setAdding(true)}>
                 <Plus className="size-4" />
-                新增餐廳
+                {tR("addRestaurant")}
               </Button>
             )
           }

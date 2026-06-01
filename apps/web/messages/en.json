@@ -52,9 +52,69 @@
     "deleteFailed": "Couldn't delete. Try again.",
     "tooLong": "Comments are limited to {max} characters"
   },
+  "Knowledge": {
+    "subtitle": "Pet care knowledge",
+    "filters": {
+      "all": "All",
+      "bookmarked": "⭐ Saved",
+      "feeding": "Feeding",
+      "training": "Training",
+      "health": "Health",
+      "breed": "Breed",
+      "lifestyle": "Lifestyle"
+    },
+    "emptyBookmarked": {
+      "title": "No bookmarks yet",
+      "subtitle": "Tap the 🔖 icon to save articles you like."
+    },
+    "emptyAll": {
+      "title": "Knowledge base coming soon",
+      "subtitle": "We're adding more articles — try another category for now."
+    }
+  },
+  "Friends": {
+    "subtitle": "Add friends and follow each other's pets",
+    "myQr": "My QR",
+    "tabs": {
+      "friends": "Friends ({count})",
+      "requests": "Requests ({count})",
+      "search": "Search"
+    },
+    "emptyFriends": {
+      "title": "No friends yet",
+      "subtitle": "Use the Search tab to find owners and add each other."
+    },
+    "emptyRequests": "No friend requests",
+    "wantsToAdd": "wants to be friends",
+    "removeConfirm": "Remove friend?",
+    "accept": "Accept",
+    "reject": "Reject"
+  },
+  "Feed": {
+    "subtitle": "Friends & public posts",
+    "compose": "Post",
+    "empty": {
+      "title": "No posts yet",
+      "subtitle": "Share the first post, or wait for friends' public posts."
+    }
+  },
   "Restaurant": {
     "title": "Restaurant",
     "addRestaurant": "Add restaurant",
+    "subtitle": "Pet-friendly restaurant map",
+    "add": "Add",
+    "favOnly": "Favorites",
+    "all": "All",
+    "geoWarning": "Couldn't get your location — using Taipei 101 as the default center, so distance sorting may be off. Allow location in your browser and refresh.",
+    "view": {
+      "list": "List",
+      "map": "Map"
+    },
+    "empty": {
+      "title": "No restaurants yet",
+      "subtitle": "Add the first pet-friendly spot, or adjust your filters.",
+      "favSubtitle": "You haven't favorited any restaurants yet."
+    },
     "fields": {
       "name": "Name",
       "address": "Address",
@@ -69,6 +129,7 @@
       "largeDogsOk": "🐕‍🦺 Large dogs OK"
     },
     "level": {
+      "all": "All",
       "indoor_ok": "Indoor OK",
       "outdoor_only": "Outdoor only",
       "restricted": "Restricted"
@@ -378,6 +439,11 @@
     },
     "familyOnlyMe": "You're the only one in this family — invite someone to make it a contest!",
     "refreshButton": "Refresh leaderboard",
+    "humanSubtitle": "Weighted: distance × size factor + duration + streak",
+    "computing": {
+      "title": "Leaderboard is updating",
+      "subtitle": "Scores aggregate nightly (Asia/Taipei). Go walk a dog to rack up points!"
+    },
     "personalEmpty": {
       "title": "Join a family to see leaderboards",
       "subtitle": "Leaderboards work within families. For just-yourself stats, your home page already covers it.",

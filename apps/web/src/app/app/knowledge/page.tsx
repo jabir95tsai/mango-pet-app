@@ -17,19 +17,20 @@ import type { KnowledgeArticle, KnowledgeCategory } from "@/lib/types";
 
 type Filter = KnowledgeCategory | "all" | "bookmarked";
 
-const FILTERS: { value: Filter; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "bookmarked", label: "⭐ 收藏" },
-  { value: "feeding", label: "餵食" },
-  { value: "training", label: "訓練" },
-  { value: "health", label: "健康" },
-  { value: "breed", label: "品種" },
-  { value: "lifestyle", label: "生活" },
+const FILTER_VALUES: Filter[] = [
+  "all",
+  "bookmarked",
+  "feeding",
+  "training",
+  "health",
+  "breed",
+  "lifestyle",
 ];
 
 export default function KnowledgePage() {
   const t = useTranslations("Nav");
   const tC = useTranslations("Common");
+  const tK = useTranslations("Knowledge");
   const { user } = useAuth();
 
   const [articles, setArticles] = useState<KnowledgeArticle[]>([]);
@@ -78,16 +79,16 @@ export default function KnowledgePage() {
 
   return (
     <>
-      <RouteHeader title={t("knowledge")} subtitle="寵物照護知識" />
+      <RouteHeader title={t("knowledge")} subtitle={tK("subtitle")} />
 
       <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 mb-4">
-        {FILTERS.map((f) => {
-          const active = filter === f.value;
+        {FILTER_VALUES.map((value) => {
+          const active = filter === value;
           return (
             <button
-              key={f.value}
+              key={value}
               type="button"
-              onClick={() => setFilter(f.value)}
+              onClick={() => setFilter(value)}
               aria-pressed={active}
               className={cn(
                 "h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
@@ -96,7 +97,7 @@ export default function KnowledgePage() {
                   : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:ring-zinc-800",
               )}
             >
-              {f.label}
+              {tK(`filters.${value}`)}
             </button>
           );
         })}
@@ -107,11 +108,15 @@ export default function KnowledgePage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title={filter === "bookmarked" ? "尚無收藏" : "知識庫建置中"}
+          title={
+            filter === "bookmarked"
+              ? tK("emptyBookmarked.title")
+              : tK("emptyAll.title")
+          }
           description={
             filter === "bookmarked"
-              ? "點 🔖 圖示收藏喜歡的文章。"
-              : "管理員會持續新增文章，先看其他類別。"
+              ? tK("emptyBookmarked.subtitle")
+              : tK("emptyAll.subtitle")
           }
         />
       ) : (

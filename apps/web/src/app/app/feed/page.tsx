@@ -19,6 +19,7 @@ import type { Pet, Post } from "@/lib/types";
 export default function FeedPage() {
   const t = useTranslations("Nav");
   const tCommon = useTranslations("Common");
+  const tFeed = useTranslations("Feed");
   const askConfirm = useConfirm();
   const { user } = useAuth();
   const { family, loading: familyLoading } = useFamily();
@@ -75,7 +76,7 @@ export default function FeedPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <RouteHeader
           title={t("feed")}
-          subtitle="好友與公開動態"
+          subtitle={tFeed("subtitle")}
           className="mb-0"
         />
         <Button
@@ -84,7 +85,7 @@ export default function FeedPage() {
           className="w-full sm:w-auto"
         >
           <PenSquare className="size-4" />
-          發文
+          {tFeed("compose")}
         </Button>
       </div>
 
@@ -93,12 +94,12 @@ export default function FeedPage() {
       ) : posts.length === 0 ? (
         <EmptyState
           icon={Newspaper}
-          title="尚無動態"
-          description="發第一篇貼文，或等好友的公開動態。"
+          title={tFeed("empty.title")}
+          description={tFeed("empty.subtitle")}
           action={
             <Button onClick={() => setComposerOpen(true)} size="md">
               <PenSquare className="size-4" />
-              發文
+              {tFeed("compose")}
             </Button>
           }
         />

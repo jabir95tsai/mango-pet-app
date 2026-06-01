@@ -52,9 +52,69 @@
     "deleteFailed": "刪除失敗，請再試一次",
     "tooLong": "留言最多 {max} 字"
   },
+  "Knowledge": {
+    "subtitle": "寵物照護知識",
+    "filters": {
+      "all": "全部",
+      "bookmarked": "⭐ 收藏",
+      "feeding": "餵食",
+      "training": "訓練",
+      "health": "健康",
+      "breed": "品種",
+      "lifestyle": "生活"
+    },
+    "emptyBookmarked": {
+      "title": "尚無收藏",
+      "subtitle": "點 🔖 圖示收藏喜歡的文章。"
+    },
+    "emptyAll": {
+      "title": "知識庫建置中",
+      "subtitle": "管理員會持續新增文章，先看其他類別。"
+    }
+  },
+  "Friends": {
+    "subtitle": "加好友、看彼此的寵物動態",
+    "myQr": "我的 QR",
+    "tabs": {
+      "friends": "好友 ({count})",
+      "requests": "邀請 ({count})",
+      "search": "搜尋"
+    },
+    "emptyFriends": {
+      "title": "尚未加任何好友",
+      "subtitle": "到「搜尋」分頁找飼主，互相加好友看彼此的動態。"
+    },
+    "emptyRequests": "尚無交友邀請",
+    "wantsToAdd": "想加你為好友",
+    "removeConfirm": "移除好友？",
+    "accept": "接受",
+    "reject": "拒絕"
+  },
+  "Feed": {
+    "subtitle": "好友與公開動態",
+    "compose": "發文",
+    "empty": {
+      "title": "尚無動態",
+      "subtitle": "發第一篇貼文，或等好友的公開動態。"
+    }
+  },
   "Restaurant": {
     "title": "餐廳",
     "addRestaurant": "新增餐廳",
+    "subtitle": "寵物友善餐廳地圖",
+    "add": "新增",
+    "favOnly": "只看收藏",
+    "all": "全部",
+    "geoWarning": "未取得你的位置 — 使用台北 101 為預設中心點，距離排序可能不正確。請在瀏覽器設定允許定位後重新整理。",
+    "view": {
+      "list": "清單",
+      "map": "地圖"
+    },
+    "empty": {
+      "title": "尚無餐廳",
+      "subtitle": "新增第一筆寵物友善餐廳，或調整篩選條件。",
+      "favSubtitle": "你還沒有收藏任何餐廳。"
+    },
     "fields": {
       "name": "名稱",
       "address": "地址",
@@ -69,6 +129,7 @@
       "largeDogsOk": "🐕‍🦺 大型犬 OK"
     },
     "level": {
+      "all": "全部",
       "indoor_ok": "可進室內",
       "outdoor_only": "僅戶外座位",
       "restricted": "限制條件"
@@ -378,6 +439,11 @@
     },
     "familyOnlyMe": "目前家庭只有你一人 — 邀請家人來比一比！",
     "refreshButton": "刷新排行榜",
+    "humanSubtitle": "加權公式：距離×體型係數 + 時長 + 連續天數",
+    "computing": {
+      "title": "排行榜計算中",
+      "subtitle": "Cloud Function 每天午夜 (Asia/Taipei) 聚合一次。先去遛狗累積分數！"
+    },
     "personalEmpty": {
       "title": "加入家庭看排行榜",
       "subtitle": "排行榜目前只給家庭內互比 — 自己一個人時看自己 stats 才有意義。",
