@@ -97,3 +97,36 @@ posts/{postId}/comments/{commentId}
 - **→ Backend**：comments 集合 + commentCount denorm + rules（read/create/delete 對齊 post 可見度）；`onCreate(comments)` + reaction push function（含 throttle/aggregate + Epic 5 gates + 不通知自己）。
 - **→ UI/UX**：留言區 UI（展開 / 輸入 / 刪除 / 空狀態 / i18n）+ FB 式 reaction picker（預設愛心、長按彈 tray、單選、reduced-motion、a11y 備援）。
 - **→ PM（後續）**：開放問題 1–4 收斂；上線後看互動率 + push opt-out 率（北極星：每動態互動數）。
+
+---
+
+## ✅ Backend 已交付（Backend session 2026-06-01 — commit 93e8272）
+
+**Deployed to `mango-pet-app`**：firestore:rules + functions（onCommentCreated / onCommentDeleted / onReactionCreated 三個新建）部署成功，三函式 state=ACTIVE、Eventarc trigger 已註冊。**Prod e2e PASS**：建留言 → `post.commentCount` 0→1（3s）；刪留言 → 1→0（3s）；runtime log 無 error（僅 Node22 平台級 punycode DEP0040，全專案皆有，非本次程式碼）。reaction push 未跑實機 e2e（會對 prod 真實使用者發推播且需真 FCM token）；自我守門 + throttle transaction 邏輯走的是 Epic 5 已驗證的同一條 `sendEngagementPush` path。**未新增 composite index**（comments 在單一子集合內 orderBy createdAt，不需要）。
+
+### Feature Builder / UI/UX 可直接用
+
+- **Comment doc 形狀最終版**（型別 `Comment` @ `@mango/shared-types`，web 從 `@/lib/types` re-export）：
+  `{ commentId, authorUid, authorName, authorPhotoURL(string|null), text, createdAt }`，path `posts/{postId}/comments/{commentId}`。平鋪、v1 不可編輯。
+- **Client API**（`apps/web/src/lib/firebase/posts.ts`，已就緒）：
+  - `createComment({ postId, authorUid, authorName, authorPhotoURL, text }) → { commentId }`。text 自動 trim；空字串 / 超過 500 字（`COMMENT_MAX_LEN`）會 throw（與 rules 同步，UI 可先本地擋）。`createdAt` server-stamp，optimistic append 請用本地 `new Date()` placeholder，re-read 後換成真值。
+  - `deleteComment(postId, commentId)`。rules 允許「留言作者 OR 貼文作者」刪。
+  - `listComments(postId, pageSize=20, after?) → { comments, cursor }`：**舊到新**（createdAt 升冪、閱讀順序）、分頁 getDocs（**非 onSnapshot**，對齊成本備註）；`cursor` 傳回下一頁的 `after`，為 `null` 即無更多。
+- **commentCount**：直接讀 `post.commentCount`（型別 `Post.commentCount?: number`；**舊貼文可能 undefined → 當 0**）。**前端絕對不要寫它** — 由 function 維護，rules 也不允許 client 寫（避免灌數）。
+- **空狀態 / i18n**：UI 自理（「搶頭香留言」等）；後端不涉入文案。
+
+### Push（§C）已上線
+
+- **留言**：`onCommentCreated` → 即時推貼文作者「{name} 留言了你的動態：{摘要}」（摘要上限 60 字；收件人=作者本人，帶摘要安全 = 開放問題#4）。
+- **表情**：`onReactionCreated` → **節流/聚合**（開放問題#3 Backend 提案，已實作）：**每貼文 60 分鐘冷卻窗 + leading-edge**。第一個 reaction 立即推；窗內靜默累加；窗結束後第一個 reaction 推一則聚合「{name} 和其他 N 人回應了」。狀態存 server-only `postInteractionThrottle/{postId}`（transaction 並發安全）。**emoji 互換是 update 不是 create → 不重複通知**。**未開新 scheduled function**（成本）。
+- **Settings opt-out**：`ENGAGEMENT_PUSH_TYPES` 已加 `post-comment` / `post-reaction`，UI/UX 可在設定頁加兩個開關（沿用現有 engagementOptOut 機制；缺值 = 預設 ON）。
+
+### Rules（已部署）
+
+- 抽出 `canReadPost()` helper；comments read/create 用 `get(父 post)` 沿用貼文可見度（public / friends / 自己）。
+- create 守門：`authorUid==auth.uid` + 能讀 post + `text` string 長度 1..500 + `createdAt==request.time`。
+- update：v1 `false`（開放問題#1 預設不開放編輯）。delete：留言作者 OR 貼文作者。
+- **後端 reaction 模型完全沒動**（`setReaction` / `reactions/{uid}` / `reactionCounts` 原樣）；§B 的 FB 式 picker 純前端互動改版即可。
+
+### 並行備註
+- 與 UI/UX session 並行（§B reaction picker commit `35e97a1`）；Backend 只動 `functions/` `firestore.rules` `posts.ts` `types.ts` `shared-types`，未碰 `emoji-reactions.tsx` / `messages/*.json`。兩邊零撞檔。
