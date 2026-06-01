@@ -38,6 +38,20 @@
     "yourReaction": "Your reaction: {emoji} (tap again to remove)",
     "reactionCount": "{count} reactions"
   },
+  "Comments": {
+    "toggle": "Comment",
+    "empty": "Be the first to comment!",
+    "placeholder": "Write a comment...",
+    "send": "Send",
+    "loading": "Loading...",
+    "loadMore": "Load more comments",
+    "loadFailed": "Couldn't load comments",
+    "sendFailed": "Couldn't post your comment. Try again.",
+    "deleteTitle": "Delete comment",
+    "delete": "Delete",
+    "deleteFailed": "Couldn't delete. Try again.",
+    "tooLong": "Comments are limited to {max} characters"
+  },
   "Restaurant": {
     "title": "Restaurant",
     "addRestaurant": "Add restaurant",
@@ -282,6 +296,14 @@
       "family-milestone": {
         "label": "Family member hit today's goal",
         "hint": "The moment a family member completes their 30-minute daily goal."
+      },
+      "post-comment": {
+        "label": "Comments on your posts",
+        "hint": "Get notified when someone comments on your post."
+      },
+      "post-reaction": {
+        "label": "Reactions on your posts",
+        "hint": "Get notified when someone reacts to your post (batched into one)."
       }
     },
     "walkAutoPhoto": {

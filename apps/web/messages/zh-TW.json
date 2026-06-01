@@ -38,6 +38,20 @@
     "yourReaction": "你的回應：{emoji}（再點一次取消）",
     "reactionCount": "{count} 個回應"
   },
+  "Comments": {
+    "toggle": "留言",
+    "empty": "搶頭香留言！",
+    "placeholder": "寫下留言...",
+    "send": "送出",
+    "loading": "載入中...",
+    "loadMore": "載入更多留言",
+    "loadFailed": "留言載入失敗",
+    "sendFailed": "留言送出失敗，請再試一次",
+    "deleteTitle": "刪除留言",
+    "delete": "刪除",
+    "deleteFailed": "刪除失敗，請再試一次",
+    "tooLong": "留言最多 {max} 字"
+  },
   "Restaurant": {
     "title": "餐廳",
     "addRestaurant": "新增餐廳",
@@ -282,6 +296,14 @@
       "family-milestone": {
         "label": "家人達成今日目標",
         "hint": "家庭成員完成今日 30 分鐘目標的當下通知你。"
+      },
+      "post-comment": {
+        "label": "有人留言你的動態",
+        "hint": "有人在你的貼文留言時通知你。"
+      },
+      "post-reaction": {
+        "label": "有人回應你的動態",
+        "hint": "有人對你的貼文按表情時通知你（多筆會聚合成一則）。"
       }
     },
     "walkAutoPhoto": {

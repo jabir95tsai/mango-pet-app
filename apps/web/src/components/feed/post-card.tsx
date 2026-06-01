@@ -5,11 +5,12 @@ import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { zhTW, enUS } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
-import { Globe, Users, Lock, Trash2 } from "lucide-react";
+import { Globe, Users, Lock, MessageCircle, Trash2 } from "lucide-react";
 import type { Post, Visibility } from "@/lib/types";
 import { Avatar } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { EmojiReactions } from "./emoji-reactions";
+import { CommentSection } from "./comment-section";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -28,6 +29,7 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
   const locale = useLocale();
   const tC = useTranslations("Common");
   const tPL = useTranslations("PhotoLightbox");
+  const tCm = useTranslations("Comments");
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
   const VIcon = VISIBILITY_ICON[post.visibility];
 
@@ -36,6 +38,14 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
   // at that photo's index.
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState(0);
+
+  // Comments are loaded lazily — the thread only mounts (and reads) when
+  // opened. `commentCount` starts from the denormalised post field (absent
+  // on legacy posts → 0) and is nudged optimistically as the user adds /
+  // removes their own comments; the server trigger is the source of truth.
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(post.commentCount ?? 0);
+  const commentsId = `comments-${post.postId}`;
 
   const createdMs =
     (post.createdAt as { toMillis?: () => number } | undefined)?.toMillis?.() ??
@@ -108,11 +118,37 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
         </div>
       )}
 
-      <EmojiReactions
-        postId={post.postId}
-        uid={currentUid}
-        counts={post.reactionCounts}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <EmojiReactions
+          postId={post.postId}
+          uid={currentUid}
+          counts={post.reactionCounts}
+        />
+        <button
+          type="button"
+          onClick={() => setCommentsOpen((o) => !o)}
+          aria-expanded={commentsOpen}
+          aria-controls={commentsId}
+          aria-label={tCm("toggle")}
+          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-zinc-100 px-3 text-sm text-zinc-600 transition-colors hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          <MessageCircle className="size-4" aria-hidden="true" />
+          {commentCount > 0 && (
+            <span className="text-xs font-medium tabular-nums">
+              {commentCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {commentsOpen && (
+        <CommentSection
+          id={commentsId}
+          postId={post.postId}
+          postAuthorUid={post.authorUid}
+          onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
+        />
+      )}
 
       <PhotoLightbox
         photos={post.photoURLs}
