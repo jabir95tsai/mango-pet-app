@@ -63,16 +63,19 @@
 | Walks history(recent) | walk-core | parity | ✅ P1a recent 列表；🟡 「全部」當頁展開 P1b code done（`8a14ce3`）待實機驗收 |
 
 ### P2 — Pets
+> 📋 **完整 spec（前置決策 + sub-phase P2-pre/a/b/c/d + 全 session prompt）** → [`ios-p2-pets.md`](./ios-p2-pets.md)（iOS PM 2026-06-01）。sub-phase = 骨架(P2a,無 dep) → svg charts(P2b) → forms/picker(P2c) → camera(P2d)，每碰 dep 走 branch+linux gate。
+
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| Pets 全頁(list + switcher + header 真照片) | [`pets-v2-rebuild.md`](./pets-v2-rebuild.md) | parity | ⬜ |
-| 4-tab(概覽/提醒/開銷/健康) | pets-v2 | parity | ⬜ |
-| 開銷 donut + filter + list + FAB camera | [`expenses-into-pets-page.md`](./expenses-into-pets-page.md) | parity | ⬜ |
-| 健康(體重 trend chart + records) | pets-v2 | parity | ⬜ |
-| 提醒(list + form) | pets-v2 | parity | ⬜ |
-| AI 收據掃描(camera → extractReceipt callable) | bug-receipt-ai-missing / receipt-scanner | parity（接同 callable） | ⬜ |
-| Pet edit form(含 walkGoal stepper) | per-pet-walk-goal | parity | ⬜ |
-| EmptyState 0 pets | pets-v2 | parity | ⬜ |
+| Pets 全頁(list + switcher + header 真照片) | [`pets-v2-rebuild.md`](./pets-v2-rebuild.md) | parity | ⬜ P2a |
+| 4-tab(概覽/提醒/開銷/健康) | pets-v2 | parity（自刻 pill tab，不用 tab-view dep） | ⬜ P2a |
+| Overview tab(2×2 StatGrid + upcoming/recent cards) | pets-v2 | parity | ⬜ P2a |
+| 開銷 donut + filter + list | [`expenses-into-pets-page.md`](./expenses-into-pets-page.md) | parity（手刻 react-native-svg donut） | ⬜ P2b |
+| 健康(體重 trend chart + records) | pets-v2 | parity（手刻 svg area+line chart） | ⬜ P2b |
+| 提醒(list + form) | pets-v2 | parity（datetimepicker + repeat + notifyBefore） | ⬜ P2c |
+| Pet edit form(含 avatar picker + walkGoal stepper) | per-pet-walk-goal | parity（expo-image-picker/manipulator） | ⬜ P2c |
+| EmptyState 0 pets | pets-v2 | parity（expo-linear-gradient） | ⬜ P2c |
+| 開銷 camera FAB + AI 收據掃描(extractReceipt callable) | bug-receipt-ai-missing / receipt-scanner | **native-upgrade**（expo-camera first-flow；接同 callable，後端不改） | ⬜ P2d |
 
 ### P3 — Home + Feed
 | Web feature | Web spec | iOS policy | iOS 狀態 |
