@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { LeaderboardEntry } from "@/lib/types";
@@ -24,6 +25,7 @@ function rankBadge(rank: number): { emoji: string; color: string } {
 }
 
 export function LeaderboardRow({ rank, entry, highlight, isGlowing }: Props) {
+  const t = useTranslations("Leaderboard");
   const { emoji, color } = rankBadge(rank);
   return (
     <article
@@ -40,7 +42,8 @@ export function LeaderboardRow({ rank, entry, highlight, isGlowing }: Props) {
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold truncate">{entry.displayName}</p>
         <p className="text-xs text-zinc-500">
-          {entry.walkCount} 次 · {entry.totalDistanceKm.toFixed(1)} km
+          {t("unitWalks", { count: entry.walkCount })} ·{" "}
+          {entry.totalDistanceKm.toFixed(1)} km
           {entry.streakDays > 0 && ` · 🔥 ${entry.streakDays}`}
         </p>
       </div>
@@ -48,7 +51,7 @@ export function LeaderboardRow({ rank, entry, highlight, isGlowing }: Props) {
         <p className="text-lg font-bold text-amber-700 tabular-nums dark:text-amber-300">
           {entry.totalScore.toFixed(0)}
         </p>
-        <p className="text-[10px] text-zinc-500">分</p>
+        <p className="text-[10px] text-zinc-500">{t("unitScore")}</p>
       </div>
     </article>
   );

@@ -494,6 +494,8 @@
     "familyOnlyMe": "目前家庭只有你一人 — 邀請家人來比一比！",
     "refreshButton": "刷新排行榜",
     "humanSubtitle": "加權公式：距離×體型係數 + 時長 + 連續天數",
+    "unitWalks": "{count} 次",
+    "unitScore": "分",
     "computing": {
       "title": "排行榜計算中",
       "subtitle": "Cloud Function 每天午夜 (Asia/Taipei) 聚合一次。先去遛狗累積分數！"

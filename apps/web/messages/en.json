@@ -494,6 +494,8 @@
     "familyOnlyMe": "You're the only one in this family — invite someone to make it a contest!",
     "refreshButton": "Refresh leaderboard",
     "humanSubtitle": "Weighted: distance × size factor + duration + streak",
+    "unitWalks": "{count} walks",
+    "unitScore": "pts",
     "computing": {
       "title": "Leaderboard is updating",
       "subtitle": "Scores aggregate nightly (Asia/Taipei). Go walk a dog to rack up points!"
