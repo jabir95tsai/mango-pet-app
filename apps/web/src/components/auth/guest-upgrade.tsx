@@ -149,7 +149,7 @@ function UpgradeAccountDialog({
           <button
             type="button"
             onClick={handleSwitchedAck}
-            className="h-11 w-full rounded-lg bg-mango-brand text-sm font-semibold text-mango-ink transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="h-11 w-full rounded-lg bg-mango-brand text-sm font-semibold text-white transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {t("conflictAck")}
           </button>
@@ -229,7 +229,7 @@ export function GuestLockedNotice({
       <button
         type="button"
         onClick={openUpgrade}
-        className="h-9 shrink-0 rounded-lg bg-mango-brand px-4 text-sm font-semibold text-mango-ink transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="h-9 shrink-0 rounded-lg bg-mango-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         {t("upgradeCta")}
       </button>

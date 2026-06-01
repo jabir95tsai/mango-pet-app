@@ -119,7 +119,7 @@ export default function SettingsPage() {
             <Button
               type="button"
               onClick={openUpgrade}
-              className="self-start bg-mango-brand text-mango-ink hover:bg-mango-brand-deep focus-visible:ring-mango-brand-deep"
+              className="self-start bg-mango-brand text-white hover:bg-mango-brand-deep focus-visible:ring-mango-brand-deep"
             >
               {tG("upgradeCta")}
             </Button>

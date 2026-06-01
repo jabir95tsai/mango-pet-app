@@ -56,7 +56,7 @@ export function GuestUpgradeNudge() {
 
   return (
     <div className="mb-4 flex items-start gap-3 rounded-lg border border-mango-brand/40 bg-mango-brand-tint/60 p-4 dark:border-mango-brand/30 dark:bg-mango-brand/10">
-      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-mango-brand text-mango-ink">
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-mango-brand text-white">
         <Sparkles className="size-5" aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
@@ -66,7 +66,7 @@ export function GuestUpgradeNudge() {
           <button
             type="button"
             onClick={openUpgrade}
-            className="h-9 rounded-lg bg-mango-brand px-4 text-sm font-semibold text-mango-ink transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="h-9 rounded-lg bg-mango-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {t("cta")}
           </button>
