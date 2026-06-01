@@ -85,3 +85,39 @@ guest **可用**：`/app/pets`（建寵物、記錄、開銷、健康）、`/app
 - **→ Feature Builder**：訪客登入按鈕 + `signInAsGuest` + linkWithCredential 升級流程（含衝突 case）+ 社群入口 gating + 升級提示 UI + i18n。
 - **→ PM（本人）**：更新隱私頁文案（G）；開放問題 1–4 收斂後升級此 spec 細節。
 - **→ 跨 spec**：通知 leaderboard-v2 / feed-comments 的實作者：guest 排除規則要一起進它們的 rules/aggregation。
+
+---
+
+## ✅ Backend 已交付（Backend session 2026-06-01 — commit b742307）
+
+**Deployed to `mango-pet-app`**：firestore:rules + functions（gcAnonymousUsers 新建；aggregateLeaderboards / recompute{Walker,Dog}Leaderboards{,OnDelete} / createFamily / joinFamilyByCode / acceptFriendRequest 更新）皆部署成功。**Prod e2e PASS**（合成 guest profile + personal-mode walk）：dog board 排除 guest（weekly + all_time 皆不寫 entry）、walker board 排除 guest、升級 de-flag 清掉 isGuest。trigger log 無 error。**未新增 index**。
+
+### 守門邏輯（rules，已部署）
+- 新 helper `isGuest()`（token-based：`request.auth.token.firebase.sign_in_provider == "anonymous"`，client 無法用自己 user doc 的 isGuest 偽造）+ `isRealUser()`。
+- **Guest 可寫**：自己的 personal-mode `pets` / `walks` / `reminders` / `expenses`（這些 create rule 本來就只要 authenticated + owner==self，匿名也通；已逐條確認，未改動）。
+- **Guest 被擋**：`posts` create、`reactions` write、`comments` create、post `reactionCounts` bump update、`friends` / `friendRequests` write。`families` 維持 callable-only（client `if false`）。
+- ⚠️ **驗證邊界**：rules 已 compile + deploy；leaderboard 排除為 prod 實測。但「真實匿名 token 下 guest 能建 pet、不能發 post」需要實際 `signInAnonymously` 才能跑（無 emulator/rules-unit-testing 設定）→ 這正是 workflow 指定的 Feature Builder 整合驗證項，請在接 UI 後跑一次。
+
+### 排行榜排除（functions/src/leaderboard-helpers.ts）
+- `computeWalkerPeriodScore` + `computeDogPeriodScore` 在讀到 walker/owner profile `isGuest === true` 時 return null → 單一 chokepoint 同時覆蓋 cron + 兩個 realtime trigger。
+- 狗榜的 owner-isGuest 跳過是**關鍵**：狗榜含 personal-mode、guest 必為 personal-mode，沒這層 guest 的狗會上全 app 狗榜（leaderboard-v2 × guest 的跨 spec 衝突，已解）。
+
+### 升級 de-flag（apps/web/src/lib/firebase/users.ts `upsertUser`）— Feature Builder 直接用
+- **Guest profile create**：`displayName="訪客"/"Guest"`、`authProvider="anonymous"`、`isGuest:true`、**不寫 `displayNameLower`**（guest 不出現在好友搜尋）。
+- **升級**：`linkWithCredential` 後 uid 不變、`isAnonymous` 變 false；下一次 auth-state callback 的 `upsertUser` 會偵測「doc 仍 isGuest 但已非匿名」→ **自動** `isGuest` 用 `deleteField()` 清除 + 回填真 `authProvider` / `displayName` / `photoURL` / `displayNameLower`。**Feature Builder 的 link 流程不需自己寫 profile 去 flag**——綁定成功後讓 auth provider 跑既有 upsert 即可。社群功能隨 isGuest 消失自動解鎖。
+- `AppUser.isGuest?: boolean`、`authProvider` 型別加 `"anonymous"`。
+
+### 匿名 GC（functions/src/index.ts `gcAnonymousUsers`）
+- 每週一 03:30 Asia/Taipei 排程（不開外部 API、低頻控成本）。回收「仍匿名（providerData 空）且 ≥ **60 天**未活動（`lastSeenAt` fallback Auth metadata）」的 guest：硬刪 personal pets+healthRecords / walks / reminders / expenses + user doc + Auth user。單次上限 500（剩的下週續清）。
+- ⚠️ **預設 DRY-RUN**（`GC_DRY_RUN = true`）：只寫 audit doc `anonymousGc/{ISO}` + log，**不刪任何東西**。請先看幾次 dry-run audit 的 candidate set 合理後，**另開一個 reviewed commit 把 `GC_DRY_RUN` 改 false** 才真正啟用刪除。
+- N=60 天為 spec 30–60 區間保守端；要調改 `GC_INACTIVE_DAYS` 一處即可。
+
+### 後端 callable defense-in-depth
+- `createFamily` / `joinFamilyByCode` / `acceptFriendRequest` 加 `isGuestAuth(req)` 擋 guest（Admin SDK 會繞過 rules，故 callable 層也要擋），回 `permission-denied`。
+
+### Feature Builder TODO（UI，本 session 不做）
+- `signInAsGuest()` = `signInAnonymously(auth)`（auth.ts）+ 登入頁「以訪客身分繼續」按鈕（次要樣式）+ i18n。
+- linkWithCredential 升級流程（含 `credential-already-in-use` → 開放問題#3 v1 預設：登入既有帳號、不 merge、告知 user）。
+- 社群入口 gating（發文 / 排行榜上榜 / 家庭 / 好友 / 留言表情）對 guest 隱藏或停用 + 升級 CTA；排行榜 PM 預設「可看不可上」。
+- 升級提示 UI（建第一筆資料後一次性 + settings 常駐入口）。
+- **整合驗證**：真匿名登入後跑 workflow 指定的三項（能建 pet/walk、walk 不上人/狗榜、不能寫 post/comment）。
