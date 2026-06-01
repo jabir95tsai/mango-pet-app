@@ -1,6 +1,6 @@
 # iOS P1a — Walks Core-Loop Screens (ship note)
 
-狀態：**SCREENS DONE (code + tsc) / SIMULATOR WALK PENDING (macOS step)**
+狀態：**✅ SIGNED OFF（2026-06-01 iPhone 實機，EAS build `f44fa94c`）** — B/C/D 全過（WalksHome 顯示 / 前景 GPS timer+距離 / walk doc 落地 + leaderboard 反應）。背景不計時 = 前景-only 預期行為（非 bug）→ **背景續跑 = P1d，user 拍板插隊先做**。parity §A P1 四列 → ✅。
 建立日期：2026-06-01
 角色：**iOS Feature Builder**
 上承：[`ios-p1-walks.md`](./ios-p1-walks.md) P1a；P1a backend `7fe2438`（service / createWalk / shared-business）

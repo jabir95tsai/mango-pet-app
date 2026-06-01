@@ -47,18 +47,19 @@
 
 ### P1 — Walks（核心）
 > 📋 spec → [`ios-p1-walks.md`](./ios-p1-walks.md)（sub-phase P1a–d + data contract + 背景 GPS + 三角色 handoff）。
-> 🚧 **P1a 核心 loop CODE COMPLETE 待實機簽收** → [`ios-p1a-walks-screens.md`](./ios-p1a-walks-screens.md)（backend `7fe2438` + screens `a02289c`）。四列 🟡 = screens 到位、需 macOS/EAS 走一趟（walk doc 落地 + leaderboard 反應）才升 ✅。
+> ✅ **P1a 核心 loop 實機簽收（2026-06-01 iPhone）** → [`ios-p1a-walks-screens.md`](./ios-p1a-walks-screens.md)（backend `7fe2438` + screens `a02289c`）：B/C/D 全過（WalksHome 顯示 / 前景 GPS timer+距離 / walk doc 落地 + leaderboard 反應）。
+> 🔀 **下一棒重排序（user 2026-06-01）**：P1d 背景 GPS **插隊先做**（user 實機體感「背景不計時」= 核心缺口；遛狗手機常鎖屏/口袋）→ 之後 P1b（done/手動/recent 展開）→ P1c（拍照/自動分享）。
 
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| Walks 全頁(radial dial + week strip + 圈內走路狗) | [`walks-v2-rebuild.md`](./walks-v2-rebuild.md) `984be5b` | parity | 🟡 P1a screens 到位（分段環 dial，平滑 arc/動畫 → UI/UX）；待實機簽收 |
-| GPS tracking + timer + stop | walk-core | **parity + 背景 GPS（committed,Q4 已拍板「要做且重要」2026-05-30）** — CoreLocation 背景追蹤,web PWA 做不到的 iOS-only 殺手能力。見 §F handoff(App Store 背景定位審查 + 耗電) | 🟡 **前景** tracking+timer+stop 到位（P1a）；**背景 GPS = P1d 未做**；待實機簽收 |
+| Walks 全頁(radial dial + week strip + 圈內走路狗) | [`walks-v2-rebuild.md`](./walks-v2-rebuild.md) `984be5b` | parity | ✅ P1a 實機簽收（分段環 dial 功能 OK；平滑 arc/動畫 polish → UI/UX follow-up） |
+| GPS tracking + timer + stop | walk-core | **parity + 背景 GPS（committed,Q4 已拍板「要做且重要」2026-05-30）** — CoreLocation 背景追蹤,web PWA 做不到的 iOS-only 殺手能力。見 §F handoff(App Store 背景定位審查 + 耗電) | ✅ **前景** tracking+timer+stop 實機簽收（P1a，前景 parity 達成；對齊 web「背景暫停」語意）／🔜 **背景續跑 = P1d（下一棒，插隊先做）** |
 | Done screen + confetti + 達標變體 | walks-v2 | parity | ⬜ P1b |
 | 手動 walk dialog | walk-core | parity | ⬜ P1b |
-| Per-pet 自訂散步目標 + pet picker | [`per-pet-walk-goal.md`](./per-pet-walk-goal.md) | parity | 🟡 P1a screens 到位（picker + goal chip；active-pet 持久化待 AsyncStorage）；待實機簽收 |
+| Per-pet 自訂散步目標 + pet picker | [`per-pet-walk-goal.md`](./per-pet-walk-goal.md) | parity | ✅ P1a 實機簽收（picker + goal chip + 切 pet 換 goal；active-pet 持久化 → AsyncStorage follow-up） |
 | Walk 拍照 + Storage 上傳 | walks-v2 | parity | ⬜ P1c |
 | 遛狗自動拍照 + 自動發動態(start/end prompt) | [`walks-auto-photo-share.md`](./walks-auto-photo-share.md) | parity | ⬜ P1c |
-| Walks history(recent) | walk-core | parity | 🟡 P1a recent 列表到位（「全部」展開 → P1b）；待實機簽收 |
+| Walks history(recent) | walk-core | parity | ✅ P1a 實機簽收（recent 列表；「全部」展開 → P1b） |
 
 ### P2 — Pets
 | Web feature | Web spec | iOS policy | iOS 狀態 |

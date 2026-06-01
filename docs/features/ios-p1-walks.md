@@ -1,6 +1,6 @@
 # iOS P1 — Walks（核心遛狗）Parity Spec
 
-狀態：**READY-FOR-DEV**（iOS PM 2026-05-31，grounded on web walks 實作盤點）
+狀態：**IN PROGRESS** — ✅ P1a 實機簽收（2026-06-01）｜🔀 **sub-phase 重排序 → P1d → P1b → P1c**（user 2026-06-01：實機體感「背景不計時」核心缺口 + 背景定位 App Store 審查提早暴露 → P1d 背景 GPS 插隊先做）
 建立日期：2026-05-31
 規格作者：iOS PM session
 角色執行：**iOS Backend**（native location/camera/storage 設定 + shared packages + schema 相容驗證）+ **iOS Feature Builder**（screens + flow 端到端）+ **iOS UI/UX**（dial / 走路狗 / safe-area / 動效）
