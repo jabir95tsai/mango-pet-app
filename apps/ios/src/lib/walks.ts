@@ -34,7 +34,18 @@ export type CreateWalkInput = {
   notes?: string | null;
   /** ≤5 Storage download URLs (see storage-paths.walkPhotoPath). */
   photoURLs?: string[];
+  /** Pre-generated walk id (from newWalkId()) so an auto-photo-share START
+   *  post created BEFORE the walk is saved can cross-link to the same id. When
+   *  omitted, an id is auto-generated. */
+  walkId?: string;
 };
+
+/** Pre-generate a stable walks/{walkId} id at walk-session start. Use it for
+ *  the walk photos' sessionId + a START post's `walkId` cross-link, then pass
+ *  the same id to createWalk() at save time. */
+export function newWalkId(): string {
+  return firestore().collection("walks").doc().id;
+}
 
 /**
  * Persist a completed walk. Returns the new `walkId`. The doc shape mirrors
@@ -42,7 +53,9 @@ export type CreateWalkInput = {
  */
 export async function createWalk(input: CreateWalkInput): Promise<string> {
   const db = firestore();
-  const ref = db.collection("walks").doc();
+  const ref = input.walkId
+    ? db.collection("walks").doc(input.walkId)
+    : db.collection("walks").doc();
 
   const score = computeWalkScore({
     distanceKm: input.distanceKm,
