@@ -59,9 +59,29 @@
 
 ---
 
+## 3. 我的寵物頁 4 個「＋」按鈕（FAB）統一橘色（user 2026-06-01）
+
+**改動檔**：`apps/web/src/components/pets/pet-floating-add.tsx`（單一 tab-aware FAB 元件，4 tab 各一 TONE）。
+
+**現況**：overview / reminders = 橘色漸層；**expenses = 桃橘**（#ee9a5a→#d77b3f）；**health = 綠色**（#79c074→#3f8a3a）。
+
+**要求**：4 個 tab（概覽 / 提醒 / 開銷 / 健康）的＋按鈕**全部統一成「開始遛狗」CTA 的橘色**，**不要閃光/掃過動畫**。
+
+- **漸層**：4 個 TONE 全改成與 §2 CTA 同一橘色漸層 `linear-gradient(160deg, var(--amber), var(--brand) 50%, var(--brandDeep))`（移除 health 綠、expenses 桃橘）。shadow 統一回 brand 橘色調 `0 16px 32px -8px rgba(243,152,0,.55) …`（把現有綠/桃橘的 rgba 換成橘）。
+- **形狀不變**：維持圓形 FAB（size-14、rounded-full、右下角 fixed）— **不要變成全寬 pill**；「開始遛狗風格」此處指**橘色漸層 + 質感**，不是改形狀。
+- **動畫**：**不加** §2 的 `ctaSweepFull` 閃光掃過。保留既有按壓 `active:scale-95` / hover scale + `motion-reduce` 既有處理即可。
+- **＋ icon 顏色**：橘底上用**白色** Plus（確保 AA 對比；若現為 `text-mango-ink` 深色，改白）。
+- **不變**：4 tab 各自的 `aria-label`（新增提醒 / 開銷 / 健康記錄…）、位置、點擊行為、tab 偵測邏輯都不動，只換顏色/陰影。
+
+> ⚠️ 語意提醒：原本 health 用綠、expenses 用桃橘是「**用顏色區分 tab**」的設計（pets-v2）。統一成橘色後失去這個 tone-coding —— user 明確要求統一橘色，照做；若日後想回復 tab 色辨識，再開 follow-up。
+
+---
+
 ## 驗收標準
 
 - [ ] 光帶跑完整顆按鈕寬度、前快後慢、尾段滑出後停約 2 秒再來。
+- [ ] 我的寵物頁 4 tab（概覽/提醒/開銷/健康）的＋按鈕**都是同一橘色漸層**，無綠 / 桃橘。
+- [ ] 寵物頁＋按鈕**無閃光/掃過動畫**；按壓 scale 保留，reduce 模式無動態；＋ icon 在橘底達 AA 對比。
 - [ ] 導覽列中間鈕嵌在凹槽內並凸出 bar 之上（非平貼外掛）。
 - [ ] `prefers-reduced-motion: reduce` 下**完全無動態**（掃光 / tab 動效 / scale 全停）。
 - [ ] 5 tab 全保留 icon + 文字標籤；active/inactive 態如上。
@@ -80,4 +100,5 @@
 ## Handoff / 備註
 
 - iOS 已有對應 `apps/ios/src/components/raised-tab-bar.tsx`（RN 版）— web 此次做的是 web/PWA 的凹槽版；兩邊視覺對齊但各自實作（不共用元件，token 共用）。
-- UI/UX workflow：先 Chrome MCP 截 production baseline → 改 → 截 after（人榜/walks 兩處），驗 reduced-motion。
+- UI/UX workflow：先 Chrome MCP 截 production baseline → 改 → 截 after（**bottom nav / walks 開始遛狗 CTA / 我的寵物頁 4 tab 的＋按鈕** 三處），驗 reduced-motion。
+- §3（寵物頁＋按鈕統一橘色）可與 §1/§2 同一 UI/UX session 一次做完（同 mango-v2 視覺語言）。
