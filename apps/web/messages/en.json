@@ -32,7 +32,11 @@
     "visibilityPrivate": "Private",
     "needTextOrPhoto": "Add text or a photo",
     "removePhoto": "Remove photo",
-    "react": "React {emoji}"
+    "react": "React {emoji}",
+    "moreReactions": "More reactions",
+    "pickReaction": "Pick a reaction",
+    "yourReaction": "Your reaction: {emoji} (tap again to remove)",
+    "reactionCount": "{count} reactions"
   },
   "Restaurant": {
     "title": "Restaurant",

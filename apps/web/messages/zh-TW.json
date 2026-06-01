@@ -32,7 +32,11 @@
     "visibilityPrivate": "私人",
     "needTextOrPhoto": "文字或照片至少要有一個",
     "removePhoto": "移除照片",
-    "react": "回應 {emoji}"
+    "react": "回應 {emoji}",
+    "moreReactions": "更多表情",
+    "pickReaction": "選擇表情",
+    "yourReaction": "你的回應：{emoji}（再點一次取消）",
+    "reactionCount": "{count} 個回應"
   },
   "Restaurant": {
     "title": "餐廳",
