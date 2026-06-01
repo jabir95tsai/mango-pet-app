@@ -1,20 +1,24 @@
 /**
- * Full-screen walk tracking overlay (P1a, FOREGROUND GPS). Drives the P1a
- * backend `WalkTrackingService` (start → live timer + distance → stop) and on
- * stop persists the walk via `createWalk` — which writes walks/{walkId} with
- * the shared-formula score, so the existing leaderboard trigger fires. No live
- * map (parity: web has none either). Done-screen confetti / notes are P1b.
+ * Full-screen walk overlay. Two phases:
+ *  • "tracking" — drives the P1d WalkTrackingService (live timer + distance +
+ *    path; background continuation handled inside the service).
+ *  • "done"     — stop() does NOT auto-save; we show a summary (km / 分 / 平均
+ *    速度) + goal-hit emerald celebration with hand-rolled confetti + a recap
+ *    (vs 7-day avg + pet calories) + optional notes, then 儲存 → createWalk or
+ *    捨棄 → discard. Mirrors web walk-tracking-view done phase + walks-v2.
  *
- * Background GPS (Always permission, keep recording while locked) is P1d and
- * intentionally not here — the service pauses the timer when backgrounded.
+ * Walk doc is written ONLY via createWalk (shared-formula score). No photo /
+ * auto-share (P1c). zh-TW strings inline for P1b (shared-i18n still pending).
  */
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,16 +29,24 @@ import {
   WalkTrackingService,
   type WalkTrackingState,
 } from "@/lib/walk-tracking-service";
+import { estimatePetCalories } from "@/lib/walk-stats";
+import { WalkConfetti } from "@/components/walks/walk-confetti";
 import { useAuth } from "@/state/auth-context";
 import { colors, radius, spacing } from "@/theme/theme";
 
-type Phase = "tracking" | "saving" | "error";
+type Phase = "tracking" | "done" | "saving" | "error";
 
 type Props = {
   visible: boolean;
   pet: Pet | null;
   streakDays: number;
   familyId: string | null;
+  /** Active pet's daily goal (minutes) — drives the goal-hit celebration. */
+  goalMin: number;
+  /** Today's walked minutes BEFORE this session (stored). */
+  todayMinBefore: number;
+  /** Trailing 7-day per-walk average (recap "vs 平均"). */
+  weeklyAvgMin: number;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -56,11 +68,19 @@ function formatTimer(durationMin: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function avgSpeedKmh(distanceKm: number, durationMin: number): number {
+  if (durationMin <= 0) return 0;
+  return distanceKm / (durationMin / 60);
+}
+
 export function WalkTrackingView({
   visible,
   pet,
   streakDays,
   familyId,
+  goalMin,
+  todayMinBefore,
+  weeklyAvgMin,
   onClose,
   onSaved,
 }: Props) {
@@ -70,6 +90,8 @@ export function WalkTrackingView({
 
   const [state, setState] = useState<WalkTrackingState>(INITIAL);
   const [phase, setPhase] = useState<Phase>("tracking");
+  const [final, setFinal] = useState<WalkTrackingState | null>(null);
+  const [notes, setNotes] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Subscribe once.
@@ -78,10 +100,12 @@ export function WalkTrackingView({
     return unsub;
   }, []);
 
-  // Start when the overlay opens; release the GPS watch when it closes.
+  // Start when the overlay opens; release GPS when it closes.
   useEffect(() => {
     if (!visible) return;
     setPhase("tracking");
+    setFinal(null);
+    setNotes("");
     setErrorMsg(null);
     void serviceRef.current!.start();
     return () => {
@@ -89,9 +113,14 @@ export function WalkTrackingView({
     };
   }, [visible]);
 
-  async function handleStop() {
-    const final = serviceRef.current!.stop();
-    if (!user || !pet) {
+  function handleStop() {
+    const f = serviceRef.current!.stop();
+    setFinal(f);
+    setPhase("done");
+  }
+
+  async function handleSave() {
+    if (!final || !user || !pet) {
       onClose();
       return;
     }
@@ -102,8 +131,7 @@ export function WalkTrackingView({
         streakDays,
         familyId,
         walkerUid: user.uid,
-        walkerName:
-          user.displayName ?? user.email?.split("@")[0] ?? "Friend",
+        walkerName: user.displayName ?? user.email?.split("@")[0] ?? "Friend",
         walkerPhotoURL: user.photoURL,
         petId: pet.petId,
         petName: pet.name,
@@ -113,6 +141,7 @@ export function WalkTrackingView({
         durationMin: final.durationMin,
         path: final.path,
         isManual: false,
+        notes: notes.trim() || undefined,
       });
       onSaved();
       onClose();
@@ -124,9 +153,22 @@ export function WalkTrackingView({
 
   const permissionDenied = state.errorKind === "permission_denied";
 
+  // Done-phase derived values.
+  const doneMin = final?.durationMin ?? 0;
+  const doneKm = final?.totalDistanceKm ?? 0;
+  const blendedMin = todayMinBefore + doneMin;
+  const goalHit = blendedMin >= goalMin;
+  const blendedPercent = Math.min(100, Math.round((blendedMin / goalMin) * 100));
+  const remainingMin = Math.max(0, goalMin - Math.round(blendedMin));
+  const avgDiff = Math.round(doneMin - weeklyAvgMin);
+  const showAvg = weeklyAvgMin > 0;
+  const kcal = estimatePetCalories(doneKm, pet?.weightKg ?? null);
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView
+        style={[styles.safe, phase === "done" && goalHit && styles.safeCelebrate]}
+      >
         {permissionDenied ? (
           <View style={styles.centerBox}>
             <Text style={styles.bigEmoji}>📍</Text>
@@ -143,18 +185,23 @@ export function WalkTrackingView({
             <Text style={styles.bigEmoji}>⚠️</Text>
             <Text style={styles.errTitle}>存檔失敗</Text>
             <Text style={styles.errBody}>{errorMsg}</Text>
-            <Pressable style={styles.secondaryBtn} onPress={onClose}>
+            <Pressable
+              style={styles.secondaryBtn}
+              onPress={() => setPhase("done")}
+            >
               <Text style={styles.secondaryText}>返回</Text>
             </Pressable>
           </View>
-        ) : (
+        ) : phase === "tracking" ? (
           <View style={styles.body}>
             <View style={styles.header}>
               <Text style={styles.petName}>{pet?.name ?? "遛狗中"}</Text>
               {state.isPaused ? (
                 <Text style={styles.paused}>背景暫停中…</Text>
               ) : (
-                <Text style={styles.live}>● 記錄中</Text>
+                <Text style={styles.live}>
+                  {state.backgroundEnabled ? "● 記錄中（背景持續）" : "● 記錄中"}
+                </Text>
               )}
             </View>
 
@@ -172,20 +219,121 @@ export function WalkTrackingView({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="停止遛狗"
-              disabled={phase === "saving"}
               onPress={handleStop}
-              style={({ pressed }) => [
-                styles.stopBtn,
-                pressed && styles.pressed,
-                phase === "saving" && styles.disabled,
-              ]}
+              style={({ pressed }) => [styles.stopBtn, pressed && styles.pressed]}
             >
-              {phase === "saving" ? (
-                <ActivityIndicator color={colors.card} />
-              ) : (
-                <Text style={styles.stopText}>停止</Text>
-              )}
+              <Text style={styles.stopText}>停止</Text>
             </Pressable>
+          </View>
+        ) : (
+          // ── Done phase ──
+          <View style={styles.doneFlex}>
+            {goalHit ? <WalkConfetti /> : null}
+            <ScrollView
+              contentContainerStyle={styles.doneScroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {goalHit ? (
+                <View style={styles.celebrate}>
+                  <View style={styles.trophy}>
+                    <Text style={styles.trophyEmoji}>🏆</Text>
+                  </View>
+                  <Text style={styles.goalHitTitle}>達標了！今天遛狗目標完成 🎉</Text>
+                  {streakDays >= 1 ? (
+                    <Text style={styles.streakBadge}>{`🔥 連續 ${streakDays} 天`}</Text>
+                  ) : null}
+                </View>
+              ) : (
+                <View style={styles.missed}>
+                  <Text style={styles.missedTitle}>{`今天完成 ${blendedPercent}%`}</Text>
+                  <Text style={styles.missedHint}>{`再走 ${remainingMin} 分鐘就達標`}</Text>
+                </View>
+              )}
+
+              {/* Recap tiles: km / 分 / 平均速度 */}
+              <View style={styles.tiles}>
+                <View style={styles.tile}>
+                  <Text style={styles.tileLabel}>km</Text>
+                  <Text style={styles.tileValue}>{doneKm.toFixed(2)}</Text>
+                </View>
+                <View style={styles.tile}>
+                  <Text style={styles.tileLabel}>分鐘</Text>
+                  <Text style={styles.tileValue}>{doneMin.toFixed(1)}</Text>
+                </View>
+                <View style={styles.tile}>
+                  <Text style={styles.tileLabel}>km/h</Text>
+                  <Text style={styles.tileValue}>
+                    {avgSpeedKmh(doneKm, doneMin).toFixed(1)}
+                  </Text>
+                </View>
+              </View>
+
+              {(showAvg || kcal > 0) && (
+                <View style={styles.recap}>
+                  {showAvg ? (
+                    <Text style={styles.recapLine}>
+                      {avgDiff > 0
+                        ? `比近 7 天平均長 ${avgDiff} 分`
+                        : avgDiff < 0
+                          ? `比近 7 天平均短 ${Math.abs(avgDiff)} 分`
+                          : "跟近 7 天平均一樣"}
+                    </Text>
+                  ) : null}
+                  {kcal > 0 && pet ? (
+                    <Text style={styles.recapLine}>
+                      {`${pet.name} 大約消耗了 ${kcal} 大卡`}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+
+              {doneKm === 0 && (final?.path.length ?? 0) === 0 ? (
+                <View style={styles.warn}>
+                  <Text style={styles.warnText}>
+                    ⚠️ 沒有記錄到路徑（可能在室內或 GPS 訊號弱），仍可存為一次遛狗。
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* Notes */}
+              <TextInput
+                style={styles.notes}
+                placeholder="留個備註（選填）"
+                placeholderTextColor={colors.ink3}
+                value={notes}
+                onChangeText={setNotes}
+                multiline
+                maxLength={300}
+              />
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="儲存遛狗紀錄"
+                disabled={phase === "saving"}
+                onPress={handleSave}
+                style={({ pressed }) => [
+                  styles.saveBtn,
+                  pressed && styles.pressed,
+                  phase === "saving" && styles.disabled,
+                ]}
+              >
+                {phase === "saving" ? (
+                  <ActivityIndicator color={colors.card} />
+                ) : (
+                  <Text style={styles.saveText}>儲存</Text>
+                )}
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="捨棄這次遛狗"
+                disabled={phase === "saving"}
+                onPress={onClose}
+                style={styles.discardBtn}
+              >
+                <Text style={styles.discardText}>捨棄</Text>
+              </Pressable>
+            </ScrollView>
           </View>
         )}
       </SafeAreaView>
@@ -195,6 +343,7 @@ export function WalkTrackingView({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+  safeCelebrate: { backgroundColor: colors.successTint },
   body: {
     flex: 1,
     alignItems: "center",
@@ -240,6 +389,108 @@ const styles = StyleSheet.create({
   stopText: { fontSize: 22, fontWeight: "800", color: colors.card },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.6 },
+
+  // Done phase
+  doneFlex: { flex: 1 },
+  doneScroll: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xxl,
+    alignItems: "center",
+    gap: spacing.lg,
+  },
+  celebrate: { alignItems: "center", gap: spacing.sm },
+  trophy: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.pill,
+    backgroundColor: colors.successTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trophyEmoji: { fontSize: 32 },
+  goalHitTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.leaf,
+    textAlign: "center",
+  },
+  streakBadge: { fontSize: 13, fontWeight: "700", color: colors.brandDeep },
+  missed: { alignItems: "center", gap: 4 },
+  missedTitle: { fontSize: 22, fontWeight: "800", color: colors.ink },
+  missedHint: { fontSize: 12, color: colors.ink3 },
+  tiles: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    width: "100%",
+    maxWidth: 360,
+  },
+  tile: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    gap: 2,
+  },
+  tileLabel: { fontSize: 10, color: colors.ink3, textTransform: "uppercase" },
+  tileValue: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.ink,
+    fontVariant: ["tabular-nums"],
+  },
+  recap: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: 6,
+  },
+  recapLine: { fontSize: 12, color: colors.ink2 },
+  warn: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: colors.bellTint,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  warnText: { fontSize: 12, color: colors.ink2, lineHeight: 18 },
+  notes: {
+    width: "100%",
+    maxWidth: 360,
+    minHeight: 72,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontSize: 14,
+    color: colors.ink,
+    textAlignVertical: "top",
+  },
+  saveBtn: {
+    width: "100%",
+    maxWidth: 360,
+    height: 52,
+    borderRadius: radius.pill,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  saveText: { fontSize: 16, fontWeight: "800", color: colors.card },
+  discardBtn: {
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  discardText: { fontSize: 14, fontWeight: "600", color: colors.ink3 },
+
   centerBox: {
     flex: 1,
     alignItems: "center",

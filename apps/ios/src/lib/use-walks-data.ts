@@ -19,6 +19,7 @@ import {
 import {
   computeStreak,
   getTodayProgress,
+  getWeeklyAvgMinutes,
   getWeekDayDoneFlags,
   getWeekKm,
   getWeekWalkCount,
@@ -97,6 +98,7 @@ export function useWalksData() {
   );
   const weekKm = useMemo(() => getWeekKm(walks), [walks]);
   const weekCount = useMemo(() => getWeekWalkCount(walks), [walks]);
+  const weeklyAvgMin = useMemo(() => getWeeklyAvgMinutes(walks), [walks]);
   const todayIdx = useMemo(() => todayIdxLocal(), []);
 
   return {
@@ -113,6 +115,7 @@ export function useWalksData() {
     weekDayFlags,
     weekKm,
     weekCount,
+    weeklyAvgMin,
     todayIdx,
     refresh,
   };

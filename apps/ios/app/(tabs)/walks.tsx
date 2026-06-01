@@ -24,6 +24,7 @@ import { WalksWeekStrip } from "@/components/walks/walks-week-strip";
 import { PetPill } from "@/components/walks/pet-pill";
 import { WalkRow } from "@/components/walks/walk-row";
 import { WalkTrackingView } from "@/components/walks/walk-tracking-view";
+import { ManualWalkDialog } from "@/components/walks/manual-walk-dialog";
 import { colors, radius, spacing } from "@/theme/theme";
 
 const WEEK_GOAL_COUNT = 5;
@@ -34,6 +35,8 @@ export default function WalksScreen() {
   const router = useRouter();
   const data = useWalksData();
   const [sessionOpen, setSessionOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [showAllWalks, setShowAllWalks] = useState(false);
 
   const {
     loading,
@@ -49,6 +52,7 @@ export default function WalksScreen() {
     weekDayFlags,
     weekKm,
     weekCount,
+    weeklyAvgMin,
     todayIdx,
   } = data;
 
@@ -81,7 +85,8 @@ export default function WalksScreen() {
   const heroSub = activePet
     ? `${activePet.name} 今天走了 ${doneMin} 分 · 連續 ${streakDays} 天`
     : `今天走了 ${doneMin} 分 · 連續 ${streakDays} 天`;
-  const visibleWalks = walks.slice(0, RECENT_LIMIT);
+  const canToggleAllWalks = walks.length > RECENT_LIMIT;
+  const visibleWalks = showAllWalks ? walks : walks.slice(0, RECENT_LIMIT);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -143,7 +148,21 @@ export default function WalksScreen() {
 
         {/* Recent walks */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>最近遛狗</Text>
+          <View style={styles.sectionHead}>
+            <Text style={styles.sectionTitle}>最近遛狗</Text>
+            {canToggleAllWalks ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showAllWalks }}
+                onPress={() => setShowAllWalks((v) => !v)}
+                hitSlop={8}
+              >
+                <Text style={styles.toggleAll}>
+                  {showAllWalks ? "顯示較少" : "全部"}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
           {loading ? (
             <ActivityIndicator color={colors.brand} style={{ marginTop: spacing.lg }} />
           ) : walks.length === 0 ? (
@@ -156,6 +175,17 @@ export default function WalksScreen() {
             </View>
           )}
         </View>
+
+        {/* Manual log — secondary action */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="手動補登遛狗"
+          disabled={pets.length === 0}
+          onPress={() => setManualOpen(true)}
+          style={({ pressed }) => [styles.manualBtn, pressed && styles.pressed]}
+        >
+          <Text style={styles.manualText}>✍️  手動補登</Text>
+        </Pressable>
       </ScrollView>
 
       {/* Sticky CTA — floats above the bottom tab bar */}
@@ -182,7 +212,19 @@ export default function WalksScreen() {
         pet={activePet}
         streakDays={streakDays}
         familyId={familyId}
+        goalMin={goalMin}
+        todayMinBefore={todayProgress.minutes}
+        weeklyAvgMin={weeklyAvgMin}
         onClose={() => setSessionOpen(false)}
+        onSaved={data.refresh}
+      />
+
+      <ManualWalkDialog
+        visible={manualOpen}
+        pets={pets}
+        streakDays={streakDays}
+        familyId={familyId}
+        onClose={() => setManualOpen(false)}
         onSaved={data.refresh}
       />
     </SafeAreaView>
@@ -217,9 +259,17 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 12, fontWeight: "700", color: colors.ink2 },
   sectionMeta: { fontSize: 12, color: colors.ink3 },
   sectionMetaStrong: { fontWeight: "800", color: colors.ink },
-  sectionTitle: { fontSize: 14, fontWeight: "700", color: colors.ink, marginBottom: spacing.sm, paddingHorizontal: spacing.xs },
+  sectionTitle: { fontSize: 14, fontWeight: "700", color: colors.ink, paddingHorizontal: spacing.xs },
+  toggleAll: { fontSize: 13, fontWeight: "700", color: colors.brandDeep },
   walkList: { gap: spacing.sm },
   emptyWalks: { fontSize: 13, color: colors.ink3, paddingHorizontal: spacing.xs },
+  manualBtn: {
+    alignSelf: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+  },
+  manualText: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
   ctaDock: { position: "absolute", left: 0, right: 0, paddingHorizontal: spacing.lg },
   cta: {
     height: 52,

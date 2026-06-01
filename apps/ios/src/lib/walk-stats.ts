@@ -101,6 +101,35 @@ export function getWeekWalkCount(walks: WalkStat[]): number {
   return n;
 }
 
+/** Average per-walk minutes over the trailing 7 days (done-screen recap
+ *  "vs 平均"). 0 when no walks in the window. Verbatim port of web
+ *  getWeeklyAvgMinutes. */
+export function getWeeklyAvgMinutes(
+  walks: WalkStat[],
+  now: Date = new Date(),
+): number {
+  const sevenDaysAgo = now.getTime() - 7 * 86_400_000;
+  let total = 0;
+  let count = 0;
+  for (const w of walks) {
+    if (walkStartMs(w) >= sevenDaysAgo) {
+      total += w.durationMin ?? 0;
+      count++;
+    }
+  }
+  return count > 0 ? total / count : 0;
+}
+
+/** Fun pet-calorie estimate for the recap (1 kcal/kg/km × 1.2). 0 when no
+ *  weight → recap tile suppresses itself. Verbatim port of web. */
+export function estimatePetCalories(
+  distanceKm: number,
+  petWeightKg: number | null | undefined,
+): number {
+  if (!petWeightKg || petWeightKg <= 0) return 0;
+  return Math.round(distanceKm * petWeightKg * 1.2);
+}
+
 /**
  * Streak days from walk dates. A streak breaks on a gap >= 2 days. Verbatim
  * port of web `computeStreak` (apps/web/src/lib/scoring.ts).
