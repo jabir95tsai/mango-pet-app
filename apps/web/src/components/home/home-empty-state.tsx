@@ -58,12 +58,7 @@ export function HomeEmptyState() {
       <div className="mt-3 flex w-full max-w-[280px] flex-col gap-2.5">
         <Link
           href="/app/pets"
-          className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full text-base font-extrabold tracking-[-0.2px] text-white transition-transform hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-mango-brand-deep/40 motion-reduce:transition-none motion-reduce:hover:scale-100"
-          style={{
-            background: "linear-gradient(180deg, #f39800 0%, #d77b00 100%)",
-            boxShadow:
-              "0 16px 28px -10px rgba(243,152,0,0.55), 0 3px 8px -3px rgba(180,100,0,0.30)",
-          }}
+          className="btn-mango inline-flex h-[52px] items-center justify-center gap-2 rounded-full text-base font-extrabold tracking-[-0.2px] text-white transition-transform hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-mango-brand-deep/40 motion-reduce:transition-none motion-reduce:hover:scale-100"
         >
           <Plus className="size-[18px]" strokeWidth={2.5} />
           {tH("empty.cta")}

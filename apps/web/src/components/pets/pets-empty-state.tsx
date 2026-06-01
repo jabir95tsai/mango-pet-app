@@ -66,12 +66,7 @@ export function PetsEmptyState({ onAddPet }: Props) {
       <button
         type="button"
         onClick={onAddPet}
-        className="mt-4 inline-flex h-[50px] items-center gap-2 rounded-full px-6 text-base font-extrabold tracking-[-0.2px] text-mango-ink transition-transform duration-200 hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-mango-brand-deep/40 motion-reduce:transition-none motion-reduce:hover:scale-100"
-        style={{
-          background: "linear-gradient(180deg, #f39800 0%, #d77b00 100%)",
-          boxShadow:
-            "0 16px 28px -10px rgba(243,152,0,0.55), 0 3px 8px -3px rgba(180,100,0,0.30)",
-        }}
+        className="btn-mango mt-4 inline-flex h-[50px] items-center gap-2 rounded-full px-6 text-base font-extrabold tracking-[-0.2px] text-white transition-transform duration-200 hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-mango-brand-deep/40 motion-reduce:transition-none motion-reduce:hover:scale-100"
       >
         <Plus className="size-[18px]" strokeWidth={2.5} />
         {tPP("empty.cta")}
