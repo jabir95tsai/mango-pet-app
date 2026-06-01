@@ -46,18 +46,19 @@
 | Mango palette design tokens | Epic 4 Phase 0 `7baff73` / globals.css | parity（抽 `packages/shared-tokens`） | ✅ `apps/ios/src/theme/theme.ts` import `mangoColors` from `@mango/shared-tokens`（P0 stub；P1+ 漸進填充） |
 
 ### P1 — Walks（核心）
-> 📋 spec READY-FOR-DEV → [`ios-p1-walks.md`](./ios-p1-walks.md)（iOS PM 2026-05-31，含 data contract + 背景 GPS + sub-phase P1a–d + 三角色 handoff）。下列 8 列待 iOS Backend / Feature Builder / UI/UX 執行。
+> 📋 spec → [`ios-p1-walks.md`](./ios-p1-walks.md)（sub-phase P1a–d + data contract + 背景 GPS + 三角色 handoff）。
+> 🚧 **P1a 核心 loop CODE COMPLETE 待實機簽收** → [`ios-p1a-walks-screens.md`](./ios-p1a-walks-screens.md)（backend `7fe2438` + screens `a02289c`）。四列 🟡 = screens 到位、需 macOS/EAS 走一趟（walk doc 落地 + leaderboard 反應）才升 ✅。
 
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| Walks 全頁(radial dial + week strip + 圈內走路狗) | [`walks-v2-rebuild.md`](./walks-v2-rebuild.md) `984be5b` | parity | ⬜ |
-| GPS tracking + timer + stop | walk-core | **parity + 背景 GPS（committed,Q4 已拍板「要做且重要」2026-05-30）** — CoreLocation 背景追蹤,web PWA 做不到的 iOS-only 殺手能力。見 §F handoff(App Store 背景定位審查 + 耗電) | ⬜ |
-| Done screen + confetti + 達標變體 | walks-v2 | parity | ⬜ |
-| 手動 walk dialog | walk-core | parity | ⬜ |
-| Per-pet 自訂散步目標 + pet picker | [`per-pet-walk-goal.md`](./per-pet-walk-goal.md) | parity | ⬜ |
-| Walk 拍照 + Storage 上傳 | walks-v2 | parity | ⬜ |
-| 遛狗自動拍照 + 自動發動態(start/end prompt) | [`walks-auto-photo-share.md`](./walks-auto-photo-share.md) | parity | ⬜ |
-| Walks history(recent) | walk-core | parity | ⬜ |
+| Walks 全頁(radial dial + week strip + 圈內走路狗) | [`walks-v2-rebuild.md`](./walks-v2-rebuild.md) `984be5b` | parity | 🟡 P1a screens 到位（分段環 dial，平滑 arc/動畫 → UI/UX）；待實機簽收 |
+| GPS tracking + timer + stop | walk-core | **parity + 背景 GPS（committed,Q4 已拍板「要做且重要」2026-05-30）** — CoreLocation 背景追蹤,web PWA 做不到的 iOS-only 殺手能力。見 §F handoff(App Store 背景定位審查 + 耗電) | 🟡 **前景** tracking+timer+stop 到位（P1a）；**背景 GPS = P1d 未做**；待實機簽收 |
+| Done screen + confetti + 達標變體 | walks-v2 | parity | ⬜ P1b |
+| 手動 walk dialog | walk-core | parity | ⬜ P1b |
+| Per-pet 自訂散步目標 + pet picker | [`per-pet-walk-goal.md`](./per-pet-walk-goal.md) | parity | 🟡 P1a screens 到位（picker + goal chip；active-pet 持久化待 AsyncStorage）；待實機簽收 |
+| Walk 拍照 + Storage 上傳 | walks-v2 | parity | ⬜ P1c |
+| 遛狗自動拍照 + 自動發動態(start/end prompt) | [`walks-auto-photo-share.md`](./walks-auto-photo-share.md) | parity | ⬜ P1c |
+| Walks history(recent) | walk-core | parity | 🟡 P1a recent 列表到位（「全部」展開 → P1b）；待實機簽收 |
 
 ### P2 — Pets
 | Web feature | Web spec | iOS policy | iOS 狀態 |
