@@ -25,6 +25,8 @@ import { PetPill } from "@/components/walks/pet-pill";
 import { WalkRow } from "@/components/walks/walk-row";
 import { WalkTrackingView } from "@/components/walks/walk-tracking-view";
 import { ManualWalkDialog } from "@/components/walks/manual-walk-dialog";
+import { PhotoShareFlow } from "@/components/walks/photo-share-flow";
+import { newWalkId } from "@/lib/walks";
 import { colors, radius, spacing } from "@/theme/theme";
 
 const WEEK_GOAL_COUNT = 5;
@@ -37,6 +39,10 @@ export default function WalksScreen() {
   const [sessionOpen, setSessionOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [showAllWalks, setShowAllWalks] = useState(false);
+  // Pre-minted id so a START auto-share post + the walk doc + the END post all
+  // cross-link to the same walks/{walkId} (mirrors web mintWalkId).
+  const [pendingWalkId, setPendingWalkId] = useState("");
+  const [startShareOpen, setStartShareOpen] = useState(false);
 
   const {
     loading,
@@ -53,8 +59,20 @@ export default function WalksScreen() {
     weekKm,
     weekCount,
     weeklyAvgMin,
+    autoPhotoShare,
     todayIdx,
   } = data;
+
+  function handleStartWalking() {
+    if (pets.length === 0) return;
+    const id = newWalkId();
+    setPendingWalkId(id);
+    if (autoPhotoShare) {
+      setStartShareOpen(true); // prompt → optional photo → then tracking
+    } else {
+      setSessionOpen(true);
+    }
+  }
 
   // 0 pets → empty state (no dial), same gate as web.
   if (!loading && pets.length === 0) {
@@ -195,7 +213,7 @@ export default function WalksScreen() {
             accessibilityRole="button"
             accessibilityLabel="開始遛狗"
             disabled={pets.length === 0}
-            onPress={() => setSessionOpen(true)}
+            onPress={handleStartWalking}
             style={({ pressed }) => [
               styles.cta,
               pressed && styles.pressed,
@@ -207,11 +225,27 @@ export default function WalksScreen() {
         </View>
       ) : null}
 
+      {/* START auto-photo-share: prompt → optional photo → then tracking */}
+      <PhotoShareFlow
+        visible={startShareOpen}
+        phase="start"
+        pet={activePet}
+        pets={pets}
+        walkId={pendingWalkId}
+        onDone={() => {
+          setStartShareOpen(false);
+          setSessionOpen(true);
+        }}
+      />
+
       <WalkTrackingView
         visible={sessionOpen}
         pet={activePet}
+        pets={pets}
         streakDays={streakDays}
         familyId={familyId}
+        walkId={pendingWalkId}
+        autoPhotoShare={autoPhotoShare}
         goalMin={goalMin}
         todayMinBefore={todayProgress.minutes}
         weeklyAvgMin={weeklyAvgMin}

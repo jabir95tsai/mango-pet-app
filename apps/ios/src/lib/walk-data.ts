@@ -32,6 +32,23 @@ export async function resolveCurrentFamilyId(
   return data?.currentFamilyId ?? familyIds[0];
 }
 
+/**
+ * Read the user's auto-photo-share preference (walks-auto-photo-share). Default
+ * ON — only an explicit `false` disables the start/end prompts, mirroring web
+ * (`u?.walkPrefs?.autoPhotoShare !== false`). The toggle UI is P5 settings.
+ */
+export async function getAutoPhotoShare(uid: string): Promise<boolean> {
+  try {
+    const snap = await firestore().collection("users").doc(uid).get();
+    const data = snap.data() as
+      | { walkPrefs?: { autoPhotoShare?: boolean } }
+      | undefined;
+    return data?.walkPrefs?.autoPhotoShare !== false;
+  } catch {
+    return true; // best-effort: default ON
+  }
+}
+
 /** Pets in the active scope. familyId set → family pets; null → personal. */
 export async function listPetsForScope(
   familyId: string | null,

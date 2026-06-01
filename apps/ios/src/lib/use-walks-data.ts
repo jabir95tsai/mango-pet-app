@@ -12,6 +12,7 @@ import type { Pet, Walk } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
 import {
+  getAutoPhotoShare,
   listPetsForScope,
   listWalksForScope,
   resolveCurrentFamilyId,
@@ -38,6 +39,7 @@ export function useWalksData() {
   const [walks, setWalks] = useState<Walk[]>([]);
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
+  const [autoPhotoShare, setAutoPhotoShare] = useState(true);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -45,12 +47,14 @@ export function useWalksData() {
     try {
       const fam = await resolveCurrentFamilyId(user.uid);
       setFamilyId(fam);
-      const [petList, walkList] = await Promise.all([
+      const [petList, walkList, auto] = await Promise.all([
         listPetsForScope(fam, user.uid).catch(() => [] as Pet[]),
         listWalksForScope(fam, user.uid).catch(() => [] as Walk[]),
+        getAutoPhotoShare(user.uid),
       ]);
       setPets(petList);
       setWalks(walkList);
+      setAutoPhotoShare(auto);
     } finally {
       setLoading(false);
     }
@@ -116,6 +120,7 @@ export function useWalksData() {
     weekKm,
     weekCount,
     weeklyAvgMin,
+    autoPhotoShare,
     todayIdx,
     refresh,
   };

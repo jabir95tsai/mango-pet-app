@@ -7,12 +7,14 @@
  *    (vs 7-day avg + pet calories) + optional notes, then 儲存 → createWalk or
  *    捨棄 → discard. Mirrors web walk-tracking-view done phase + walks-v2.
  *
- * Walk doc is written ONLY via createWalk (shared-formula score). No photo /
- * auto-share (P1c). zh-TW strings inline for P1b (shared-i18n still pending).
+ * Walk doc is written ONLY via createWalk (shared-formula score). P1c adds
+ * in-walk photos (≤5 → walk.photoURLs) and the END auto-photo-share flow.
+ * zh-TW strings inline (shared-i18n still pending).
  */
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -25,22 +27,34 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { Pet } from "@mango/shared-types";
 
 import { createWalk } from "@/lib/walks";
+import { uploadWalkPhoto } from "@/lib/photos";
 import {
   WalkTrackingService,
   type WalkTrackingState,
 } from "@/lib/walk-tracking-service";
 import { estimatePetCalories } from "@/lib/walk-stats";
 import { WalkConfetti } from "@/components/walks/walk-confetti";
+import { CameraCaptureModal } from "@/components/walks/camera-capture-modal";
+import { PhotoShareFlow } from "@/components/walks/photo-share-flow";
 import { useAuth } from "@/state/auth-context";
 import { colors, radius, spacing } from "@/theme/theme";
+
+const MAX_WALK_PHOTOS = 5;
 
 type Phase = "tracking" | "done" | "saving" | "error";
 
 type Props = {
   visible: boolean;
   pet: Pet | null;
+  /** All pets in scope — for the END composer's pet tags. */
+  pets: Pet[];
   streakDays: number;
   familyId: string | null;
+  /** Pre-minted walk id — used as the photo sessionId AND createWalk's id so an
+   *  auto-share post cross-links to the same walk. */
+  walkId: string;
+  /** Whether to run the END auto-photo-share prompt after saving. */
+  autoPhotoShare: boolean;
   /** Active pet's daily goal (minutes) — drives the goal-hit celebration. */
   goalMin: number;
   /** Today's walked minutes BEFORE this session (stored). */
@@ -76,8 +90,11 @@ function avgSpeedKmh(distanceKm: number, durationMin: number): number {
 export function WalkTrackingView({
   visible,
   pet,
+  pets,
   streakDays,
   familyId,
+  walkId,
+  autoPhotoShare,
   goalMin,
   todayMinBefore,
   weeklyAvgMin,
@@ -93,6 +110,12 @@ export function WalkTrackingView({
   const [final, setFinal] = useState<WalkTrackingState | null>(null);
   const [notes, setNotes] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // In-walk photos (≤5) — uploaded live to walk.photoURLs at save.
+  const [photoURLs, setPhotoURLs] = useState<string[]>([]);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  // END auto-photo-share runs after a successful save.
+  const [endShareOpen, setEndShareOpen] = useState(false);
 
   // Subscribe once.
   useEffect(() => {
@@ -107,6 +130,9 @@ export function WalkTrackingView({
     setFinal(null);
     setNotes("");
     setErrorMsg(null);
+    setPhotoURLs([]);
+    setCameraOpen(false);
+    setEndShareOpen(false);
     void serviceRef.current!.start();
     return () => {
       serviceRef.current!.reset();
@@ -117,6 +143,20 @@ export function WalkTrackingView({
     const f = serviceRef.current!.stop();
     setFinal(f);
     setPhase("done");
+  }
+
+  async function handleWalkPhoto(uri: string) {
+    setCameraOpen(false);
+    if (!user || photoURLs.length >= MAX_WALK_PHOTOS) return;
+    setUploadingPhoto(true);
+    try {
+      const url = await uploadWalkPhoto(uri, user.uid, walkId, photoURLs.length);
+      setPhotoURLs((prev) => [...prev, url].slice(0, MAX_WALK_PHOTOS));
+    } catch {
+      // Best-effort — a failed photo never blocks completing the walk.
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   async function handleSave() {
@@ -142,9 +182,17 @@ export function WalkTrackingView({
         path: final.path,
         isManual: false,
         notes: notes.trim() || undefined,
+        walkId,
+        photoURLs,
       });
       onSaved();
-      onClose();
+      // END auto-photo-share: same walkId cross-link. Otherwise just close.
+      if (autoPhotoShare) {
+        setPhase("done");
+        setEndShareOpen(true);
+      } else {
+        onClose();
+      }
     } catch (err) {
       setPhase("error");
       setErrorMsg(err instanceof Error ? err.message : "存檔失敗");
@@ -214,6 +262,28 @@ export function WalkTrackingView({
                 <Text style={styles.distUnit}> km</Text>
               </View>
               <Text style={styles.points}>{`${state.path.length} 個路徑點`}</Text>
+            </View>
+
+            {/* In-walk photos (≤5) */}
+            <View style={styles.photoStrip}>
+              {photoURLs.map((url, i) => (
+                <Image key={`${url}-${i}`} source={{ uri: url }} style={styles.photoThumb} />
+              ))}
+              {photoURLs.length < MAX_WALK_PHOTOS ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="拍遛狗照片"
+                  disabled={uploadingPhoto}
+                  onPress={() => setCameraOpen(true)}
+                  style={({ pressed }) => [styles.photoAdd, pressed && styles.pressed]}
+                >
+                  {uploadingPhoto ? (
+                    <ActivityIndicator color={colors.brandDeep} />
+                  ) : (
+                    <Text style={styles.photoAddText}>📷</Text>
+                  )}
+                </Pressable>
+              ) : null}
             </View>
 
             <Pressable
@@ -336,6 +406,24 @@ export function WalkTrackingView({
             </ScrollView>
           </View>
         )}
+
+        {/* In-walk camera (tracking phase) */}
+        <CameraCaptureModal
+          visible={cameraOpen}
+          onCaptured={handleWalkPhoto}
+          onCancel={() => setCameraOpen(false)}
+        />
+
+        {/* END auto-photo-share — same walkId cross-link, after save */}
+        <PhotoShareFlow
+          visible={endShareOpen}
+          phase="end"
+          pet={pet}
+          pets={pets}
+          walkId={walkId}
+          walkMinutes={Math.round(doneMin)}
+          onDone={onClose}
+        />
       </SafeAreaView>
     </Modal>
   );
@@ -371,6 +459,26 @@ const styles = StyleSheet.create({
   },
   distUnit: { fontSize: 18, fontWeight: "700", color: colors.ink2 },
   points: { fontSize: 13, color: colors.ink3 },
+  photoStrip: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  photoThumb: { width: 56, height: 56, borderRadius: radius.md },
+  photoAdd: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderStyle: "dashed",
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoAddText: { fontSize: 22 },
   stopBtn: {
     width: 120,
     height: 120,
