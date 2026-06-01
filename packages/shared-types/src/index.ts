@@ -103,9 +103,37 @@ export type Post = {
   visibility: Visibility;
   createdAt: Timestamp;
   reactionCounts: Record<ReactionEmoji, number>;
+  /** Denormalised count of `posts/{postId}/comments/*`. Maintained ONLY by
+   *  the Cloud Functions onCreate/onDelete comment triggers (the post
+   *  `update` rule forbids non-authors touching the post doc, so a commenter
+   *  can't bump it client-side — server-authoritative by design). Absent on
+   *  posts created before comments shipped → readers treat `undefined` as 0.
+   *  Spec docs/features/feed-comments-and-reactions-v2.md §A. */
+  commentCount?: number;
   /** Optional cross-link to a walks/{walkId} doc. Set by the auto-photo-
    *  share flow. May point at a future walk doc (START post is created
    *  before the walk is saved) — readers must tolerate a missing/cancelled
    *  referenced doc. */
   walkId?: string;
 };
+
+// ── Comments (feed interaction v2) ──
+/** One row of `posts/{postId}/comments/{commentId}`. Flat (no nested
+ *  replies) in v1. Author identity is denormalised so the reader doesn't
+ *  reverse-look-up the user doc. Read/create/delete permission mirrors the
+ *  parent post's visibility (see firestore.rules). Spec
+ *  docs/features/feed-comments-and-reactions-v2.md §A. */
+export type Comment = {
+  commentId: string;
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL: string | null;
+  /** Trimmed, non-empty, ≤ COMMENT_MAX_LEN chars (enforced in rules + client). */
+  text: string;
+  createdAt: Timestamp;
+};
+
+/** Hard cap on comment `text` length (post-trim). Mirrored in
+ *  firestore.rules `create` guard so the server rejects over-length writes
+ *  even if a client skips validation. */
+export const COMMENT_MAX_LEN = 500;

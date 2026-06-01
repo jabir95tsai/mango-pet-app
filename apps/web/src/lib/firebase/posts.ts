@@ -10,8 +10,10 @@ import {
   limit,
   orderBy,
   query,
+  type QueryDocumentSnapshot,
   serverTimestamp,
   setDoc,
+  startAfter,
   Timestamp,
   updateDoc,
   where,
@@ -23,7 +25,9 @@ import {
   uploadImage,
 } from "./storage";
 import {
+  COMMENT_MAX_LEN,
   REACTION_EMOJIS,
+  type Comment,
   type Post,
   type PostInput,
   type ReactionEmoji,
@@ -235,4 +239,93 @@ export async function setReaction(
   } else {
     await deleteDoc(reactionDoc(postId, uid));
   }
+}
+
+// ── Comments (feed interaction v2) ───────────────────────────────────
+// Data model: posts/{postId}/comments/{commentId}. Flat, no nested
+// replies in v1. `post.commentCount` is denormalised and maintained ONLY
+// by the Cloud Functions onCreate/onDelete triggers — this client layer
+// NEVER writes it (the post `update` rule blocks non-authors from
+// touching the post doc anyway). Spec docs/features/
+// feed-comments-and-reactions-v2.md §A.
+
+const COMMENTS = "comments";
+
+function commentsCol(postId: string) {
+  return collection(getDb(), POSTS, postId, COMMENTS);
+}
+
+export type CreateCommentArgs = {
+  postId: string;
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL: string | null;
+  text: string;
+};
+
+/** Append a comment to a post. `text` is trimmed; throws on empty or
+ *  over-length (mirrors the firestore.rules guard so the UI gets a fast
+ *  local error instead of a permission-denied round-trip). Returns the
+ *  created comment with a resolved id; `createdAt` is server-stamped so
+ *  the returned object's timestamp is null until the doc is re-read —
+ *  callers doing optimistic append should use a local Date placeholder. */
+export async function createComment(
+  args: CreateCommentArgs,
+): Promise<{ commentId: string }> {
+  const text = args.text.trim();
+  if (!text) throw new Error("留言不能是空白");
+  if (text.length > COMMENT_MAX_LEN) {
+    throw new Error(`留言最多 ${COMMENT_MAX_LEN} 字`);
+  }
+  const ref = await addDoc(commentsCol(args.postId), {
+    authorUid: args.authorUid,
+    authorName: args.authorName,
+    authorPhotoURL: args.authorPhotoURL,
+    text,
+    createdAt: serverTimestamp(),
+  });
+  return { commentId: ref.id };
+}
+
+/** Delete a comment. Rules allow the comment author OR the post author
+ *  (own-post moderation). The onDelete trigger decrements
+ *  `post.commentCount`. */
+export async function deleteComment(
+  postId: string,
+  commentId: string,
+): Promise<void> {
+  await deleteDoc(doc(getDb(), POSTS, postId, COMMENTS, commentId));
+}
+
+export type CommentPage = {
+  comments: Comment[];
+  /** Cursor for the next page; pass back as `after`. Null when exhausted. */
+  cursor: QueryDocumentSnapshot | null;
+};
+
+/** Load one page of a post's comments, oldest-first (chronological reading
+ *  order). v1 is paginated getDocs, NOT onSnapshot — per spec cost note
+ *  ("點開才讀，不用即時"). Pass the previous page's `cursor` as `after` to
+ *  page forward. Default page size 20 (open question #2 PM default). */
+export async function listComments(
+  postId: string,
+  pageSize = 20,
+  after: QueryDocumentSnapshot | null = null,
+): Promise<CommentPage> {
+  const base = [
+    orderBy("createdAt", "asc"),
+    limit(pageSize),
+  ];
+  const q = after
+    ? query(commentsCol(postId), orderBy("createdAt", "asc"), startAfter(after), limit(pageSize))
+    : query(commentsCol(postId), ...base);
+  const snap = await getDocs(q);
+  const comments = snap.docs.map((d) => ({
+    ...(d.data() as Omit<Comment, "commentId">),
+    commentId: d.id,
+  }));
+  const cursor = snap.docs.length === pageSize
+    ? snap.docs[snap.docs.length - 1]
+    : null;
+  return { comments, cursor };
 }

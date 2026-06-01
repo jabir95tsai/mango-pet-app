@@ -265,13 +265,20 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(authorUid)/friends/$(viewerUid));
     }
 
-    match /posts/{postId} {
-      allow read: if request.auth != null && (
-        resource.data.visibility == "public"
-        || resource.data.authorUid == request.auth.uid
-        || (resource.data.visibility == "friends"
-            && isFriend(resource.data.authorUid, request.auth.uid))
+    // Can the signed-in caller READ a post with this data? Mirrors the
+    // posts/{postId} read rule so the comments subcollection can reuse the
+    // exact same visibility logic via a get() on the parent post.
+    function canReadPost(postData) {
+      return request.auth != null && (
+        postData.visibility == "public"
+        || postData.authorUid == request.auth.uid
+        || (postData.visibility == "friends"
+            && isFriend(postData.authorUid, request.auth.uid))
       );
+    }
+
+    match /posts/{postId} {
+      allow read: if canReadPost(resource.data);
 
       allow create: if request.auth != null
         && request.resource.data.authorUid == request.auth.uid
@@ -279,6 +286,10 @@ service cloud.firestore {
 
       allow update: if request.auth != null && (
         resource.data.authorUid == request.auth.uid
+        // Reactors bump reactionCounts (their only legitimate write to
+        // someone else's post). commentCount is deliberately NOT client-
+        // writable — the onComment(Created|Deleted) Cloud Functions maintain
+        // it via Admin SDK (rules bypass), per spec "避免 client 灌數".
         || (request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(["reactionCounts"]))
       );
@@ -288,6 +299,41 @@ service cloud.firestore {
       match /reactions/{uid} {
         allow read: if request.auth != null;
         allow write: if request.auth.uid == uid;
+      }
+
+      // ── Comments (feed interaction v2) ──
+      // Permission mirrors the parent post's visibility: anyone who can
+      // read the post can read + add comments. Spec docs/features/
+      // feed-comments-and-reactions-v2.md §A. `post.commentCount` is
+      // maintained by the onCreate/onDelete Cloud Functions (Admin SDK).
+      match /comments/{commentId} {
+        // get() the parent post once and reuse the visibility check.
+        function parentPost() {
+          return get(/databases/$(database)/documents/posts/$(postId)).data;
+        }
+        allow read: if canReadPost(parentPost());
+
+        // Author writes their own comment, must be able to read the post,
+        // and text must be a trimmed-non-empty string within the length cap
+        // (mirrors COMMENT_MAX_LEN in shared-types). createdAt must be the
+        // server timestamp so ordering can't be spoofed.
+        allow create: if request.auth != null
+          && request.resource.data.authorUid == request.auth.uid
+          && canReadPost(parentPost())
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.createdAt == request.time;
+
+        // No edits in v1 (open question #1 — PM default: not editable).
+        allow update: if false;
+
+        // Comment author deletes their own; post author moderates any
+        // comment on their post.
+        allow delete: if request.auth != null && (
+          request.auth.uid == resource.data.authorUid
+          || request.auth.uid == parentPost().authorUid
+        );
       }
     }
 
@@ -337,6 +383,15 @@ service cloud.firestore {
         allow read: if request.auth != null;
         allow write: if false;
       }
+    }
+
+    // ── postInteractionThrottle (server-only) ──
+    // Per-post reaction-push throttle state, written by the onReactionCreated
+    // trigger via Admin SDK (rules bypass). Holds reactionLastPushAt +
+    // reactionPending to collapse reaction-push bursts into ≤1 push/hour/post.
+    // No client surface. Spec feed-comments-and-reactions-v2.md §C.
+    match /postInteractionThrottle/{postId} {
+      allow read, write: if false;
     }
 
     // ── deletedAccounts audit log (admin/server-only) ──

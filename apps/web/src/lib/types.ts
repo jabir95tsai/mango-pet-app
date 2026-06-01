@@ -1,5 +1,6 @@
 import type { Timestamp } from "firebase/firestore";
 import type {
+  Comment,
   Gender,
   Pet,
   Post,
@@ -9,12 +10,13 @@ import type {
   Walk,
   WalkPathPoint,
 } from "@mango/shared-types";
-import { REACTION_EMOJIS } from "@mango/shared-types";
+import { COMMENT_MAX_LEN, REACTION_EMOJIS } from "@mango/shared-types";
 
 // These domain types now live in @mango/shared-types (cross-platform single
 // source of truth). Re-exported here so existing `@/lib/types` imports keep
 // working unchanged.
 export type {
+  Comment,
   Gender,
   Pet,
   Post,
@@ -24,7 +26,7 @@ export type {
   Walk,
   WalkPathPoint,
 };
-export { REACTION_EMOJIS };
+export { COMMENT_MAX_LEN, REACTION_EMOJIS };
 
 export type AuthProviderKind = "google" | "apple" | "facebook";
 
@@ -98,6 +100,8 @@ export const ENGAGEMENT_PUSH_TYPES = [
   "streak-warning",
   "rank-overtake",
   "family-milestone",
+  "post-comment",
+  "post-reaction",
 ] as const;
 export type EngagementPushType = (typeof ENGAGEMENT_PUSH_TYPES)[number];
 

@@ -1036,6 +1036,268 @@ export const syncDogEntryVisibility = onDocumentWritten(
   },
 );
 
+// ═════════════════════════════════════════════════════════════════════
+// Feed interaction v2 — comment + reaction push + commentCount denorm
+// Spec: docs/features/feed-comments-and-reactions-v2.md §A + §C
+//
+// Three event triggers on the posts subtree:
+//   - onCreate(posts/{postId}/comments/{commentId})  → commentCount +1 +
+//     push the post author "{name} 留言了你的動態" (immediate).
+//   - onDelete(posts/{postId}/comments/{commentId})  → commentCount -1
+//     (clamped ≥ 0).
+//   - onCreate(posts/{postId}/reactions/{uid})       → push the post author
+//     "{name} 回應了你的動態", THROTTLED/AGGREGATED (see below).
+//
+// Shared gates (mirror the Epic 5 engagement-push contract):
+//   1. Don't notify yourself (commenter/reactor == post author → skip).
+//   2. Author must have ≥1 FCM token.
+//   3. Author must not have opted out of the push type
+//      (pushPrefs.engagementOptOut).
+// All three reuse sendEngagementPush() + pushCopy() + the
+// engagementPushes/{type}/waves/{ISO} audit posture.
+// ═════════════════════════════════════════════════════════════════════
+
+const POST_COMMENT_TYPE = "post-comment";
+const POST_REACTION_TYPE = "post-reaction";
+
+/** Reaction-push throttle window. Within this window after an author was
+ *  last pushed for a reaction on a given post, further reactions are
+ *  accumulated silently; the first reaction AFTER the window emits one
+ *  aggregated "{name} 和其他 N 人回應了" push. Leading-edge fire keeps the
+ *  author informed immediately on the first reaction; the window collapses
+ *  bursts (multi-person pile-ons, rapid toggles) into at most one push per
+ *  hour per post — the cost + anti-spam guard the spec mandates (§C). */
+const REACTION_PUSH_COOLDOWN_MS = 60 * 60 * 1000;
+
+const POST_EXCERPT_MAX = 60;
+
+/** Shared author-notifiability gate: returns the author's valid FCM tokens
+ *  when they should be pushed for `pushType`, or null to skip. Centralises
+ *  gates 1–3 so the comment + reaction triggers can't diverge. */
+async function resolveAuthorPushTarget(
+  authorUid: string,
+  actorUid: string,
+  pushType: string,
+): Promise<{ tokens: string[]; locale?: string } | null> {
+  if (!authorUid || authorUid === actorUid) return null; // gate 1: not self
+  const authorSnap = await db.doc(`users/${authorUid}`).get();
+  if (!authorSnap.exists) return null;
+  const a = authorSnap.data() ?? {};
+  const tokens = ((a.fcmTokens ?? []) as string[]).filter(Boolean);
+  if (tokens.length === 0) return null; // gate 2: has tokens
+  const optOut = (a.pushPrefs?.engagementOptOut ?? []) as string[];
+  if (optOut.includes(pushType)) return null; // gate 3: not opted out
+  return { tokens, locale: a.locale as string | undefined };
+}
+
+/** onCreate(posts/{postId}/comments/{commentId}) — bump commentCount and
+ *  push the post author. commentCount is clamped via increment (starts at
+ *  undefined → 1 on the first comment). */
+export const onCommentCreated = onDocumentCreated(
+  {
+    document: "posts/{postId}/comments/{commentId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const comment = event.data?.data();
+    if (!comment) return;
+    const postId = event.params.postId;
+    const postRef = db.doc(`posts/${postId}`);
+    const postSnap = await postRef.get();
+    if (!postSnap.exists) return; // post deleted between write + trigger
+    const post = postSnap.data() ?? {};
+
+    // Denormalised count — Admin SDK bypasses rules. increment handles the
+    // absent-field case (treated as 0 → 1).
+    await postRef.update({ commentCount: FieldValue.increment(1) });
+
+    const target = await resolveAuthorPushTarget(
+      post.authorUid as string,
+      comment.authorUid as string,
+      POST_COMMENT_TYPE,
+    );
+    if (!target) return;
+
+    const commenterName = (comment.authorName as string) || "有人";
+    // Excerpt is always safe to include: the recipient IS the post author,
+    // who can read every comment on their own post regardless of post
+    // visibility (open question #4 — excerpt OK).
+    const raw = ((comment.text as string) || "").replace(/\s+/g, " ").trim();
+    const excerpt =
+      raw.length > POST_EXCERPT_MAX ? `${raw.slice(0, POST_EXCERPT_MAX)}…` : raw;
+
+    const copy = pushCopy(
+      target.locale,
+      { name: commenterName, excerpt },
+      { title: "新留言", body: "{name} 留言了你的動態：{excerpt}" },
+      { title: "New comment", body: "{name} commented on your post: {excerpt}" },
+    );
+
+    try {
+      await sendEngagementPush({
+        uid: post.authorUid as string,
+        tokens: target.tokens,
+        body: copy,
+        data: { type: POST_COMMENT_TYPE, postId },
+        link: "/app/feed",
+      });
+    } catch (err) {
+      logger.error(`onCommentCreated: push failed post=${postId}`, err);
+    }
+    logger.info(
+      `onCommentCreated: post=${postId} comment=${event.params.commentId} ` +
+        `pushed=${post.authorUid !== comment.authorUid}`,
+    );
+  },
+);
+
+/** onDelete(posts/{postId}/comments/{commentId}) — decrement commentCount,
+ *  clamped at 0 (a comment created before this function shipped never
+ *  incremented, so a naive increment(-1) could go negative). */
+export const onCommentDeleted = onDocumentDeleted(
+  {
+    document: "posts/{postId}/comments/{commentId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const postId = event.params.postId;
+    const postRef = db.doc(`posts/${postId}`);
+    await db
+      .runTransaction(async (tx) => {
+        const snap = await tx.get(postRef);
+        if (!snap.exists) return; // post gone (e.g. cascade delete) — no-op
+        const current = Number(snap.data()?.commentCount) || 0;
+        tx.update(postRef, { commentCount: Math.max(0, current - 1) });
+      })
+      .catch((err) =>
+        logger.error(`onCommentDeleted: decrement failed post=${postId}`, err),
+      );
+    logger.info(
+      `onCommentDeleted: post=${postId} comment=${event.params.commentId}`,
+    );
+  },
+);
+
+/** onCreate(posts/{postId}/reactions/{uid}) — push the post author that
+ *  someone reacted, THROTTLED per post (see REACTION_PUSH_COOLDOWN_MS).
+ *
+ *  Fires only on a NEW reaction doc: setReaction() overwrites the uid-keyed
+ *  doc when a user swaps emoji (an update, not a create), so emoji swaps
+ *  don't re-notify. Throttle state lives in the server-only
+ *  `postInteractionThrottle/{postId}` doc, updated inside a transaction so
+ *  concurrent reactions can't double-send.
+ *
+ *  Leading-edge + aggregate-on-next-window:
+ *    - first reaction (no active window) → send NOW, open a window.
+ *    - reactions within the window → accumulate `pending`, no send.
+ *    - first reaction after the window → send an aggregated
+ *      "{name} 和其他 N 人回應了" folding in the `pending` accrued during the
+ *      previous window, then open a fresh window. */
+export const onReactionCreated = onDocumentCreated(
+  {
+    document: "posts/{postId}/reactions/{uid}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const reaction = event.data?.data();
+    if (!reaction) return;
+    const postId = event.params.postId;
+    const reactorUid = (reaction.uid as string) || event.params.uid;
+
+    const postSnap = await db.doc(`posts/${postId}`).get();
+    if (!postSnap.exists) return;
+    const post = postSnap.data() ?? {};
+
+    const target = await resolveAuthorPushTarget(
+      post.authorUid as string,
+      reactorUid,
+      POST_REACTION_TYPE,
+    );
+    if (!target) return; // self-reaction / no tokens / opted out
+
+    const nowMs = event.time ? new Date(event.time).getTime() : Date.now();
+    const throttleRef = db.doc(`postInteractionThrottle/${postId}`);
+
+    // Transaction decides whether THIS reaction sends a push, and folds in
+    // any reactions accrued during the previous cooldown window.
+    const decision = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(throttleRef);
+      const data = snap.data() ?? {};
+      const lastPushMs =
+        (data.reactionLastPushAt as Timestamp | undefined)?.toMillis() ?? 0;
+      const pending = Number(data.reactionPending) || 0;
+      const windowOpen = lastPushMs > 0 && nowMs - lastPushMs < REACTION_PUSH_COOLDOWN_MS;
+
+      if (windowOpen) {
+        // Inside cooldown — accumulate silently, no push.
+        tx.set(
+          throttleRef,
+          { reactionPending: pending + 1 },
+          { merge: true },
+        );
+        return { send: false as const };
+      }
+      // Window closed (or first ever) — push now, folding in `pending`
+      // others accrued during the previous window. Reset the window.
+      tx.set(
+        throttleRef,
+        {
+          reactionLastPushAt: Timestamp.fromMillis(nowMs),
+          reactionPending: 0,
+        },
+        { merge: true },
+      );
+      return { send: true as const, others: pending };
+    });
+
+    if (!decision.send) {
+      logger.info(`onReactionCreated: throttled post=${postId} reactor=${reactorUid}`);
+      return;
+    }
+
+    // Reactor display name (reaction doc doesn't denormalise it).
+    const reactorSnap = await db.doc(`users/${reactorUid}`).get();
+    const reactorName = (reactorSnap.data()?.displayName as string) || "有人";
+    const others = decision.others;
+
+    const copy =
+      others > 0
+        ? pushCopy(
+            target.locale,
+            { name: reactorName, n: others },
+            { title: "新回應", body: "{name} 和其他 {n} 人回應了你的動態" },
+            { title: "New reaction", body: "{name} and {n} others reacted to your post" },
+          )
+        : pushCopy(
+            target.locale,
+            { name: reactorName },
+            { title: "新回應", body: "{name} 回應了你的動態" },
+            { title: "New reaction", body: "{name} reacted to your post" },
+          );
+
+    try {
+      await sendEngagementPush({
+        uid: post.authorUid as string,
+        tokens: target.tokens,
+        body: copy,
+        data: { type: POST_REACTION_TYPE, postId },
+        link: "/app/feed",
+      });
+    } catch (err) {
+      logger.error(`onReactionCreated: push failed post=${postId}`, err);
+    }
+    logger.info(
+      `onReactionCreated: post=${postId} reactor=${reactorUid} others=${others} sent`,
+    );
+  },
+);
+
 // ─────────────────────────────────────────────────────────────────────
 // rank-overtake push helper — Phase 2 B1
 // ─────────────────────────────────────────────────────────────────────
