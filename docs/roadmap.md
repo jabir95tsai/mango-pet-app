@@ -129,6 +129,7 @@
     - **裝新 EAS build 驗 P1b**：停止遛狗 → done screen（達標看 confetti+emerald）→ 存檔/捨棄；手動補登 → Firestore `isManual:true`;recent「全部」展開。過 → 回報 iOS PM 升 §A P1 三列 ✅。
     - 之後 **P1c**（拍照 + Storage + 自動發動態 walkId cross-link;expo-camera = 新 native dep → iOS Backend 走 branch+gate）+ 建議一起起 `@mango/shared-i18n`（文案變多，收斂 Walks namespace 避免 zh-TW/en drift）。
     - **follow-up**：active-pet AsyncStorage 持久化（async-storage 已裝，low pri）;stat helpers 收進 shared-business。
+    - 🎨 **iOS UI/UX walks polish pass（排程：P1 功能收齊後，user 2026-06-01 決定 features-first）**：目前 iOS walks 是「功能對、外觀粗胚」（戰略 D1 = 原生手感，非 web 像素複製；目標 = 同品牌+同功能+native 感）。**功能正常、非 bug**。收斂的 polish 項：dial 平滑 arc（react-native-svg）/ Reanimated 走路狗 / confetti+emerald 慶祝精緻化 / streak badge pop / reduced-motion / mango tokens 細修。→ **P1c 後開一個 iOS UI/UX session 一次做**（svg/Reanimated = 新 dep 走 branch+gate）。
     - Web 側恢復可動,但依 [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md) §2「critical + polish only,新 feature 預設不做」
 - **照片圖庫 + 照片儲存** — [`docs/features/photo-gallery-downloads.md`](../features/photo-gallery-downloads.md) ✅ **SHIPPED 2026-05-27**（Feature Builder `e76f97c`）
   - 新增 `/app/photos`「我的照片」集中圖庫；聚合自己的 post / walk / pet avatar / existing receiptURL；點圖沿用 PhotoLightbox；支援單張、多張、一鍵儲存尚未下載
