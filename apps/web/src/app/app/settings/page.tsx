@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   Globe,
-  Images,
   MoreHorizontal,
   ShieldCheck,
   Trash2,
@@ -18,6 +17,7 @@ import { PushToggle } from "@/components/settings/push-toggle";
 import { EngagementPushSection } from "@/components/settings/engagement-push-section";
 import { WalkAutoPhotoSection } from "@/components/settings/walk-auto-photo-section";
 import { LeaderboardVisibilitySection } from "@/components/settings/leaderboard-visibility-section";
+import { PhotosPreviewSection } from "@/components/settings/photos-preview-section";
 import { FamilySection } from "@/components/family/family-section";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ExportDataButton } from "@/components/settings/export-data-button";
@@ -87,14 +87,6 @@ export default function SettingsPage() {
             >
               <Users className="size-5" strokeWidth={1.8} />
             </Link>
-            <Link
-              href="/app/photos"
-              aria-label={tS("photosLink")}
-              title={tS("photosLink")}
-              className="grid size-11 shrink-0 place-items-center rounded-full bg-mango-card-soft text-mango-brand-deep ring-1 ring-mango-hairline transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
-            >
-              <Images className="size-5" strokeWidth={1.8} />
-            </Link>
           </div>
           {user && (
             <button
@@ -113,6 +105,15 @@ export default function SettingsPage() {
             the camera FAB on the pets 開銷 tab; the 4-tap path the
             stopgap solved no longer exists since /app/expenses is
             redirected away. */}
+
+        {/* Latest photos — replaces the old gallery icon button. Shows the
+            3 most-recent photos as a tap-through to /app/photos; sits just
+            above the family block. */}
+        {user && (
+          <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+            <PhotosPreviewSection />
+          </section>
+        )}
 
         <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
           <FamilySection />
@@ -153,10 +154,10 @@ export default function SettingsPage() {
           </section>
         )}
 
-        <section className="flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
-          <div className="flex items-center gap-3">
-            <Globe className="size-5 text-amber-700 dark:text-amber-300" />
-            <p className="font-medium">Language / 語言</p>
+        <section className="flex flex-row items-center justify-between gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <div className="flex min-w-0 items-center gap-3">
+            <Globe className="size-5 shrink-0 text-amber-700 dark:text-amber-300" />
+            <p className="font-medium">語言 / Language</p>
           </div>
           <LanguageSwitcher />
         </section>

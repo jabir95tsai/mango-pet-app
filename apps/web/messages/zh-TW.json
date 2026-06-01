@@ -268,6 +268,10 @@
   "Settings": {
     "friendsLink": "好友",
     "photosLink": "照片圖庫",
+    "photosPreview": {
+      "viewAll": "查看全部",
+      "empty": "還沒有照片"
+    },
     "privacyData": {
       "title": "資料與隱私",
       "subtitle": "下載一份你在 Mango Pet 上的完整資料副本（JSON 格式）。包含寵物、紀錄、家庭關係等；照片以 URL 形式存放。",
