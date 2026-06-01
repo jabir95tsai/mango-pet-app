@@ -47,6 +47,19 @@ _2026-05-29 PWA PM session 已清空一輪：原 Inbox 10 條全 triage 完 — 
 - **優先級提示**：P0（app 進不去 = 核心可用性；雖當下已恢復，需確認是否會復發 + 是否每次 push 都中斷）
 - **待 user 補充**（幫 Bug Hunter 縮範圍）：確切時間區間？看到的是白畫面 / 轉圈 / 錯誤訊息 / 連不上？手機 PWA 還是瀏覽器？只有自己還是家人也中？
 
+### ✅ 使用者頭像在首頁 + 設定頁顯示成文字（initials）— RESOLVED `7a61b2c`（2026-06-01 Bug Hunter）
+- **發現於**：2026-06-01、PWA PM session（user 回報）
+- **類型**：bug / UI / 系統性（已證實）
+- **重現 / 觀察**：user 回報「首頁、設定頁我的頭像圖片沒正確顯示，顯示文字」。Chrome MCP 在 prod `/app` 重現：首頁「發文」slot 顯示「YO」(= `initialsOf("You")`)，無 `<img>`；同帳號 feed 貼文頭像、Mango/錢錢 寵物頭像照片**正常載入**。
+- **✅ 真 root cause（推翻 PM 假設）**：不是「photoURL 為 falsy 因 profile doc 沒存」，也不是網域白名單 / 載圖失敗。讀取 prod IndexedDB `firebaseLocalStorage` 的 auth user 物件：
+  - **top-level `user.photoURL` = null、`user.displayName` = null**
+  - 但 `providerData[0]`（google.com）`photoURL` 在（len 98）、`displayName` = "蔡智博Jabir"；`providerData[1]` = apple.com（兩者皆 null）。
+  - → 這是**多 provider 連結帳號（Google + Apple，經 `auth.ts` 的 `linkWithCredential`）**的 Firebase 典型坑：linkWithCredential 後 top-level 聚合欄位被清成 null（Apple 不給 photoURL、name 只給一次），但 provider 子項還留著 Google 的真值。
+  - 自己頭像讀取路徑直接用 top-level `user?.photoURL`（null）→ src falsy → 顯示 initials；`displayName`（null）→ fallback "You" → "YO"。feed 頭像正常是因為它讀 Firestore post doc 的 denormalized `authorPhotoURL`，不是 live auth。
+- **最小修法（已 ship）**：`lib/firebase/auth.ts` 新增純 helper `resolveUserPhotoURL` / `resolveUserDisplayName`（top-level 優先，null 時 fallback 到第一個有值的 `providerData`），套到兩個回報點（your-story-avatar、settings page）。純讀取路徑、不動 auth state。Chrome MCP 部署後回驗通過。
+- **🆕 衍生 handoff（系統性寫入側，未修，交 Backend / Feature）**：見下方「已分類 — Backend 接」新條目「多-provider 帳號 top-level photoURL/displayName=null 污染所有 denormalized 寫入」。同一個 root cause 也讓 `upsertUser` 與所有 author/walker/payer denormalized 寫入點存 null；本次只修了「自己頭像顯示」，寫入側＋既有髒資料 backfill 不在 Bug Hunter 範圍。
+- **優先級提示**：顯示 bug 已 RESOLVED（原 P2）。衍生寫入側建議 P1（系統性、影響多人看到的 denormalized 名字/頭像）。
+
 ---
 
 ## 已分類 — Bug Hunter 接
@@ -82,7 +95,28 @@ _目前沒有 active 條目。已 SHIPPED 的見「已處理（audit trail）」
 
 ## 已分類 — Backend 接
 
-_目前沒有 active 條目。已升級到 spec / 已 SHIPPED 的見「已處理（audit trail）」與各自 `docs/features/*.md`。dormant code 備註見 Deferred。_
+### ✅ 多-provider 帳號 top-level `photoURL`/`displayName`=null 污染所有 denormalized 寫入 — RESOLVED `c7a02a5`（2026-06-01 Bug Hunter，user 要求修根本原因）
+- **觸發**：user 回報「排行榜頭像仍錯誤」。Chrome MCP prod 重現：人(walker)榜總榜自己那列顯示 initials「JA」+ 名字「jabir95tsai」，其他單一-provider 使用者正常。
+- **證實的 root cause 鏈**：walker 榜聚合（`functions/src/leaderboard-helpers.ts:155-160`）直接讀 `users/{uid}` doc 的 `displayName`/`photoURL`；該 doc 由 `upsertUser` 用 top-level（null）寫入 → 存了 `displayName="jabir95tsai"`(email prefix fallback)、`photoURL=null` → 榜忠實顯示 null。
+- **✅ 已 ship 的 root-cause 修法（`c7a02a5`，兩層）**：
+  1. `auth.ts` `syncAuthProfileFromProviders()`：登入時（`upsertUser` 前）若 top-level null 但 providerData 有值，`updateProfile` 把 top-level 補回（idempotent guard，不覆寫既有非 null）。一併修好所有 action-time denormalized 寫入（post author / walk walker / expense payer）。
+  2. `upsertUser` 改用 `resolveUserDisplayName`/`resolveUserPhotoURL`（providerData fallback）→ users doc（榜的來源）即使 updateProfile 失敗也正確。
+- **部署驗證**：重登後 prod 實測 — Auth top-level 已補回（displayName="蔡智博Jabir"、photoURL len98）；`users/{uid}` doc 經 Firestore REST 讀回 **displayName="蔡智博Jabir"、photoURL=lh3...len98**（原 "jabir95tsai"/null）。榜的 entry 是快取投影，自然修復：今晚 00:30 cron 或下次遛狗的 realtime recompute 重讀 users doc 後即顯示照片（user 選自然修復，未手動觸發 cron — 手動觸發會重寫全使用者共用榜資料，已被 auto-mode classifier 擋下且 user 不需要）。
+- **舊（未修時）的觀察記錄**：
+- **發現於**：2026-06-01、Bug Hunter session（修「自己頭像顯示成文字」`7a61b2c` 時挖出的衍生 root cause）
+- **類型**：bug / 系統性資料品質 / 技術債
+- **重現 / 觀察**：多 provider 連結帳號（已實證：Google + Apple，經 `auth.ts` `linkWithCredential`）的 Firebase Auth **top-level `user.photoURL` / `user.displayName` 為 null**，真值只留在 `providerData[0]`（google.com）。Bug Hunter 已用 helper 修了「讀取顯示」側，但**寫入側全都直接讀 top-level `user.photoURL`/`user.displayName`**，會把 null 寫進 Firestore：
+  - `lib/firebase/users.ts:50-51` `upsertUser`（users doc 的 `photoURL` / `displayName`）
+  - `components/feed/post-composer.tsx:141-142`（post `authorName` / `authorPhotoURL`）
+  - `app/app/walks/page.tsx:284-285`（walk `walkerName` / `walkerPhotoURL`）
+  - `app/app/restaurants/[restaurantId]/page.tsx:96-97`（review author）
+  - `components/friends/friend-search.tsx:50-51`、`app/app/friends/add/page.tsx:64-65`（friend 卡 displayName/photoURL）
+  - `components/pets/pets-page-content.tsx:276`（expense `payerName`）
+  - → 受影響帳號之後新建的貼文/遛狗/開銷/評論/好友卡，**別人看到的名字會 fallback、頭像會變 initials**。目前 feed 看起來正常是因為舊 doc 是 top-level 還沒被清成 null 時寫的。
+- **建議修法（root cause，一次解讀+寫兩側）**：登入路徑（`AuthProvider` 的 `upsertUser` hook 附近）偵測 top-level 為 null 但 providerData 有值時，呼叫 `updateProfile(user, { displayName, photoURL })` 把 top-level 補回 → 所有讀/寫點自動正確、且持久化到 Auth。或最低限度：所有寫入點改用本次新增的 `resolveUserPhotoURL`/`resolveUserDisplayName` helper。
+  - 另需評估：對既有已寫 null 的 Firestore docs 做一次性 backfill（migration）— 屬 Backend。
+- **建議交付給**：Backend（updateProfile 同步 + 既有資料 backfill）；寫入點 helper 化可 Feature/Bug Hunter
+- **優先級提示**：P1（系統性、影響多人可見的 denormalized 身分欄位；非單帳號）
 
 ---
 
