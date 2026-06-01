@@ -53,7 +53,7 @@
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
 | Walks 全頁(radial dial + week strip + 圈內走路狗) | [`walks-v2-rebuild.md`](./walks-v2-rebuild.md) `984be5b` | parity | ✅ P1a 實機簽收（分段環 dial 功能 OK；平滑 arc/動畫 polish → UI/UX follow-up） |
-| GPS tracking + timer + stop | walk-core | **parity + 背景 GPS（committed,Q4 已拍板「要做且重要」2026-05-30）** — CoreLocation 背景追蹤,web PWA 做不到的 iOS-only 殺手能力。見 §F handoff(App Store 背景定位審查 + 耗電) | ✅ **前景** tracking+timer+stop 實機簽收（P1a）／🟡 **背景續跑 P1d code/native COMPLETE 待實機簽收**（merge `871b154`；session-only + Always fallback；見 §F.1）|
+| GPS tracking + timer + stop | walk-core | **parity + 背景 GPS（committed,Q4 已拍板「要做且重要」2026-05-30）** — CoreLocation 背景追蹤,web PWA 做不到的 iOS-only 殺手能力。見 §F handoff(App Store 背景定位審查 + 耗電) | ✅ **前景**（P1a）+ ✅ **背景續跑 P1d 實機簽收（2026-06-01，EAS `4e875f0b`）** — 鎖屏/口袋走一段時間+距離續算;session-only + Always fallback。iOS-only 殺手能力達成 |
 | Done screen + confetti + 達標變體 | walks-v2 | parity | ⬜ P1b |
 | 手動 walk dialog | walk-core | parity | ⬜ P1b |
 | Per-pet 自訂散步目標 + pet picker | [`per-pet-walk-goal.md`](./per-pet-walk-goal.md) | parity | ✅ P1a 實機簽收（picker + goal chip + 切 pet 換 goal；active-pet 持久化 → AsyncStorage follow-up） |
@@ -175,10 +175,11 @@
 - **⚠️ App Store 審查風險**:背景定位是 Apple 重點審查項。必須:(a) 用途字串講清楚「記錄遛狗路線」;(b) 只在遛狗 session 進行中啟用背景定位,結束即停;(c) 不可常駐背景定位。最常見拒絕原因 = 背景定位用途不充分。
 - **耗電 / UX**:背景高頻定位耗電;walk 結束自動關閉 + 提供前景 fallback。
 
-### F.1 P1d 實作狀態（2026-06-01）
+### F.1 P1d 實作狀態 — ✅ 達標（2026-06-01）
 
-- **CODE / NATIVE COMPLETE 待實機簽收**（merge `871b154` / feat `b001445`）：`UIBackgroundModes:location` + Always usage strings + `expo-task-manager` + `@react-native-async-storage/async-storage`（背景路徑持久化）+ `WalkTrackingService` session-only 背景續跑 + Always 拒絕退前景 fallback。web rollout gate 綠、apps/ios tsc 過。
-- **唯一未驗 = 實機背景續跑**（鎖屏/口袋走一段 → 時間+距離續算）→ 需 user 跑新 EAS build（`4e875f0b`）走一趟。**實機過才算 P1d 達標。**
+- **✅ 實機簽收**（merge `871b154` / feat `b001445`；EAS build `4e875f0b`）：user 鎖屏/口袋走一段，時間+距離續算 → 背景續跑 work。
+- native：`UIBackgroundModes:location` + Always usage strings + `expo-task-manager` + `@react-native-async-storage/async-storage`（背景路徑持久化）；service：session-only 背景續跑 + wall-clock duration + Always 拒絕退前景 fallback。
+- **P1 核心遛狗 loop（含背景）正式完成。** iOS-only 背景定位殺手能力 = Q4 committed 達成。
 
 ### F.2 App Store 審查 note 草稿（送審時貼 App Review notes）
 

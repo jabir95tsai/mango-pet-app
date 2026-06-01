@@ -1,6 +1,6 @@
 # iOS P1 — Walks（核心遛狗）Parity Spec
 
-狀態：**IN PROGRESS** — ✅ P1a 實機簽收（2026-06-01）｜🟡 P1d 背景 GPS code/native COMPLETE 待實機簽收（merge `871b154`；session-only + Always fallback；審查 note + Open Q3 收 parity §F）｜🔀 **sub-phase 順序 P1d → P1b → P1c**（user 2026-06-01：背景續跑核心缺口 + 審查提早暴露）
+狀態：**IN PROGRESS** — ✅ P1a 實機簽收 + ✅ **P1d 背景 GPS 實機簽收（2026-06-01）→ 核心遛狗 loop（含背景）完成**｜🔜 P1b（done/手動補登/recent 展開）→ P1c（拍照/自動分享）｜sub-phase 順序 P1d → P1b → P1c
 建立日期：2026-05-31
 規格作者：iOS PM session
 角色執行：**iOS Backend**（native location/camera/storage 設定 + shared packages + schema 相容驗證）+ **iOS Feature Builder**（screens + flow 端到端）+ **iOS UI/UX**（dial / 走路狗 / safe-area / 動效）
