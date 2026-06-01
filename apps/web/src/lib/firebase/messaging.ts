@@ -7,9 +7,9 @@ import {
   type Messaging,
 } from "firebase/messaging";
 import {
-  arrayRemove,
   arrayUnion,
   doc,
+  setDoc,
   updateDoc,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -98,17 +98,38 @@ export async function enablePush(uid: string): Promise<{ token: string } | null>
   });
   if (!token) return null;
 
-  await updateDoc(doc(getDb(), "users", uid), {
-    fcmTokens: arrayUnion(token),
-  });
+  // Clear any prior "user turned push off" intent — they just opted back
+  // in. setDoc/merge so pushPrefs.engagementOptOut is preserved.
+  await setDoc(
+    doc(getDb(), "users", uid),
+    {
+      fcmTokens: arrayUnion(token),
+      pushPrefs: { globalDisabled: false },
+    },
+    { merge: true },
+  );
 
   return { token };
 }
 
-export async function disablePush(uid: string, token: string): Promise<void> {
-  await updateDoc(doc(getDb(), "users", uid), {
-    fcmTokens: arrayRemove(token),
-  });
+/**
+ * Turn push OFF for this account. Clears ALL fcmTokens (not just the
+ * current context's — stale tokens from other contexts would otherwise
+ * keep receiving push) and records the explicit `globalDisabled` intent
+ * so the Settings probe stops re-minting a token via
+ * reconcileCurrentToken. The OS notification permission can't be revoked
+ * programmatically, so this intent flag is the only thing that makes
+ * "off" stick while permission stays "granted".
+ */
+export async function disablePush(uid: string): Promise<void> {
+  await setDoc(
+    doc(getDb(), "users", uid),
+    {
+      fcmTokens: [],
+      pushPrefs: { globalDisabled: true },
+    },
+    { merge: true },
+  );
 }
 
 /** Reconcile the in-memory FCM token for the **current browser context**

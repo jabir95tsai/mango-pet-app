@@ -66,6 +66,12 @@ export type AppUser = {
      *  values: "evening-walk-reminder", "streak-warning",
      *  "rank-overtake", "family-milestone". */
     engagementOptOut?: string[];
+    /** Explicit "user turned push OFF" intent. Absent/false = on. Set
+     *  true by disablePush so the Settings probe stops re-minting an FCM
+     *  token via reconcileCurrentToken (which otherwise re-enables push
+     *  on every Settings open while the OS permission stays "granted").
+     *  Cleared by enablePush. */
+    globalDisabled?: boolean;
   };
   /** Walks-related preferences. Namespace reserved so future
    *  per-walk toggles (e.g., quiet hours, GPS-off mode) don't

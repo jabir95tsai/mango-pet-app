@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Bell, BellOff, BellRing, Info, Send } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { getAppUser } from "@/lib/firebase/users";
 import { Button } from "@/components/ui/button";
 import {
   currentPermission,
@@ -58,6 +59,15 @@ export function PushToggle() {
         return;
       }
       if (perm === "granted") {
+        // Respect an explicit "user turned push off" intent. Without this
+        // the reconcile below re-mints a token on every Settings open
+        // (OS permission stays "granted" after disable), so push could
+        // never be turned off from the UI.
+        const appUser = await getAppUser(user.uid);
+        if (appUser?.pushPrefs?.globalDisabled) {
+          if (!cancelled) setStatus({ kind: "disabled" });
+          return;
+        }
         // Don't trust `user.fcmTokens.length > 0` here — those tokens
         // could be from a sibling context (iOS Safari vs PWA install,
         // desktop Chrome vs Chrome PWA) that produced a different FCM
@@ -108,7 +118,7 @@ export function PushToggle() {
     setBusy(true);
     setError(null);
     try {
-      await disablePush(user.uid, status.token);
+      await disablePush(user.uid);
       setStatus({ kind: "disabled" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
