@@ -147,6 +147,17 @@ export function HumanLeaderboard() {
       .sort((a, b) => b.totalScore - a.totalScore);
   }, [family, members, entries]);
 
+  // Glow signal — diff lastUpdatedAt across realtime snapshots. We feed
+  // the source-of-truth `entries` (not `visibleEntries`, which has the
+  // zero-score placeholder rows that never have a real lastUpdatedAt and
+  // would never glow anyway). MUST stay above the personal-mode early
+  // return below so the hook count is constant across renders — otherwise
+  // a personal-mode / guest user (no family) crashes with React error
+  // #300 ("rendered fewer hooks than expected") the moment familyLoading
+  // flips false. (Guest-login made this reachable: guests are always
+  // personal-mode and the spec lets them view the board.)
+  const glowing = useLeaderboardEntryGlow(entries);
+
   // ── Personal mode branch (spec B): empty state + CTA ─────────────
   // No toggle, no period tabs, no rows — just the explanation card.
   // Gated on familyLoading so we don't flash the empty state to a
@@ -176,13 +187,6 @@ export function HumanLeaderboard() {
   const visibleEntries = scope === "family" ? familyEntries : entries;
   const isFamilyOnlyMe =
     scope === "family" && members.length === 1 && visibleEntries.length === 1;
-
-  // Glow signal — diff lastUpdatedAt across realtime snapshots. We
-  // feed the source-of-truth `entries` (not `visibleEntries`, which
-  // has the zero-score placeholder rows that never have a real
-  // lastUpdatedAt and would never glow anyway). Family-only-me
-  // single-member case is naturally a no-op — same uid in both arrays.
-  const glowing = useLeaderboardEntryGlow(entries);
 
   return (
     <>
