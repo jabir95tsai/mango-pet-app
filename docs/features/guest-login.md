@@ -121,3 +121,26 @@ guest **可用**：`/app/pets`（建寵物、記錄、開銷、健康）、`/app
 - 社群入口 gating（發文 / 排行榜上榜 / 家庭 / 好友 / 留言表情）對 guest 隱藏或停用 + 升級 CTA；排行榜 PM 預設「可看不可上」。
 - 升級提示 UI（建第一筆資料後一次性 + settings 常駐入口）。
 - **整合驗證**：真匿名登入後跑 workflow 指定的三項（能建 pet/walk、walk 不上人/狗榜、不能寫 post/comment）。
+
+---
+
+## ✅ Feature Builder 已交付（Web/PWA session 2026-06-01 — commits d8f491f + 0f314da）
+
+**Shipped to main → App Hosting（prod live）。** 端到端 guest 前端全部完成並在 production 實機驗證（Chrome MCP，真匿名登入）。
+
+### 做了什麼
+- **A 入口**：`signInAsGuest()`（`signInAnonymously`）+ `upgradeGuestWithProvider()`（`linkWithPopup`，衝突 fallback `signInWithCredential`，回 `linked`/`switched`）@ `auth.ts`。登入頁加「以訪客身分繼續」次要按鈕 + 「或」divider。
+- **B profile**：`auth-provider` 新增 `isGuest`（= `user.isAnonymous`）。profile create / 升級 de-flag 沿用 Backend 的 `upsertUser`（未改）。
+- **C gating**：feed 發文、post-composer、reactions/comments（post-card）、friends 頁、family-section、settings（藏排行榜可見度 + friends link、加常駐升級卡）、walks 自動拍照 prompt（start trigger + end effect）全部對 guest 隱藏/停用 + `<GuestLockedNotice>` 升級 CTA。排行榜「可看不可上」（viewing 不擋，後端排除上榜）。
+- **E 升級**：全域 `GuestUpgradeProvider` + dialog（Google/Apple）。`linked` 同 uid 保資料；`switched`（帳號已存在）登入既有、不 merge、明確告知。`linkWithPopup` 不觸發 onAuthStateChanged → 成功後 reload 讓 gate 重評估 + profile de-flag。
+- **5 nudge**：guest 有 ≥1 寵物後一次性 dismissible banner（localStorage）+ settings 常駐升級入口。i18n：`Auth.continueAsGuest`/`guestDivider` + 整個 `Guest` namespace（zh-TW + en，key parity 已驗）。
+
+### Production 驗證（Chrome MCP，真 guest）
+訪客登入 → 建 pet「訪客小狗」（Firestore 寫入成功，**確認 Backend rules 對真匿名 token 放行 guest 自己的 pet**）→ 兩次硬重整資料持久 ✅；nudge 出現 ✅；feed/reactions/friends/family/settings gating + 升級 dialog 全部 ✅；feed/leaderboard 可看 ✅。
+
+### ⚠️ 過程中兩個發現（已處理 / 需 follow-up）
+1. **Anonymous provider 之前是關的**（`ADMIN_ONLY_OPERATION`）。Backend 只用合成 profile 測，沒開 Auth 的 Anonymous 登入方式。**已由 user 授權、用 Identity Toolkit Admin API（gcloud）啟用**（`signIn.anonymous.enabled=true`）。→ **成本影響**：匿名帳號開始可被任何人建立；`gcAnonymousUsers` 仍是 `GC_DRY_RUN=true`，**尚未真的清**。**Backend follow-up**：看幾次 dry-run audit 後把 `GC_DRY_RUN` 改 false 才真正控成本。
+2. **排行榜 personal-mode 崩潰（React #300）**：`human-leaderboard.tsx` 把 `useLeaderboardEntryGlow` 放在 personal-mode early return **之下** → 任何無家庭 user（含所有 guest）一進排行榜就白屏。**pre-existing**（家庭內測試者碰不到），guest-login 讓它浮現。已修（commit `0f314da`，把 hook 移到 early return 之上）+ prod 驗證 guest 兩個 board 都可看。
+
+### 尚未驗證（需 user 或新帳號）
+- **OAuth 實際綁定**：要 user 真實 Google/Apple 帳號（popup）。且 user 既有 Google 已註冊 → 只能驗 `switched` 衝突路徑（不保資料）；要驗「`linked` 保資料」happy path 需一個**從未註冊**的 Google/Apple 帳號。前端 dialog/流程已就緒，邏輯走 `linkWithPopup`。
