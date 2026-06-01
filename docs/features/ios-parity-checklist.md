@@ -57,8 +57,8 @@
 | Done screen + confetti + 達標變體 | walks-v2 | parity | 🟡 P1b code done（`8a14ce3`，hand-rolled confetti 無新 dep；emerald 慶祝 + recap）；待實機驗收 |
 | 手動 walk dialog | walk-core | parity | 🟡 P1b code done（`8a14ce3`，isManual:true）；datetime picker **defer**（PM 2026-06-01，維持「往回推時長」）；待實機驗收 |
 | Per-pet 自訂散步目標 + pet picker | [`per-pet-walk-goal.md`](./per-pet-walk-goal.md) | parity | ✅ P1a 實機簽收（picker + goal chip + 切 pet 換 goal；active-pet 持久化 → AsyncStorage follow-up） |
-| Walk 拍照 + Storage 上傳 | walks-v2 | parity | ⬜ P1c |
-| 遛狗自動拍照 + 自動發動態(start/end prompt) | [`walks-auto-photo-share.md`](./walks-auto-photo-share.md) | parity | ⬜ P1c |
+| Walk 拍照 + Storage 上傳 | walks-v2 | parity | 🟡 P1c code done（backend `18803fb` 壓縮/上傳 + FB `de2265c` 拍照 ≤5）；expo-camera/image-manipulator 新 dep 走 gate;待實機驗收 |
+| 遛狗自動拍照 + 自動發動態(start/end prompt) | [`walks-auto-photo-share.md`](./walks-auto-photo-share.md) | parity | 🟡 P1c code done（`de2265c`，START/END post 同 walkId cross-link + createPost）;待實機驗收 |
 | Walks history(recent) | walk-core | parity | ✅ P1a recent 列表；🟡 「全部」當頁展開 P1b code done（`8a14ce3`）待實機驗收 |
 
 ### P2 — Pets
