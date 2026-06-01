@@ -59,6 +59,16 @@ const messaging = getMessaging();
 const LOOK_AHEAD_MS = 7 * 24 * 60 * 60 * 1000;
 const FUNCTION_REGION = "asia-east1";
 
+/** True when the callable's auth token is an anonymous (guest) sign-in.
+ *  Guests are blocked from community callables (createFamily /
+ *  joinFamilyByCode / acceptFriendRequest) — a defense-in-depth layer on
+ *  top of the firestore.rules `isRealUser()` gate (these callables write
+ *  via Admin SDK, which bypasses rules, so the check must live here too).
+ *  Spec docs/features/guest-login.md §C. */
+function isGuestAuth(req: { auth?: { token?: { firebase?: { sign_in_provider?: string } } } }): boolean {
+  return req.auth?.token?.firebase?.sign_in_provider === "anonymous";
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // scanReminders — every 15 min
 // ─────────────────────────────────────────────────────────────────────
@@ -1447,6 +1457,9 @@ export const acceptFriendRequest = onCall(
   async (req) => {
     const myUid = req.auth?.uid;
     if (!myUid) throw new HttpsError("unauthenticated", "Sign-in required");
+    if (isGuestAuth(req)) {
+      throw new HttpsError("permission-denied", "綁定帳號後才能使用好友功能");
+    }
     const fromUid = (req.data?.fromUid as string | undefined)?.trim();
     if (!fromUid) throw new HttpsError("invalid-argument", "fromUid required");
 
@@ -1619,6 +1632,9 @@ export const createFamily = onCall(
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+    if (isGuestAuth(req)) {
+      throw new HttpsError("permission-denied", "綁定帳號後才能建立家庭");
+    }
     const name = ((req.data?.name as string | undefined) ?? "").trim() || "我的家庭";
     if (name.length > 40) {
       throw new HttpsError("invalid-argument", "Family name too long");
@@ -1657,6 +1673,9 @@ export const joinFamilyByCode = onCall(
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+    if (isGuestAuth(req)) {
+      throw new HttpsError("permission-denied", "綁定帳號後才能加入家庭");
+    }
     const code = ((req.data?.inviteCode as string | undefined) ?? "").trim();
     if (!/^\d{6}$/.test(code)) {
       throw new HttpsError("invalid-argument", "邀請碼必須是 6 位數字");
@@ -3890,6 +3909,189 @@ export const autoFriendFamilyMembers = onDocumentWritten(
         `new=${newMembers.length} attempted=${pairsToTry.size} ` +
         `created=${created} exists=${skippedExists} ` +
         `missingProfile=${skippedMissingProfile} failed=${failed}`,
+    );
+  },
+);
+
+// ═════════════════════════════════════════════════════════════════════
+// gcAnonymousUsers — guest (anonymous-auth) account garbage collection
+// Spec: docs/features/guest-login.md §F
+//
+// Anonymous accounts proliferate (one uid per device) and the ones that
+// never upgrade leave orphan user/pets/walks/etc. behind — Firestore bloat
+// + (already excluded from, but still scanned by) the leaderboard cron.
+// This reaps anonymous Auth users that are BOTH:
+//   - still anonymous (providerData empty → never linked/upgraded), and
+//   - inactive for ≥ GC_INACTIVE_DAYS (by users/{uid}.lastSeenAt, falling
+//     back to the Auth user's lastRefreshTime / creationTime).
+// For each reaped user it hard-deletes their personal-mode data (pets +
+// healthRecords, walks, reminders, expenses), the user doc, and the Auth
+// user — the same scope deleteUserAccount covers, minus the community
+// branches a guest can't have (no families / friends / posts / reactions /
+// reviews — all blocked by rules).
+//
+// ⚠️ SHIPS IN DRY-RUN BY DEFAULT (GC_DRY_RUN = true): it logs + writes an
+// audit doc listing exactly what it WOULD delete, but deletes nothing.
+// Flip GC_DRY_RUN to false (separate reviewed commit) to arm it, after the
+// first few dry-run audit docs confirm the candidate set looks right.
+// Conservative N per spec (30–60d) → 60d.
+// ═════════════════════════════════════════════════════════════════════
+
+/** Inactivity threshold before an un-upgraded guest is eligible for GC.
+ *  Conservative end of the spec's 30–60d range. */
+const GC_INACTIVE_DAYS = 60;
+/** Safety: when true, the GC only reports (audit + logs), never deletes.
+ *  Ships true; flip to false in a separate commit once dry-run output is
+ *  vetted. */
+const GC_DRY_RUN = true;
+/** Cap deletions per run so an unexpectedly large backlog can't blow the
+ *  function timeout or rack up a surprise write bill in one pass. The next
+ *  weekly run picks up the remainder. */
+const GC_MAX_DELETES_PER_RUN = 500;
+
+/** Hard-delete one guest's personal-mode data + user doc. Mirrors the
+ *  relevant subset of deleteUserAccount (guests have no family/community
+ *  data). Returns per-collection counts. No-op on `dryRun` (counts only).
+ *  Idempotent: re-running after a partial failure just re-deletes whatever
+ *  remains. */
+async function reapGuestData(
+  uid: string,
+  dryRun: boolean,
+): Promise<{ pets: number; walks: number; reminders: number; expenses: number; healthRecords: number }> {
+  const counts = { pets: 0, walks: 0, reminders: 0, expenses: 0, healthRecords: 0 };
+
+  // Pets the guest created (always personal-mode for a guest) + their
+  // healthRecords subcollection.
+  const petsSnap = await db.collection("pets").where("ownerUid", "==", uid).get();
+  for (const petDoc of petsSnap.docs) {
+    const hrSnap = await petDoc.ref.collection("healthRecords").get();
+    counts.healthRecords += hrSnap.size;
+    if (!dryRun && hrSnap.size > 0) {
+      await deleteIdsInBatches(hrSnap.docs, (b, d) => b.delete(d.ref));
+    }
+  }
+  counts.pets = petsSnap.size;
+  if (!dryRun && petsSnap.size > 0) {
+    await deleteIdsInBatches(petsSnap.docs, (b, d) => b.delete(d.ref));
+  }
+
+  // Top-level collections keyed by the guest's owner field.
+  for (const [col, field] of [
+    ["walks", "walkerUid"],
+    ["reminders", "createdByUid"],
+    ["expenses", "payerUid"],
+  ] as const) {
+    const snap = await db.collection(col).where(field, "==", uid).get();
+    (counts as Record<string, number>)[col] = snap.size;
+    if (!dryRun && snap.size > 0) {
+      await deleteIdsInBatches(snap.docs, (b, d) => b.delete(d.ref));
+    }
+  }
+
+  // User profile doc.
+  if (!dryRun) {
+    await db.doc(`users/${uid}`).delete().catch(() => {});
+  }
+  return counts;
+}
+
+export const gcAnonymousUsers = onSchedule(
+  {
+    // Weekly, Monday 03:30 Asia/Taipei — off-peak, low cadence (cost).
+    schedule: "30 3 * * 1",
+    timeZone: "Asia/Taipei",
+    region: FUNCTION_REGION,
+    retryCount: 0,
+    memory: "512MiB",
+    timeoutSeconds: 540,
+  },
+  async () => {
+    const nowMs = Date.now();
+    const cutoffMs = nowMs - GC_INACTIVE_DAYS * 86_400_000;
+
+    let scanned = 0;
+    let anonymous = 0;
+    let eligible = 0;
+    let reaped = 0;
+    let skippedActive = 0;
+    let skippedUpgraded = 0;
+    const reapedSample: Array<{ uid: string; lastActiveISO: string | null; counts: unknown }> = [];
+
+    // Page through all Auth users. listUsers returns up to 1000/page.
+    let pageToken: string | undefined = undefined;
+    do {
+      const page = await getAuth().listUsers(1000, pageToken);
+      pageToken = page.pageToken;
+      for (const u of page.users) {
+        scanned++;
+        // Anonymous = no linked providers. An upgraded ex-guest has ≥1
+        // providerData entry → skip (their data is real now).
+        if (u.providerData.length > 0) {
+          skippedUpgraded++;
+          continue;
+        }
+        anonymous++;
+
+        // Determine last activity: prefer the Firestore profile's lastSeenAt
+        // (app-level activity), fall back to Auth metadata.
+        const profileSnap = await db.doc(`users/${u.uid}`).get();
+        const p = profileSnap.data();
+        // Defensive: if a non-guest profile somehow has no providers, don't
+        // touch it (only reap docs that are absent or explicitly isGuest).
+        if (p && p.isGuest !== true) {
+          skippedUpgraded++;
+          continue;
+        }
+        const lastSeenMs =
+          (p?.lastSeenAt as Timestamp | undefined)?.toMillis?.() ??
+          (u.metadata.lastRefreshTime
+            ? new Date(u.metadata.lastRefreshTime).getTime()
+            : new Date(u.metadata.creationTime).getTime());
+
+        if (lastSeenMs > cutoffMs) {
+          skippedActive++;
+          continue;
+        }
+        eligible++;
+        if (reaped >= GC_MAX_DELETES_PER_RUN) continue;
+
+        const counts = await reapGuestData(u.uid, GC_DRY_RUN);
+        if (!GC_DRY_RUN) {
+          await getAuth().deleteUser(u.uid).catch((err) =>
+            logger.error(`gcAnonymousUsers: auth delete failed uid=${u.uid}`, err),
+          );
+        }
+        reaped++;
+        if (reapedSample.length < 50) {
+          reapedSample.push({
+            uid: u.uid,
+            lastActiveISO: new Date(lastSeenMs).toISOString(),
+            counts,
+          });
+        }
+      }
+    } while (pageToken);
+
+    const isoNow = new Date(nowMs).toISOString();
+    await db.doc(`anonymousGc/${isoNow}`).set({
+      ranAt: Timestamp.now(),
+      dryRun: GC_DRY_RUN,
+      inactiveDays: GC_INACTIVE_DAYS,
+      cutoffISO: new Date(cutoffMs).toISOString(),
+      scanned,
+      anonymous,
+      eligible,
+      reaped,
+      skippedActive,
+      skippedUpgraded,
+      cappedPerRun: GC_MAX_DELETES_PER_RUN,
+      reapedSample,
+    });
+
+    logger.info(
+      `gcAnonymousUsers done — dryRun=${GC_DRY_RUN} scanned=${scanned} ` +
+        `anon=${anonymous} eligible=${eligible} reaped=${reaped} ` +
+        `active=${skippedActive} upgraded=${skippedUpgraded}`,
     );
   },
 );

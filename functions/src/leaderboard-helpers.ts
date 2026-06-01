@@ -154,6 +154,12 @@ export async function computeWalkerPeriodScore(
   // qualifying walks (saves a read on the personal-mode-only case).
   const profileDoc = await db.doc(`users/${walkerUid}`).get();
   const p = profileDoc.data() ?? {};
+  // Exclude guests (anonymous-auth) from the leaderboard — they have no
+  // real identity. Returning null here makes the caller treat them exactly
+  // like a walker with no qualifying walks (no entry written; cron cleanup
+  // removes any stale entry). Spec guest-login.md §D. The flag is set by
+  // upsertUser on guest profile create and cleared on upgrade.
+  if (p.isGuest === true) return null;
   return {
     uid: walkerUid,
     displayName: (p.displayName as string) ?? "Friend",
@@ -270,6 +276,12 @@ export async function computeDogPeriodScore(
   if (ownerUid) {
     const ownerDoc = await db.doc(`users/${ownerUid}`).get();
     const o = ownerDoc.data() ?? {};
+    // ⚠️ Exclude guest-owned dogs. The dog board INCLUDES personal-mode dogs
+    // (leaderboard-v2 §②), and every guest is personal-mode — so without
+    // this, a guest's dog would leak onto the all-app dog board. Returning
+    // null skips the entry entirely (cron cleanup removes any stale one).
+    // Spec guest-login.md §D (the cross-spec conflict this resolves).
+    if (o.isGuest === true) return null;
     ownerName = (o.displayName as string) ?? "Friend";
     const v = o.leaderboardVisibility;
     if (v === "public" || v === "friends" || v === "off") ownerVisibility = v;

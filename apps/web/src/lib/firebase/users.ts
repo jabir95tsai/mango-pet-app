@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -45,25 +46,38 @@ function toDisplayNameLower(name: string): string {
   return name.trim().toLowerCase();
 }
 
+/** Default guest display name. zh-TW / en only (the two supported locales).
+ *  Kept minimal — guests have no provider identity. */
+function guestDisplayName(locale: "zh-TW" | "en"): string {
+  return locale === "en" ? "Guest" : "訪客";
+}
+
 export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<void> {
   const ref = doc(getDb(), "users", user.uid);
   const snap = await getDoc(ref);
+  const isGuest = user.isAnonymous;
+
   // Resolve from providerData when the top-level Auth fields are null
   // (multi-provider accounts, e.g. Google + Apple linked). Without this
   // the profile doc — which the leaderboard / friends / etc. read — gets
-  // a null photo and an email-prefix name fallback.
-  const desiredName =
-    resolveUserDisplayName(user) ?? user.email?.split("@")[0] ?? "Friend";
+  // a null photo and an email-prefix name fallback. Guests have no
+  // providerData → fall back to the localised "訪客"/"Guest" label.
+  const desiredName = isGuest
+    ? guestDisplayName(locale)
+    : resolveUserDisplayName(user) ?? user.email?.split("@")[0] ?? "Friend";
   const desiredPhoto = resolveUserPhotoURL(user);
 
   if (!snap.exists()) {
+    // Guest profile: minimal, flagged, and DELIBERATELY no displayNameLower
+    // (keeps guests out of friend prefix-search — they can't be friended).
     await setDoc(ref, {
       uid: user.uid,
       displayName: desiredName,
-      displayNameLower: toDisplayNameLower(desiredName),
+      ...(isGuest ? {} : { displayNameLower: toDisplayNameLower(desiredName) }),
       email: user.email,
       photoURL: desiredPhoto,
-      authProvider: inferProvider(user),
+      authProvider: isGuest ? "anonymous" : inferProvider(user),
+      ...(isGuest ? { isGuest: true } : {}),
       locale,
       createdAt: serverTimestamp(),
       lastSeenAt: serverTimestamp(),
@@ -77,14 +91,28 @@ export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<vo
   const existing = snap.data() as AppUser;
   const patch: Record<string, unknown> = {};
 
+  // ── Upgrade de-flag (linkWithCredential): same uid, was guest, now has a
+  // real provider (isAnonymous === false). Clear the guest flag, fix the
+  // authProvider, and backfill the real name/photo + search field so the
+  // upgraded account becomes a full citizen (community + leaderboards
+  // unlock). Spec guest-login.md §E. Idempotent: only fires while the doc
+  // still carries isGuest. The client link flow doesn't need to write the
+  // profile itself — this runs on the post-link auth-state callback.
+  const upgrading = existing.isGuest === true && !isGuest;
+  if (upgrading) {
+    patch.isGuest = deleteField();
+    patch.authProvider = inferProvider(user);
+  }
+
   if (existing.displayName !== desiredName) {
     patch.displayName = desiredName;
     patch.displayNameLower = toDisplayNameLower(desiredName);
-  } else if (existing.displayNameLower === undefined) {
+  } else if (existing.displayNameLower === undefined && !isGuest) {
     // Defensive backfill on the login path: existing users who haven't
     // logged in since Phase 1 deploy but before the migration runs would
     // otherwise stay invisible to displayName search. One-shot write at
     // next login fixes them even without the migration ever firing.
+    // Skipped for guests — they intentionally have no search field.
     patch.displayNameLower = toDisplayNameLower(existing.displayName);
   }
   if (existing.photoURL !== desiredPhoto) patch.photoURL = desiredPhoto;

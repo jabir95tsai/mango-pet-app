@@ -43,7 +43,16 @@ export type AppUser = {
   displayNameLower?: string;
   email: string | null;
   photoURL: string | null;
-  authProvider: AuthProviderKind;
+  /** `"anonymous"` for guest (anonymous-auth) users — see `isGuest`. */
+  authProvider: AuthProviderKind | "anonymous";
+  /** True for anonymous/guest accounts (signInAnonymously). Guests can use
+   *  personal features (pets/walks) but are excluded from community
+   *  (posts/comments/reactions/family/friends) and from the leaderboards
+   *  (walker + dog aggregation skips them). Set on guest profile create;
+   *  cleared automatically by `upsertUser` when the user upgrades via
+   *  linkWithCredential (uid unchanged). Absent = a real (non-guest) user.
+   *  Spec docs/features/guest-login.md. */
+  isGuest?: boolean;
   locale: "zh-TW" | "en";
   city?: string;
   createdAt: Timestamp;
