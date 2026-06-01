@@ -53,7 +53,7 @@ export function PetHeader({
   const sexAge = [sex, age].filter(Boolean).join(" · ");
 
   const chips = [
-    pet.breed ?? tPet(`species.${pet.species}`),
+    pet.breed ?? pet.speciesOther ?? tPet(`species.${pet.species}`),
     sexAge,
     pet.weightKg != null ? `${pet.weightKg} 公斤` : null,
   ].filter((s): s is string => !!s && s.length > 0);

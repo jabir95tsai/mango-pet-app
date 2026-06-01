@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -89,6 +90,7 @@ export async function createPet(
       ownerUid,
       name: input.name,
       species: input.species,
+      speciesOther: input.speciesOther,
       breed: input.breed,
       gender: input.gender,
       weightKg: input.weightKg,
@@ -122,7 +124,7 @@ export async function updatePet(
   actingUid: string,
   avatar?: File,
 ): Promise<Pet> {
-  const updates = clean({
+  const updates: Record<string, unknown> = clean({
     name: input.name,
     species: input.species,
     breed: input.breed,
@@ -131,6 +133,15 @@ export async function updatePet(
     bio: input.bio,
     birthday: input.birthday ? Timestamp.fromDate(input.birthday) : undefined,
   });
+
+  // speciesOther: write the custom text only for an "other" pet; otherwise
+  // DELETE any stale value. clean() drops empties from the write, so without
+  // an explicit deleteField a leftover speciesOther would shadow the dog/cat
+  // label on display (`breed ?? speciesOther ?? label`) after 其他→狗 edits.
+  updates.speciesOther =
+    input.species === "other" && input.speciesOther
+      ? input.speciesOther
+      : deleteField();
 
   await updateDoc(petDoc(petId), updates);
 

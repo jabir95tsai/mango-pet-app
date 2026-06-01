@@ -22,6 +22,11 @@ export type Pet = {
   ownerUid: string;
   name: string;
   species: Species;
+  /** Free-text animal type when `species === "other"` (e.g. 兔 / 鸚鵡 /
+   *  倉鼠). Absent for dog/cat. Optional + additive so legacy pets and the
+   *  iOS Pets P2 build stay compatible; display falls back to the localized
+   *  "其他" label when empty. Set from the pet form's custom-species input. */
+  speciesOther?: string;
   breed?: string;
   birthday?: Timestamp;
   gender?: Gender;

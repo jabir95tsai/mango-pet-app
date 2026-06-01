@@ -255,7 +255,9 @@
       "birthday": "Birthday",
       "bio": "Bio",
       "photo": "Tap to add a photo",
+      "speciesOther": "Animal type",
       "namePlaceholder": "Mango",
+      "speciesOtherPlaceholder": "Rabbit, parrot, hamster…",
       "breedPlaceholder": "Shiba / Mixed…",
       "bioPlaceholder": "Personality, favorites…"
     },

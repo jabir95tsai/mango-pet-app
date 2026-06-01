@@ -143,6 +143,10 @@ export type FamilyMember = {
 export type PetInput = {
   name: string;
   species: Species;
+  /** Free-text animal type, only meaningful when `species === "other"`
+   *  (e.g. 兔 / 鸚鵡). The form sends it only for "other"; cleared/omitted
+   *  otherwise. See `Pet.speciesOther`. */
+  speciesOther?: string;
   breed?: string;
   birthday?: Date;
   gender?: Gender;

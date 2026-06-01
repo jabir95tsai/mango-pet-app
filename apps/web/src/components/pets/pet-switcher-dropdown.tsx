@@ -91,7 +91,7 @@ export function PetSwitcherDropdown({
                 {p.name}
               </div>
               <div className="mt-0.5 truncate text-[11px] text-mango-ink-3">
-                {[p.breed ?? tPet(`species.${p.species}`), p.weightKg != null ? `${p.weightKg} kg` : null]
+                {[p.breed ?? p.speciesOther ?? tPet(`species.${p.species}`), p.weightKg != null ? `${p.weightKg} kg` : null]
                   .filter(Boolean)
                   .join(" · ")}
               </div>

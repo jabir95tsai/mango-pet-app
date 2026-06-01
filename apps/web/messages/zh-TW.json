@@ -255,7 +255,9 @@
       "birthday": "生日",
       "bio": "簡介",
       "photo": "點擊上傳照片",
+      "speciesOther": "動物種類",
       "namePlaceholder": "芒果",
+      "speciesOtherPlaceholder": "兔子、鸚鵡、倉鼠…",
       "breedPlaceholder": "柴犬 / 米克斯…",
       "bioPlaceholder": "個性、喜好…"
     },

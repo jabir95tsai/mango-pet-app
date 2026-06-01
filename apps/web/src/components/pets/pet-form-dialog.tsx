@@ -30,6 +30,8 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
 
   const [name, setName] = useState("");
   const [species, setSpecies] = useState<Species>("dog");
+  // Free-text animal type, shown + saved only when species === "other".
+  const [speciesOther, setSpeciesOther] = useState("");
   const [breed, setBreed] = useState("");
   const [gender, setGender] = useState<Gender>("unknown");
   const [weight, setWeight] = useState("");
@@ -53,6 +55,7 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
     if (!open) return;
     setName(initial?.name ?? "");
     setSpecies(initial?.species ?? "dog");
+    setSpeciesOther(initial?.speciesOther ?? "");
     setBreed(initial?.breed ?? "");
     setGender(initial?.gender ?? "unknown");
     setWeight(initial?.weightKg?.toString() ?? "");
@@ -92,6 +95,10 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
         {
           name: name.trim(),
           species,
+          // Only meaningful for "other"; send undefined otherwise so the
+          // data layer clears any stale value.
+          speciesOther:
+            species === "other" ? speciesOther.trim() || undefined : undefined,
           breed: breed.trim() || undefined,
           gender,
           weightKg: weight ? Number(weight) : undefined,
@@ -222,6 +229,19 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
             </Select>
           </div>
         </div>
+
+        {/* Custom animal type — only when "其他/other" is picked, so the
+            dropdown stays simple for the common dog/cat cases. */}
+        {species === "other" && (
+          <div className="flex flex-col gap-1">
+            <FieldLabel>{tPet("fields.speciesOther")}</FieldLabel>
+            <Input
+              value={speciesOther}
+              onChange={(e) => setSpeciesOther(e.target.value)}
+              placeholder={tPet("fields.speciesOtherPlaceholder")}
+            />
+          </div>
+        )}
 
         <div className="flex flex-col gap-1">
           <FieldLabel>{tPet("fields.breed")}</FieldLabel>
