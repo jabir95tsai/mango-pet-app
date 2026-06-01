@@ -53,7 +53,7 @@
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
 | Walks 全頁(radial dial + week strip + 圈內走路狗) | [`walks-v2-rebuild.md`](./walks-v2-rebuild.md) `984be5b` | parity | ✅ P1a 實機簽收（分段環 dial 功能 OK；平滑 arc/動畫 polish → UI/UX follow-up） |
-| GPS tracking + timer + stop | walk-core | **parity + 背景 GPS（committed,Q4 已拍板「要做且重要」2026-05-30）** — CoreLocation 背景追蹤,web PWA 做不到的 iOS-only 殺手能力。見 §F handoff(App Store 背景定位審查 + 耗電) | ✅ **前景** tracking+timer+stop 實機簽收（P1a，前景 parity 達成；對齊 web「背景暫停」語意）／🔜 **背景續跑 = P1d（下一棒，插隊先做）** |
+| GPS tracking + timer + stop | walk-core | **parity + 背景 GPS（committed,Q4 已拍板「要做且重要」2026-05-30）** — CoreLocation 背景追蹤,web PWA 做不到的 iOS-only 殺手能力。見 §F handoff(App Store 背景定位審查 + 耗電) | ✅ **前景** tracking+timer+stop 實機簽收（P1a）／🟡 **背景續跑 P1d code/native COMPLETE 待實機簽收**（merge `871b154`；session-only + Always fallback；見 §F.1）|
 | Done screen + confetti + 達標變體 | walks-v2 | parity | ⬜ P1b |
 | 手動 walk dialog | walk-core | parity | ⬜ P1b |
 | Per-pet 自訂散步目標 + pet picker | [`per-pet-walk-goal.md`](./per-pet-walk-goal.md) | parity | ✅ P1a 實機簽收（picker + goal chip + 切 pet 換 goal；active-pet 持久化 → AsyncStorage follow-up） |
@@ -174,6 +174,28 @@
 - **背景模式**:`UIBackgroundModes` 含 `location`;Expo config plugin 設定。
 - **⚠️ App Store 審查風險**:背景定位是 Apple 重點審查項。必須:(a) 用途字串講清楚「記錄遛狗路線」;(b) 只在遛狗 session 進行中啟用背景定位,結束即停;(c) 不可常駐背景定位。最常見拒絕原因 = 背景定位用途不充分。
 - **耗電 / UX**:背景高頻定位耗電;walk 結束自動關閉 + 提供前景 fallback。
+
+### F.1 P1d 實作狀態（2026-06-01）
+
+- **CODE / NATIVE COMPLETE 待實機簽收**（merge `871b154` / feat `b001445`）：`UIBackgroundModes:location` + Always usage strings + `expo-task-manager` + `@react-native-async-storage/async-storage`（背景路徑持久化）+ `WalkTrackingService` session-only 背景續跑 + Always 拒絕退前景 fallback。web rollout gate 綠、apps/ios tsc 過。
+- **唯一未驗 = 實機背景續跑**（鎖屏/口袋走一段 → 時間+距離續算）→ 需 user 跑新 EAS build（`4e875f0b`）走一趟。**實機過才算 P1d 達標。**
+
+### F.2 App Store 審查 note 草稿（送審時貼 App Review notes）
+
+> Backend 起草、iOS PM 收錄。送審 background-location 時用。
+
+```
+Mango Pet records your dog-walking route and distance. Background location
+is used ONLY while a walk is actively in progress (the user taps Start Walk),
+so the route keeps recording when the phone is locked or in a pocket. It stops
+immediately when the walk ends (no persistent background tracking). The standard
+iOS blue location indicator is shown during an active walk.
+```
+
+### F.3 Open Q3 拍板 — 背景定位提早 TestFlight internal
+
+- **決定（2026-06-01）**：**P1d 就跑一次 TestFlight internal**（或 dev/internal build 走完整背景流程），把背景定位 + 權限 flow 驗給自己看，**提早暴露審查風險，不等 P7**。
+- 理由：背景定位是 Apple 最常拒的項目;愈早跑完整 flow（含 Always 權限對話、藍色 indicator、結束即停）愈早發現問題。
 - **工期影響**:P1 原估 2 週(前景追蹤);背景 GPS + 權限流程 + 審查預留,**P1 建議 +0.5～1 週 buffer**(交 iOS PM 重估)。
 - **roadmap「不做」清單**:既有「不做 Web 內背景 GPS」**僅限 web**(PWA 技術做不好);iOS native 不在該禁令內,無矛盾。
 
