@@ -43,13 +43,10 @@ const WEEK_GOAL_COUNT = 5;
 const RECENT_WALKS_LIMIT = 5;
 const LAST_PET_ID_STORAGE_KEY = "mango.walks.lastPetId";
 
-// CTA family — white on brand mango, matching the 開始遛狗 sticky CTA + the
-// pets FAB (user 2026-06-01: orange buttons use white text, not ink). Used
-// by the desktop hero CTA + the empty-state inline link. NOTE: white on
-// solid brand is ~2.6:1 (below AA for small text) — an accepted aesthetic
-// choice per the user; the bold/large CTA glyphs carry it.
-const CTA_MANGO =
-  "bg-mango-brand text-white hover:bg-mango-brand-deep shadow-mango";
+// CTA family — the raised mango gradient (same look as the pets ＋ FAB and
+// the 開始遛狗 CTA), white text. Shared by the desktop hero CTA + the
+// empty-state inline link via the `.btn-mango` class.
+const CTA_MANGO = "btn-mango text-white";
 
 /** ISO-8601 week start (Monday 00:00 device-local). Mirrors the helper
  *  inside `walk-tracking.ts` but re-implemented here per spec rule

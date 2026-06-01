@@ -12,8 +12,10 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const VARIANTS: Record<Variant, string> = {
-  primary:
-    "bg-amber-500 text-white hover:bg-amber-600 disabled:bg-amber-300 dark:text-zinc-950",
+  // Raised mango gradient (matches the pets ＋ FAB / 開始遛狗 CTA). White
+  // text in both light + dark (the old `dark:text-zinc-950` made these
+  // amber-on-black 橘底黑字 in dark mode).
+  primary: "btn-mango text-white",
   secondary:
     "bg-white text-zinc-900 border border-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800",
   ghost:

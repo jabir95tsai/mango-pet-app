@@ -136,6 +136,39 @@ body {
   }
 }
 
+/* Raised "mango" primary button — the warm gradient + lifted shadow of the
+ * pets-page FAB (the ＋ button) and the 開始遛狗 CTA, so every orange button
+ * reads as one consistent, 3D affordance. Applied by the <Button> `primary`
+ * variant and the custom orange CTAs. Sets white text itself (also overrides
+ * the old dark-mode ink text that made primary buttons 橘底黑字 in dark
+ * mode). Consumers keep their own sizing / radius / focus utilities. */
+.btn-mango {
+  background-image: linear-gradient(
+    160deg,
+    var(--color-mango-amber),
+    var(--color-mango-brand) 50%,
+    var(--color-mango-brand-deep)
+  );
+  color: #fff;
+  box-shadow:
+    0 10px 22px -8px rgba(243, 152, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition:
+    filter 150ms ease,
+    transform 150ms ease;
+}
+.btn-mango:hover {
+  filter: brightness(0.96);
+}
+.btn-mango:disabled {
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-mango {
+    transition: none;
+  }
+}
+
 /* Walk completion confetti — pure CSS, no canvas-confetti dep.
  * Spec docs/features/walks-photo-and-celebration.md Phase 2 D3.
  * 20 absolutely-positioned slivers fall + rotate; per-piece delay +

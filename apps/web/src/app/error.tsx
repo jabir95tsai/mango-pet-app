@@ -33,7 +33,7 @@ export default function GlobalError({ error, reset }: Props) {
         <button
           type="button"
           onClick={reset}
-          className="h-10 rounded-lg bg-amber-500 px-5 text-sm font-medium text-white hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+          className="btn-mango h-10 rounded-lg px-5 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         >
           {t("retry")}
         </button>

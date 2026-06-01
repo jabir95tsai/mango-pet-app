@@ -239,7 +239,7 @@ export default function PhotosPage() {
             <div className="flex flex-wrap justify-center gap-2">
               <Link
                 href="/app/feed"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-mango-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+                className="btn-mango inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
               >
                 <Camera className="size-4" />
                 {t("empty.feedCta")}

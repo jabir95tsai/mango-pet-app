@@ -66,7 +66,7 @@ export function GuestUpgradeNudge() {
           <button
             type="button"
             onClick={openUpgrade}
-            className="h-9 rounded-lg bg-mango-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="btn-mango h-9 rounded-lg px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {t("cta")}
           </button>

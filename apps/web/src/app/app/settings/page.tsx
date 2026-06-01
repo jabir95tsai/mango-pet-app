@@ -116,11 +116,7 @@ export default function SettingsPage() {
               <p className="font-semibold text-mango-ink">{tG("settings.title")}</p>
             </div>
             <p className="text-sm text-mango-ink-2">{tG("settings.body")}</p>
-            <Button
-              type="button"
-              onClick={openUpgrade}
-              className="self-start bg-mango-brand text-white hover:bg-mango-brand-deep focus-visible:ring-mango-brand-deep"
-            >
+            <Button type="button" onClick={openUpgrade} className="self-start">
               {tG("upgradeCta")}
             </Button>
           </section>
