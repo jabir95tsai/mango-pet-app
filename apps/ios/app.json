@@ -16,7 +16,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": ["location"],
         "NSLocationWhenInUseUsageDescription": "Mango Pet 需要你的位置來記錄遛狗路線與距離。",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "遛狗進行中時，Mango Pet 會在背景（鎖屏或切換到其他 App）持續記錄你的遛狗路線與距離；遛狗結束會立即停止定位。"
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "遛狗進行中時，Mango Pet 會在背景（鎖屏或切換到其他 App）持續記錄你的遛狗路線與距離；遛狗結束會立即停止定位。",
+        "NSCameraUsageDescription": "Mango Pet 需要使用相機來拍攝遛狗與寵物照片。"
       }
     },
     "plugins": [
@@ -45,6 +46,12 @@
           "locationWhenInUsePermission": "Mango Pet 需要你的位置來記錄遛狗路線與距離。",
           "locationAlwaysAndWhenInUsePermission": "遛狗進行中時，Mango Pet 會在背景（鎖屏或切換到其他 App）持續記錄你的遛狗路線與距離；遛狗結束會立即停止定位。",
           "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Mango Pet 需要使用相機來拍攝遛狗與寵物照片。"
         }
       ]
     ],
