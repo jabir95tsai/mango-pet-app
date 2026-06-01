@@ -37,6 +37,7 @@
 ## A. Phase plan 已涵蓋的 parity 項目
 
 > 這些 feature 在 [`ios-app-strategy.md`](./ios-app-strategy.md) 的 P0–P7 已有對應。policy 預設 **parity**,標註處為 native upgrade。
+> 📐 **P2–P7 完整施工藍圖（data contract + native-dep gate inventory + 排序 + 風險）** → [`ios-port-master-plan.md`](./ios-port-master-plan.md)（workflow 並行盤點產出 2026-06-01）。下方 §A P2–P7 列為 parity 追蹤;每 phase 開工前依 master plan 的「待補列」補齊 + 初始化 ⬜。
 
 ### P0 — Foundation
 | Web feature | Web spec / 來源 | iOS policy | iOS 狀態 |
