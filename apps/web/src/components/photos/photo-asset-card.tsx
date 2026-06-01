@@ -69,7 +69,7 @@ export function PhotoAssetCard({
           className={cn(
             "absolute left-2 top-2 grid size-11 place-items-center rounded-full border text-sm font-bold shadow-sm backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep",
             selected
-              ? "border-mango-brand-deep bg-mango-brand text-mango-ink"
+              ? "border-mango-brand-deep bg-mango-brand text-white"
               : "border-white/80 bg-black/35 text-white",
           )}
         >
@@ -90,7 +90,7 @@ export function PhotoAssetCard({
           {t(`sources.${SOURCE_KEYS[asset.source]}`)}
         </span>
         {!downloaded ? (
-          <span className="absolute right-2 bottom-2 rounded-full bg-mango-brand px-2.5 py-1 text-[11px] font-bold text-mango-ink shadow-sm">
+          <span className="absolute right-2 bottom-2 rounded-full bg-mango-brand px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
             {t("newBadge")}
           </span>
         ) : (

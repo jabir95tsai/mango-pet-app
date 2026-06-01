@@ -119,7 +119,7 @@ export function PhotoPromptSheet({
           <button
             type="button"
             onClick={onTake}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-mango-brand text-base font-bold text-mango-ink shadow-mango transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-mango-brand text-base font-bold text-white shadow-mango transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <Camera className="size-5" />
             {t("take")}

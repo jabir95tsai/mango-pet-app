@@ -213,7 +213,7 @@ export function PetExpensesBody({
               className={cn(
                 "h-8 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep",
                 active
-                  ? "bg-mango-brand text-mango-ink shadow-sm"
+                  ? "bg-mango-brand text-white shadow-sm"
                   : "bg-mango-card text-mango-ink-2 ring-1 ring-mango-hairline hover:bg-mango-bg-alt",
               )}
             >

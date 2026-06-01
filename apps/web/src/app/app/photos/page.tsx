@@ -207,7 +207,7 @@ export default function PhotosPage() {
               className={cn(
                 "h-10 shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep",
                 active
-                  ? "border-mango-brand bg-mango-brand text-mango-ink"
+                  ? "border-mango-brand bg-mango-brand text-white"
                   : "border-mango-hairline bg-white text-mango-ink-2 hover:bg-mango-bg-alt",
               )}
             >
@@ -239,7 +239,7 @@ export default function PhotosPage() {
             <div className="flex flex-wrap justify-center gap-2">
               <Link
                 href="/app/feed"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-mango-brand px-4 text-sm font-semibold text-mango-ink transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-mango-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-mango-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
               >
                 <Camera className="size-4" />
                 {t("empty.feedCta")}
