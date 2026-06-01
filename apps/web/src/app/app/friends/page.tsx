@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, QrCode, UserMinus, UserX, Users } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { RouteHeader } from "@/components/nav/route-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -28,7 +29,7 @@ export default function FriendsPage() {
   const tC = useTranslations("Common");
   const tF = useTranslations("Friends");
   const askConfirm = useConfirm();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
 
   const [friends, setFriends] = useState<Friend[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -117,17 +118,25 @@ export default function FriendsPage() {
           subtitle={tF("subtitle")}
           className="mb-0"
         />
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setQrOpen(true)}
-          disabled={!user}
-        >
-          <QrCode className="size-4" />
-          {tF("myQr")}
-        </Button>
+        {!isGuest && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setQrOpen(true)}
+            disabled={!user}
+          >
+            <QrCode className="size-4" />
+            {tF("myQr")}
+          </Button>
+        )}
       </div>
 
+      {/* Friends are community — gated for guests. They get an upgrade
+          prompt in place of the whole friends surface. Spec §C. */}
+      {isGuest && <GuestLockedNotice feature="friends" />}
+
+      {!isGuest && (
+      <>
       <div className="mb-4">
         <Tabs<Tab>
           value={tab}
@@ -217,6 +226,8 @@ export default function FriendsPage() {
         ))}
 
       {tab === "search" && <FriendSearch excludeUids={excludeUids} onSent={refresh} />}
+      </>
+      )}
 
       <MyQrDialog open={qrOpen} onClose={() => setQrOpen(false)} />
     </>

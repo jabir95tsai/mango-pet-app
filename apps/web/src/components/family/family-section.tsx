@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { useFamily } from "@/components/family/family-provider";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ export function FamilySection() {
   const tC = useTranslations("Common");
   const tF = useTranslations("Family");
   const tShare = useTranslations("Family.invite");
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { family, families, loading, refresh, switchFamily } = useFamily();
   const askConfirm = useConfirm();
 
@@ -196,6 +197,12 @@ export function FamilySection() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Family (create / join) is community — needs a real identity. Guests
+  // get an upgrade prompt instead of the whole section. Spec §C.
+  if (isGuest) {
+    return <GuestLockedNotice feature="family" />;
   }
 
   if (loading) {

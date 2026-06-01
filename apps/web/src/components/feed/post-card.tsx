@@ -7,6 +7,8 @@ import { zhTW, enUS } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
 import { Globe, Users, Lock, MessageCircle, Trash2 } from "lucide-react";
 import type { Post, Visibility } from "@/lib/types";
+import { useAuth } from "@/components/auth/auth-provider";
+import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { Avatar } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { EmojiReactions } from "./emoji-reactions";
@@ -30,6 +32,7 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
   const tC = useTranslations("Common");
   const tPL = useTranslations("PhotoLightbox");
   const tCm = useTranslations("Comments");
+  const { isGuest } = useAuth();
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
   const VIcon = VISIBILITY_ICON[post.visibility];
 
@@ -118,36 +121,45 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <EmojiReactions
-          postId={post.postId}
-          uid={currentUid}
-          counts={post.reactionCounts}
-        />
-        <button
-          type="button"
-          onClick={() => setCommentsOpen((o) => !o)}
-          aria-expanded={commentsOpen}
-          aria-controls={commentsId}
-          aria-label={tCm("toggle")}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-zinc-100 px-3 text-sm text-zinc-600 transition-colors hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-        >
-          <MessageCircle className="size-4" aria-hidden="true" />
-          {commentCount > 0 && (
-            <span className="text-xs font-medium tabular-nums">
-              {commentCount}
-            </span>
-          )}
-        </button>
-      </div>
+      {/* Reactions + comments need a real identity — guests get an upgrade
+          nudge in place of the interactive row. They can still read the
+          post above. Spec §C (留言 / 表情 → guest 不可用). */}
+      {isGuest ? (
+        <GuestLockedNotice feature="reactions" />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <EmojiReactions
+              postId={post.postId}
+              uid={currentUid}
+              counts={post.reactionCounts}
+            />
+            <button
+              type="button"
+              onClick={() => setCommentsOpen((o) => !o)}
+              aria-expanded={commentsOpen}
+              aria-controls={commentsId}
+              aria-label={tCm("toggle")}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-zinc-100 px-3 text-sm text-zinc-600 transition-colors hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            >
+              <MessageCircle className="size-4" aria-hidden="true" />
+              {commentCount > 0 && (
+                <span className="text-xs font-medium tabular-nums">
+                  {commentCount}
+                </span>
+              )}
+            </button>
+          </div>
 
-      {commentsOpen && (
-        <CommentSection
-          id={commentsId}
-          postId={post.postId}
-          postAuthorUid={post.authorUid}
-          onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
-        />
+          {commentsOpen && (
+            <CommentSection
+              id={commentsId}
+              postId={post.postId}
+              postAuthorUid={post.authorUid}
+              onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
+            />
+          )}
+        </>
       )}
 
       <PhotoLightbox

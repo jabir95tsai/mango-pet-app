@@ -17,11 +17,18 @@ import { upsertUser } from "@/lib/firebase/users";
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
+  /** True for anonymous (guest) sessions. Derived from the live Auth
+   *  object so it's available synchronously without a Firestore read.
+   *  Guests can use personal features but are gated out of community
+   *  surfaces (posts/comments/reactions/family/friends/leaderboard
+   *  ranking). Spec docs/features/guest-login.md. */
+  isGuest: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
+  isGuest: false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -87,7 +94,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
-  const value = useMemo(() => ({ user, loading }), [user, loading]);
+  const value = useMemo(
+    () => ({ user, loading, isGuest: !!user?.isAnonymous }),
+    [user, loading],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

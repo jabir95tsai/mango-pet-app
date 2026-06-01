@@ -189,6 +189,8 @@
     "signInWithFacebook": "用 Facebook 登入",
     "welcome": "歡迎來到芒果寵物",
     "subtitle": "紀錄、分享、發現屬於你和毛孩的生活",
+    "continueAsGuest": "以訪客身分繼續",
+    "guestDivider": "或",
     "errors": {
       "cancelled": "登入已取消",
       "popupBlocked": "瀏覽器阻擋了登入視窗，請允許彈跳視窗後重試",
@@ -202,6 +204,39 @@
     "linkHint": {
       "title": "請先用 {email} 登入",
       "body": "這個 Email 已綁定 {existing}。先用 {existing} 登入，登入後會自動把 {tried} 也連起來，之後兩個都能用。"
+    }
+  },
+  "Guest": {
+    "upgradeCta": "綁定帳號",
+    "locked": {
+      "post": "綁定帳號後即可發動態",
+      "reactions": "綁定帳號後即可留言、按表情",
+      "friends": "綁定帳號後即可加好友、看彼此動態",
+      "family": "綁定帳號後即可建立或加入家庭"
+    },
+    "upgrade": {
+      "title": "綁定帳號，保留你的資料",
+      "body": "用 Google 或 Apple 綁定，目前的寵物與遛狗紀錄會原封保留，並解鎖社群功能。",
+      "withGoogle": "用 Google 綁定",
+      "withApple": "用 Apple 綁定",
+      "conflictBody": "這個帳號已經註冊過了，將直接登入既有帳號。訪客期間建立的資料無法併入既有帳號。",
+      "conflictAck": "我知道了",
+      "errors": {
+        "cancelled": "已取消",
+        "popupBlocked": "瀏覽器阻擋了視窗，請允許彈跳視窗後重試",
+        "network": "網路連線失敗，請重試",
+        "generic": "綁定失敗，請稍後再試"
+      }
+    },
+    "nudge": {
+      "title": "綁定帳號，以免資料遺失",
+      "body": "訪客資料只存在這台裝置，清除瀏覽器資料或換裝置就會消失。綁定 Google 或 Apple 後永久保留。",
+      "cta": "綁定帳號",
+      "dismiss": "稍後再說"
+    },
+    "settings": {
+      "title": "你正在使用訪客模式",
+      "body": "綁定 Google 或 Apple，保留你的寵物與遛狗紀錄，並解鎖發文、好友、家庭、排行榜等社群功能。"
     }
   },
   "Pet": {

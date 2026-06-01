@@ -53,7 +53,7 @@ export function PostComposer({
 }: Props) {
   const tCommon = useTranslations("Common");
   const tP = useTranslations("Post");
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [text, setText] = useState("");
@@ -170,7 +170,9 @@ export function PostComposer({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title={tP("compose")}>
+    // Defensive: guests can't post (the compose entry is hidden for them).
+    // Force the dialog shut even if something tries to open it. Spec §C.
+    <Dialog open={open && !isGuest} onClose={onClose} title={tP("compose")}>
       <div className="flex flex-col gap-4">
         <Textarea
           value={text}

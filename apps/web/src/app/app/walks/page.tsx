@@ -115,7 +115,7 @@ export default function WalksPage() {
   const tC = useTranslations("Common");
   const tPP = useTranslations("WalksPhotoPrompt");
   const askConfirm = useConfirm();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { family, loading: familyLoading } = useFamily();
 
   const [pets, setPets] = useState<Pet[]>([]);
@@ -306,7 +306,10 @@ export default function WalksPage() {
     if (pets.length === 0) return;
     const id = mintWalkId();
     setPendingWalkId(id);
-    if (autoPhotoEnabled) {
+    // Guests can't share to feed, so skip the auto-photo prompt entirely
+    // and go straight into tracking — otherwise the prompt (which gates
+    // setSessionOpen) would never resolve for them. Spec §C.
+    if (autoPhotoEnabled && !isGuest) {
       setStartPromptOpen(true);
     } else {
       setSessionOpen(true);
@@ -716,8 +719,11 @@ export default function WalksPage() {
       />
       {activePet && (
         <>
+          {/* Auto-share to feed is a community action — guests can walk
+              but can't post, so the share prompt never fires for them.
+              Spec §C (walks 自動發動態 gated). */}
           <PhotoPromptSheet
-            open={startPromptOpen}
+            open={startPromptOpen && !isGuest}
             onSkip={handleStartPromptSkip}
             onTake={handleStartPromptTake}
             petName={activePet.name}

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { FirebaseError } from "firebase/app";
 import {
   NeedsLinkError,
+  signInAsGuest,
   signInWithProvider,
   type AuthProviderKind,
 } from "@/lib/firebase/auth";
@@ -134,6 +135,7 @@ export function SignInButtons({ nextPath = "/app/walks" }: Props) {
   const router = useRouter();
   const { user } = useAuth();
   const [pending, setPending] = useState<AuthProviderKind | null>(null);
+  const [guestPending, setGuestPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [linkHint, setLinkHint] = useState<Hint | null>(null);
 
@@ -159,6 +161,19 @@ export function SignInButtons({ nextPath = "/app/walks" }: Props) {
     }
   }
 
+  async function handleGuest() {
+    setGuestPending(true);
+    setError(null);
+    setLinkHint(null);
+    try {
+      await signInAsGuest();
+      // The `user` effect above redirects once the anonymous session lands.
+    } catch (err) {
+      setError(friendlyError(err, t));
+      setGuestPending(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-xs flex-col gap-3">
       {PROVIDERS.map((p) => {
@@ -170,7 +185,7 @@ export function SignInButtons({ nextPath = "/app/walks" }: Props) {
             key={p.kind}
             type="button"
             onClick={() => handleSignIn(p.kind)}
-            disabled={pending !== null}
+            disabled={pending !== null || guestPending}
             aria-label={t(p.labelKey)}
             className={cn(
               "relative flex h-12 items-center justify-center gap-3 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60",
@@ -190,6 +205,27 @@ export function SignInButtons({ nextPath = "/app/walks" }: Props) {
           </button>
         );
       })}
+
+      {/* Guest entry — secondary, visually weaker than the OAuth buttons.
+          A divider sets it apart so it reads as the "or just try it"
+          escape hatch. Spec docs/features/guest-login.md §A. */}
+      <div className="flex items-center gap-3 pt-1" aria-hidden="true">
+        <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+        <span className="text-xs text-zinc-400">{t("guestDivider")}</span>
+        <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+      </div>
+      <button
+        type="button"
+        onClick={handleGuest}
+        disabled={pending !== null || guestPending}
+        className="flex h-11 items-center justify-center rounded-lg border border-zinc-200 bg-transparent text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+      >
+        {guestPending ? (
+          <span aria-hidden="true">…</span>
+        ) : (
+          <span>{t("continueAsGuest")}</span>
+        )}
+      </button>
 
       {linkHint && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-500/30 dark:bg-amber-500/10">

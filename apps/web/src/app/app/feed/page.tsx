@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Newspaper, PenSquare } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { useFamily } from "@/components/family/family-provider";
 import { RouteHeader } from "@/components/nav/route-header";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -21,7 +22,7 @@ export default function FeedPage() {
   const tCommon = useTranslations("Common");
   const tFeed = useTranslations("Feed");
   const askConfirm = useConfirm();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { family, loading: familyLoading } = useFamily();
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -79,15 +80,21 @@ export default function FeedPage() {
           subtitle={tFeed("subtitle")}
           className="mb-0"
         />
-        <Button
-          onClick={() => setComposerOpen(true)}
-          size="md"
-          className="w-full sm:w-auto"
-        >
-          <PenSquare className="size-4" />
-          {tFeed("compose")}
-        </Button>
+        {/* Guests can VIEW the feed (public posts) but not post — the
+            compose entry is replaced by an upgrade nudge. Spec §C. */}
+        {!isGuest && (
+          <Button
+            onClick={() => setComposerOpen(true)}
+            size="md"
+            className="w-full sm:w-auto"
+          >
+            <PenSquare className="size-4" />
+            {tFeed("compose")}
+          </Button>
+        )}
       </div>
+
+      {isGuest && <GuestLockedNotice feature="post" className="mb-6" />}
 
       {loading ? (
         <p className="text-sm text-zinc-500">{tCommon("loading")}</p>
@@ -97,10 +104,12 @@ export default function FeedPage() {
           title={tFeed("empty.title")}
           description={tFeed("empty.subtitle")}
           action={
-            <Button onClick={() => setComposerOpen(true)} size="md">
-              <PenSquare className="size-4" />
-              {tFeed("compose")}
-            </Button>
+            isGuest ? undefined : (
+              <Button onClick={() => setComposerOpen(true)} size="md">
+                <PenSquare className="size-4" />
+                {tFeed("compose")}
+              </Button>
+            )
           }
         />
       ) : (

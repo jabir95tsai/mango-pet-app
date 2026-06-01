@@ -189,6 +189,8 @@
     "signInWithFacebook": "Sign in with Facebook",
     "welcome": "Welcome to Mango Pet",
     "subtitle": "Track, share, and discover life with your pets",
+    "continueAsGuest": "Continue as guest",
+    "guestDivider": "or",
     "errors": {
       "cancelled": "Sign-in cancelled",
       "popupBlocked": "Popup was blocked. Allow popups and try again.",
@@ -202,6 +204,39 @@
     "linkHint": {
       "title": "Sign in with {email} first",
       "body": "This email is registered with {existing}. Sign in with {existing} and we'll automatically link {tried} to the same account."
+    }
+  },
+  "Guest": {
+    "upgradeCta": "Bind account",
+    "locked": {
+      "post": "Bind an account to post to the feed",
+      "reactions": "Bind an account to comment and react",
+      "friends": "Bind an account to add friends and follow each other",
+      "family": "Bind an account to create or join a family"
+    },
+    "upgrade": {
+      "title": "Bind an account to keep your data",
+      "body": "Bind with Google or Apple — your current pets and walk history carry over untouched, and community features unlock.",
+      "withGoogle": "Bind with Google",
+      "withApple": "Bind with Apple",
+      "conflictBody": "This account already exists, so we'll sign you into it. Data created during your guest session can't be merged into the existing account.",
+      "conflictAck": "Got it",
+      "errors": {
+        "cancelled": "Cancelled",
+        "popupBlocked": "Popup was blocked. Allow popups and try again.",
+        "network": "Network error. Please try again.",
+        "generic": "Couldn't bind your account. Please try again later."
+      }
+    },
+    "nudge": {
+      "title": "Bind an account so you don't lose your data",
+      "body": "Guest data lives only on this device — clearing your browser or switching devices loses it. Bind with Google or Apple to keep it for good.",
+      "cta": "Bind account",
+      "dismiss": "Later"
+    },
+    "settings": {
+      "title": "You're using guest mode",
+      "body": "Bind with Google or Apple to keep your pets and walk history, and unlock posting, friends, family, and leaderboards."
     }
   },
   "Pet": {

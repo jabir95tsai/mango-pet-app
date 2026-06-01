@@ -3,8 +3,11 @@ import {
   FacebookAuthProvider,
   GoogleAuthProvider,
   linkWithCredential,
+  linkWithPopup,
   OAuthProvider,
   onAuthStateChanged,
+  signInAnonymously,
+  signInWithCredential,
   signInWithPopup,
   signOut,
   updateProfile,
@@ -107,6 +110,76 @@ export async function signInWithProvider(kind: AuthProviderKind): Promise<User> 
       }
     }
     pendingLink = null;
+    throw err;
+  }
+}
+
+/**
+ * Guest (anonymous) sign-in. Creates a throwaway anonymous Firebase user so
+ * a visitor can try personal features (pets / walks) without registering.
+ * The auth-state callback then upserts a minimal guest `users/{uid}` doc
+ * (displayName "訪客"/"Guest", isGuest:true) — see users.ts `upsertUser`.
+ * Spec docs/features/guest-login.md §A.
+ */
+export async function signInAsGuest(): Promise<User> {
+  const result = await signInAnonymously(getFirebaseAuth());
+  return result.user;
+}
+
+/**
+ * Outcome of a guest → real-account upgrade.
+ *  - `linked`:   the provider was linked to the SAME anonymous uid, so all
+ *                guest data (pets/walks) is preserved. `upsertUser` clears
+ *                the `isGuest` flag on the next auth-state callback and
+ *                community unlocks.
+ *  - `switched`: the chosen Google/Apple account already exists, so we
+ *                could NOT fold the guest into it. v1 signs INTO the
+ *                existing account instead; the guest's anonymous data stays
+ *                orphaned under the old uid (the gcAnonymousUsers job reaps
+ *                it). NO merge. Spec §E / open question #3.
+ */
+export type GuestUpgradeResult =
+  | { status: "linked"; user: User }
+  | { status: "switched"; user: User; kind: AuthProviderKind };
+
+/**
+ * Upgrade the current anonymous guest by binding a real OAuth provider.
+ * Uses `linkWithPopup` (NOT `signInWithProvider`) so the uid is unchanged
+ * and the guest's existing pets/walks carry over. On the hard-boundary
+ * conflict (`credential-already-in-use` / `email-already-in-use`) falls
+ * back to signing into the pre-existing account (status "switched").
+ * Spec docs/features/guest-login.md §E.
+ */
+export async function upgradeGuestWithProvider(
+  kind: AuthProviderKind,
+): Promise<GuestUpgradeResult> {
+  const auth = getFirebaseAuth();
+  const current = auth.currentUser;
+  if (!current) throw new Error("No current user to upgrade");
+  // Defensive: a real (non-anonymous) user has nothing to upgrade.
+  if (!current.isAnonymous) return { status: "linked", user: current };
+
+  const provider = buildProvider(kind);
+  try {
+    const result = await linkWithPopup(current, provider);
+    pendingLink = null;
+    return { status: "linked", user: result.user };
+  } catch (err) {
+    if (
+      err instanceof FirebaseError &&
+      (err.code === "auth/credential-already-in-use" ||
+        err.code === "auth/email-already-in-use")
+    ) {
+      // This Google/Apple account already exists → can't link into the
+      // guest. v1: sign into the existing account; guest data is abandoned
+      // under the old anonymous uid (GC cleans). No merge.
+      const credential = credentialFromError(kind, err);
+      const result = credential
+        ? await signInWithCredential(auth, credential)
+        : await signInWithPopup(auth, provider);
+      pendingLink = null;
+      return { status: "switched", user: result.user, kind };
+    }
     throw err;
   }
 }

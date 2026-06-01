@@ -142,7 +142,7 @@ export function WalkTrackingView({
   const tP = useTranslations("Walks.photo");
   const tCel = useTranslations("Walks.celebration");
   const tPP = useTranslations("WalksPhotoPrompt");
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { family } = useFamily();
   const router = useRouter();
   const sessionRef = useRef<WalkSession | null>(null);
@@ -286,10 +286,12 @@ export function WalkTrackingView({
       setEndPromptOpen(false);
       return;
     }
-    if (!autoPhotoEnabled) return;
+    // Guests can't share to feed — never schedule the end-of-walk share
+    // prompt for them. Spec §C.
+    if (!autoPhotoEnabled || isGuest) return;
     const t = window.setTimeout(() => setEndPromptOpen(true), 1000);
     return () => window.clearTimeout(t);
-  }, [phase, autoPhotoEnabled]);
+  }, [phase, autoPhotoEnabled, isGuest]);
 
   function handleEndPromptTake() {
     setEndPromptOpen(false);

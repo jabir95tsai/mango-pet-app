@@ -8,6 +8,7 @@ import {
   Globe,
   MoreHorizontal,
   ShieldCheck,
+  Sparkles,
   Trash2,
   Users,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import { FamilySection } from "@/components/family/family-section";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ExportDataButton } from "@/components/settings/export-data-button";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useGuestUpgrade } from "@/components/auth/guest-upgrade";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +39,9 @@ export default function SettingsPage() {
   const tPd = useTranslations("Settings.privacyData");
   const tDz = useTranslations("Settings.dangerZone");
   const tS = useTranslations("Settings");
-  const { user } = useAuth();
+  const tG = useTranslations("Guest");
+  const { user, isGuest } = useAuth();
+  const { openUpgrade } = useGuestUpgrade();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { open: drawerOpen, setOpen: setDrawerOpen } = useNavDrawer();
 
@@ -79,14 +83,17 @@ export default function SettingsPage() {
                 Users icon disc sits in the user-avatar box's right edge
                 so it reads as "you ↔ your people". 44×44 hit area
                 (size-11) for mobile a11y. */}
-            <Link
-              href="/app/friends"
-              aria-label={tS("friendsLink")}
-              title={tS("friendsLink")}
-              className="grid size-11 shrink-0 place-items-center rounded-full bg-mango-brand-tint text-mango-brand-deep transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
-            >
-              <Users className="size-5" strokeWidth={1.8} />
-            </Link>
+            {/* Friends are community — entry hidden for guests. Spec §C. */}
+            {!isGuest && (
+              <Link
+                href="/app/friends"
+                aria-label={tS("friendsLink")}
+                title={tS("friendsLink")}
+                className="grid size-11 shrink-0 place-items-center rounded-full bg-mango-brand-tint text-mango-brand-deep transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+              >
+                <Users className="size-5" strokeWidth={1.8} />
+              </Link>
+            )}
           </div>
           {user && (
             <button
@@ -98,6 +105,26 @@ export default function SettingsPage() {
             </button>
           )}
         </section>
+
+        {/* Persistent guest-upgrade entry — always available to guests (the
+            one-time nudge banner can be dismissed; this stays). Binds the
+            anonymous account to Google/Apple, preserving pets/walks. Spec §5. */}
+        {isGuest && (
+          <section className="flex flex-col gap-3 rounded-lg border border-mango-brand/40 bg-mango-brand-tint/50 p-6 dark:border-mango-brand/30 dark:bg-mango-brand/10">
+            <div className="flex items-center gap-3">
+              <Sparkles className="size-5 text-mango-brand-deep" />
+              <p className="font-semibold text-mango-ink">{tG("settings.title")}</p>
+            </div>
+            <p className="text-sm text-mango-ink-2">{tG("settings.body")}</p>
+            <Button
+              type="button"
+              onClick={openUpgrade}
+              className="self-start bg-mango-brand text-mango-ink hover:bg-mango-brand-deep focus-visible:ring-mango-brand-deep"
+            >
+              {tG("upgradeCta")}
+            </Button>
+          </section>
+        )}
 
         {/* 拍收據 quick-action removed 2026-05-26 — spec
             docs/features/expenses-into-pets-page.md D3 reverts the
@@ -147,8 +174,10 @@ export default function SettingsPage() {
         {/* Dog-leaderboard visibility master switch (leaderboard v2).
             Sits with the other in-app-behaviour toggles, above the
             account-focused Language/Privacy/Danger trio. Hidden when
-            signed-out — the preference is per user. */}
-        {user && (
+            signed-out — the preference is per user. Also hidden for guests:
+            their dogs never appear on the boards (backend excludes them),
+            so the visibility control is moot. Spec §C. */}
+        {user && !isGuest && (
           <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
             <LeaderboardVisibilitySection />
           </section>
