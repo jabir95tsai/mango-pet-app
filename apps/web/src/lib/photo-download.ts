@@ -34,6 +34,27 @@ function canShareFiles(files: File[]): boolean {
   }
 }
 
+/**
+ * Whether to route a save through the OS share sheet (`navigator.share`)
+ * instead of a direct file download.
+ *
+ * Web Share is the ONLY way into the iOS/Android photo album (an
+ * `<a download>` lands in Files, not Photos), so on touch devices we
+ * prefer it. But desktop Chrome/Edge now also report `canShare({files})`
+ * === true, and there the share sheet is the WRONG behaviour for a
+ * "download" button: it opens an OS share dialog (and frequently rejects
+ * with AbortError once the pre-fetch await has consumed the click's
+ * transient activation), so no file is ever saved. Gate share on a
+ * touch-primary (coarse pointer) device; everyone else gets a real
+ * download.
+ */
+function prefersShareSheet(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia("(pointer: coarse)").matches;
+}
+
 function extensionFromType(type: string): string {
   if (type.includes("png")) return "png";
   if (type.includes("webp")) return "webp";
@@ -73,7 +94,7 @@ function downloadFile(file: File): void {
 }
 
 async function shareFiles(files: File[], title: string): Promise<SinglePhotoDownloadResult> {
-  if (!canShareFiles(files)) {
+  if (!prefersShareSheet() || !canShareFiles(files)) {
     for (const file of files) downloadFile(file);
     return { ok: true, mode: "download" };
   }
@@ -144,7 +165,7 @@ export async function shareOrDownloadPhotosFromUrls(
   }
 
   const files = prepared.map((photo) => photo.file);
-  if (canShareFiles(files)) {
+  if (prefersShareSheet() && canShareFiles(files)) {
     const shared = await shareFiles(files, title);
     return {
       completedAssetIds: shared.ok ? prepared.map((photo) => photo.id) : [],
