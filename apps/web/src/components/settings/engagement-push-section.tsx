@@ -58,14 +58,21 @@ export function EngagementPushSection() {
       // instant, then write to Firestore. On error we roll back AND
       // surface the failure (a silent revert would feel like the
       // toggle "won't turn off").
+      //
+      // `isOn` is the CURRENT state (true = on, i.e. NOT in the opt-out
+      // list). Clicking flips it: turning a type OFF means ADDING its id
+      // to the opt-out list; turning it back ON means removing the id.
       const next = isOn
-        ? optOut.filter((s) => s !== type)
-        : [...optOut, type];
+        ? [...optOut, type]
+        : optOut.filter((s) => s !== type);
       setOptOut(next);
       setPending(type);
       setError(null);
       try {
-        await updateEngagementOptOut(user.uid, type, !isOn);
+        // `updateEngagementOptOut`'s 3rd arg is "opt out?" — true ⇒
+        // arrayUnion (off), false ⇒ arrayRemove (on). We're opting out
+        // exactly when the type was on, so pass `isOn`.
+        await updateEngagementOptOut(user.uid, type, isOn);
       } catch (err) {
         setOptOut(optOut);
         setError(err instanceof Error ? err.message : "Failed to save");
