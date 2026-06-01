@@ -23,6 +23,7 @@
   },
   "Post": {
     "compose": "New post",
+    "processingPhotos": "Processing photo…",
     "publish": "Publish",
     "placeholder": "What did you and your pet do today?",
     "tagPet": "Tag a pet",
@@ -52,8 +53,19 @@
     "deleteFailed": "Couldn't delete. Try again.",
     "tooLong": "Comments are limited to {max} characters"
   },
+  "Error": {
+    "title": "Something went wrong",
+    "retry": "Try again",
+    "home": "Back to home"
+  },
+  "NotFound": {
+    "title": "Page not found",
+    "subtitle": "We couldn't find anything at this URL.",
+    "home": "Back to home"
+  },
   "Knowledge": {
     "subtitle": "Pet care knowledge",
+    "notFound": "Article not found",
     "filters": {
       "all": "All",
       "bookmarked": "⭐ Saved",
@@ -81,6 +93,15 @@
     "qrAlt": "QR code invite link",
     "copied": "Copied",
     "copyLink": "Copy link",
+    "add": {
+      "title": "Add friend",
+      "subtitle": "Invite from a QR scan",
+      "notFoundTitle": "User not found",
+      "notFoundDesc": "This invite link may have expired, or they haven't signed in to the app yet.",
+      "sending": "Sending…",
+      "send": "Send friend request",
+      "failed": "Request failed"
+    },
     "tabs": {
       "friends": "Friends ({count})",
       "requests": "Requests ({count})",
@@ -115,6 +136,15 @@
     "locationError": "Couldn't get your current location — default coordinates filled in. Please correct them.",
     "namePlaceholder": "Mango Café",
     "addressPlaceholder": "123 Main St…",
+    "notFound": "Restaurant not found",
+    "openMaps": "Open in Google Maps",
+    "websiteLink": "Website",
+    "amenityWater": "💧 Water bowl",
+    "amenityMenu": "🍽️ Pet menu",
+    "amenityLargeDogs": "🐕‍🦺 Large dogs OK",
+    "reviews": "Reviews ({count})",
+    "writeReview": "Write review",
+    "beFirstReview": "Be the first to write a review!",
     "view": {
       "list": "List",
       "map": "Map"
@@ -176,6 +206,8 @@
   },
   "Pet": {
     "addPet": "Add pet",
+    "processing": "Processing…",
+    "imageError": "Image processing failed",
     "petDetail": "Pet detail",
     "noPets": "No pets yet",
     "notFound": "Pet not found",
@@ -676,6 +708,7 @@
     "scanReceipt": "Scan receipt",
     "totalSpent": "Total spent",
     "vendorPlaceholder": "Vendor name",
+    "noPet": "Add a pet first",
     "itemPlaceholder": "Item",
     "removeItem": "Remove item",
     "fields": {
@@ -812,6 +845,7 @@
     }
   },
   "PetsPage": {
+    "kgUnit": "kg",
     "title": {
       "list": "My Pets",
       "detail": "Pet Profile"

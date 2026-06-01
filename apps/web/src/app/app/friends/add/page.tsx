@@ -22,6 +22,7 @@ export default function AddFriendPage() {
   const router = useRouter();
   const { user } = useAuth();
   const tC = useTranslations("Common");
+  const tF = useTranslations("Friends");
 
   const targetUid = params.get("uid") ?? "";
   const [target, setTarget] = useState<AppUser | null>(null);
@@ -69,7 +70,7 @@ export default function AddFriendPage() {
       setStatus("sent");
     } catch (err) {
       setStatus("error");
-      setError(err instanceof Error ? err.message : "邀請失敗");
+      setError(err instanceof Error ? err.message : tF("add.failed"));
     }
   }
 
@@ -86,15 +87,15 @@ export default function AddFriendPage() {
         </button>
       </div>
 
-      <RouteHeader title="加好友" subtitle="掃 QR 來的邀請" />
+      <RouteHeader title={tF("add.title")} subtitle={tF("add.subtitle")} />
 
       {!targetUid || loading ? (
         <p className="text-sm text-zinc-500">{tC("loading")}</p>
       ) : !target ? (
         <EmptyState
           icon={X}
-          title="找不到使用者"
-          description="這個邀請連結可能失效，或對方還沒登入過 App。"
+          title={tF("add.notFoundTitle")}
+          description={tF("add.notFoundDesc")}
           action={
             <Button
               variant="secondary"
@@ -131,7 +132,7 @@ export default function AddFriendPage() {
               className="w-full"
             >
               <UserPlus className="size-4" />
-              {status === "sending" ? "送出中…" : "送出好友邀請"}
+              {status === "sending" ? tF("add.sending") : tF("add.send")}
             </Button>
           )}
 

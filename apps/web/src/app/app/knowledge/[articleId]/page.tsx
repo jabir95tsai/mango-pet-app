@@ -30,6 +30,7 @@ export default function ArticlePage() {
   const lang = locale === "zh-TW" ? "zh-TW" : "en";
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
   const tC = useTranslations("Common");
+  const tK = useTranslations("Knowledge");
 
   const [article, setArticle] = useState<KnowledgeArticle | null>(null);
   const [bookmarked, setBookmarked] = useState(false);
@@ -71,7 +72,7 @@ export default function ArticlePage() {
     return (
       <EmptyState
         icon={BookOpen}
-        title="找不到文章"
+        title={tK("notFound")}
         action={
           <Button variant="secondary" onClick={() => router.push("/app/knowledge")}>
             <ArrowLeft className="size-4" />

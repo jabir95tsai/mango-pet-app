@@ -149,7 +149,7 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
             )}
           </button>
           {processing ? (
-            <span className="text-xs text-amber-600">處理中…</span>
+            <span className="text-xs text-amber-600">{tPet("processing")}</span>
           ) : !previewURL ? (
             <span className="text-xs text-zinc-500">{tPet("fields.photo")}</span>
           ) : null}
@@ -180,7 +180,7 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
                 const processed = await processImage(file, IMAGE_PRESETS.avatar);
                 setAvatar(processed);
               } catch (err) {
-                setError(err instanceof Error ? err.message : "圖片處理失敗");
+                setError(err instanceof Error ? err.message : tPet("imageError"));
               } finally {
                 setProcessing(false);
               }

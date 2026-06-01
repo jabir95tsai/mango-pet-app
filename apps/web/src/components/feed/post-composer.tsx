@@ -243,7 +243,7 @@ export function PostComposer({
             {photos.length}/{MAX_PHOTOS}
           </Button>
           {processing && (
-            <span className="text-xs text-amber-600">處理照片中…</span>
+            <span className="text-xs text-amber-600">{tP("processingPhotos")}</span>
           )}
         </div>
 

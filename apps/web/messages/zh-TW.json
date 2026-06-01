@@ -23,6 +23,7 @@
   },
   "Post": {
     "compose": "發新貼文",
+    "processingPhotos": "處理照片中…",
     "publish": "發布",
     "placeholder": "今天和毛孩做了什麼?",
     "tagPet": "標記寵物",
@@ -52,8 +53,19 @@
     "deleteFailed": "刪除失敗，請再試一次",
     "tooLong": "留言最多 {max} 字"
   },
+  "Error": {
+    "title": "出了點狀況",
+    "retry": "重試",
+    "home": "回首頁"
+  },
+  "NotFound": {
+    "title": "頁面走丟了",
+    "subtitle": "這個網址找不到任何寵物。",
+    "home": "回首頁"
+  },
   "Knowledge": {
     "subtitle": "寵物照護知識",
+    "notFound": "找不到文章",
     "filters": {
       "all": "全部",
       "bookmarked": "⭐ 收藏",
@@ -81,6 +93,15 @@
     "qrAlt": "QR code 邀請連結",
     "copied": "已複製",
     "copyLink": "複製連結",
+    "add": {
+      "title": "加好友",
+      "subtitle": "掃 QR 來的邀請",
+      "notFoundTitle": "找不到使用者",
+      "notFoundDesc": "這個邀請連結可能失效，或對方還沒登入過 App。",
+      "sending": "送出中…",
+      "send": "送出好友邀請",
+      "failed": "邀請失敗"
+    },
     "tabs": {
       "friends": "好友 ({count})",
       "requests": "邀請 ({count})",
@@ -115,6 +136,15 @@
     "locationError": "無法取得目前位置，已填入預設座標。請手動修正。",
     "namePlaceholder": "芒果咖啡",
     "addressPlaceholder": "台北市信義區⋯",
+    "notFound": "找不到餐廳",
+    "openMaps": "開 Google Maps",
+    "websiteLink": "網站",
+    "amenityWater": "💧 水碗",
+    "amenityMenu": "🍽️ 寵物餐",
+    "amenityLargeDogs": "🐕‍🦺 大型犬 OK",
+    "reviews": "評論 ({count})",
+    "writeReview": "寫評論",
+    "beFirstReview": "第一個來寫評論的就是你！",
     "view": {
       "list": "清單",
       "map": "地圖"
@@ -176,6 +206,8 @@
   },
   "Pet": {
     "addPet": "新增寵物",
+    "processing": "處理中…",
+    "imageError": "圖片處理失敗",
     "petDetail": "寵物詳情",
     "noPets": "還沒有寵物",
     "notFound": "找不到這隻寵物",
@@ -676,6 +708,7 @@
     "scanReceipt": "拍收據",
     "totalSpent": "總支出",
     "vendorPlaceholder": "店家名稱",
+    "noPet": "先新增寵物",
     "itemPlaceholder": "品項",
     "removeItem": "移除品項",
     "fields": {
@@ -812,6 +845,7 @@
     }
   },
   "PetsPage": {
+    "kgUnit": "公斤",
     "title": {
       "list": "我的寵物",
       "detail": "寵物資料"

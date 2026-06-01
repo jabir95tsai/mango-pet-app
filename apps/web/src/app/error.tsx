@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type Props = {
   error: Error & { digest?: string };
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export default function GlobalError({ error, reset }: Props) {
+  const t = useTranslations("Error");
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -19,7 +21,7 @@ export default function GlobalError({ error, reset }: Props) {
         🥭💔
       </span>
       <div className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">出了點狀況</h1>
+        <h1 className="text-xl font-semibold">{t("title")}</h1>
         <p className="text-sm text-zinc-500 max-w-md">
           {error.message || "Something went wrong"}
         </p>
@@ -33,13 +35,13 @@ export default function GlobalError({ error, reset }: Props) {
           onClick={reset}
           className="h-10 rounded-lg bg-amber-500 px-5 text-sm font-medium text-white hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         >
-          重試
+          {t("retry")}
         </button>
         <Link
           href="/"
           className="flex h-10 items-center rounded-lg border border-zinc-200 px-5 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-zinc-700 dark:hover:bg-zinc-800"
         >
-          回首頁
+          {t("home")}
         </Link>
       </div>
     </main>

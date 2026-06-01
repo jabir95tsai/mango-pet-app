@@ -35,18 +35,13 @@ import type {
   RestaurantReviewInput,
 } from "@/lib/types";
 
-const LEVEL_LABEL: Record<PetFriendlyLevel, string> = {
-  indoor_ok: "可進室內",
-  outdoor_only: "僅戶外座位",
-  restricted: "限制條件",
-};
-
 export default function RestaurantDetailPage() {
   const router = useRouter();
   const params = useParams<{ restaurantId: string }>();
   const restaurantId = params.restaurantId;
   const { user } = useAuth();
   const tC = useTranslations("Common");
+  const tR = useTranslations("Restaurant");
   const askConfirm = useConfirm();
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
@@ -118,7 +113,7 @@ export default function RestaurantDetailPage() {
     return (
       <EmptyState
         icon={MapPin}
-        title="找不到餐廳"
+        title={tR("notFound")}
         action={
           <Button variant="secondary" onClick={() => router.push("/app/restaurants")}>
             <ArrowLeft className="size-4" />
@@ -154,21 +149,21 @@ export default function RestaurantDetailPage() {
             </p>
             <div className="flex flex-wrap gap-2 mt-3 text-xs">
               <span className="rounded-md bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
-                {LEVEL_LABEL[restaurant.petFriendlyLevel]}
+                {tR(`level.${restaurant.petFriendlyLevel}`)}
               </span>
               {restaurant.hasWaterBowl && (
                 <span className="rounded-md bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
-                  💧 水碗
+                  {tR("amenityWater")}
                 </span>
               )}
               {restaurant.hasPetMenu && (
                 <span className="rounded-md bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
-                  🍽️ 寵物餐
+                  {tR("amenityMenu")}
                 </span>
               )}
               {restaurant.allowsLargeDogs && (
                 <span className="rounded-md bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800">
-                  🐕‍🦺 大型犬 OK
+                  {tR("amenityLargeDogs")}
                 </span>
               )}
             </div>
@@ -205,7 +200,7 @@ export default function RestaurantDetailPage() {
             className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-xs font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
             <ExternalLink className="size-3.5" />
-            開 Google Maps
+            {tR("openMaps")}
           </a>
           {restaurant.phone && (
             <a
@@ -224,7 +219,7 @@ export default function RestaurantDetailPage() {
               className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-100 px-3 text-xs font-medium hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-zinc-800"
             >
               <ExternalLink className="size-3.5" />
-              網站
+              {tR("websiteLink")}
             </a>
           )}
         </div>
@@ -238,14 +233,14 @@ export default function RestaurantDetailPage() {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold">評論 ({reviews.length})</h2>
+          <h2 className="font-semibold">{tR("reviews", { count: reviews.length })}</h2>
           <Button size="sm" onClick={() => setWriting(true)}>
             <Plus className="size-4" />
-            寫評論
+            {tR("writeReview")}
           </Button>
         </div>
         {reviews.length === 0 ? (
-          <p className="text-sm text-zinc-500 py-4 text-center">第一個來寫評論的就是你！</p>
+          <p className="text-sm text-zinc-500 py-4 text-center">{tR("beFirstReview")}</p>
         ) : (
           reviews.map((r) => (
             <ReviewCard

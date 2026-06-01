@@ -80,7 +80,7 @@ export function PetHealthBody({
             {current != null ? (
               <>
                 {current}
-                <span className="text-xs font-semibold text-mango-ink-2"> 公斤</span>
+                <span className="text-xs font-semibold text-mango-ink-2">{" "}{tPP("kgUnit")}</span>
               </>
             ) : (
               <span className="text-mango-ink-3">—</span>

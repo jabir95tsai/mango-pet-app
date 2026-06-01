@@ -162,7 +162,7 @@ export function ExpenseFormDialog({
           <FieldLabel>{tE("fields.pet")}</FieldLabel>
           <Select value={petId} onChange={(e) => setPetId(e.target.value)} required>
             {pets.length === 0 ? (
-              <option value="">先新增寵物</option>
+              <option value="">{tE("noPet")}</option>
             ) : (
               pets.map((p) => (
                 <option key={p.petId} value={p.petId}>
