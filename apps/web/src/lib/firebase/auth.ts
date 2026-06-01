@@ -7,6 +7,7 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signOut,
+  updateProfile,
   type AuthCredential,
   type User,
 } from "firebase/auth";
@@ -157,4 +158,30 @@ export function resolveUserDisplayName(
     if (p?.displayName) return p.displayName;
   }
   return null;
+}
+
+/**
+ * Root-cause fix for the multi-provider null-identity bug: when the
+ * top-level `displayName` / `photoURL` are null but a provider entry
+ * carries them, write the resolved values back onto the Auth user via
+ * `updateProfile`. Run once at login (before `upsertUser`) so that:
+ *   - `upsertUser` then denormalises the *real* name/photo into
+ *     `users/{uid}` (the doc the leaderboard, friends, etc. read), and
+ *   - every action-time denormalised write (post author, walk walker,
+ *     expense payer …) that reads top-level `user.photoURL` is correct.
+ * Idempotent: the guard makes it a no-op once the top-level is populated,
+ * and it never overwrites an existing non-null top-level value.
+ */
+export async function syncAuthProfileFromProviders(user: User): Promise<void> {
+  const patch: { displayName?: string; photoURL?: string } = {};
+  if (!user.displayName) {
+    const name = resolveUserDisplayName(user);
+    if (name) patch.displayName = name;
+  }
+  if (!user.photoURL) {
+    const photo = resolveUserPhotoURL(user);
+    if (photo) patch.photoURL = photo;
+  }
+  if (Object.keys(patch).length === 0) return;
+  await updateProfile(user, patch);
 }

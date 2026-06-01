@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import type { User } from "firebase/auth";
+import { resolveUserDisplayName, resolveUserPhotoURL } from "./auth";
 import { getDb, getFirebaseApp } from "./config";
 import type {
   AppUser,
@@ -47,8 +48,13 @@ function toDisplayNameLower(name: string): string {
 export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<void> {
   const ref = doc(getDb(), "users", user.uid);
   const snap = await getDoc(ref);
-  const desiredName = user.displayName ?? user.email?.split("@")[0] ?? "Friend";
-  const desiredPhoto = user.photoURL ?? null;
+  // Resolve from providerData when the top-level Auth fields are null
+  // (multi-provider accounts, e.g. Google + Apple linked). Without this
+  // the profile doc — which the leaderboard / friends / etc. read — gets
+  // a null photo and an email-prefix name fallback.
+  const desiredName =
+    resolveUserDisplayName(user) ?? user.email?.split("@")[0] ?? "Friend";
+  const desiredPhoto = resolveUserPhotoURL(user);
 
   if (!snap.exists()) {
     await setDoc(ref, {

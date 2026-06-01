@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { User } from "firebase/auth";
 import { useLocale } from "next-intl";
-import { subscribeAuth } from "@/lib/firebase/auth";
+import { subscribeAuth, syncAuthProfileFromProviders } from "@/lib/firebase/auth";
 import { setupPushMessageListener } from "@/lib/firebase/messaging";
 import { upsertUser } from "@/lib/firebase/users";
 
@@ -38,6 +38,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(u);
       setLoading(false);
       if (u) {
+        // Backfill top-level Auth displayName/photoURL from providerData
+        // for multi-provider accounts BEFORE upsertUser, so the profile
+        // doc (and every downstream denormalised write) gets the real
+        // values instead of null. Best-effort — upsertUser below resolves
+        // from providerData too, so a failure here still self-heals the
+        // users doc.
+        try {
+          await syncAuthProfileFromProviders(u);
+        } catch (err) {
+          console.error("syncAuthProfileFromProviders failed:", err);
+        }
         try {
           await upsertUser(u, locale);
         } catch (err) {
