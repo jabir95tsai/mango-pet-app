@@ -197,7 +197,7 @@ export function PostComposer({
                 <button
                   type="button"
                   onClick={() => removePhoto(i)}
-                  aria-label="移除照片"
+                  aria-label={tP("removePhoto")}
                   className="absolute top-1 right-1 size-8 rounded-full bg-black/60 text-white grid place-items-center hover:bg-black/80"
                 >
                   <X className="size-4" />

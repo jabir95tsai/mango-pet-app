@@ -52,8 +52,7 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
     const loc = await getCurrentLocation();
     setLat(loc.lat.toFixed(6));
     setLng(loc.lng.toFixed(6));
-    if (!loc.fromBrowser)
-      setError("無法取得目前位置，已填入預設座標。請手動修正。");
+    if (!loc.fromBrowser) setError(tR("locationError"));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -98,7 +97,7 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="芒果咖啡"
+            placeholder={tR("namePlaceholder")}
             required
           />
         </div>
@@ -107,7 +106,7 @@ export function AddRestaurantDialog({ open, onClose, onSubmit }: Props) {
           <Input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="台北市信義區⋯"
+            placeholder={tR("addressPlaceholder")}
             required
           />
         </div>

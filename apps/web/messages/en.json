@@ -75,6 +75,12 @@
   "Friends": {
     "subtitle": "Add friends and follow each other's pets",
     "myQr": "My QR",
+    "searchPlaceholder": "Email or nickname",
+    "qrTitle": "My QR code",
+    "qrInstructions": "Have them scan with their phone camera, or copy the link and send it.",
+    "qrAlt": "QR code invite link",
+    "copied": "Copied",
+    "copyLink": "Copy link",
     "tabs": {
       "friends": "Friends ({count})",
       "requests": "Requests ({count})",
@@ -106,6 +112,9 @@
     "favOnly": "Favorites",
     "all": "All",
     "geoWarning": "Couldn't get your location — using Taipei 101 as the default center, so distance sorting may be off. Allow location in your browser and refresh.",
+    "locationError": "Couldn't get your current location — default coordinates filled in. Please correct them.",
+    "namePlaceholder": "Mango Café",
+    "addressPlaceholder": "123 Main St…",
     "view": {
       "list": "List",
       "map": "Map"
@@ -205,6 +214,7 @@
   "Health": {
     "title": "Health records",
     "addRecord": "Add record",
+    "kgExample": "e.g. 8.5",
     "type": "Type",
     "timeline": "Timeline",
     "weightChart": "Weight chart",
@@ -298,6 +308,50 @@
     "invite": {
       "shareAria": "Share invite link",
       "text": "Join my \"{name}\" family on Mango Pet: {url}"
+    },
+    "title": "Family",
+    "personalMode": "Personal mode · no family yet",
+    "join": "Join",
+    "create": "New",
+    "personalInfo": "You're in personal mode — your pets, walks, reminders, and expenses are visible only to you. Create or join a family to share them, and you can migrate your existing data in too.",
+    "inviteCode": "Invite code",
+    "copyCode": "Copy invite code",
+    "regenCode": "Regenerate invite code",
+    "inviteHelp": "Have family enter these 6 digits to join — all pet records are shared.",
+    "members": "Members ({count})",
+    "owner": "Owner",
+    "you": "(you)",
+    "removeMember": "Remove member",
+    "leave": "Leave family",
+    "defaultName": "My family",
+    "regenConfirm": {
+      "title": "Regenerate invite code?",
+      "message": "The old code stops working. Members who already joined aren't affected.",
+      "confirm": "Regenerate"
+    },
+    "leaveConfirm": {
+      "title": "Leave family?",
+      "message": "After leaving \"{name}\" you'll no longer see this family's pets and records.",
+      "confirm": "Leave"
+    },
+    "removeConfirm": {
+      "title": "Remove member?",
+      "message": "Remove {name} from the family?",
+      "confirm": "Remove"
+    },
+    "createDialog": {
+      "title": "New family",
+      "instructions": "Create a new family and add your people to care for pets together.",
+      "nameLabel": "Family name",
+      "namePlaceholder": "e.g. The Mango family",
+      "submit": "Create"
+    },
+    "joinDialog": {
+      "title": "Join a family",
+      "instructions": "Enter the 6-digit invite code your family shared.",
+      "submit": "Join",
+      "errInvalidCode": "The invite code must be 6 digits",
+      "errAlready": "You're already a member of this family"
     }
   },
   "JoinFamily": {
@@ -471,6 +525,16 @@
     }
   },
   "Walks": {
+    "manual": {
+      "title": "Log a past walk",
+      "pet": "Pet",
+      "noPet": "Add a pet first",
+      "start": "Start time",
+      "end": "End time",
+      "distance": "Distance (km)",
+      "duration": "Duration (min)",
+      "notes": "Notes (optional)"
+    },
     "core": {
       "todayGoalGap": "{min} more min today",
       "todayGoalHit": "Goal hit!",
@@ -572,6 +636,13 @@
     "title": "Push notifications",
     "enable": "Enable",
     "disable": "Disable",
+    "test": "Test",
+    "testSent": "Sent {sent} notification(s)",
+    "testPartial": "Sent {sent}, {failed} failed",
+    "testFailed": "Send failed: {failed} failed",
+    "testError": "Test push failed",
+    "iosHint": "On iPhone, add the app to your Home Screen first (Safari Share → Add to Home Screen) to receive push.",
+    "vapidHint": "VAPID key not set. In Firebase Console → Project settings → Cloud Messaging → Web push certificates, generate a key and set it as NEXT_PUBLIC_FIREBASE_VAPID_KEY.",
     "status": {
       "checking": "Checking...",
       "unsupported": "Not supported on this device",
@@ -602,6 +673,9 @@
     "manual": "Manual",
     "scanReceipt": "Scan receipt",
     "totalSpent": "Total spent",
+    "vendorPlaceholder": "Vendor name",
+    "itemPlaceholder": "Item",
+    "removeItem": "Remove item",
     "fields": {
       "pet": "Pet",
       "amount": "Amount",

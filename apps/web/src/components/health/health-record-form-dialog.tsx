@@ -181,7 +181,7 @@ function TypeFields({ type, data, setData, tH }: FieldsProps) {
             min="0.1"
             value={(data as { kg?: number }).kg || ""}
             onChange={(e) => setData({ kg: Number(e.target.value) })}
-            placeholder="例如 8.5"
+            placeholder={tH("kgExample")}
             required
           />
         </div>

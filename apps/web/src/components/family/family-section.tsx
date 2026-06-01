@@ -34,6 +34,7 @@ import { ImportWizardDialog } from "@/components/family/import-wizard-dialog";
 
 export function FamilySection() {
   const tC = useTranslations("Common");
+  const tF = useTranslations("Family");
   const tShare = useTranslations("Family.invite");
   const { user } = useAuth();
   const { family, families, loading, refresh, switchFamily } = useFamily();
@@ -134,9 +135,9 @@ export function FamilySection() {
   async function handleRegen() {
     if (!family) return;
     const ok = await askConfirm({
-      title: "重新產生邀請碼？",
-      message: "舊的邀請碼會失效，已加入的成員不受影響。",
-      confirmText: "重新產生",
+      title: tF("regenConfirm.title"),
+      message: tF("regenConfirm.message"),
+      confirmText: tF("regenConfirm.confirm"),
       cancelText: tC("cancel"),
     });
     if (!ok) return;
@@ -155,9 +156,9 @@ export function FamilySection() {
   async function handleLeave() {
     if (!family) return;
     const ok = await askConfirm({
-      title: "離開家庭？",
-      message: `離開「${family.name}」之後就看不到這個家庭的寵物與紀錄了。`,
-      confirmText: "離開",
+      title: tF("leaveConfirm.title"),
+      message: tF("leaveConfirm.message", { name: family.name }),
+      confirmText: tF("leaveConfirm.confirm"),
       cancelText: tC("cancel"),
       danger: true,
     });
@@ -177,9 +178,9 @@ export function FamilySection() {
   async function handleRemoveMember(memberUid: string, displayName: string) {
     if (!family) return;
     const ok = await askConfirm({
-      title: "移除成員？",
-      message: `從家庭中移除 ${displayName}？`,
-      confirmText: "移除",
+      title: tF("removeConfirm.title"),
+      message: tF("removeConfirm.message", { name: displayName }),
+      confirmText: tF("removeConfirm.confirm"),
       cancelText: tC("cancel"),
       danger: true,
     });
@@ -211,29 +212,26 @@ export function FamilySection() {
             <Users className="size-4" />
           </span>
           <div>
-            <p className="font-medium text-sm">家庭</p>
+            <p className="font-medium text-sm">{tF("title")}</p>
             <p className="text-xs text-zinc-500">
-              {family ? family.name : "個人模式 · 尚未加入家庭"}
+              {family ? family.name : tF("personalMode")}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="ghost" onClick={() => setShowJoin(true)}>
-            加入
+            {tF("join")}
           </Button>
           <Button size="sm" variant="secondary" onClick={() => setShowCreate(true)}>
             <Plus className="size-3.5" />
-            新建
+            {tF("create")}
           </Button>
         </div>
       </div>
 
       {!family && (
         <div className="rounded-lg border border-amber-200/70 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          <p>
-            你目前以「個人模式」使用，寵物、遛狗、提醒、開銷只有你自己看得到。
-            建立或加入家庭後，可以把已建立的資料一起搬進家庭分享。
-          </p>
+          <p>{tF("personalInfo")}</p>
         </div>
       )}
 
@@ -264,7 +262,7 @@ export function FamilySection() {
           <div className="flex flex-col gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-500/10">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-xs text-amber-800 dark:text-amber-300">邀請碼</p>
+                <p className="text-xs text-amber-800 dark:text-amber-300">{tF("inviteCode")}</p>
                 <p className="font-mono text-2xl font-bold tracking-widest tabular-nums text-amber-900 dark:text-amber-200">
                   {family.inviteCode}
                 </p>
@@ -286,7 +284,7 @@ export function FamilySection() {
                   type="button"
                   onClick={handleCopyCode}
                   className="grid size-9 place-items-center rounded-lg bg-white text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
-                  aria-label="複製邀請碼"
+                  aria-label={tF("copyCode")}
                 >
                   {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
                 </button>
@@ -296,7 +294,7 @@ export function FamilySection() {
                     onClick={handleRegen}
                     disabled={busy}
                     className="grid size-9 place-items-center rounded-lg bg-white text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:bg-amber-950 dark:text-amber-300"
-                    aria-label="重新產生邀請碼"
+                    aria-label={tF("regenCode")}
                   >
                     <RefreshCw className={cn("size-4", busy && "animate-spin")} />
                   </button>
@@ -304,14 +302,14 @@ export function FamilySection() {
               </div>
             </div>
             <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
-              請家人輸入這 6 位數字加入家庭，所有寵物紀錄都會共用。
+              {tF("inviteHelp")}
             </p>
           </div>
 
           {/* Members list */}
           <div className="flex flex-col gap-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              成員 ({members.length})
+              {tF("members", { count: members.length })}
             </p>
             {membersLoading ? (
               <p className="text-xs text-zinc-500">{tC("loading")}</p>
@@ -328,11 +326,11 @@ export function FamilySection() {
                         {m.displayName}
                         {m.uid === family.ownerUid && (
                           <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
-                            擁有者
+                            {tF("owner")}
                           </span>
                         )}
                         {m.uid === user?.uid && (
-                          <span className="ml-1.5 text-xs text-zinc-500">(你)</span>
+                          <span className="ml-1.5 text-xs text-zinc-500">{tF("you")}</span>
                         )}
                       </p>
                     </div>
@@ -342,7 +340,7 @@ export function FamilySection() {
                         onClick={() => handleRemoveMember(m.uid, m.displayName)}
                         disabled={busy}
                         className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950"
-                        aria-label="移除成員"
+                        aria-label={tF("removeMember")}
                       >
                         <X className="size-4" />
                       </button>
@@ -361,7 +359,7 @@ export function FamilySection() {
             className="self-start inline-flex items-center gap-1.5 rounded-lg px-3 h-9 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950"
           >
             <LogOut className="size-4" />
-            離開家庭
+            {tF("leave")}
           </button>
         </>
       )}
@@ -403,6 +401,7 @@ function CreateFamilyDialog({
   onCreated: (familyId: string) => Promise<void> | void;
 }) {
   const tC = useTranslations("Common");
+  const tF = useTranslations("Family");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -419,7 +418,7 @@ function CreateFamilyDialog({
     setBusy(true);
     setError(null);
     try {
-      const res = await createFamily(name.trim() || "我的家庭");
+      const res = await createFamily(name.trim() || tF("defaultName"));
       await onCreated(res.familyId);
       onClose();
     } catch (err) {
@@ -430,19 +429,19 @@ function CreateFamilyDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="新建家庭">
+    <Dialog open={open} onClose={onClose} title={tF("createDialog.title")}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          建立一個新家庭，把家人加進來一起照顧寵物。
+          {tF("createDialog.instructions")}
         </p>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            家庭名稱
+            {tF("createDialog.nameLabel")}
           </label>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="例如：芒果家"
+            placeholder={tF("createDialog.namePlaceholder")}
             maxLength={40}
             autoFocus
           />
@@ -453,7 +452,7 @@ function CreateFamilyDialog({
             {tC("cancel")}
           </Button>
           <Button type="submit" disabled={busy}>
-            {busy ? "..." : "建立"}
+            {busy ? "..." : tF("createDialog.submit")}
           </Button>
         </div>
       </form>
@@ -473,6 +472,7 @@ function JoinFamilyDialog({
   onJoined: (familyId: string) => Promise<void> | void;
 }) {
   const tC = useTranslations("Common");
+  const tF = useTranslations("Family");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -488,7 +488,7 @@ function JoinFamilyDialog({
     e.preventDefault();
     const trimmed = code.trim();
     if (!/^\d{6}$/.test(trimmed)) {
-      setError("邀請碼必須是 6 位數字");
+      setError(tF("joinDialog.errInvalidCode"));
       return;
     }
     setBusy(true);
@@ -496,7 +496,7 @@ function JoinFamilyDialog({
     try {
       const res = await joinFamilyByCode(trimmed);
       if (res.alreadyMember) {
-        setError("你已經是這個家庭的成員了");
+        setError(tF("joinDialog.errAlready"));
         setBusy(false);
         return;
       }
@@ -511,10 +511,10 @@ function JoinFamilyDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="加入家庭">
+    <Dialog open={open} onClose={onClose} title={tF("joinDialog.title")}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          輸入家人分享的 6 位數邀請碼。
+          {tF("joinDialog.instructions")}
         </p>
         <Input
           value={code}
@@ -531,7 +531,7 @@ function JoinFamilyDialog({
             {tC("cancel")}
           </Button>
           <Button type="submit" disabled={busy || code.length !== 6}>
-            {busy ? "..." : "加入"}
+            {busy ? "..." : tF("joinDialog.submit")}
           </Button>
         </div>
       </form>

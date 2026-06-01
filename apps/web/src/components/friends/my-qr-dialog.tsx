@@ -31,6 +31,7 @@ function buildInviteUrl(uid: string): string {
 
 export function MyQrDialog({ open, onClose }: Props) {
   const tC = useTranslations("Common");
+  const tF = useTranslations("Friends");
   const { user } = useAuth();
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -65,10 +66,10 @@ export function MyQrDialog({ open, onClose }: Props) {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="我的 QR code">
+    <Dialog open={open} onClose={onClose} title={tF("qrTitle")}>
       <div className="flex flex-col items-center gap-4">
         <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
-          請對方用手機相機掃，或複製連結傳給他。
+          {tF("qrInstructions")}
         </p>
 
         <div className="relative grid size-72 place-items-center rounded-2xl border border-zinc-200/80 bg-white p-3 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-100">
@@ -77,7 +78,7 @@ export function MyQrDialog({ open, onClose }: Props) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={dataUrl}
-                alt="QR code 邀請連結"
+                alt={tF("qrAlt")}
                 className="size-full"
               />
               {/* Centre logo overlay — survives the H-level error correction. */}
@@ -106,11 +107,11 @@ export function MyQrDialog({ open, onClose }: Props) {
           >
             {copied ? (
               <>
-                <Check className="size-4" /> 已複製
+                <Check className="size-4" /> {tF("copied")}
               </>
             ) : (
               <>
-                <Copy className="size-4" /> 複製連結
+                <Copy className="size-4" /> {tF("copyLink")}
               </>
             )}
           </Button>

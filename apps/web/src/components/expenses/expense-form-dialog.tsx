@@ -221,7 +221,7 @@ export function ExpenseFormDialog({
             <Input
               value={vendor}
               onChange={(e) => setVendor(e.target.value)}
-              placeholder="店家名稱"
+              placeholder={tE("vendorPlaceholder")}
             />
           </div>
         </div>
@@ -240,14 +240,14 @@ export function ExpenseFormDialog({
                       setItems(next);
                     }}
                     className="flex-1 h-9 text-sm"
-                    placeholder="品項"
+                    placeholder={tE("itemPlaceholder")}
                   />
                   <button
                     type="button"
                     onClick={() =>
                       setItems(items.filter((_, idx) => idx !== i))
                     }
-                    aria-label="移除品項"
+                    aria-label={tE("removeItem")}
                     className="size-9 grid place-items-center rounded-full hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 shrink-0"
                   >
                     <X className="size-4" />

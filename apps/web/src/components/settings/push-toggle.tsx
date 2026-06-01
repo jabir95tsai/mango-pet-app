@@ -135,13 +135,15 @@ export function PushToggle() {
       const res = await sendTestPush();
       if (res.ok && res.sent > 0) {
         setTestResult(
-          `已送出 ${res.sent} 條推播${res.failed > 0 ? `（${res.failed} 失敗）` : ""}`,
+          res.failed > 0
+            ? tP("testPartial", { sent: res.sent, failed: res.failed })
+            : tP("testSent", { sent: res.sent }),
         );
       } else {
-        setTestResult(`送出失敗：${res.failed} 失敗`);
+        setTestResult(tP("testFailed", { failed: res.failed }));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "測試推播失敗");
+      setError(err instanceof Error ? err.message : tP("testError"));
     } finally {
       setTesting(false);
     }
@@ -178,7 +180,7 @@ export function PushToggle() {
               disabled={testing || busy}
             >
               <Send className="size-3.5" />
-              {testing ? "..." : "測試"}
+              {testing ? "..." : tP("test")}
             </Button>
             <Button size="sm" variant="secondary" onClick={handleDisable} disabled={busy || testing}>
               {busy ? "..." : tP("disable")}
@@ -200,18 +202,14 @@ export function PushToggle() {
       {showIosHint && (
         <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
           <Info className="size-4 shrink-0 mt-0.5" />
-          <span>
-            iPhone 需先把 App 加到主畫面（Safari 分享 → 加入主畫面）才能收推播。
-          </span>
+          <span>{tP("iosHint")}</span>
         </div>
       )}
 
       {isVapidMissingError && (
         <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
           <Info className="size-4 shrink-0 mt-0.5" />
-          <span>
-            未設定 VAPID Key。請到 Firebase Console → 專案設定 → Cloud Messaging → Web push certificates 產生金鑰，並設為 <code className="font-mono">NEXT_PUBLIC_FIREBASE_VAPID_KEY</code>。
-          </span>
+          <span>{tP("vapidHint")}</span>
         </div>
       )}
 

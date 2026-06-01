@@ -75,6 +75,12 @@
   "Friends": {
     "subtitle": "加好友、看彼此的寵物動態",
     "myQr": "我的 QR",
+    "searchPlaceholder": "Email 或暱稱",
+    "qrTitle": "我的 QR code",
+    "qrInstructions": "請對方用手機相機掃，或複製連結傳給他。",
+    "qrAlt": "QR code 邀請連結",
+    "copied": "已複製",
+    "copyLink": "複製連結",
     "tabs": {
       "friends": "好友 ({count})",
       "requests": "邀請 ({count})",
@@ -106,6 +112,9 @@
     "favOnly": "只看收藏",
     "all": "全部",
     "geoWarning": "未取得你的位置 — 使用台北 101 為預設中心點，距離排序可能不正確。請在瀏覽器設定允許定位後重新整理。",
+    "locationError": "無法取得目前位置，已填入預設座標。請手動修正。",
+    "namePlaceholder": "芒果咖啡",
+    "addressPlaceholder": "台北市信義區⋯",
     "view": {
       "list": "清單",
       "map": "地圖"
@@ -205,6 +214,7 @@
   "Health": {
     "title": "健康紀錄",
     "addRecord": "新增紀錄",
+    "kgExample": "例如 8.5",
     "type": "類型",
     "timeline": "時間軸",
     "weightChart": "體重變化",
@@ -298,6 +308,50 @@
     "invite": {
       "shareAria": "分享邀請連結",
       "text": "加入我的「{name}」家庭：{url}"
+    },
+    "title": "家庭",
+    "personalMode": "個人模式 · 尚未加入家庭",
+    "join": "加入",
+    "create": "新建",
+    "personalInfo": "你目前以「個人模式」使用，寵物、遛狗、提醒、開銷只有你自己看得到。建立或加入家庭後，可以把已建立的資料一起搬進家庭分享。",
+    "inviteCode": "邀請碼",
+    "copyCode": "複製邀請碼",
+    "regenCode": "重新產生邀請碼",
+    "inviteHelp": "請家人輸入這 6 位數字加入家庭，所有寵物紀錄都會共用。",
+    "members": "成員 ({count})",
+    "owner": "擁有者",
+    "you": "(你)",
+    "removeMember": "移除成員",
+    "leave": "離開家庭",
+    "defaultName": "我的家庭",
+    "regenConfirm": {
+      "title": "重新產生邀請碼？",
+      "message": "舊的邀請碼會失效，已加入的成員不受影響。",
+      "confirm": "重新產生"
+    },
+    "leaveConfirm": {
+      "title": "離開家庭？",
+      "message": "離開「{name}」之後就看不到這個家庭的寵物與紀錄了。",
+      "confirm": "離開"
+    },
+    "removeConfirm": {
+      "title": "移除成員？",
+      "message": "從家庭中移除 {name}？",
+      "confirm": "移除"
+    },
+    "createDialog": {
+      "title": "新建家庭",
+      "instructions": "建立一個新家庭，把家人加進來一起照顧寵物。",
+      "nameLabel": "家庭名稱",
+      "namePlaceholder": "例如：芒果家",
+      "submit": "建立"
+    },
+    "joinDialog": {
+      "title": "加入家庭",
+      "instructions": "輸入家人分享的 6 位數邀請碼。",
+      "submit": "加入",
+      "errInvalidCode": "邀請碼必須是 6 位數字",
+      "errAlready": "你已經是這個家庭的成員了"
     }
   },
   "JoinFamily": {
@@ -471,6 +525,16 @@
     }
   },
   "Walks": {
+    "manual": {
+      "title": "手動補登遛狗",
+      "pet": "寵物",
+      "noPet": "先新增寵物",
+      "start": "開始時間",
+      "end": "結束時間",
+      "distance": "距離 (km)",
+      "duration": "時長 (分鐘)",
+      "notes": "備註 (選填)"
+    },
     "core": {
       "todayGoalGap": "今天還差 {min} 分鐘",
       "todayGoalHit": "今日目標達成！",
@@ -572,6 +636,13 @@
     "title": "推播通知",
     "enable": "啟用",
     "disable": "停用",
+    "test": "測試",
+    "testSent": "已送出 {sent} 條推播",
+    "testPartial": "已送出 {sent} 條推播（{failed} 失敗）",
+    "testFailed": "送出失敗：{failed} 失敗",
+    "testError": "測試推播失敗",
+    "iosHint": "iPhone 需先把 App 加到主畫面（Safari 分享 → 加入主畫面）才能收推播。",
+    "vapidHint": "未設定 VAPID Key。請到 Firebase Console → 專案設定 → Cloud Messaging → Web push certificates 產生金鑰，並設為 NEXT_PUBLIC_FIREBASE_VAPID_KEY。",
     "status": {
       "checking": "檢查中...",
       "unsupported": "此裝置不支援推播",
@@ -602,6 +673,9 @@
     "manual": "手動",
     "scanReceipt": "拍收據",
     "totalSpent": "總支出",
+    "vendorPlaceholder": "店家名稱",
+    "itemPlaceholder": "品項",
+    "removeItem": "移除品項",
     "fields": {
       "pet": "寵物",
       "amount": "金額",

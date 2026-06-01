@@ -33,6 +33,7 @@ export function ManualWalkDialog({
   onSubmit,
 }: Props) {
   const tC = useTranslations("Common");
+  const tM = useTranslations("Walks.manual");
   const [petId, setPetId] = useState("");
   const [startedAt, setStartedAt] = useState(
     toLocalDatetimeInput(new Date(Date.now() - 60 * 60 * 1000)),
@@ -119,13 +120,13 @@ export function ManualWalkDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="手動補登遛狗">
+    <Dialog open={open} onClose={onClose} title={tM("title")}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <FieldLabel>寵物</FieldLabel>
+          <FieldLabel>{tM("pet")}</FieldLabel>
           <Select value={petId} onChange={(e) => setPetId(e.target.value)}>
             {pets.length === 0 ? (
-              <option value="">先新增寵物</option>
+              <option value="">{tM("noPet")}</option>
             ) : (
               pets.map((p) => (
                 <option key={p.petId} value={p.petId}>
@@ -138,7 +139,7 @@ export function ManualWalkDialog({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <FieldLabel>開始時間</FieldLabel>
+            <FieldLabel>{tM("start")}</FieldLabel>
             <Input
               type="datetime-local"
               value={startedAt}
@@ -147,7 +148,7 @@ export function ManualWalkDialog({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <FieldLabel>結束時間</FieldLabel>
+            <FieldLabel>{tM("end")}</FieldLabel>
             <Input
               type="datetime-local"
               value={endedAt}
@@ -159,7 +160,7 @@ export function ManualWalkDialog({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <FieldLabel>距離 (km)</FieldLabel>
+            <FieldLabel>{tM("distance")}</FieldLabel>
             <Input
               type="number"
               step="0.01"
@@ -170,7 +171,7 @@ export function ManualWalkDialog({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <FieldLabel>時長 (分鐘)</FieldLabel>
+            <FieldLabel>{tM("duration")}</FieldLabel>
             <Input
               type="number"
               step="1"
@@ -183,7 +184,7 @@ export function ManualWalkDialog({
         </div>
 
         <div className="flex flex-col gap-1">
-          <FieldLabel>備註 (選填)</FieldLabel>
+          <FieldLabel>{tM("notes")}</FieldLabel>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
 

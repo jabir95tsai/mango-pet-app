@@ -17,6 +17,7 @@ type Props = {
 
 export function FriendSearch({ excludeUids, onSent }: Props) {
   const tC = useTranslations("Common");
+  const tF = useTranslations("Friends");
   const { user } = useAuth();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<AppUser[]>([]);
@@ -67,7 +68,7 @@ export function FriendSearch({ excludeUids, onSent }: Props) {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Email 或暱稱"
+          placeholder={tF("searchPlaceholder")}
         />
         <Button type="submit" disabled={searching}>
           <Search className="size-4" />
