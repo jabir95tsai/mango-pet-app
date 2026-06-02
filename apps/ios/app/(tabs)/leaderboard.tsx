@@ -32,9 +32,7 @@ export default function LeaderboardScreen() {
     void AsyncStorage.setItem(DIMENSION_KEY, next);
   }
 
-  // Family management screen lands in P4b; route to settings (its future home)
-  // for now. Repointed to /family in P4b.
-  const goFamily = () => router.push("/(tabs)/settings");
+  const goFamily = () => router.push("/family");
 
   return (
     <SafeAreaView edges={["top"]} style={styles.flex}>

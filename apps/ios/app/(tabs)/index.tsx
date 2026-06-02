@@ -100,7 +100,7 @@ export default function HomeScreen() {
         {isPersonal ? (
           <InviteFamilyCard
             petName={pets[0]?.name}
-            onInvite={() => router.push("/(tabs)/settings")}
+            onInvite={() => router.push("/family")}
           />
         ) : null}
 

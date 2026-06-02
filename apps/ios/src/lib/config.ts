@@ -17,3 +17,11 @@ export const GOOGLE_IOS_CLIENT_ID =
 // stays server-side only and is NOT stored here.
 export const GOOGLE_WEB_CLIENT_ID =
   "722604603606-oepafc9cc8r6i5dgtg9rlk2l75pdv0lr.apps.googleusercontent.com";
+
+// Production web origin (App Hosting). Used to build shareable invite links +
+// QR payloads — a family invite QR encodes `${SITE_URL}/join/{code}` and a
+// friend QR `${SITE_URL}/app/friends/add?uid=...`, so a scan from any camera
+// opens the web flow (cross-platform). In-app deep links use the `mangopet://`
+// scheme via expo-router; universal-link routing into the app
+// (apple-app-site-association) is a later P7 item.
+export const SITE_URL = "https://mango-pet--mango-pet-app.asia-east1.hosted.app";
