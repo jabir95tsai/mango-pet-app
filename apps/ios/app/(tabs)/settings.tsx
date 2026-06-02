@@ -15,6 +15,7 @@ import { PushToggle } from "@/components/settings/push-toggle";
 import { EngagementPushSection } from "@/components/settings/engagement-push-section";
 import { WalkAutoPhotoSection, LeaderboardVisibilitySection } from "@/components/settings/prefs-sections";
 import { GuestUpgradeSection } from "@/components/settings/guest-upgrade-section";
+import { ExportDataSection } from "@/components/settings/export-data-section";
 import { DeleteAccountSection } from "@/components/settings/delete-account-section";
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
@@ -62,7 +63,7 @@ export default function SettingsScreen() {
         {!isGuest ? <WalkAutoPhotoSection /> : null}
         {!isGuest ? <LeaderboardVisibilitySection /> : null}
 
-        {/* Data export lands in P5b (needs expo-file-system) */}
+        {!isGuest ? <ExportDataSection /> : null}
 
         {!isGuest ? (
           <View style={styles.danger}>
