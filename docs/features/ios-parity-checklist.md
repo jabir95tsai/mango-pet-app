@@ -93,12 +93,16 @@
 | 照片圖庫 `/app/photos`（drift，§B） | [`photo-gallery-downloads.md`](./photo-gallery-downloads.md) | **parity + native upgrade** | 🟡 code done（`f5c5944`，aggregator posts+walks+pets+expenses + filter pills + 批次存 + downloadState）；待實機驗收 |
 
 ### P4 — Leaderboard + Family
+> 🟡 **P4 全 code 收齊（2026-06-03），待實機驗收**：P4a `590abe0`（human+dog 即時榜 onSnapshot + glow + tabs + FamilyProvider read）、P4b `ec34909`（family 管理 + QR + /join；functions gate，web gate 綠）。
+
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| Leaderboard(family-aware + 即時 glow) | [`family-leaderboard-realtime.md`](./family-leaderboard-realtime.md) | parity | ⬜ |
-| Family section(member + invite + leave) | family epic | parity | ⬜ |
-| Family invite QR + share link(`/join/{code}`) | family epic / backlog 進階版 | parity | ⬜ |
-| 加入家庭自動加好友 | [`auto-friend-family-members.md`](./auto-friend-family-members.md) | parity（trigger 已 ship,iOS 只呈現） | ⬜ |
+| Leaderboard(family-aware + 即時 glow) | [`family-leaderboard-realtime.md`](./family-leaderboard-realtime.md) | parity | 🟡 code done（`590abe0`，subscribe{,Dog}Leaderboard onSnapshot + shared periodKey + use-glow <5s freshness + scope/period/dimension AsyncStorage 持久化）；待實機驗收 |
+| Dog Leaderboard v2(pet-aware) | [`leaderboard-v2-dog-centric.md`](./leaderboard-v2-dog-centric.md) | parity | 🟡 code done（`590abe0`，friends/all client filter by friendUids + ownerVisibility；personal dogs 含入）；待實機驗收 |
+| Family section(member + invite + leave) | family epic | parity | 🟡 code done（`ec34909`，FamilyProvider + 多家庭 switcher + member list + create/join/leave/remove/regen callables asia-east1）；待實機驗收 |
+| Family invite QR + share link(`/join/{code}`) | family epic / backlog 進階版 | parity | 🟡 code done（`ec34909`，react-native-qrcode-svg + copy/RN-Share + /join/[code] 6位驗證→callable→bounce）；待實機驗收 |
+| Leaderboard Visibility Toggle | settings | parity | ⬜ P5（settings；dog board 已讀 denorm ownerVisibility） |
+| 加入家庭自動加好友 | [`auto-friend-family-members.md`](./auto-friend-family-members.md) | parity（trigger 已 ship,iOS 只呈現） | ✅ 後端 trigger（iOS 只在 listFriendUids re-fetch 呈現，無 client code） |
 
 ### P5 — Push + Settings
 | Web feature | Web spec | iOS policy | iOS 狀態 |
