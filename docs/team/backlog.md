@@ -95,6 +95,20 @@ _目前沒有 active 條目。已 SHIPPED 的見「已處理（audit trail）」
 
 ## 已分類 — Backend 接
 
+### ⚠️ main working tree 卡未解 stash-pop conflict in `functions/src/index.ts`（#3 family-leaderboard）
+- **發現於**：2026-06-01、Cross-platform PM session（user 回報）
+- **類型**：技術債 / 工作流 blocker（**local-only,origin/main 乾淨、production 無影響**）
+- **狀態（grounding）**：`git status` = `both modified: functions/src/index.ts`（unmerged）。conflict markers 在**行 350–369、374–388** 兩段。stash 仍有兩筆未處理:
+  - `stash@{0}`：#3 family-leaderboard Phase 0 **v2**（newer Feature Builder iteration）
+  - `stash@{1}`：#3 family-leaderboard Phase 0（`familyId != null` filter）— 註記「not mine」
+  - 另有 untracked `docs/features/achievements-badges.md`（新 feature 草稿,不擋 commit;見下方 PM 註記）
+- **為什麼要處理**：git 在有 unmerged paths 時**拒絕任何 commit**（不只 functions/）→ 這個 working tree 裡**所有 session 都 commit 不了**,含已放行的 iOS Feature Builder P0 Step 7。
+- **建議交付給**：Backend（**不是 iOS P2**;這是既有 web/functions #3 family-leaderboard 的遺留,跟 iOS pets port 無關）。需判斷 `stash@{0}` v2 vs `stash@{1}` 哪個是要的版本、解 conflict、跑 `npx tsc --noEmit`（functions）、決定是否 `npx firebase deploy --only functions:<name>`,然後 `git stash drop` 清掉殘留。
+- **優先級提示**：**P1**（不是 P0:無資料/安全/錢風險、origin 乾淨;但擋住本機所有 commit/push 工作流）。
+- **PM 排序（2026-06-01 Cross-platform PM）**：
+  - **iOS Feature Builder 不要在這個 working tree 開工**直到 conflict 解掉;或改用 **git worktree**（[`../team/README.md`](../team/README.md) §並行 / [`../features/ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md) §4）— 從 origin/main 開新 worktree 的 index 是乾淨的,可繞過此 local 卡點並行 iOS。
+  - `achievements-badges.md` 看起來是**新 feature 探索**。iOS 開發期間依 parallel-policy §2 = 「新 feature 預設不做」;若要推進需先過「誰先做」決策樹（web-first / cross-platform / 延後）。交 PM 排序,不在本條範圍。
+
 ### ✅ 多-provider 帳號 top-level `photoURL`/`displayName`=null 污染所有 denormalized 寫入 — RESOLVED `c7a02a5`（2026-06-01 Bug Hunter，user 要求修根本原因）
 - **觸發**：user 回報「排行榜頭像仍錯誤」。Chrome MCP prod 重現：人(walker)榜總榜自己那列顯示 initials「JA」+ 名字「jabir95tsai」，其他單一-provider 使用者正常。
 - **證實的 root cause 鏈**：walker 榜聚合（`functions/src/leaderboard-helpers.ts:155-160`）直接讀 `users/{uid}` doc 的 `displayName`/`photoURL`；該 doc 由 `upsertUser` 用 top-level（null）寫入 → 存了 `displayName="jabir95tsai"`(email prefix fallback)、`photoURL=null` → 榜忠實顯示 null。
