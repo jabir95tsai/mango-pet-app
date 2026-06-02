@@ -592,6 +592,35 @@ export type FamilyMember = {
   joinedAt: Timestamp;
 };
 
+// ── Friends (P6) — mirrors apps/web/src/lib/types.ts. Bidirectional denorm:
+//    users/{uid}/friends/{friendUid} + users/{uid}/friendRequests/{fromUid}.
+export type Friend = {
+  /** Friend's user id (= the friends subcollection doc id). */
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  addedAt: Timestamp;
+};
+
+export type FriendRequest = {
+  /** = friendRequests subcollection doc id (the requester's uid). */
+  requestId: string;
+  fromUid: string;
+  fromName: string;
+  fromPhotoURL: string | null;
+  requestedAt: Timestamp;
+};
+
+/** Minimal public profile for friend search results + the QR add-landing.
+ *  A subset of the web AppUser — only what the friends UI renders. */
+export type PublicUserProfile = {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  city?: string;
+  isGuest?: boolean;
+};
+
 // ── Push + prefs (P5) — mirrors apps/web/src/lib/types.ts. Stored on
 //    users/{uid}. Engagement opt-outs + global disable are client-written
 //    (setDoc merge); the backend cron/triggers read them before sending APNs.

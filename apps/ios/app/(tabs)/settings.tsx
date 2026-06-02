@@ -57,6 +57,12 @@ export default function SettingsScreen() {
           <Text style={styles.linkText}>👨‍👩‍👧  {t("Family.title")}</Text>
           <Text style={styles.chevron}>›</Text>
         </Pressable>
+        {!isGuest ? (
+          <Pressable onPress={() => router.push("/friends")} style={styles.linkRow}>
+            <Text style={styles.linkText}>🧑‍🤝‍🧑  {t("Settings.friendsLink")}</Text>
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
+        ) : null}
 
         <PushToggle />
         {!isGuest ? <EngagementPushSection /> : null}

@@ -33,6 +33,7 @@ export default function LeaderboardScreen() {
   }
 
   const goFamily = () => router.push("/family");
+  const goFriends = () => router.push("/friends");
 
   return (
     <SafeAreaView edges={["top"]} style={styles.flex}>
@@ -52,7 +53,7 @@ export default function LeaderboardScreen() {
           {dimension === "human" ? (
             <HumanLeaderboard onCreateFamily={goFamily} />
           ) : (
-            <DogLeaderboard onAddFriend={goFamily} />
+            <DogLeaderboard onAddFriend={goFriends} />
           )}
         </View>
       </ScrollView>
