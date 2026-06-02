@@ -6,3 +6,4 @@ export * from "./scoring";
 export * from "./gps";
 export * from "./dates";
 export * from "./image-presets";
+export * from "./walk-status";

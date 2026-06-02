@@ -11,9 +11,14 @@
  *
  * UI (PhotoPromptSheet / PostComposer) is Feature Builder's; this is data/upload.
  */
-import firestore from "@react-native-firebase/firestore";
+import firestore, {
+  type FirebaseFirestoreTypes,
+} from "@react-native-firebase/firestore";
 import {
+  COMMENT_MAX_LEN,
   REACTION_EMOJIS,
+  type Comment,
+  type Post,
   type ReactionEmoji,
   type Visibility,
 } from "@mango/shared-types";
@@ -110,7 +115,198 @@ export async function createPost(input: CreatePostInput): Promise<string> {
   return ref.id;
 }
 
-/** Delete a post (mirrors web deletePost). */
+/** Delete a post (mirrors web deletePost). Cloud Functions cascade-delete the
+ *  reactions + comments subcollections; this client only removes the doc. */
 export async function deletePost(postId: string): Promise<void> {
   await firestore().collection("posts").doc(postId).delete();
+}
+
+// ── Feed reads (mirror apps/web/src/lib/firebase/posts.ts byte-for-byte so both
+//    platforms hit the SAME composite indexes; one-shot getDocs, no onSnapshot)
+
+function postsCol() {
+  return firestore().collection("posts");
+}
+
+function mapPosts(
+  snap: FirebaseFirestoreTypes.QuerySnapshot,
+): Post[] {
+  return snap.docs.map((d) => ({ ...(d.data() as Post), postId: d.id }));
+}
+
+export async function listPublicPosts(max = 30): Promise<Post[]> {
+  const snap = await postsCol()
+    .where("visibility", "==", "public")
+    .orderBy("createdAt", "desc")
+    .limit(max)
+    .get();
+  return mapPosts(snap);
+}
+
+export async function listMyPosts(uid: string, max = 30): Promise<Post[]> {
+  const snap = await postsCol()
+    .where("authorUid", "==", uid)
+    .orderBy("createdAt", "desc")
+    .limit(max)
+    .get();
+  return mapPosts(snap);
+}
+
+export async function listFriendsPosts(
+  friendUids: string[],
+  max = 30,
+): Promise<Post[]> {
+  if (friendUids.length === 0) return [];
+  // Firestore "in" supports up to 30 values; chunk if more.
+  const chunks: string[][] = [];
+  for (let i = 0; i < friendUids.length; i += 30) {
+    chunks.push(friendUids.slice(i, i + 30));
+  }
+  const results = await Promise.all(
+    chunks.map(async (chunk) => {
+      const snap = await postsCol()
+        .where("authorUid", "in", chunk)
+        .where("visibility", "in", ["friends", "public"])
+        .orderBy("createdAt", "desc")
+        .limit(max)
+        .get();
+      return mapPosts(snap);
+    }),
+  );
+  return results.flat();
+}
+
+/** Mixed feed = own + public + friends-visible, deduped, newest-first.
+ *  Identical aggregation to web listFeedPosts. */
+export async function listFeedPosts(
+  uid: string,
+  friendUids: string[] = [],
+  max = 30,
+): Promise<Post[]> {
+  const [mine, publicPosts, friendsPosts] = await Promise.all([
+    listMyPosts(uid, max),
+    listPublicPosts(max),
+    listFriendsPosts(friendUids, max),
+  ]);
+  const dedup = new Map<string, Post>();
+  for (const p of [...mine, ...publicPosts, ...friendsPosts]) {
+    dedup.set(p.postId, p);
+  }
+  return Array.from(dedup.values()).sort((a, b) => {
+    const ta = (a.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
+    const tb = (b.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
+    return tb - ta;
+  });
+}
+
+// ── Reactions: posts/{postId}/reactions/{uid}. The CLIENT maintains
+//    post.reactionCounts via increment (mirrors web setReaction — NOT a server
+//    trigger). commentCount, by contrast, is server-maintained.
+
+function reactionDoc(postId: string, uid: string) {
+  return postsCol().doc(postId).collection("reactions").doc(uid);
+}
+
+export async function getMyReaction(
+  postId: string,
+  uid: string,
+): Promise<ReactionEmoji | null> {
+  const snap = await reactionDoc(postId, uid).get();
+  return snap.exists ? ((snap.data()?.emoji as ReactionEmoji) ?? null) : null;
+}
+
+/** Set/clear the current user's reaction. Re-reads current first so the
+ *  count increments balance (mirrors web). Pass `null` to remove. */
+export async function setReaction(
+  postId: string,
+  uid: string,
+  emoji: ReactionEmoji | null,
+): Promise<void> {
+  const current = await getMyReaction(postId, uid);
+  if (current === emoji) return;
+  const postRef = postsCol().doc(postId);
+
+  if (current && current !== emoji) {
+    await postRef.update({
+      [`reactionCounts.${current}`]: firestore.FieldValue.increment(-1),
+    });
+  }
+  if (emoji) {
+    await reactionDoc(postId, uid).set({
+      uid,
+      emoji,
+      reactedAt: firestore.FieldValue.serverTimestamp(),
+    });
+    await postRef.update({
+      [`reactionCounts.${emoji}`]: firestore.FieldValue.increment(1),
+    });
+  } else {
+    await reactionDoc(postId, uid).delete();
+  }
+}
+
+// ── Comments: posts/{postId}/comments/{commentId}. Flat, oldest-first, cursor
+//    paginated (NOT onSnapshot — "點開才讀"). commentCount denorm is maintained
+//    ONLY by Cloud Functions onCreate/onDelete; this client never writes it.
+
+export type CreateCommentArgs = {
+  postId: string;
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL: string | null;
+  text: string;
+};
+
+export async function createComment(
+  args: CreateCommentArgs,
+): Promise<{ commentId: string }> {
+  const text = args.text.trim();
+  if (!text) throw new Error("留言不能是空白");
+  if (text.length > COMMENT_MAX_LEN) {
+    throw new Error(`留言最多 ${COMMENT_MAX_LEN} 字`);
+  }
+  const ref = await postsCol().doc(args.postId).collection("comments").add({
+    authorUid: args.authorUid,
+    authorName: args.authorName,
+    authorPhotoURL: args.authorPhotoURL,
+    text,
+    createdAt: firestore.FieldValue.serverTimestamp(),
+  });
+  return { commentId: ref.id };
+}
+
+/** Delete a comment. Rules allow the comment author OR the post author. */
+export async function deleteComment(
+  postId: string,
+  commentId: string,
+): Promise<void> {
+  await postsCol().doc(postId).collection("comments").doc(commentId).delete();
+}
+
+export type CommentPage = {
+  comments: Comment[];
+  /** Cursor for the next page; pass back as `after`. Null when exhausted. */
+  cursor: FirebaseFirestoreTypes.QueryDocumentSnapshot | null;
+};
+
+/** One page of comments, oldest-first. Pass the previous page's `cursor` as
+ *  `after` to page forward. Default page size 20 (web parity). */
+export async function listComments(
+  postId: string,
+  pageSize = 20,
+  after: FirebaseFirestoreTypes.QueryDocumentSnapshot | null = null,
+): Promise<CommentPage> {
+  let q = postsCol()
+    .doc(postId)
+    .collection("comments")
+    .orderBy("createdAt", "asc");
+  if (after) q = q.startAfter(after);
+  const snap = await q.limit(pageSize).get();
+  const comments = snap.docs.map((d) => ({
+    ...(d.data() as Omit<Comment, "commentId">),
+    commentId: d.id,
+  }));
+  const cursor =
+    snap.docs.length === pageSize ? snap.docs[snap.docs.length - 1] : null;
+  return { comments, cursor };
 }
