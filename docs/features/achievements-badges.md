@@ -168,3 +168,59 @@ title 兩語系（zh-TW / en），i18n key 建議 `Achievements.{id}.title` / `.
 - **→ Feature Builder**：`/app/achievements` 頁 + 入口 + 進度計算（定義 threshold × lifetime 統計）+ i18n。
 - **→ UI/UX**：徽章視覺（已得/未得/進度條）、分類版面、reduced-motion。
 - **→ PM（後續）**：收 user 對 D 徽章清單的 sign-off；上線後看成就頁開啟率 + 是否拉升遛狗完成率/留存。
+
+---
+
+## ✅ Backend 已交付（Backend session 2026-06-02 — commit 6f7afc0 on main）
+
+**Deployed to `mango-pet-app`**：firestore:rules + functions（onWalkCreatedAchievements / onPetCreatedAchievements / onPostCreatedAchievements / backfillAchievements 新建；onReactionCreated / joinFamilyByCode / aggregateLeaderboards 更新）皆部署成功。**Prod e2e PASS**：真實 user 建 walk → lifetime stats 維護（walkCount/dist/longest）+ 授予 walk-1/dist-5/pet-1；guest 建 walk → 同樣得個人徽章、**無任何社群/排行榜徽章洩漏**（guest gating 正確）；trigger log 無 error。**未新增 index**。
+
+### Feature Builder 直接用
+
+**1. 徽章定義（ACHIEVEMENTS，26 枚 / 7 類）**
+- 從 `@/lib/types` import `ACHIEVEMENTS`（型別 `Achievement`）。canonical 在 `@mango/shared-types`（web + iOS 共用）。每枚：`{ id, category, emoji, metric, threshold, rankPeriod?, guest }`。
+- i18n key 自行用 `Achievements.{id}.title` / `.desc`（zh-TW + en）。**Backend 不提供顯示文案**（只在 push body 用一份內部 title bank）。emoji 已在常數內。
+
+**2. 已得徽章 doc**
+- path `users/{uid}/achievements/{achievementId}`，型別 `AchievementGrant` = `{ achievementId, earnedAt, progressSnapshot? }`。**只在達標寫一次**（idempotent，已得不重寫不重推）。
+- rules：**讀本人、寫限 function**。前端只讀。
+
+**3. lifetime 統計（進度條來源）**
+- path `users/{uid}/stats/lifetime`，型別 `LifetimeStats` = `{ walkCount, totalDistanceKm, totalDurationMin, currentStreak, longestStreak, lastWalkDayIdx, updatedAt }`。涵蓋**全部 walk（family + personal，含 guest）**。rules：讀本人、寫限 function。
+- ⚠️ 連續徽章門檻比對 **`longestStreak`**（永不收回），不是 currentStreak。
+
+**4. 進度怎麼算（未得徽章「47/50」）**
+- 純前端：`進度 = 對應 metric 的 lifetime 值 ÷ achievement.threshold`。metric→來源對照：
+  - `walkCount` / `totalDistanceKm` / `totalDurationMin` / `longestStreak` → 讀 `users/{uid}/stats/lifetime`。
+  - `petCount` → count `pets where ownerUid==uid`（或前端已有的 pets 清單長度）。
+  - `postCount` → count `posts where authorUid==uid`。
+  - `singlePostReactions`（react-10）→ 任一 post 的 `reactionCounts` 加總 ≥ 10（後端已自動授予；前端顯示用）。
+  - `familyJoined`（family-join）→ `user.familyIds.length > 0`。
+  - `leaderboardRank`（rank-*）→ 後端在每日 cron 授予；前端顯示已得/未得即可，不需自算 rank。**rank 類比較邏輯反向**（rank ≤ threshold 才達標；`rankPeriod` 指週榜/月榜）。
+- 同類分階：已得顯示最高階；未得顯示「下一階進度」。
+
+**5. guest gating（對齊 guest-login）**
+- guest 可解：walks / streak / distance / duration / pets（`guest:true` 的徽章）。
+- guest 不可解：family / social / rank（`guest:false`）→ 前端顯示鎖定 + 「綁定帳號解鎖」。判斷用 achievement.guest 旗標。
+- 升級（linkWithCredential）uid 不變 → 已得徽章自動保留。
+
+### 評估 / 授予掛載點（後端，已上線）
+- walk onCreate（`onWalkCreatedAchievements`，**獨立** trigger、不排除 personal-mode）→ 維護 lifetime stats + 評估 walk/dist/dur/streak。
+- pets onCreate（`onPetCreatedAchievements`）→ petCount。
+- posts onCreate（`onPostCreatedAchievements`）→ postCount。
+- reaction onCreate（`onReactionCreated` 內加一段）→ react-10（讀 post reactionCounts）。
+- joinFamilyByCode callable → family-join。
+- aggregateLeaderboards 每日 cron（`runRankAchievements`）→ rank-top10 / rank-1-week / rank-1-month（讀當日寫好的 walker + dog entries）。**未開新高頻 scheduled function**。
+
+### 解鎖 push（§F，已上線）
+- 授予新徽章 → push「🏅 恭喜解鎖『{名}』」；同一次 evaluate 解多枚 → 合併一則「解鎖 N 枚」。
+- opt-out type **`achievement`** 已加進 `ENGAGEMENT_PUSH_TYPES`，Settings 可加開關。push deep-link → `/app/achievements`。
+
+### 上線 backfill（task 7，已部署，**尚未執行**）
+- `backfillAchievements` callable：**admin custom claim 必要**、**預設 dry-run**（`{dryRun:false}` 才實寫、`{targetUid}` 可先測單人）。重建 lifetime stats（從 walks）+ 補發老用戶已達標徽章；**backfill 不發 push**（避免老徽章洗版）。audit `achievementsBackfills/{ISO}`。
+- ⚠️ **上線流程**：先 `{dryRun:true}` 看 audit/log 的 grant 數合理 → 再 `{dryRun:false}` 正式跑一次。需要有人持 admin claim 觸發（比照 cleanupLegacyPaths / gcAnonymousUsers 模式）。
+
+### 注意 / 已知行為
+- ACHIEVEMENTS 數值/品項要調 → 改 `@mango/shared-types` 的 `ACHIEVEMENTS` + `functions/src/achievements.ts` 鏡像（兩份保持同步）+ i18n。functions 不能 import workspace package，故刻意雙份。
+- 進度不存每枚 doc（只存已得）；未得進度前端即時算。
+- 排行榜類在 cron（日級）評估，當天遛狗後最快隔天 00:30 才授予 rank 徽章（設計如此，低頻控成本）。
