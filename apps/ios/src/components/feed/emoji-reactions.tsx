@@ -92,7 +92,10 @@ export function EmojiReactions({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={mine === "❤️" ? "取消愛心" : "按愛心"}
+          accessibilityHint="長按選擇其他反應"
           onPress={() => apply(mine === "❤️" ? null : "❤️")}
+          onLongPress={() => setTrayOpen(true)}
+          delayLongPress={300}
           style={({ pressed }) => [
             styles.mainBtn,
             mine ? styles.mainBtnOn : null,

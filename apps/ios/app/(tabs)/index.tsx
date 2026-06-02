@@ -22,6 +22,7 @@ import { useFeedData } from "@/lib/feed-data";
 import { useAuth } from "@/state/auth-context";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
+import { PhotoLightbox } from "@/components/feed/photo-lightbox";
 import { HomeTopBar } from "@/components/home/home-top-bar";
 import { StoriesBar } from "@/components/home/stories-bar";
 import { FeedSectionHeader } from "@/components/home/feed-section-header";
@@ -45,6 +46,7 @@ export default function HomeScreen() {
     removePost,
   } = useFeedData({ home: true });
   const [composerOpen, setComposerOpen] = useState(false);
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
 
   const petNameById = useMemo(
     () => Object.fromEntries(pets.map((p) => [p.petId, p.name])),
@@ -116,6 +118,7 @@ export default function HomeScreen() {
                 post={p}
                 currentUid={user?.uid ?? ""}
                 petNameById={petNameById}
+                onOpenPhotos={(photos, index) => setLightbox({ photos, index })}
                 onDeleted={() => removePost(p.postId)}
               />
             ))}
@@ -129,6 +132,15 @@ export default function HomeScreen() {
         onClose={() => setComposerOpen(false)}
         onPosted={refresh}
       />
+
+      {lightbox ? (
+        <PhotoLightbox
+          photos={lightbox.photos}
+          initialIndex={lightbox.index}
+          open
+          onClose={() => setLightbox(null)}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
