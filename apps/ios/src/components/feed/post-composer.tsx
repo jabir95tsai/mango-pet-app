@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   Pressable,
@@ -18,6 +19,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 import type { Pet, Visibility } from "@mango/shared-types";
 
 import { createPost } from "@/lib/posts";
@@ -80,6 +82,25 @@ export function PostComposer({
 
   function removePhoto(idx: number) {
     setPhotoUris((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function pickFromLibrary() {
+    const remaining = MAX_PHOTOS - photoUris.length;
+    if (remaining <= 0) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("需要相簿權限", "請到設定開啟相簿存取權限。");
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
+      quality: 1,
+    });
+    if (res.canceled) return;
+    const uris = res.assets.map((a) => a.uri);
+    setPhotoUris((prev) => [...prev, ...uris].slice(0, MAX_PHOTOS));
   }
 
   async function handlePublish() {
@@ -150,20 +171,36 @@ export function PostComposer({
                 </View>
               ) : null}
 
-              <Pressable
-                accessibilityRole="button"
-                disabled={photoUris.length >= MAX_PHOTOS}
-                onPress={() => setCameraOpen(true)}
-                style={({ pressed }) => [
-                  styles.addPhoto,
-                  pressed && styles.pressed,
-                  photoUris.length >= MAX_PHOTOS && styles.disabled,
-                ]}
-              >
-                <Text style={styles.addPhotoText}>
-                  {`📷  加照片 (${photoUris.length}/${MAX_PHOTOS})`}
-                </Text>
-              </Pressable>
+              <View style={styles.addPhotoRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="拍照"
+                  disabled={photoUris.length >= MAX_PHOTOS}
+                  onPress={() => setCameraOpen(true)}
+                  style={({ pressed }) => [
+                    styles.addPhoto,
+                    pressed && styles.pressed,
+                    photoUris.length >= MAX_PHOTOS && styles.disabled,
+                  ]}
+                >
+                  <Text style={styles.addPhotoText}>📷  拍照</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="從相簿選擇"
+                  disabled={photoUris.length >= MAX_PHOTOS}
+                  onPress={pickFromLibrary}
+                  style={({ pressed }) => [
+                    styles.addPhoto,
+                    pressed && styles.pressed,
+                    photoUris.length >= MAX_PHOTOS && styles.disabled,
+                  ]}
+                >
+                  <Text style={styles.addPhotoText}>
+                    {`🖼️  相簿 (${photoUris.length}/${MAX_PHOTOS})`}
+                  </Text>
+                </Pressable>
+              </View>
 
               {pets.length > 0 ? (
                 <>
@@ -281,8 +318,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   removeText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  addPhotoRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
   addPhoto: {
-    marginTop: spacing.md,
+    flex: 1,
     height: 44,
     borderRadius: radius.md,
     borderWidth: 1,
