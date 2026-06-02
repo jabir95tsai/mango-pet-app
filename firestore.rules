@@ -85,6 +85,23 @@ service cloud.firestore {
         allow read, write: if request.auth.uid == uid;
       }
 
+      // ── Achievements / badges (gamification) ──
+      // Granted badge docs (users/{uid}/achievements/{achievementId}) +
+      // the lifetime stats doc (users/{uid}/stats/lifetime). Both are
+      // server-authoritative: the owner can READ their own, but ALL writes
+      // go through Cloud Functions (Admin SDK bypasses rules) so a client
+      // can't self-grant a badge or inflate their walk stats. Spec
+      // docs/features/achievements-badges.md §B/§C.
+      match /achievements/{achievementId} {
+        allow read: if request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      match /stats/{statId} {
+        allow read: if request.auth.uid == uid;
+        allow write: if false;
+      }
+
       match /photoDownloadState/{photoAssetId} {
         allow read: if request.auth.uid == uid;
         allow create, update: if request.auth.uid == uid
@@ -427,6 +444,15 @@ service cloud.firestore {
     // records the dry-run/real flag + scanned/eligible/reaped counts + a
     // sample of reaped uids. No client surface. Spec guest-login.md §F.
     match /anonymousGc/{id} {
+      allow read, write: if false;
+    }
+
+    // ── achievementsBackfills audit log (admin/server-only) ──
+    // Written by the backfillAchievements callable via Admin SDK. One doc
+    // per real (non-dry-run) backfill keyed by ISO; records processed /
+    // granted counts + a sample. No client surface. Spec
+    // achievements-badges.md §F.
+    match /achievementsBackfills/{id} {
       allow read, write: if false;
     }
 

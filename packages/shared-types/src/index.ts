@@ -361,3 +361,128 @@ export type ExtractedReceipt = {
   category?: ExpenseCategory;
   items?: string[];
 };
+
+// ── Achievements / badges (gamification) ──
+// Spec: docs/features/achievements-badges.md. This is the cross-platform
+// single source of truth for the badge catalogue; the Cloud Functions
+// keep a byte-equivalent mirror (ACHIEVEMENTS_FN) because the functions
+// package can't import this workspace package — see functions/src/
+// achievements.ts. KEEP THE TWO IN SYNC.
+
+/** Metric a badge is measured against. All the lifetime-stat metrics read
+ *  from `users/{uid}/stats/lifetime` (covers ALL walks — family + personal,
+ *  guests included), NOT the leaderboard entry (which is family-only +
+ *  guest-excluded). `leaderboardRank` / `singlePostReactions` read their
+ *  own sources (see ACHIEVEMENTS notes + spec §D 資料來源備註). */
+export type AchievementMetric =
+  | "walkCount"
+  | "totalDistanceKm"
+  | "totalDurationMin"
+  | "longestStreak"
+  | "petCount"
+  | "familyJoined"
+  | "postCount"
+  | "singlePostReactions"
+  | "leaderboardRank";
+
+export type AchievementCategory =
+  | "walks"
+  | "streak"
+  | "distance"
+  | "duration"
+  | "pets"
+  | "family"
+  | "social"
+  | "rank";
+
+export type Achievement = {
+  /** Stable id — doc id under users/{uid}/achievements/ + i18n key root
+   *  `Achievements.{id}.title` / `.desc`. */
+  id: string;
+  category: AchievementCategory;
+  emoji: string;
+  /** The lifetime/source metric this badge measures. */
+  metric: AchievementMetric;
+  /** Inclusive lower bound: earned when `metric value >= threshold`. For
+   *  `leaderboardRank` the comparison INVERTS (earned when `rank <=
+   *  threshold` — e.g. threshold 1 = #1, threshold 10 = top-10) and
+   *  `rankPeriod` says which board period to check. */
+  threshold: number;
+  /** For rank badges only: which leaderboard period the rank applies to. */
+  rankPeriod?: "weekly" | "monthly";
+  /** Can a guest (anonymous) account earn this? Community + rank badges
+   *  are false (guests don't post / aren't on the board). Aligns with
+   *  guest-login.md. */
+  guest: boolean;
+};
+
+/** Badge catalogue v1 — 26 badges / 7 categories (spec §D, 2026-06-02).
+ *  Order is display order within a category. Thresholds/items are
+ *  user-tunable; changing them only touches this array + the functions
+ *  mirror + i18n. */
+export const ACHIEVEMENTS: readonly Achievement[] = [
+  // 遛狗里程碑 (walkCount, guest ✓)
+  { id: "walk-1", category: "walks", emoji: "🐾", metric: "walkCount", threshold: 1, guest: true },
+  { id: "walk-10", category: "walks", emoji: "🦴", metric: "walkCount", threshold: 10, guest: true },
+  { id: "walk-50", category: "walks", emoji: "🦮", metric: "walkCount", threshold: 50, guest: true },
+  { id: "walk-100", category: "walks", emoji: "🏅", metric: "walkCount", threshold: 100, guest: true },
+  { id: "walk-365", category: "walks", emoji: "🏆", metric: "walkCount", threshold: 365, guest: true },
+  // 連續天數 (longestStreak — never revoked, guest ✓)
+  { id: "streak-3", category: "streak", emoji: "🔥", metric: "longestStreak", threshold: 3, guest: true },
+  { id: "streak-7", category: "streak", emoji: "🔥", metric: "longestStreak", threshold: 7, guest: true },
+  { id: "streak-14", category: "streak", emoji: "🔥", metric: "longestStreak", threshold: 14, guest: true },
+  { id: "streak-30", category: "streak", emoji: "🔥", metric: "longestStreak", threshold: 30, guest: true },
+  { id: "streak-100", category: "streak", emoji: "💯", metric: "longestStreak", threshold: 100, guest: true },
+  // 累計里程 (totalDistanceKm, guest ✓)
+  { id: "dist-5", category: "distance", emoji: "📏", metric: "totalDistanceKm", threshold: 5, guest: true },
+  { id: "dist-25", category: "distance", emoji: "📏", metric: "totalDistanceKm", threshold: 25, guest: true },
+  { id: "dist-50", category: "distance", emoji: "🥾", metric: "totalDistanceKm", threshold: 50, guest: true },
+  { id: "dist-100", category: "distance", emoji: "🗺️", metric: "totalDistanceKm", threshold: 100, guest: true },
+  { id: "dist-250", category: "distance", emoji: "🌍", metric: "totalDistanceKm", threshold: 250, guest: true },
+  // 累計時長 (totalDurationMin, guest ✓)
+  { id: "time-600", category: "duration", emoji: "⏱️", metric: "totalDurationMin", threshold: 600, guest: true },
+  { id: "time-3000", category: "duration", emoji: "⏱️", metric: "totalDurationMin", threshold: 3000, guest: true },
+  // 寵物 (petCount, guest ✓)
+  { id: "pet-1", category: "pets", emoji: "🐶", metric: "petCount", threshold: 1, guest: true },
+  { id: "pet-3", category: "pets", emoji: "🏠", metric: "petCount", threshold: 3, guest: true },
+  // 家庭 (familyJoined, guest ✗)
+  { id: "family-join", category: "family", emoji: "👨‍👩‍👧", metric: "familyJoined", threshold: 1, guest: false },
+  // 社群 (guest ✗)
+  { id: "post-1", category: "social", emoji: "📸", metric: "postCount", threshold: 1, guest: false },
+  { id: "post-10", category: "social", emoji: "✍️", metric: "postCount", threshold: 10, guest: false },
+  { id: "react-10", category: "social", emoji: "❤️", metric: "singlePostReactions", threshold: 10, guest: false },
+  // 排行榜 (guest ✗)
+  { id: "rank-top10", category: "rank", emoji: "📊", metric: "leaderboardRank", threshold: 10, rankPeriod: "weekly", guest: false },
+  { id: "rank-1-week", category: "rank", emoji: "👑", metric: "leaderboardRank", threshold: 1, rankPeriod: "weekly", guest: false },
+  { id: "rank-1-month", category: "rank", emoji: "🏆", metric: "leaderboardRank", threshold: 1, rankPeriod: "monthly", guest: false },
+];
+
+/** Lifetime walk stats — `users/{uid}/stats/lifetime`. Covers ALL of a
+ *  user's walks (family + personal; guests included), maintained
+ *  incrementally by the walk onCreate trigger. The achievement evaluator
+ *  reads these for the walk/distance/duration/streak metrics. Spec §C. */
+export type LifetimeStats = {
+  walkCount: number;
+  totalDistanceKm: number;
+  totalDurationMin: number;
+  /** Consecutive Taipei-day streak ending at `lastWalkDayIdx`. */
+  currentStreak: number;
+  /** Historical max of currentStreak — NEVER decreases (streak badges use
+   *  this so a badge once earned is never revoked). Spec §D ⚠️. */
+  longestStreak: number;
+  /** Taipei day-index (floor((ms + 8h)/86400000)) of the most recent walk;
+   *  drives the O(1) streak update. */
+  lastWalkDayIdx: number;
+  updatedAt: Timestamp;
+};
+
+/** Granted-badge doc — `users/{uid}/achievements/{achievementId}`. Written
+ *  once when earned (idempotent), only by Cloud Functions. Progress for
+ *  un-earned badges is computed client-side from ACHIEVEMENTS threshold +
+ *  current LifetimeStats, so it is NOT stored per badge. Spec §B. */
+export type AchievementGrant = {
+  achievementId: string;
+  earnedAt: Timestamp;
+  /** The metric value at grant time (for "earned at 52 walks" display). */
+  progressSnapshot?: number;
+};

@@ -37,6 +37,14 @@ import {
   pairId,
   type CreateFriendshipResult,
 } from "./friendship-helpers";
+import {
+  ACHIEVEMENTS,
+  ACHIEVEMENT_TITLES,
+  applyWalkToLifetimeStats,
+  evaluateAchievements,
+  type AchievementDef,
+  type AchievementMetrics,
+} from "./achievements";
 
 initializeApp();
 
@@ -415,8 +423,83 @@ export const aggregateLeaderboards = onSchedule(
     } catch (err) {
       logger.error("runDogLeaderboardAggregation failed", err as Error);
     }
+
+    // Rank achievements (rank-top10 / rank-1-week / rank-1-month). Reads the
+    // entries just written above and evaluates the top users. Isolated so a
+    // failure can't undo the aggregation. Low frequency (daily cron) per
+    // spec §C "排行榜類在 aggregateLeaderboards cron 評估即可".
+    try {
+      await runRankAchievements(weekKey, monthKey);
+    } catch (err) {
+      logger.error("runRankAchievements failed", err as Error);
+    }
   },
 );
+
+/** Evaluate the leaderboard-rank badges against the freshly-written
+ *  entries. rank-top10 / rank-1-week come from the WEEKLY walker board OR
+ *  weekly dog board (spec: "任一週 weekly 人榜或狗榜 rank ≤ 10"); rank-1-month
+ *  from the MONTHLY walker board. Ranks are computed by sorting entries on
+ *  totalScore DESC (same ordering the writers use). Guests are already
+ *  excluded from both boards, so they can't appear here. */
+async function runRankAchievements(
+  weekKey: string,
+  monthKey: string,
+): Promise<void> {
+  // Rank a collection's entries by totalScore DESC → uid→rank (1-indexed).
+  // `ownerKey` extracts the user uid from an entry (walker entries are keyed
+  // by uid; dog entries denormalise ownerUid).
+  const rankByScore = (
+    docs: FirebaseFirestore.QueryDocumentSnapshot[],
+    ownerKey: (d: FirebaseFirestore.DocumentData) => string | undefined,
+  ): Map<string, number> => {
+    const rows = docs
+      .map((d) => ({ uid: ownerKey(d.data()), score: Number(d.data().totalScore) || 0 }))
+      .filter((r): r is { uid: string; score: number } => !!r.uid)
+      .sort((a, b) => b.score - a.score);
+    const out = new Map<string, number>();
+    // Dense 1-indexed rank; a user's BEST rank wins if they own multiple
+    // dog entries (take the first/highest).
+    rows.forEach((r, i) => {
+      const rank = i + 1;
+      if (!out.has(r.uid) || rank < (out.get(r.uid) as number)) out.set(r.uid, rank);
+    });
+    return out;
+  };
+
+  const [weeklyWalker, monthlyWalker, weeklyDog] = await Promise.all([
+    db.collection(`leaderboards/${weekKey}/entries`).get(),
+    db.collection(`leaderboards/${monthKey}/entries`).get(),
+    db.collection(`dogLeaderboards/${weekKey}/entries`).get(),
+  ]);
+
+  const weeklyWalkerRanks = rankByScore(weeklyWalker.docs, (d) => d.uid as string);
+  const monthlyWalkerRanks = rankByScore(monthlyWalker.docs, (d) => d.uid as string);
+  const weeklyDogRanks = rankByScore(weeklyDog.docs, (d) => d.ownerUid as string);
+
+  // Best weekly rank per uid = min(walker weekly, dog weekly).
+  const weeklyBest = new Map<string, number>();
+  for (const [uid, r] of weeklyWalkerRanks) weeklyBest.set(uid, r);
+  for (const [uid, r] of weeklyDogRanks) {
+    if (!weeklyBest.has(uid) || r < (weeklyBest.get(uid) as number)) {
+      weeklyBest.set(uid, r);
+    }
+  }
+
+  // Only the users who could possibly earn a rank badge need evaluating:
+  // weekly rank ≤ 10 (covers rank-top10 + rank-1-week) and monthly rank == 1.
+  const toEval = new Set<string>();
+  for (const [uid, r] of weeklyBest) if (r <= 10) toEval.add(uid);
+  for (const [uid, r] of monthlyWalkerRanks) if (r === 1) toEval.add(uid);
+
+  for (const uid of toEval) {
+    await runAchievementEval(uid, {
+      weeklyRank: weeklyBest.get(uid),
+      monthlyRank: monthlyWalkerRanks.get(uid),
+    });
+  }
+  logger.info(`runRankAchievements: evaluated ${toEval.size} top users`);
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // recomputeWalkerLeaderboards — onCreate(walks/{walkId}) realtime
@@ -1224,6 +1307,24 @@ export const onReactionCreated = onDocumentCreated(
     if (!postSnap.exists) return;
     const post = postSnap.data() ?? {};
 
+    // react-10 achievement: the POST AUTHOR earns it when this single post's
+    // total reactions cross 10. Evaluate before the push gate so it runs on
+    // every reaction (incl. self-reactions / when the author opted out of
+    // reaction pushes). reactionCounts is denormalised on the post doc.
+    const postAuthorUid = post.authorUid as string | undefined;
+    if (postAuthorUid) {
+      const counts = (post.reactionCounts ?? {}) as Record<string, number>;
+      const totalReactions = Object.values(counts).reduce(
+        (s, n) => s + (Number(n) || 0),
+        0,
+      );
+      if (totalReactions >= 10) {
+        await runAchievementEval(postAuthorUid, {
+          singlePostReactions: totalReactions,
+        });
+      }
+    }
+
     const target = await resolveAuthorPushTarget(
       post.authorUid as string,
       reactorUid,
@@ -1304,6 +1405,192 @@ export const onReactionCreated = onDocumentCreated(
     }
     logger.info(
       `onReactionCreated: post=${postId} reactor=${reactorUid} others=${others} sent`,
+    );
+  },
+);
+
+// ═════════════════════════════════════════════════════════════════════
+// Achievements / badges — lifetime stats + evaluation + unlock push
+// Spec: docs/features/achievements-badges.md
+//
+// - Lifetime stats (users/{uid}/stats/lifetime) cover ALL of a user's
+//   walks (family + personal; guests included), maintained incrementally
+//   by onWalkCreatedAchievements. ⚠️ This is a SEPARATE trigger from
+//   recomputeWalkerLeaderboards (which bails on personal-mode) — badges
+//   must count personal walks too.
+// - evaluateAchievements (./achievements) grants newly-met badge docs once
+//   and returns the fresh set; we then send ONE merged unlock push.
+// - Mounted on walk / pets / post onCreate + family join callable + the
+//   aggregateLeaderboards cron (rank). No new high-frequency scheduled fn.
+// ═════════════════════════════════════════════════════════════════════
+
+const ACHIEVEMENT_PUSH_TYPE = "achievement";
+
+/** Read a user's profile push-eligibility for achievement unlock pushes.
+ *  Unlike resolveAuthorPushTarget, the recipient IS the actor (badges are
+ *  self-notifications), so there's no not-self gate. Returns null to skip
+ *  (no tokens / opted out). */
+async function resolveSelfPushTarget(
+  uid: string,
+  pushType: string,
+): Promise<{ tokens: string[]; locale?: string } | null> {
+  const snap = await db.doc(`users/${uid}`).get();
+  if (!snap.exists) return null;
+  const u = snap.data() ?? {};
+  const tokens = ((u.fcmTokens ?? []) as string[]).filter(Boolean);
+  if (tokens.length === 0) return null;
+  const optOut = (u.pushPrefs?.engagementOptOut ?? []) as string[];
+  if (optOut.includes(pushType)) return null;
+  return { tokens, locale: u.locale as string | undefined };
+}
+
+/** Send ONE merged unlock push for a batch of newly-earned badges (spec §F
+ *  "同一次 evaluate 解多枚時可合併一則"). Single badge → name it; multiple →
+ *  "解鎖 N 枚成就". Honours opt-out + token gates via resolveSelfPushTarget. */
+async function sendAchievementUnlockPush(
+  uid: string,
+  badges: AchievementDef[],
+): Promise<void> {
+  if (badges.length === 0) return;
+  const target = await resolveSelfPushTarget(uid, ACHIEVEMENT_PUSH_TYPE);
+  if (!target) return;
+
+  let copy;
+  if (badges.length === 1) {
+    const t = ACHIEVEMENT_TITLES[badges[0].id] ?? { zh: badges[0].id, en: badges[0].id };
+    copy = pushCopy(
+      target.locale,
+      { name: t.zh, nameEn: t.en, emoji: badges[0].emoji },
+      { title: "🏅 解鎖新成就", body: "恭喜解鎖「{name}」{emoji}" },
+      { title: "🏅 Achievement unlocked", body: "You earned “{nameEn}” {emoji}" },
+    );
+  } else {
+    copy = pushCopy(
+      target.locale,
+      { n: badges.length },
+      { title: "🏅 解鎖新成就", body: "你一次解鎖了 {n} 枚成就，來看看吧！" },
+      { title: "🏅 Achievements unlocked", body: "You unlocked {n} achievements — come take a look!" },
+    );
+  }
+
+  await sendEngagementPush({
+    uid,
+    tokens: target.tokens,
+    body: copy,
+    data: { type: ACHIEVEMENT_PUSH_TYPE, badgeIds: badges.map((b) => b.id).join(",") },
+    link: "/app/achievements",
+  });
+}
+
+/** Is this uid a guest (anonymous)? Reads the denormalised users doc flag
+ *  (set by upsertUser; cleared on upgrade). Used to gate non-guest badges
+ *  in the evaluator. */
+async function isGuestUser(uid: string): Promise<boolean> {
+  const snap = await db.doc(`users/${uid}`).get();
+  return snap.data()?.isGuest === true;
+}
+
+/** Shared wrapper: evaluate achievements for a uid with the given metrics,
+ *  wiring guest-gating + the merged unlock push. Swallows nothing — the
+ *  evaluator logs its own errors. */
+async function runAchievementEval(
+  uid: string,
+  metrics: AchievementMetrics,
+): Promise<void> {
+  const guest = await isGuestUser(uid);
+  await evaluateAchievements(db, uid, metrics, {
+    isGuest: guest,
+    sendPush: sendAchievementUnlockPush,
+  });
+}
+
+/** onCreate(walks/{walkId}) — achievements path. Maintains lifetime stats
+ *  (ALL walks incl. personal-mode + guests) then evaluates walk/distance/
+ *  duration/streak badges. Separate from recomputeWalkerLeaderboards which
+ *  deliberately bails on personal-mode. */
+export const onWalkCreatedAchievements = onDocumentCreated(
+  {
+    document: "walks/{walkId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const walk = event.data?.data();
+    if (!walk) return;
+    const uid = (walk.walkerUid as string) || (walk.ownerUid as string);
+    if (!uid) return;
+
+    const startedAtMs =
+      (walk.startedAt as Timestamp | undefined)?.toMillis?.() ?? Date.now();
+    const stats = await applyWalkToLifetimeStats(db, uid, {
+      distanceKm: Number(walk.distanceKm) || 0,
+      durationMin: Number(walk.durationMin) || 0,
+      startedAtMs,
+    });
+
+    await runAchievementEval(uid, {
+      walkCount: stats.walkCount,
+      totalDistanceKm: stats.totalDistanceKm,
+      totalDurationMin: stats.totalDurationMin,
+      longestStreak: stats.longestStreak,
+    });
+
+    logger.info(
+      `onWalkCreatedAchievements: uid=${uid} walk=${event.params.walkId} ` +
+        `count=${stats.walkCount} dist=${stats.totalDistanceKm} ` +
+        `longest=${stats.longestStreak}`,
+    );
+  },
+);
+
+/** onCreate(pets/{petId}) — pet-count badges. Counts pets the user owns
+ *  (ownerUid). guest ✓ (pet badges are personal). */
+export const onPetCreatedAchievements = onDocumentCreated(
+  {
+    document: "pets/{petId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const pet = event.data?.data();
+    if (!pet) return;
+    const uid = pet.ownerUid as string | undefined;
+    if (!uid) return;
+    const petsSnap = await db
+      .collection("pets")
+      .where("ownerUid", "==", uid)
+      .get();
+    await runAchievementEval(uid, { petCount: petsSnap.size });
+    logger.info(
+      `onPetCreatedAchievements: uid=${uid} pet=${event.params.petId} petCount=${petsSnap.size}`,
+    );
+  },
+);
+
+/** onCreate(posts/{postId}) — post-count badges (guest ✗; guests can't
+ *  post anyway per guest-login rules). The react-10 badge is evaluated on
+ *  the reaction trigger instead (it reads the post's reactionCounts). */
+export const onPostCreatedAchievements = onDocumentCreated(
+  {
+    document: "posts/{postId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const post = event.data?.data();
+    if (!post) return;
+    const uid = post.authorUid as string | undefined;
+    if (!uid) return;
+    const postsSnap = await db
+      .collection("posts")
+      .where("authorUid", "==", uid)
+      .get();
+    await runAchievementEval(uid, { postCount: postsSnap.size });
+    logger.info(
+      `onPostCreatedAchievements: uid=${uid} post=${event.params.postId} postCount=${postsSnap.size}`,
     );
   },
 );
@@ -1712,6 +1999,10 @@ export const joinFamilyByCode = onCall(
       { merge: true },
     );
     await batch.commit();
+
+    // family-join achievement. Guests can't reach here (isGuestAuth gate
+    // above), so isGuest is false — but runAchievementEval re-checks anyway.
+    await runAchievementEval(uid, { familyJoined: true });
 
     return { familyId: familyDoc.id, alreadyMember: false };
   },
@@ -4093,5 +4384,225 @@ export const gcAnonymousUsers = onSchedule(
         `anon=${anonymous} eligible=${eligible} reaped=${reaped} ` +
         `active=${skippedActive} upgraded=${skippedUpgraded}`,
     );
+  },
+);
+
+// ═════════════════════════════════════════════════════════════════════
+// backfillAchievements — one-shot admin callable
+// Spec: docs/features/achievements-badges.md §F open-question #4 + task 7.
+//
+// Grants existing users the badges they ALREADY qualify for, so the
+// achievements page isn't empty on launch. For each user: rebuild the
+// lifetime stats doc from their walks (idempotent recompute), derive
+// petCount / postCount / familyJoined / best ranks, then run the SAME
+// evaluateAchievements path the live triggers use (so grants + the merged
+// unlock push are identical to organic unlocks).
+//
+// Conservative ops posture (mirrors cleanupLegacyPaths / gcAnonymousUsers):
+//   - admin custom claim required
+//   - DRY-RUN by default — must pass { dryRun: false } to actually write
+//   - optional { targetUid } to test on one user first
+//   - audit doc achievementsBackfills/{ISO}
+//   - dry-run does NOT send pushes (evaluate dryRun short-circuits before
+//     any write/push)
+// ═════════════════════════════════════════════════════════════════════
+
+/** Recompute a user's lifetime stats doc from ALL their walks (family +
+ *  personal). Idempotent — overwrites the doc with the derived truth. Used
+ *  by the backfill; the live path maintains it incrementally instead. */
+async function rebuildLifetimeStats(
+  uid: string,
+  write: boolean,
+): Promise<{
+  walkCount: number;
+  totalDistanceKm: number;
+  totalDurationMin: number;
+  currentStreak: number;
+  longestStreak: number;
+}> {
+  const snap = await db.collection("walks").where("walkerUid", "==", uid).get();
+  let walkCount = 0;
+  let totalDistanceKm = 0;
+  let totalDurationMin = 0;
+  const dayIdxSet = new Set<number>();
+  for (const d of snap.docs) {
+    const w = d.data();
+    walkCount += 1;
+    totalDistanceKm += Number(w.distanceKm) || 0;
+    totalDurationMin += Number(w.durationMin) || 0;
+    const ms = (w.startedAt as Timestamp | undefined)?.toMillis?.();
+    if (ms != null) dayIdxSet.add(taipeiDayIndexLocal(ms));
+  }
+  totalDistanceKm = Math.round(totalDistanceKm * 100) / 100;
+
+  // Longest + current streak from the set of distinct walk-days.
+  const days = Array.from(dayIdxSet).sort((a, b) => a - b);
+  let longestStreak = 0;
+  let run = 0;
+  let lastDay: number | null = null;
+  for (const day of days) {
+    if (lastDay != null && day === lastDay + 1) run += 1;
+    else run = 1;
+    if (run > longestStreak) longestStreak = run;
+    lastDay = day;
+  }
+  // currentStreak = run ending at the most recent walk-day (today or
+  // yesterday in Taipei, else broken → but we keep the trailing run length
+  // for the doc; streak BADGES use longestStreak so this is informational).
+  const todayIdx = taipeiDayIndexLocal(Date.now());
+  let currentStreak = 0;
+  if (lastDay != null && (lastDay === todayIdx || lastDay === todayIdx - 1)) {
+    currentStreak = run;
+  }
+
+  if (write) {
+    await db.doc(`users/${uid}/stats/lifetime`).set(
+      {
+        walkCount,
+        totalDistanceKm,
+        totalDurationMin,
+        currentStreak,
+        longestStreak,
+        lastWalkDayIdx: lastDay ?? 0,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  }
+  return { walkCount, totalDistanceKm, totalDurationMin, currentStreak, longestStreak };
+}
+
+/** Local copy of taipeiDayIndex (achievements.ts) — index.ts already has
+ *  taipeiDayIdx but it's defined later in the file scope; reuse that one. */
+function taipeiDayIndexLocal(ms: number): number {
+  return taipeiDayIdx(ms);
+}
+
+export const backfillAchievements = onCall(
+  {
+    region: FUNCTION_REGION,
+    cors: true,
+    timeoutSeconds: 540,
+    memory: "512MiB",
+  },
+  async (req) => {
+    if (req.auth?.token?.admin !== true) {
+      throw new HttpsError("permission-denied", "admin custom claim required");
+    }
+    const dryRun = req.data?.dryRun !== false; // default true
+    const targetUid =
+      (req.data?.targetUid as string | undefined)?.trim() || undefined;
+
+    const weekKey = isoWeekLabel(new Date());
+    const monthKey = monthLabel(new Date());
+
+    // Precompute rank maps once (shared across all users).
+    const [weeklyWalker, monthlyWalker, weeklyDog] = await Promise.all([
+      db.collection(`leaderboards/${weekKey}/entries`).get(),
+      db.collection(`leaderboards/${monthKey}/entries`).get(),
+      db.collection(`dogLeaderboards/${weekKey}/entries`).get(),
+    ]);
+    const rankMap = (
+      docs: FirebaseFirestore.QueryDocumentSnapshot[],
+      ownerKey: (d: FirebaseFirestore.DocumentData) => string | undefined,
+    ): Map<string, number> => {
+      const rows = docs
+        .map((d) => ({ uid: ownerKey(d.data()), score: Number(d.data().totalScore) || 0 }))
+        .filter((r): r is { uid: string; score: number } => !!r.uid)
+        .sort((a, b) => b.score - a.score);
+      const out = new Map<string, number>();
+      rows.forEach((r, i) => {
+        const rank = i + 1;
+        if (!out.has(r.uid) || rank < (out.get(r.uid) as number)) out.set(r.uid, rank);
+      });
+      return out;
+    };
+    const weeklyWalkerRanks = rankMap(weeklyWalker.docs, (d) => d.uid as string);
+    const monthlyWalkerRanks = rankMap(monthlyWalker.docs, (d) => d.uid as string);
+    const weeklyDogRanks = rankMap(weeklyDog.docs, (d) => d.ownerUid as string);
+
+    const uids = targetUid
+      ? [targetUid]
+      : (await db.collection("users").get()).docs.map((d) => d.id);
+
+    let processed = 0;
+    let usersWithNewGrants = 0;
+    let totalGranted = 0;
+    const sample: Array<{ uid: string; granted: string[] }> = [];
+
+    for (const uid of uids) {
+      processed++;
+      const userSnap = await db.doc(`users/${uid}`).get();
+      const u = userSnap.data() ?? {};
+      const isGuest = u.isGuest === true;
+
+      const stats = await rebuildLifetimeStats(uid, !dryRun);
+
+      const [petsSnap, postsSnap] = await Promise.all([
+        db.collection("pets").where("ownerUid", "==", uid).get(),
+        db.collection("posts").where("authorUid", "==", uid).get(),
+      ]);
+      const familyJoined =
+        ((u.familyIds as string[] | undefined) ?? []).length > 0;
+
+      const weeklyRank = (() => {
+        const a = weeklyWalkerRanks.get(uid);
+        const b = weeklyDogRanks.get(uid);
+        if (a == null) return b;
+        if (b == null) return a;
+        return Math.min(a, b);
+      })();
+
+      const metrics: AchievementMetrics = {
+        walkCount: stats.walkCount,
+        totalDistanceKm: stats.totalDistanceKm,
+        totalDurationMin: stats.totalDurationMin,
+        longestStreak: stats.longestStreak,
+        petCount: petsSnap.size,
+        postCount: postsSnap.size,
+        familyJoined,
+        weeklyRank,
+        monthlyRank: monthlyWalkerRanks.get(uid),
+      };
+
+      const res = await evaluateAchievements(db, uid, metrics, {
+        isGuest,
+        // Backfill stays silent — don't spam every existing user with a
+        // push for badges they earned long ago.
+        sendPush: undefined,
+        dryRun,
+      });
+      if (res.newlyGranted.length > 0) {
+        usersWithNewGrants++;
+        totalGranted += res.newlyGranted.length;
+        if (sample.length < 50) sample.push({ uid, granted: res.newlyGranted });
+      }
+    }
+
+    const isoNow = new Date().toISOString();
+    const summary = {
+      ranAt: Timestamp.now(),
+      dryRun,
+      targetUid: targetUid ?? null,
+      processed,
+      usersWithNewGrants,
+      totalGranted,
+      sample,
+    };
+    if (!dryRun) {
+      await db.doc(`achievementsBackfills/${isoNow}`).set(summary);
+    }
+    logger.info(
+      `backfillAchievements done — dryRun=${dryRun} processed=${processed} ` +
+        `usersWithNewGrants=${usersWithNewGrants} totalGranted=${totalGranted}`,
+    );
+    return {
+      ok: true,
+      dryRun,
+      processed,
+      usersWithNewGrants,
+      totalGranted,
+      sample,
+    };
   },
 );

@@ -1,5 +1,9 @@
 import type { Timestamp } from "firebase/firestore";
 import type {
+  Achievement,
+  AchievementCategory,
+  AchievementGrant,
+  AchievementMetric,
   Comment,
   Expense,
   ExpenseCategory,
@@ -8,6 +12,7 @@ import type {
   ExtractedReceipt,
   FeedingData,
   Gender,
+  LifetimeStats,
   HealthRecord,
   HealthRecordData,
   HealthRecordInput,
@@ -30,6 +35,7 @@ import type {
   WeightData,
 } from "@mango/shared-types";
 import {
+  ACHIEVEMENTS,
   COMMENT_MAX_LEN,
   EXPENSE_CATEGORIES,
   NOTIFY_BEFORE_MINUTES,
@@ -41,6 +47,10 @@ import {
 // working unchanged. The P2 batch (Pet edit / reminders / expenses / health)
 // joined Pet/Walk/Post here on 2026-06-02.
 export type {
+  Achievement,
+  AchievementCategory,
+  AchievementGrant,
+  AchievementMetric,
   Comment,
   Expense,
   ExpenseCategory,
@@ -49,6 +59,7 @@ export type {
   ExtractedReceipt,
   FeedingData,
   Gender,
+  LifetimeStats,
   HealthRecord,
   HealthRecordData,
   HealthRecordInput,
@@ -71,6 +82,7 @@ export type {
   WeightData,
 };
 export {
+  ACHIEVEMENTS,
   COMMENT_MAX_LEN,
   EXPENSE_CATEGORIES,
   NOTIFY_BEFORE_MINUTES,
@@ -166,6 +178,7 @@ export const ENGAGEMENT_PUSH_TYPES = [
   "family-milestone",
   "post-comment",
   "post-reaction",
+  "achievement",
 ] as const;
 export type EngagementPushType = (typeof ENGAGEMENT_PUSH_TYPES)[number];
 
