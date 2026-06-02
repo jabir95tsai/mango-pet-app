@@ -133,6 +133,18 @@ monorepo 化之後，**任何動到 `package.json` / `package-lock.json` / nativ
 - 長期更穩：CI/lockfile 改在 linux 生成；或保留 `apps/web` 的 `optionalDependencies` 平台清單（已在 `_comment_optionalDependencies` 寫明）。任一 native dep 升版，記得同步那份 pin。
 - 「直推 main 中招」在 P0 migration + 本次已連續發生 → 這條是硬規則，不是建議。
 
+### 規則 5（iOS 驗收節奏）：實機驗收 per-phase 批次，不 per-sub-phase
+
+> user 2026-06-01：「不想每個 sub-phase 都實機驗收，很麻煩，一次做完一次驗。」
+
+**分清兩種「驗證」**：
+- **自動關卡（dev session 自己跑，不需 user）**：`tsc --noEmit` + 碰 dep 的 **linux web-rollout gate**（規則 4，保護 web production）。**每個 sub-phase 都要做**，因為它保命且免費。
+- **實機驗收（user 裝 iPhone 走查）**：**per-phase 一次**。一個 phase（如 P2）的所有 sub-phase code 全 merge 後，發**一顆** EAS build，user 一次走完整個 phase 的端到端清單。**不要每個 sub-phase 都叫 user 裝一次。**
+
+**為何安全**：iOS 尚未上 App Store（無 production release），未實機驗的 iOS code 進 main 不影響線上；web 由 web-gate 保護。**tradeoff**：runtime bug 會在 phase 末一次浮現（較難逐項隔離）→ 末端驗完開 iOS Bug Hunter 收。
+
+**dev session 紀律**：碰 dep → branch + tsc + web-gate 綠 → merge；**不主動發 device build、不要 user 中途驗**。phase 全 code 收齊 → iOS PM 發該 phase 唯一一顆 EAS build + 端到端清單給 user。
+
 ### 進階選項：Git Worktree（真要長期雙開）
 
 如果你預期長期雙開、想徹底隔離兩邊的 working tree（連 system-reminder「intentional change」狂噴都消除），用 git worktree：
