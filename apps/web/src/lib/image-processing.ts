@@ -120,12 +120,11 @@ export async function processImage(
   return current;
 }
 
-/** Predefined presets for the three places that upload images. */
-export const IMAGE_PRESETS = {
-  avatar: { maxSizeMB: 0.6, maxWidthOrHeight: 800 } as const,
-  post: { maxSizeMB: 1, maxWidthOrHeight: 1920 } as const,
-  receipt: { maxSizeMB: 3.5, maxWidthOrHeight: 2400, preserveQuality: true } as const,
-};
+/** Predefined presets for the places that upload images. Definition now
+ *  lives in @mango/shared-business (web + ios share one set of dimensions);
+ *  re-exported here so existing `@/lib/image-processing` imports of
+ *  `IMAGE_PRESETS` keep working unchanged. */
+export { IMAGE_PRESETS } from "@mango/shared-business";
 
 /** Human-readable file size, e.g. "2.3 MB". */
 export function humanSize(bytes: number): string {

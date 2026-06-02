@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
+import { getMessages } from "@mango/shared-i18n";
 import { routing } from "./routing";
 
 type Locale = (typeof routing.locales)[number];
@@ -23,6 +24,8 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: (await import(`../../messages/${locale}.json`)).default,
+    // Catalogs now come from @mango/shared-i18n (single cross-platform source
+    // of truth) instead of ../../messages/*.json.
+    messages: getMessages(locale),
   };
 });

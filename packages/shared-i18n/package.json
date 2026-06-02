@@ -1,0 +1,13 @@
+{
+  "name": "@mango/shared-i18n",
+  "version": "0.0.0",
+  "private": true,
+  "types": "./src/index.ts",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  }
+}

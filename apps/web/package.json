@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@mango/shared-business": "file:../../packages/shared-business",
+    "@mango/shared-i18n": "file:../../packages/shared-i18n",
     "@mango/shared-types": "file:../../packages/shared-types",
     "@googlemaps/js-api-loader": "^2.0.2",
     "@hookform/resolvers": "^5.2.2",

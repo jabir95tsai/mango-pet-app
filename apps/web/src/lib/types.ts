@@ -1,32 +1,81 @@
 import type { Timestamp } from "firebase/firestore";
 import type {
   Comment,
+  Expense,
+  ExpenseCategory,
+  ExpenseInput,
+  ExpenseSource,
+  ExtractedReceipt,
+  FeedingData,
   Gender,
+  HealthRecord,
+  HealthRecordData,
+  HealthRecordInput,
+  HealthRecordType,
+  MedicationData,
   Pet,
+  PetInput,
   Post,
   ReactionEmoji,
+  Reminder,
+  ReminderInput,
+  ReminderRepeat,
   Species,
+  VaccineData,
+  VetData,
   Visibility,
   Walk,
+  WalkGoal,
   WalkPathPoint,
+  WeightData,
 } from "@mango/shared-types";
-import { COMMENT_MAX_LEN, REACTION_EMOJIS } from "@mango/shared-types";
+import {
+  COMMENT_MAX_LEN,
+  EXPENSE_CATEGORIES,
+  NOTIFY_BEFORE_MINUTES,
+  REACTION_EMOJIS,
+} from "@mango/shared-types";
 
 // These domain types now live in @mango/shared-types (cross-platform single
 // source of truth). Re-exported here so existing `@/lib/types` imports keep
-// working unchanged.
+// working unchanged. The P2 batch (Pet edit / reminders / expenses / health)
+// joined Pet/Walk/Post here on 2026-06-02.
 export type {
   Comment,
+  Expense,
+  ExpenseCategory,
+  ExpenseInput,
+  ExpenseSource,
+  ExtractedReceipt,
+  FeedingData,
   Gender,
+  HealthRecord,
+  HealthRecordData,
+  HealthRecordInput,
+  HealthRecordType,
+  MedicationData,
   Pet,
+  PetInput,
   Post,
   ReactionEmoji,
+  Reminder,
+  ReminderInput,
+  ReminderRepeat,
   Species,
+  VaccineData,
+  VetData,
   Visibility,
   Walk,
+  WalkGoal,
   WalkPathPoint,
+  WeightData,
 };
-export { COMMENT_MAX_LEN, REACTION_EMOJIS };
+export {
+  COMMENT_MAX_LEN,
+  EXPENSE_CATEGORIES,
+  NOTIFY_BEFORE_MINUTES,
+  REACTION_EMOJIS,
+};
 
 export type AuthProviderKind = "google" | "apple" | "facebook";
 
@@ -140,22 +189,7 @@ export type FamilyMember = {
   joinedAt: Timestamp;
 };
 
-export type PetInput = {
-  name: string;
-  species: Species;
-  /** Free-text animal type, only meaningful when `species === "other"`
-   *  (e.g. 兔 / 鸚鵡). The form sends it only for "other"; cleared/omitted
-   *  otherwise. See `Pet.speciesOther`. */
-  speciesOther?: string;
-  breed?: string;
-  birthday?: Date;
-  gender?: Gender;
-  weightKg?: number;
-  bio?: string;
-  /** Optional in the form; absent value preserves the existing pet's
-   *  walkGoal on update (the form just doesn't touch the field). */
-  walkGoal?: { minutes: number; source: "manual" | "computed" };
-};
+// `PetInput` now lives in @mango/shared-types (re-exported at top of file).
 
 // `Post` now lives in @mango/shared-types (re-exported at top of file).
 
@@ -168,105 +202,8 @@ export type PostInput = {
   walkId?: string;
 };
 
-// ── Health records ──
-export type HealthRecordType =
-  | "weight"
-  | "feeding"
-  | "vaccine"
-  | "vet"
-  | "medication";
-
-export type WeightData = { kg: number };
-export type FeedingData = {
-  brand?: string;
-  amountG?: number;
-  foodType?: string;
-};
-export type VaccineData = {
-  name: string;
-  nextDueAt?: Timestamp;
-};
-export type VetData = {
-  clinic: string;
-  doctor?: string;
-  diagnosis: string;
-  prescription?: string;
-};
-export type MedicationData = {
-  name: string;
-  frequency?: string;
-  startsAt?: Timestamp;
-  endsAt?: Timestamp;
-};
-
-export type HealthRecordData =
-  | WeightData
-  | FeedingData
-  | VaccineData
-  | VetData
-  | MedicationData;
-
-export type HealthRecord = {
-  recordId: string;
-  /** Family the pet belongs to. Optional during the migration window —
-   *  legacy records still under `users/{uid}/pets/.../healthRecords/` won't
-   *  have it; new top-level records always will. `null` for records under
-   *  a personal-mode pet (parent pet's `familyId === null`). Permission is
-   *  resolved via the parent pet, so this field is informational only. */
-  familyId?: string | null;
-  petId: string;
-  /** User who recorded it (for attribution). Optional for legacy data. */
-  recordedByUid?: string;
-  type: HealthRecordType;
-  recordedAt: Timestamp;
-  data: HealthRecordData;
-  notes?: string;
-  createdAt: Timestamp;
-};
-
-export type HealthRecordInput = {
-  type: HealthRecordType;
-  recordedAt: Date;
-  data: HealthRecordData;
-  notes?: string;
-};
-
-// ── Reminders ──
-export type ReminderRepeat = "none" | "daily" | "weekly" | "monthly" | "yearly";
-
-export type Reminder = {
-  reminderId: string;
-  /** Family that this reminder belongs to. Optional during migration
-   *  window. `null` for personal-mode reminders — permission gated by
-   *  `createdByUid == request.auth.uid` instead. */
-  familyId?: string | null;
-  /** User who created the reminder. In family mode this is for
-   *  attribution; in personal mode it is the permission boundary. */
-  createdByUid?: string;
-  petId?: string;
-  title: string;
-  description?: string;
-  triggerAt: Timestamp;
-  repeat: ReminderRepeat;
-  notifyBeforeMinutes: number;
-  done: boolean;
-  doneAt?: Timestamp;
-  /** User who marked the reminder done (attribution). */
-  doneByUid?: string;
-  /** Set by scheduled function after a push was sent for this trigger. Reset when advancing. */
-  notified?: boolean;
-  notifiedAt?: Timestamp;
-  createdAt: Timestamp;
-};
-
-export type ReminderInput = {
-  petId?: string;
-  title: string;
-  description?: string;
-  triggerAt: Date;
-  repeat: ReminderRepeat;
-  notifyBeforeMinutes: number;
-};
+// Health records + Reminders now live in @mango/shared-types
+// (re-exported at top of file).
 
 // ── Restaurants ──
 export type PetFriendlyLevel = "indoor_ok" | "outdoor_only" | "restricted";
@@ -435,54 +372,8 @@ export type Friend = {
   addedAt: Timestamp;
 };
 
-// ── Expenses ──
-export type ExpenseCategory =
-  | "food"
-  | "medical"
-  | "grooming"
-  | "toy"
-  | "training"
-  | "insurance"
-  | "other";
-
-export type ExpenseSource = "manual" | "ai_scan";
-
-export type Expense = {
-  expenseId: string;
-  /** Family the pet belongs to. Optional during migration window.
-   *  `null` for personal-mode expenses — permission gated by
-   *  `payerUid == request.auth.uid` instead of family membership. */
-  familyId?: string | null;
-  /** Member who paid (for attribution + per-payer breakdowns). */
-  payerUid?: string;
-  payerName?: string;
-  /** Legacy alias of payerUid for back-compat. */
-  ownerUid: string;
-  petId: string;
-  petName?: string;
-  amount: number;          // in TWD
-  currency: "TWD";
-  vendor?: string;
-  category: ExpenseCategory;
-  spentAt: Timestamp;
-  notes?: string;
-  receiptURL?: string;     // optional Storage path
-  items?: string[];        // line items from receipt
-  source: ExpenseSource;
-  createdAt: Timestamp;
-};
-
-export type ExpenseInput = {
-  petId: string;
-  petName?: string;
-  amount: number;
-  vendor?: string;
-  category: ExpenseCategory;
-  spentAt: Date;
-  notes?: string;
-  items?: string[];
-  source: ExpenseSource;
-};
+// Expenses (Expense / ExpenseInput / ExpenseCategory / ExpenseSource) now
+// live in @mango/shared-types (re-exported at top of file).
 
 // ── Photo gallery ──
 export type GalleryPhotoSource =
@@ -515,11 +406,5 @@ export type PhotoDownloadState = {
   mode: PhotoDownloadMode;
 };
 
-/** AI-extracted data before user confirms. */
-export type ExtractedReceipt = {
-  amount?: number;
-  vendor?: string;
-  spentAt?: string;        // YYYY-MM-DD
-  category?: ExpenseCategory;
-  items?: string[];
-};
+// `ExtractedReceipt` now lives in @mango/shared-types (re-exported at top of
+// file).

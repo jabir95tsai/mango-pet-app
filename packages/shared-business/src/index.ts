@@ -4,3 +4,5 @@
 export * from "./walk-goals";
 export * from "./scoring";
 export * from "./gps";
+export * from "./dates";
+export * from "./image-presets";

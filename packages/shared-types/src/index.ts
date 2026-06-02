@@ -142,3 +142,222 @@ export type Comment = {
  *  firestore.rules `create` guard so the server rejects over-length writes
  *  even if a client skips validation. */
 export const COMMENT_MAX_LEN = 500;
+
+// ─────────────────────────────────────────────────────────────────────────
+// P2 Pets batch (2026-06-02) — pet edit / reminders / expenses / health.
+// Extracted out of apps/web/src/lib/types.ts so apps/web and apps/ios share
+// ONE definition (web now re-exports these). Shapes are byte-for-byte the
+// web originals; only their home moved. Firestore docs are written by both
+// platforms + the existing callables, so field names must NOT drift.
+// ─────────────────────────────────────────────────────────────────────────
+
+// ── Walk goal (per-pet daily target) ──
+/** Per-pet daily walk-minute goal. Structurally identical to the inline
+ *  object historically on `Pet.walkGoal`; named here so `PetInput` and the
+ *  iOS pet-edit form reuse one definition. Read sites still resolve the
+ *  legacy-absent fallback via `getPetWalkGoalMinutes()`
+ *  (@mango/shared-business). */
+export type WalkGoal = { minutes: number; source: "manual" | "computed" };
+
+// ── PetInput (create/update payload) ──
+export type PetInput = {
+  name: string;
+  species: Species;
+  /** Free-text animal type, only meaningful when `species === "other"`
+   *  (e.g. 兔 / 鸚鵡). The form sends it only for "other"; cleared/omitted
+   *  otherwise. See `Pet.speciesOther`. */
+  speciesOther?: string;
+  breed?: string;
+  birthday?: Date;
+  gender?: Gender;
+  weightKg?: number;
+  bio?: string;
+  /** Optional in the form; absent value preserves the existing pet's
+   *  walkGoal on update (the form just doesn't touch the field). */
+  walkGoal?: WalkGoal;
+};
+
+// ── Health records ──
+export type HealthRecordType =
+  | "weight"
+  | "feeding"
+  | "vaccine"
+  | "vet"
+  | "medication";
+
+export type WeightData = { kg: number };
+export type FeedingData = {
+  brand?: string;
+  amountG?: number;
+  foodType?: string;
+};
+export type VaccineData = {
+  name: string;
+  nextDueAt?: Timestamp;
+};
+export type VetData = {
+  clinic: string;
+  doctor?: string;
+  diagnosis: string;
+  prescription?: string;
+};
+export type MedicationData = {
+  name: string;
+  frequency?: string;
+  startsAt?: Timestamp;
+  endsAt?: Timestamp;
+};
+
+export type HealthRecordData =
+  | WeightData
+  | FeedingData
+  | VaccineData
+  | VetData
+  | MedicationData;
+
+export type HealthRecord = {
+  recordId: string;
+  /** Family the pet belongs to. Optional during the migration window —
+   *  legacy records still under `users/{uid}/pets/.../healthRecords/` won't
+   *  have it; new top-level records always will. `null` for records under
+   *  a personal-mode pet (parent pet's `familyId === null`). Permission is
+   *  resolved via the parent pet, so this field is informational only. */
+  familyId?: string | null;
+  petId: string;
+  /** User who recorded it (for attribution). Optional for legacy data. */
+  recordedByUid?: string;
+  type: HealthRecordType;
+  recordedAt: Timestamp;
+  data: HealthRecordData;
+  notes?: string;
+  createdAt: Timestamp;
+};
+
+export type HealthRecordInput = {
+  type: HealthRecordType;
+  recordedAt: Date;
+  data: HealthRecordData;
+  notes?: string;
+};
+
+// ── Reminders ──
+export type ReminderRepeat =
+  | "none"
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "yearly";
+
+/** Allowed `notifyBeforeMinutes` presets (0 = at trigger time, 15m, 1h, 1d,
+ *  1w). Drives the reminder-form picker on both platforms; the scheduled
+ *  `scanReminders` function reads whatever value is stored, so adding a
+ *  preset here is purely a client-UX change. */
+export const NOTIFY_BEFORE_MINUTES = [0, 15, 60, 1440, 10080] as const;
+export type NotifyBeforeMinutes = (typeof NOTIFY_BEFORE_MINUTES)[number];
+
+export type Reminder = {
+  reminderId: string;
+  /** Family that this reminder belongs to. Optional during migration
+   *  window. `null` for personal-mode reminders — permission gated by
+   *  `createdByUid == request.auth.uid` instead. */
+  familyId?: string | null;
+  /** User who created the reminder. In family mode this is for
+   *  attribution; in personal mode it is the permission boundary. */
+  createdByUid?: string;
+  petId?: string;
+  title: string;
+  description?: string;
+  triggerAt: Timestamp;
+  repeat: ReminderRepeat;
+  notifyBeforeMinutes: number;
+  done: boolean;
+  doneAt?: Timestamp;
+  /** User who marked the reminder done (attribution). */
+  doneByUid?: string;
+  /** Set by scheduled function after a push was sent for this trigger. Reset when advancing. */
+  notified?: boolean;
+  notifiedAt?: Timestamp;
+  createdAt: Timestamp;
+};
+
+export type ReminderInput = {
+  petId?: string;
+  title: string;
+  description?: string;
+  triggerAt: Date;
+  repeat: ReminderRepeat;
+  notifyBeforeMinutes: number;
+};
+
+// ── Expenses ──
+export type ExpenseCategory =
+  | "food"
+  | "medical"
+  | "grooming"
+  | "toy"
+  | "training"
+  | "insurance"
+  | "other";
+
+/** Ordered category list for legend pills / category filters / form selects.
+ *  Single source so the web donut legend and the iOS donut legend can't
+ *  drift. (`Expense.category` is typed by `ExpenseCategory`, not this array.) */
+export const EXPENSE_CATEGORIES: readonly ExpenseCategory[] = [
+  "food",
+  "medical",
+  "grooming",
+  "toy",
+  "training",
+  "insurance",
+  "other",
+];
+
+export type ExpenseSource = "manual" | "ai_scan";
+
+export type Expense = {
+  expenseId: string;
+  /** Family the pet belongs to. Optional during migration window.
+   *  `null` for personal-mode expenses — permission gated by
+   *  `payerUid == request.auth.uid` instead of family membership. */
+  familyId?: string | null;
+  /** Member who paid (for attribution + per-payer breakdowns). */
+  payerUid?: string;
+  payerName?: string;
+  /** Legacy alias of payerUid for back-compat. */
+  ownerUid: string;
+  petId: string;
+  petName?: string;
+  amount: number; // in TWD
+  currency: "TWD";
+  vendor?: string;
+  category: ExpenseCategory;
+  spentAt: Timestamp;
+  notes?: string;
+  receiptURL?: string; // optional Storage path
+  items?: string[]; // line items from receipt
+  source: ExpenseSource;
+  createdAt: Timestamp;
+};
+
+export type ExpenseInput = {
+  petId: string;
+  petName?: string;
+  amount: number;
+  vendor?: string;
+  category: ExpenseCategory;
+  spentAt: Date;
+  notes?: string;
+  items?: string[];
+  source: ExpenseSource;
+};
+
+/** AI-extracted receipt data before the user confirms (returned by the
+ *  `extractReceipt` callable; gemini-2.5-flash). `spentAt` is a YYYY-MM-DD
+ *  string the form parses into a Date. */
+export type ExtractedReceipt = {
+  amount?: number;
+  vendor?: string;
+  spentAt?: string; // YYYY-MM-DD
+  category?: ExpenseCategory;
+  items?: string[];
+};
