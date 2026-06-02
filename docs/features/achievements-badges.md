@@ -254,3 +254,32 @@ title 兩語系（zh-TW / en），i18n key 建議 `Achievements.{id}.title` / `.
 
 ### → Backend（提醒，非本 session）
 - `backfillAchievements` 仍 **尚未執行**（task 7）→ 老用戶（含我測試 guest 早於成就上線建立的 2 隻舊寵物）的已達標徽章尚未補發。跑 backfill（先 dry-run）後老資料才會亮。
+
+---
+
+## ✅ UI/UX 已交付（Web/PWA UI/UX session 2026-06-02 — commit 2f08bcb on main）
+
+**Shipped to main → App Hosting（prod live + Chrome MCP 驗過，真 guest 帳號）。** 純視覺打磨，未碰資料/邏輯/後端/ACHIEVEMENTS 定義/i18n feature key（只加一支顯示用 `emptyHint`）。
+
+### 做了什麼
+- **BadgeCard（`apps/web/src/components/achievements/badge-card.tsx`）三態強化**：
+  - **已得**：彩色 emoji 落在暖色漸層 disc（`.badge-disc-earned`）+ 品牌色外環 + 右下 ✓ 角標 + `bg-mango-brand-tint` 解鎖日期 pill + 卡片柔光 shadow。掛載時跑**一次性**光掃（`.badge-sweep`，1 iteration）。
+  - **未得**：灰階 + opacity 變暗；進度條加粗（h-2）+ 補 `role="progressbar"` / `aria-valuemin/max/now`。
+  - **鎖定（guest 的社群/家庭/排行榜）**：灰階 + 鎖角標 + 「綁定帳號解鎖」整卡可點開升級 dialog。
+- **成就頁（`apps/web/src/app/app/achievements/page.tsx`）**：
+  - 頂部**進度環 hero**（SVG ring 顯示總完成度 + 🏆），同時兼作 **0 徽章空狀態**（`Achievements.emptyHint`）。RouteHeader subtitle 移除（避免和 hero 的 N/total 重複）。
+  - 每個分類 header 下加**里程碑進度條**（earnedCount/total）。
+  - grid 維持 mobile-first `grid-cols-2 sm:3 md:4`。
+- **globals.css**：`.badge-disc-earned` + `.badge-sweep`（單次光掃），沿用既有 `prefers-reduced-motion` 硬停規範（reduce → 無動畫）。
+- **i18n**：`Achievements.emptyHint`（zh-TW + en）。
+
+### a11y（WCAG AA）
+- 說明/進度標籤色階由 `ink-3` 提到 `ink-2`（在 `card-soft` 上 ~8:1，過 AA）。
+- 未得徽章進度為真 `progressbar` role + aria-value*；鎖定卡為 button 帶 `aria-label`；已得/未得卡讓可見文字自然被 SR 讀（不用 aria-label 覆寫蓋掉 desc/日期）。
+- emoji / 裝飾角標 / sweep / ring 全 `aria-hidden`。
+
+### Prod 驗證（Chrome MCP，真 guest）
+hero「已解鎖 2/26」+ 環 ✓；寵物區 2/2 滿條、第一隻毛孩 + 多寵之家 彩色 disc + ✓ + 「解鎖於 2026年6月2日」pill ✓；其餘類灰階 + 進度條 ✓；家庭/社群/排行榜 guest 鎖定 + 綁定帳號解鎖 button ✓。
+
+### ⚠️ 給 Feature Builder（未做，已丟 backlog）
+- 任務含「解鎖時慶祝動效（**若** Feature Builder 留了 hook）」。**目前頁面沒有 newly-earned hook** —— 它只讀既有 grant，無法分辨「這次剛解鎖」vs「早就有」。所以我做的是**進頁時已得徽章的輕量光掃**（reduced-motion 安全），而**非**假的「剛解鎖」慶祝（否則每次進頁都會對所有舊徽章放慶祝）。真正的解鎖瞬間慶祝需要 Feature Builder 提供 hook（例：比對 localStorage 上次已知 grant 集合，或 push deep-link 帶 `?unlocked=walk-50`）→ UI/UX 再接 confetti/scale-pop。見 backlog。

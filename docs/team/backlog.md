@@ -185,3 +185,11 @@ _目前沒有 active 條目。已 SHIPPED 的見「已處理（audit trail）」
 - **walks 頁加 sticky bottom CTA（解 A）** — ✅ SHIPPED `5c1429e`（UI/UX 2026-05-24）：`app/app/walks/page.tsx` 加 `fixed ... md:hidden` sticky bar 重用 Hero handler，tracking view 開啟時 unmount。
 - **Mobile bottom nav 重組（開銷→排行榜、更多→設定右上角）** — ✅ SHIPPED `e34640a`（UI/UX 2026-05-23）：drawer state 提升到 `NavDrawerProvider`，trigger 移到 settings header；mobile 5 links `[home, pets, walks, leaderboard, settings]`，overflow 5 items 進 drawer。
 - **[範例] 重複的 Mango pet** — 教學範例。已升級到 `docs/features/mango-dedupe-migration.md`（後被 user 取消，見該 spec）。保留當格式範例。
+
+### 成就頁缺「剛解鎖」hook → 無法做真正的解鎖瞬間慶祝動效
+- **發現於**：2026-06-02、UI/UX session
+- **類型**：新功能想法 / 設計
+- **重現 / 觀察**：`/app/achievements` 只讀既有 `users/{uid}/achievements` grant，無法分辨「這次剛解鎖」vs「早就有」。UI/UX 已做進頁時的輕量光掃（reduced-motion 安全），但 spec §E 想要的「解鎖時慶祝動效」需要 newly-earned 訊號才能只對剛解鎖的徽章放 confetti/scale-pop，不誤觸舊徽章。
+- **建議做法**：Feature Builder 提供 hook —— 例 (a) 前端用 localStorage 存上次已知 grant id 集合，load 後 diff 出新增；或 (b) 解鎖 push deep-link 帶 query（`/app/achievements?unlocked=walk-50`）。拿到訊號後 UI/UX 接慶祝動效（沿用既有 `.walk-confetti` / `.walk-streak-pop` + prefers-reduced-motion）。
+- **建議交付給**：Feature Builder（出 hook）→ UI/UX（接動效）
+- **優先級提示**：P2
