@@ -1,18 +1,20 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Lock } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import { formatMetricValue, type BadgeState } from "@/lib/achievements";
 import { cn } from "@/lib/utils";
 
 /** One badge tile. Three visual states:
- *  - earned   → full-colour emoji + brand tint + "解鎖於 {date}".
- *  - unearned → greyscale emoji + (when the metric is client-computable) a
- *               progress bar with "47/50".
+ *  - earned   → full-colour emoji on a warm gradient disc + brand ring +
+ *               check + "解鎖於 {date}" pill, with a one-shot light sweep on
+ *               mount (reduced-motion: no sweep).
+ *  - unearned → greyscale dimmed emoji + (when the metric is client-
+ *               computable) a progress bar with "47/50".
  *  - locked   → greyscale + lock; guest viewing a community/rank badge. The
  *               whole tile is a button that opens the upgrade dialog.
- *  Visual polish (final palette / motion) is UI/UX's to refine; this is the
- *  functional structure. Spec §E.
+ *  Colours are mango tokens; text passes WCAG AA on the soft-card surface.
+ *  Spec §E + UI/UX handoff.
  */
 export function BadgeCard({
   state,
@@ -27,8 +29,8 @@ export function BadgeCard({
   const title = t(`${achievement.id}.title`);
   const desc = t(`${achievement.id}.desc`);
 
-  const dimmed = !earned;
   const showBar = !earned && !locked && progress != null && current != null;
+  const pct = Math.round((progress ?? 0) * 100);
 
   const earnedDate =
     earnedAt != null
@@ -44,16 +46,22 @@ export function BadgeCard({
         <span
           aria-hidden="true"
           className={cn(
-            "grid size-14 place-items-center rounded-2xl text-3xl transition",
+            "relative grid size-14 place-items-center overflow-hidden rounded-2xl text-3xl",
             earned
-              ? "bg-mango-brand-tint"
-              : "bg-mango-bg-alt grayscale opacity-50",
+              ? "badge-disc-earned"
+              : "bg-mango-bg-alt opacity-45 grayscale",
           )}
         >
           {achievement.emoji}
+          {earned && <span className="badge-sweep" aria-hidden="true" />}
         </span>
+        {earned && (
+          <span className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full bg-mango-brand text-white ring-2 ring-mango-card-soft">
+            <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+          </span>
+        )}
         {locked && (
-          <span className="absolute -right-1 -bottom-1 grid size-6 place-items-center rounded-full bg-mango-ink text-white">
+          <span className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full bg-mango-ink text-white ring-2 ring-mango-card-soft">
             <Lock className="size-3.5" aria-hidden="true" />
           </span>
         )}
@@ -63,35 +71,42 @@ export function BadgeCard({
         <p
           className={cn(
             "text-sm font-semibold leading-tight",
-            dimmed ? "text-mango-ink-2" : "text-mango-ink",
+            earned ? "text-mango-ink" : "text-mango-ink-2",
           )}
         >
           {title}
         </p>
-        <p className="mt-0.5 line-clamp-2 text-xs text-mango-ink-3">{desc}</p>
+        <p className="mt-0.5 line-clamp-2 text-xs text-mango-ink-2">{desc}</p>
       </div>
 
       {earned && earnedDate && (
-        <p className="text-[11px] font-medium text-mango-brand-deep">
+        <span className="mt-auto rounded-full bg-mango-brand-tint px-2 py-0.5 text-[11px] font-semibold text-mango-brand-deep">
           {t("earnedOn", { date: earnedDate })}
-        </p>
+        </span>
       )}
 
       {locked && (
-        <span className="text-[11px] font-semibold text-mango-brand-deep">
+        <span className="mt-auto text-[11px] font-semibold text-mango-brand-deep">
           {t("locked")}
         </span>
       )}
 
       {showBar && (
-        <div className="w-full">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-mango-bg-alt">
+        <div
+          className="mt-auto w-full"
+          role="progressbar"
+          aria-label={title}
+          aria-valuemin={0}
+          aria-valuemax={achievement.threshold}
+          aria-valuenow={current ?? 0}
+        >
+          <div className="h-2 w-full overflow-hidden rounded-full bg-mango-bg-alt">
             <div
-              className="h-full rounded-full bg-mango-brand"
-              style={{ width: `${Math.round((progress ?? 0) * 100)}%` }}
+              className="h-full rounded-full bg-mango-brand transition-[width] duration-500"
+              style={{ width: `${pct}%` }}
             />
           </div>
-          <p className="mt-1 text-[11px] tabular-nums text-mango-ink-3">
+          <p className="mt-1 text-[11px] font-medium tabular-nums text-mango-ink-2">
             {formatMetricValue(current ?? 0)} / {achievement.threshold}
           </p>
         </div>
@@ -102,7 +117,7 @@ export function BadgeCard({
   const cardClass = cn(
     "flex h-full flex-col items-center gap-2 rounded-2xl border p-4 text-center",
     earned
-      ? "border-mango-brand/40 bg-mango-card-soft"
+      ? "border-mango-brand/50 bg-mango-card-soft shadow-[0_4px_16px_-10px_rgba(243,152,0,0.7)]"
       : "border-mango-hairline bg-mango-card-soft",
   );
 
@@ -122,9 +137,5 @@ export function BadgeCard({
     );
   }
 
-  return (
-    <div className={cardClass} aria-label={earned ? `${title} ✓` : title}>
-      {inner}
-    </div>
-  );
+  return <div className={cardClass}>{inner}</div>;
 }

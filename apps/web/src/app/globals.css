@@ -169,6 +169,57 @@ body {
   }
 }
 
+/* Achievement badge — earned tiles get a warm gradient disc + a soft inner
+ * highlight so a milestone reads as "lit up" vs the muted greyscale of the
+ * locked/un-earned tiles. On mount each earned disc plays a single light
+ * sweep (one iteration, ~1.1s) so opening the page reveals your milestones
+ * with a touch of life — not a looping animation, so a wall of earned
+ * badges shimmers once and settles. The global prefers-reduced-motion rule
+ * above already neutralises the keyframe; we also hard-hide the sweep band
+ * for that audience so no static gloss strip is left sitting on the disc. */
+.badge-disc-earned {
+  background-image: linear-gradient(
+    150deg,
+    var(--color-mango-amber),
+    var(--color-mango-brand-tint) 55%,
+    var(--color-mango-amber)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 0 0 1px rgba(243, 152, 0, 0.25);
+}
+.badge-sweep {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+.badge-sweep::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  transform: skewX(-18deg);
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.8),
+    transparent
+  );
+  animation: badgeSweep 1.1s ease-out 1;
+}
+@keyframes badgeSweep {
+  0% { left: -60%; opacity: 0; }
+  18% { opacity: 1; }
+  100% { left: 130%; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-sweep { display: none; }
+}
+
 /* Walk completion confetti — pure CSS, no canvas-confetti dep.
  * Spec docs/features/walks-photo-and-celebration.md Phase 2 D3.
  * 20 absolutely-positioned slivers fall + rotate; per-piece delay +

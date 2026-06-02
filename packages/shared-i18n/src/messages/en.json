@@ -455,6 +455,7 @@
     "earnedOn": "Unlocked {date}",
     "locked": "Bind account to unlock",
     "guestHint": "Community & leaderboard badges need a bound account to unlock. Personal badges — walks, distance, pets — you can start earning right now.",
+    "emptyHint": "No badges yet — take a walk or add a pet and they'll start lighting up one by one!",
     "categories": {
       "walks": "Walk Milestones",
       "streak": "Streaks",
