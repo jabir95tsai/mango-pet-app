@@ -449,9 +449,56 @@
     "alreadyInFamily": "You're already in a family.",
     "goToApp": "Go to app"
   },
+  "Achievements": {
+    "pageTitle": "Achievements",
+    "summary": "{earned} of {total} unlocked",
+    "earnedOn": "Unlocked {date}",
+    "locked": "Bind account to unlock",
+    "guestHint": "Community & leaderboard badges need a bound account to unlock. Personal badges — walks, distance, pets — you can start earning right now.",
+    "categories": {
+      "walks": "Walk Milestones",
+      "streak": "Streaks",
+      "distance": "Distance",
+      "duration": "Duration",
+      "pets": "Pets",
+      "family": "Family",
+      "social": "Community",
+      "rank": "Leaderboard"
+    },
+    "walk-1": { "title": "First Walk", "desc": "Complete your first walk" },
+    "walk-10": { "title": "Getting Started", "desc": "Reach 10 walks" },
+    "walk-50": { "title": "Walk Pro", "desc": "Reach 50 walks" },
+    "walk-100": { "title": "Walk Master", "desc": "Reach 100 walks" },
+    "walk-365": { "title": "Walk Legend", "desc": "Reach 365 walks" },
+    "streak-3": { "title": "3-Day Streak", "desc": "Walk 3 days in a row" },
+    "streak-7": { "title": "Week Warrior", "desc": "Walk 7 days in a row" },
+    "streak-14": { "title": "Two Weeks Strong", "desc": "Walk 14 days in a row" },
+    "streak-30": { "title": "Monthly Devotion", "desc": "Walk 30 days in a row" },
+    "streak-100": { "title": "Century Streak", "desc": "Walk 100 days in a row" },
+    "dist-5": { "title": "5 km", "desc": "Walk 5 km in total" },
+    "dist-25": { "title": "25 km", "desc": "Walk 25 km in total" },
+    "dist-50": { "title": "50 km", "desc": "Walk 50 km in total" },
+    "dist-100": { "title": "100 km", "desc": "Walk 100 km in total" },
+    "dist-250": { "title": "250 km", "desc": "Walk 250 km in total" },
+    "time-600": { "title": "10 Hours", "desc": "Walk for 10 hours in total" },
+    "time-3000": { "title": "50 Hours", "desc": "Walk for 50 hours in total" },
+    "pet-1": { "title": "First Pet", "desc": "Add your first pet" },
+    "pet-3": { "title": "Full House", "desc": "Have 3 pets" },
+    "family-join": { "title": "Family Member", "desc": "Join or create a family" },
+    "post-1": { "title": "First Post", "desc": "Share your first post" },
+    "post-10": { "title": "Storyteller", "desc": "Share 10 posts" },
+    "react-10": { "title": "Crowd Pleaser", "desc": "Get 10 reactions on a single post" },
+    "rank-top10": { "title": "On the Board", "desc": "Reach the weekly top 10" },
+    "rank-1-week": { "title": "Weekly Champion", "desc": "Top the weekly leaderboard" },
+    "rank-1-month": { "title": "Monthly Champion", "desc": "Top the monthly leaderboard" }
+  },
   "Settings": {
     "friendsLink": "Friends",
     "photosLink": "Photos",
+    "achievements": {
+      "title": "Achievements",
+      "subtitle": "See your badges and progress"
+    },
     "photosPreview": {
       "viewAll": "View all",
       "empty": "No photos yet"
@@ -492,6 +539,10 @@
       "post-reaction": {
         "label": "Reactions on your posts",
         "hint": "Get notified when someone reacts to your post (batched into one)."
+      },
+      "achievement": {
+        "label": "Achievement unlocked",
+        "hint": "Notify me when I unlock a new badge."
       }
     },
     "walkAutoPhoto": {

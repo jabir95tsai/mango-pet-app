@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
+  ChevronRight,
   Globe,
   MoreHorizontal,
   ShieldCheck,
   Sparkles,
   Trash2,
+  Trophy,
   Users,
 } from "lucide-react";
 import { RouteHeader } from "@/components/nav/route-header";
@@ -121,6 +123,24 @@ export default function SettingsPage() {
             </Button>
           </section>
         )}
+
+        {/* Achievements entry — available to everyone (guests earn the
+            personal badges too). Spec achievements-badges.md §E. */}
+        <Link
+          href="/app/achievements"
+          className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 transition-colors hover:border-mango-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+              <Trophy className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-medium">{tS("achievements.title")}</p>
+              <p className="text-sm text-zinc-500">{tS("achievements.subtitle")}</p>
+            </div>
+          </div>
+          <ChevronRight className="size-5 shrink-0 text-zinc-400" />
+        </Link>
 
         {/* 拍收據 quick-action removed 2026-05-26 — spec
             docs/features/expenses-into-pets-page.md D3 reverts the
