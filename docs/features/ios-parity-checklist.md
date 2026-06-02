@@ -78,15 +78,19 @@
 | 開銷 camera FAB + AI 收據掃描(extractReceipt callable) | bug-receipt-ai-missing / receipt-scanner | **native-upgrade**（expo-camera first-flow；接同 callable，後端不改） | ⬜ P2d |
 
 ### P3 — Home + Feed
+> 📋 spec → [`ios-p3-home-feed.md`](./ios-p3-home-feed.md)（最小 spec，依 master plan + web 實作）。sub-phase P3a（無 dep，main）→ P3b（reanimated gate）→ P3c（media-library+sharing gate）。
+> 🟡 **P3 全 code 收齊（2026-06-02），待 user 發 EAS build 實機驗收**：P3a `a933fe1`+`4ecd677`（feed 資料層/PostCard/Reactions/Comments + Home v3 + Feed route + composer 相簿）、P3b `4eefb39`（reanimated PhotoLightbox + long-press tray；web gate 綠）、P3c `f5c5944`（expo-media-library/sharing：Photos gallery + SaveToAlbum PhotosKit；web gate 綠）。
+
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| Home v3(Feed-first + IG Stories bar) | [`home-v3-feed-first.md`](./home-v3-feed-first.md) | parity | ⬜ |
-| StoriesBar(walk status rings) | home-v3 | parity | ⬜ |
-| PostCard list + PostComposer | home-v3 / feed | parity | ⬜ |
-| InviteFamilyCard / EmptyStateHome | home-v3 | parity | ⬜ |
-| `/app/feed` full timeline | feed | parity | ⬜ |
-| PhotoLightbox(carousel + swipe) | [`photo-lightbox.md`](./photo-lightbox.md) | parity | ⬜ |
-| 拍照後存到相簿 | [`save-photo-to-album.md`](./save-photo-to-album.md) | **parity + native upgrade**（web Share sheet → iOS PhotosKit） | ⬜ |
+| Home v3(Feed-first + IG Stories bar) | [`home-v3-feed-first.md`](./home-v3-feed-first.md) | parity | 🟡 code done（`4ecd677`，4 variants）；待實機驗收 |
+| StoriesBar(walk status rings) | home-v3 | parity | 🟡 code done（`4ecd677`，shared `computeTodayWalkStatus`；ring 用 linear-gradient，conic 為 follow-up polish）；待實機驗收 |
+| PostCard list + PostComposer | home-v3 / feed | parity | 🟡 code done（`a933fe1` cards/reactions/comments + `4ecd677` composer 相機+相簿）；待實機驗收 |
+| InviteFamilyCard / EmptyStateHome | home-v3 | parity | 🟡 code done（`4ecd677`；invite CTA → settings，full family flow = P4）；待實機驗收 |
+| `/app/feed` full timeline | feed | parity | 🟡 code done（`4ecd677`，pull-to-refresh + composer）；待實機驗收 |
+| PhotoLightbox(carousel + swipe) | [`photo-lightbox.md`](./photo-lightbox.md) | parity | 🟡 code done（`4eefb39`，reanimated swipe>50/drag-dismiss>100 + reduce-motion）；待實機驗收 |
+| 拍照後存到相簿 | [`save-photo-to-album.md`](./save-photo-to-album.md) | **parity + native upgrade**（web Share sheet → iOS PhotosKit） | 🟡 code done（`f5c5944`，PhotosKit saveToLibrary + 分享 + Photos gallery 批次存）；待實機驗收 |
+| 照片圖庫 `/app/photos`（drift，§B） | [`photo-gallery-downloads.md`](./photo-gallery-downloads.md) | **parity + native upgrade** | 🟡 code done（`f5c5944`，aggregator posts+walks+pets+expenses + filter pills + 批次存 + downloadState）；待實機驗收 |
 
 ### P4 — Leaderboard + Family
 | Web feature | Web spec | iOS policy | iOS 狀態 |

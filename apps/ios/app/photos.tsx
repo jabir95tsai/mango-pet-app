@@ -152,7 +152,7 @@ export default function PhotosScreen() {
   }
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.flex}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.flex}>
       <View style={styles.header}>
         <Pressable accessibilityLabel="返回" onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
           <Text style={styles.backText}>‹</Text>
