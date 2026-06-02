@@ -9,6 +9,7 @@
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -23,6 +24,7 @@ import { useAuth } from "@/state/auth-context";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { PhotoLightbox } from "@/components/feed/photo-lightbox";
+import { savePhotoToAlbum } from "@/lib/save-photo";
 import { HomeTopBar } from "@/components/home/home-top-bar";
 import { StoriesBar } from "@/components/home/stories-bar";
 import { FeedSectionHeader } from "@/components/home/feed-section-header";
@@ -78,6 +80,7 @@ export default function HomeScreen() {
       <HomeTopBar
         familyName={isPersonal ? null : familyName}
         userDisplayName={userName}
+        onOpenPhotos={() => router.push("/photos")}
       />
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -139,6 +142,14 @@ export default function HomeScreen() {
           initialIndex={lightbox.index}
           open
           onClose={() => setLightbox(null)}
+          onSave={async (url) => {
+            try {
+              await savePhotoToAlbum(url);
+              Alert.alert(t("Photos.status.saved", { count: 1 }));
+            } catch {
+              Alert.alert(t("Photos.status.failed"));
+            }
+          }}
         />
       ) : null}
     </SafeAreaView>

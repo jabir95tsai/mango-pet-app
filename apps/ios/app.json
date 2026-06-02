@@ -18,7 +18,8 @@
         "NSLocationWhenInUseUsageDescription": "Mango Pet 需要你的位置來記錄遛狗路線與距離。",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "遛狗進行中時，Mango Pet 會在背景（鎖屏或切換到其他 App）持續記錄你的遛狗路線與距離；遛狗結束會立即停止定位。",
         "NSCameraUsageDescription": "Mango Pet 需要使用相機來拍攝遛狗與寵物照片。",
-        "NSPhotoLibraryUsageDescription": "Mango Pet 需要存取你的相簿，讓你為寵物挑選頭像、上傳貼文與收據照片。"
+        "NSPhotoLibraryUsageDescription": "Mango Pet 需要存取你的相簿，讓你為寵物挑選頭像、上傳貼文與收據照片。",
+        "NSPhotoLibraryAddUsageDescription": "Mango Pet 需要權限把寵物照片儲存到你的相簿。"
       }
     },
     "plugins": [
@@ -59,6 +60,14 @@
         "expo-image-picker",
         {
           "photosPermission": "Mango Pet 需要存取你的相簿，讓你為寵物挑選頭像、上傳貼文與收據照片。"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Mango Pet 需要存取你的相簿，讓你瀏覽與儲存寵物照片。",
+          "savePhotosPermission": "Mango Pet 需要權限把寵物照片儲存到你的相簿。",
+          "isAccessMediaLocationEnabled": false
         }
       ]
     ],

@@ -37,6 +37,7 @@ function RootNavigator() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="feed" options={{ presentation: "card" }} />
+      <Stack.Screen name="photos" options={{ presentation: "card" }} />
     </Stack>
   );
 }

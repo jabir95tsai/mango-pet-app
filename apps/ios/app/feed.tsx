@@ -6,6 +6,7 @@
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -21,6 +22,7 @@ import { useAuth } from "@/state/auth-context";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { PhotoLightbox } from "@/components/feed/photo-lightbox";
+import { savePhotoToAlbum } from "@/lib/save-photo";
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 
@@ -103,6 +105,14 @@ export default function FeedScreen() {
           initialIndex={lightbox.index}
           open
           onClose={() => setLightbox(null)}
+          onSave={async (url) => {
+            try {
+              await savePhotoToAlbum(url);
+              Alert.alert(t("Photos.status.saved", { count: 1 }));
+            } catch {
+              Alert.alert(t("Photos.status.failed"));
+            }
+          }}
         />
       ) : null}
     </SafeAreaView>

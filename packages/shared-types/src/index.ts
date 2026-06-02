@@ -486,3 +486,38 @@ export type AchievementGrant = {
   /** The metric value at grant time (for "earned at 52 walks" display). */
   progressSnapshot?: number;
 };
+
+// ── Photos gallery (P3) — aggregated view over posts/walks/pets/expenses photos.
+//    Mirrors apps/web/src/lib/types.ts so web + iOS build the SAME asset ids
+//    (the id doubles as the photoDownloadState doc id). Spec
+//    docs/features/photo-gallery-downloads.md.
+export type GalleryPhotoSource =
+  | "post"
+  | "walk"
+  | "pet-avatar"
+  | "expense-receipt";
+
+export type GalleryPhotoAsset = {
+  /** Stable per-photo id `${source}:${sourceId}:${indexOrKind}`. Doubles as
+   *  the downloaded-state document id. */
+  id: string;
+  source: GalleryPhotoSource;
+  url: string;
+  title: string;
+  createdAt: Timestamp;
+  sourceId: string;
+  petId?: string;
+  petName?: string;
+  fileName: string;
+};
+
+export type PhotoDownloadMode = "share" | "download";
+
+export type PhotoDownloadState = {
+  assetId: string;
+  source: GalleryPhotoSource;
+  sourceId: string;
+  urlHash: string;
+  downloadedAt: Timestamp;
+  mode: PhotoDownloadMode;
+};
