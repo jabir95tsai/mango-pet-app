@@ -521,3 +521,73 @@ export type PhotoDownloadState = {
   downloadedAt: Timestamp;
   mode: PhotoDownloadMode;
 };
+
+// ── Leaderboard (P4) — mirrors apps/web/src/lib/types.ts. Entries are written
+//    by Cloud Functions (recompute*Leaderboards realtime + aggregate* cron);
+//    clients read-only via onSnapshot. Paths:
+//      leaderboards/{periodKey}/entries/{uid}
+//      dogLeaderboards/{periodKey}/entries/{petId}
+//    periodKey = @mango/shared-business periodKey() — same as functions write.
+export type LeaderboardPeriod = "weekly" | "monthly" | "all_time";
+export type LeaderboardVisibility = "public" | "friends" | "off";
+
+export type LeaderboardEntry = {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  city?: string;
+  totalScore: number;
+  totalDistanceKm: number;
+  totalDurationMin: number;
+  walkCount: number;
+  streakDays: number;
+  updatedAt: Timestamp;
+  /** Rank in the previous aggregation (for ▲▼ deltas). */
+  previousRank?: number;
+  /** Wall-clock of the last score write — drives the row glow (<5s = fresh). */
+  lastUpdatedAt?: Timestamp;
+};
+
+export type DogLeaderboardEntry = {
+  petId: string;
+  petName: string;
+  petPhotoURL: string | null;
+  breed: string | null;
+  species: Species;
+  ownerUid: string;
+  ownerName: string;
+  /** null = personal-mode dog (still eligible for the dog board). */
+  familyId: string | null;
+  totalScore: number;
+  totalDistanceKm: number;
+  totalDurationMin: number;
+  walkCount: number;
+  streakDays: number;
+  /** Denormalised from users/{ownerUid}.leaderboardVisibility (syncDogEntryVisibility). */
+  ownerVisibility: LeaderboardVisibility;
+  updatedAt: Timestamp;
+  lastUpdatedAt?: Timestamp;
+  previousRank?: number;
+};
+
+// ── Family (P4) — mirrors apps/web/src/lib/types.ts. Managed via Cloud
+//    Functions callables (region asia-east1): createFamily / joinFamilyByCode /
+//    leaveFamily / removeFamilyMember / regenerateInviteCode.
+export type Family = {
+  familyId: string;
+  name: string;
+  ownerUid: string;
+  memberUids: string[];
+  /** 6-digit numeric invite code. */
+  inviteCode: string;
+  inviteCodeExpiresAt?: Timestamp;
+  createdAt: Timestamp;
+};
+
+export type FamilyMember = {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  /** User's createdAt proxy (no per-family join timestamp yet). */
+  joinedAt: Timestamp;
+};

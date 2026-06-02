@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "@/state/auth-context";
+import { FamilyProvider } from "@/state/family-context";
 import { colors } from "@/theme/theme";
 
 function RootNavigator() {
@@ -47,8 +48,10 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.flex}>
       <SafeAreaProvider>
         <AuthProvider>
-          <StatusBar style="dark" />
-          <RootNavigator />
+          <FamilyProvider>
+            <StatusBar style="dark" />
+            <RootNavigator />
+          </FamilyProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
