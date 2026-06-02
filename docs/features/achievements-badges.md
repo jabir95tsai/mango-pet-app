@@ -1,6 +1,6 @@
 # 徽章 / 成就系統（Achievements）
 
-> **狀態**：READY-FOR-DEV — PM spec（2026-06-02；user 3 決策已拍板）。唯一待 sign-off：徽章清單（PM 提案，可增刪）。
+> **狀態**：READY-FOR-DEV — PM spec（2026-06-02；user 3 決策已拍板）。徽章清單 §D 已定版 v1（26 枚；user 仍可增刪數值/品項）。
 > **角色分工**：Backend（成就定義 + lifetime 統計來源 + 評估/授予 trigger + 解鎖 push）→ Feature Builder（`/app/achievements` 頁 + 入口）→ UI/UX（徽章視覺 / 已得·未得態 / 進度）。
 > **歸屬**：gamification / 用戶活躍（北極星：每週活躍家庭數、每日遛狗完成率）；push 接 Epic 5。
 > **依賴**：實作排在 iOS 並行期 main 乾淨時；動 production code 前讀近期 commit 避免撞檔。
@@ -58,19 +58,81 @@ users/{uid}/achievements/{achievementId}
   - `aggregateLeaderboards` cron（排行榜名次類，如「週榜第一」）。
 - 不開新的高頻 scheduled function（控成本）。
 
-## D. 徽章清單提案（PM 提案 — 待 user sign-off，可增刪）
+## D. 徽章清單（定版 v1 — 2026-06-02；user 仍可增刪數值/品項）
 
-| 類別 | 徽章 | 條件 |
-|---|---|---|
-| 遛狗里程碑 | 🐾 初次遛狗 / 🦮 遛狗達人 / 🏅 遛狗大師 | walkCount ≥ 1 / 50 / 200 |
-| 連續天數 | 🔥 三日有恆 / 🔥 一週不輟 / 🔥 月度堅持 | currentStreak ≥ 3 / 7 / 30 |
-| 累計里程 | 📏 10 公里 / 50 公里 / 100 公里 | totalDistanceKm ≥ 10 / 50 / 100 |
-| 寵物 | 🐶 第一隻毛孩 / 🏠 多寵家庭 | petCount ≥ 1 / 3 |
-| 家庭 | 👨‍👩‍👧 加入家庭 | 加入任一 family |
-| 社群 | 📸 第一篇動態 / ❤️ 廣受歡迎 | 第一篇 post / 單篇 reaction ≥ 10 |
-| 排行榜 | 👑 週榜第一 | 任一週 weekly 榜 rank == 1 |
+26 枚，7 類。`id` = Backend `ACHIEVEMENTS` 常數 key；`metric` = lifetime 統計來源（見 C 關鍵點）；`guest` = guest 是否可解（社群/排行榜類 ✗）。
+title 兩語系（zh-TW / en），i18n key 建議 `Achievements.{id}.title` / `.desc`。
 
-> 數值/品項你可直接增刪改。社群/排行榜類對 guest 不適用（見 guest 段）。
+### 遛狗里程碑（metric: `walkCount`，guest ✓）
+| id | emoji | zh-TW / en | 條件 |
+|---|---|---|---|
+| `walk-1` | 🐾 | 初次遛狗 / First Walk | walkCount ≥ 1 |
+| `walk-10` | 🦴 | 遛狗新手 / Getting Started | ≥ 10 |
+| `walk-50` | 🦮 | 遛狗達人 / Walk Pro | ≥ 50 |
+| `walk-100` | 🏅 | 遛狗大師 / Walk Master | ≥ 100 |
+| `walk-365` | 🏆 | 遛狗傳奇 / Walk Legend | ≥ 365 |
+
+### 連續天數（metric: `longestStreak`，guest ✓）
+> ⚠️ 用 **longestStreak（歷史最長）** 非 currentStreak — 徽章一旦得到就永久保留，不因斷掉而收回。Backend lifetime 統計需含 longestStreak。
+| id | emoji | zh-TW / en | 條件 |
+|---|---|---|---|
+| `streak-3` | 🔥 | 三日有恆 / 3-Day Streak | longestStreak ≥ 3 |
+| `streak-7` | 🔥 | 一週不輟 / Week Warrior | ≥ 7 |
+| `streak-14` | 🔥 | 雙週堅持 / Two Weeks Strong | ≥ 14 |
+| `streak-30` | 🔥 | 月度堅持 / Monthly Devotion | ≥ 30 |
+| `streak-100` | 💯 | 百日不間斷 / Century Streak | ≥ 100 |
+
+### 累計里程（metric: `totalDistanceKm`，guest ✓）
+| id | emoji | zh-TW / en | 條件 |
+|---|---|---|---|
+| `dist-5` | 📏 | 暖身 5 公里 / 5 km | totalDistanceKm ≥ 5 |
+| `dist-25` | 📏 | 25 公里 / 25 km | ≥ 25 |
+| `dist-50` | 🥾 | 50 公里 / 50 km | ≥ 50 |
+| `dist-100` | 🗺️ | 百里之行 / 100 km | ≥ 100 |
+| `dist-250` | 🌍 | 250 公里 / 250 km | ≥ 250 |
+
+### 累計時長（metric: `totalDurationMin`，guest ✓）
+| id | emoji | zh-TW / en | 條件 |
+|---|---|---|---|
+| `time-600` | ⏱️ | 遛滿 10 小時 / 10 Hours | totalDurationMin ≥ 600 |
+| `time-3000` | ⏱️ | 遛滿 50 小時 / 50 Hours | ≥ 3000 |
+
+### 寵物（metric: `petCount`，guest ✓）
+| id | emoji | zh-TW / en | 條件 |
+|---|---|---|---|
+| `pet-1` | 🐶 | 第一隻毛孩 / First Pet | petCount ≥ 1 |
+| `pet-3` | 🏠 | 多寵之家 / Full House | ≥ 3 |
+
+### 家庭（metric: `familyJoined`，guest ✗）
+| id | emoji | zh-TW / en | 條件 |
+|---|---|---|---|
+| `family-join` | 👨‍👩‍👧 | 加入家庭 / Family Member | 加入任一 family |
+
+### 社群（guest ✗）
+| id | emoji | zh-TW / en | 條件 | metric |
+|---|---|---|---|---|
+| `post-1` | 📸 | 第一篇動態 / First Post | postCount ≥ 1 | postCount |
+| `post-10` | ✍️ | 動態達人 / Storyteller | ≥ 10 | postCount |
+| `react-10` | ❤️ | 廣受歡迎 / Crowd Pleaser | 單篇 post reactionCounts 加總 ≥ 10 | 單篇 reactionCounts（已 denormalized） |
+
+### 排行榜（guest ✗；來源既有 leaderboard entries）
+| id | emoji | zh-TW / en | 條件 |
+|---|---|---|---|
+| `rank-top10` | 📊 | 登上排行榜 / On the Board | 任一週 weekly 人榜或狗榜 rank ≤ 10 |
+| `rank-1-week` | 👑 | 週榜第一 / Weekly Champion | weekly rank == 1 |
+| `rank-1-month` | 🏆 | 月榜第一 / Monthly Champion | monthly rank == 1 |
+
+### 資料來源備註（給 Backend）
+- `walkCount` / `totalDistanceKm` / `totalDurationMin` / `longestStreak` → 來自 C 的 lifetime 統計（涵蓋全部 walk，**非** leaderboard entry）。
+- `react-10` → 讀 post 自身 denormalized `reactionCounts` 加總（feed-comments-and-reactions-v2 已有）。
+- `rank-*` → 讀既有 `leaderboards/*` 與 `dogLeaderboards/*` entry（guest 已被排除，天然不會誤得）。
+- 排行榜類在 `aggregateLeaderboards` cron 評估即可（低頻）；其餘掛 walk/pets/family/post onCreate。
+
+### UI 分層（給 UI/UX）
+- 同類分階（如遛狗 1→10→50→100→365）：已得顯示最高階徽章 + 各階為里程碑；未得顯示「下一階進度」（如 walkCount 47 → walk-50 進度 47/50）。
+- guest ✗ 類：guest 帳號顯示為鎖定 + 「綁定帳號解鎖」提示（對齊 guest-login gating）。
+
+> v1 共 26 枚。數值/品項 user 可再增刪；改動只需動 Backend `ACHIEVEMENTS` 常數 + i18n。
 
 ## E. 成就頁（Feature Builder + UI/UX）
 
