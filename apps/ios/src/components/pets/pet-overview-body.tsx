@@ -8,8 +8,10 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { dayDiffFromNow, startOfMonth } from "@mango/shared-business";
-import type { Expense, ExpenseCategory, Pet, Reminder, Walk } from "@mango/shared-types";
+import type { Expense, Pet, Reminder, Walk } from "@mango/shared-types";
 
+import { CATEGORY_EMOJI } from "@/lib/expense-ui";
+import { groupThousands, monthDay } from "@/lib/format";
 import { scoped } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 
@@ -17,32 +19,8 @@ const tPP = scoped("PetsPage");
 const tExp = scoped("Expense");
 const tRem = scoped("Reminder");
 
-const CATEGORY_EMOJI: Record<ExpenseCategory, string> = {
-  food: "🍖",
-  medical: "💊",
-  grooming: "✂️",
-  toy: "🧸",
-  training: "🎓",
-  insurance: "🛡️",
-  other: "🧾",
-};
-
 function ms(ts: { toMillis?: () => number } | undefined): number {
   return ts?.toMillis?.() ?? 0;
-}
-
-/** Thousands separator without Intl (Hermes lacks full toLocaleString). */
-function groupThousands(n: number): string {
-  return Math.round(n)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-function monthDay(t: { toMillis?: () => number } | undefined): string {
-  const millis = ms(t);
-  if (!millis) return "";
-  const d = new Date(millis);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 type StatTone = "brand" | "leaf" | "cookie" | "muted";

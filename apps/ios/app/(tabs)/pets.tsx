@@ -25,6 +25,8 @@ import { PetHeader } from "@/components/pets/pet-header";
 import { PetSwitcher } from "@/components/pets/pet-switcher";
 import { PetTabs, type PetTabKey } from "@/components/pets/pet-tabs";
 import { PetOverviewBody } from "@/components/pets/pet-overview-body";
+import { PetExpensesBody } from "@/components/pets/pet-expenses-body";
+import { PetHealthBody } from "@/components/pets/pet-health-body";
 import { PetsEmptyState } from "@/components/pets/pets-empty-state";
 import { colors, spacing } from "@/theme/theme";
 
@@ -129,6 +131,10 @@ export default function PetsScreen() {
                 expenses={expenses}
                 walks={walks}
               />
+            ) : activeTab === "expenses" ? (
+              <PetExpensesBody petId={activePet.petId} expenses={expenses} />
+            ) : activeTab === "health" ? (
+              <PetHealthBody petId={activePet.petId} />
             ) : (
               <TabPlaceholder tab={activeTab} />
             )}
