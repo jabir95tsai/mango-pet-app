@@ -283,3 +283,37 @@ hero「已解鎖 2/26」+ 環 ✓；寵物區 2/2 滿條、第一隻毛孩 + 多
 
 ### ⚠️ 給 Feature Builder（未做，已丟 backlog）
 - 任務含「解鎖時慶祝動效（**若** Feature Builder 留了 hook）」。**目前頁面沒有 newly-earned hook** —— 它只讀既有 grant，無法分辨「這次剛解鎖」vs「早就有」。所以我做的是**進頁時已得徽章的輕量光掃**（reduced-motion 安全），而**非**假的「剛解鎖」慶祝（否則每次進頁都會對所有舊徽章放慶祝）。真正的解鎖瞬間慶祝需要 Feature Builder 提供 hook（例：比對 localStorage 上次已知 grant 集合，或 push deep-link 帶 `?unlocked=walk-50`）→ UI/UX 再接 confetti/scale-pop。見 backlog。
+
+---
+
+## H. 解鎖慶祝畫面（Unlock Celebration）— user 設計稿 2026-06-02
+
+> 補上 UI/UX 點出的缺口（上方「真正的解鎖瞬間慶祝需要 hook」）。user 用 Claude Design 做了高保真稿並 handoff。
+> **設計來源**：Claude Design bundle（`Mango 徽章解鎖慶祝.html` + `confetti-engine.jsx`）。實作者請向 user 取同一份 design URL，fetch 後 gunzip→tar 展開讀 `mango-pet/project/Mango 徽章解鎖慶祝.html` 全文 + `chats/`。**像素級重現視覺**，技術用 React（不照抄 prototype 結構）。
+> **角色分工**：Feature Builder（偵測 newly-earned hook + app 層掛載 + CTA 路由 + 多枚 queue）→ UI/UX（modal/紙花/獎章視覺像素級 port + a11y + reduced-motion）。
+
+### 觸發 / 偵測 hook（Feature Builder — 這是缺的關鍵件）
+頁面只讀既有 grant、分不出「剛解鎖」。需要：
+- **client 端 diff**：localStorage 存「已慶祝過的 achievement id 集合」；achievements 資料載入時(或 app 啟動 / walk 完成後)比對 current grants，**新增的 id → 推入慶祝 queue → 慶祝後寫回 localStorage**。避免每次進頁對舊徽章重放。
+- **push deep-link**：解鎖 push（§F）點開帶 `?unlocked=<id>`（多枚用逗號）→ 直接開慶祝 modal。
+- 多枚同時解鎖 → 用設計變體 B（一次顯示 N 枚、可逐枚翻看）。
+- 掛載在 **app 層 overlay**（非單一頁），這樣剛遛完狗 / 進 app / 點 push 都能跳。
+
+### 視覺規格（像素級對齊設計稿；tokens 用既有 globals.css 變數）
+- **Scrim**：`rgba(38,24,8,.55)` + `backdrop-blur(3px)`，淡入 `.35s`。
+- **Modal**：`cardSoft` 底、`1px hairline`、圓角 `24px`、`max-width 330px`、padding `18/22/22`、shadow `0 24px 60px -20px rgba(70,42,8,.45)…`；入場 `modal-in .5s cubic-bezier(.2,.9,.3,1.1)`（translateY18+scale.94→0）。
+- **獎章（芒果金幣）**：148px 圓、漸層 `linear-gradient(150deg, amber 0%, brand 45%, brandDeep 100%)` + inner/outer shadow；內 disc 112px 徑向亮面，中央 emoji 62px。`medal-pop .8s cubic-bezier(.34,1.56,.64,1)`（scale.3 rot-12 → 1.12 rot4 → 1）。外圈 `glow-pulse 2.4s` + `rays-spin 12s` 光暈/光芒。
+- **文案**：kicker「🎉 恭喜解鎖！」(brandDeep)、`badge-name` 25px/800、`badge-desc` 14.5px/ink2、chip「🏅 {category}」(brandTint 底)。內容套 §D 徽章資料（name/desc/category/emoji）。
+- **CTA**：主鈕「太棒了」(圓角膠囊 52px、`linear-gradient(180deg,brand,brandDeep)` 白字、shadow-mango) → 關閉；次鈕「查看所有成就」(ghost) → `/app/achievements`。
+- **紙花 confetti**：72 片、7 色 `[brand,brandDeep,amber,brandTint,leaf,pink,sky]`、`conf-fall` 落下+旋轉 720deg、隨機大小/延遲、3 成圓形。
+- **變體**：A 單枚 / B 多枚（縮圖 strip + dots + swap 切換）/ C reduced-motion 靜態。
+- **a11y**：`role="dialog" aria-modal` + aria-label「獲得徽章：{name}」；✕ 關閉、scrim 點擊關閉、Esc 關閉、focus 進 modal；按鈕 `focus-visible` 3px outline。
+- **reduced-motion**：`@media (prefers-reduced-motion: reduce)` → 全 animation/transition none、**confetti 不顯示**、glow 靜態。設計稿變體 C 即此態。
+
+### i18n / 範圍
+- 文案走 i18n（zh-TW + en）：kicker / 太棒了 / 查看所有成就 / 徽章 name·desc·category（沿用 §D 的 `Achievements.{id}.*` key）。
+- 不改 Backend / grant 邏輯（已 shipped）；本節純前端慶祝層 + 偵測 hook。
+
+### Handoff
+- **→ Feature Builder**：newly-earned 偵測（localStorage diff + push `?unlocked=` deep-link）+ app 層掛載 + 慶祝 queue（多枚）+ CTA 路由 + 慶祝後寫回 localStorage。
+- **→ UI/UX**：modal/獎章/紙花/變體 A·B·C 像素級 port（上方視覺規格）+ a11y + reduced-motion；i18n key 接 Feature Builder。
