@@ -105,14 +105,19 @@
 | 加入家庭自動加好友 | [`auto-friend-family-members.md`](./auto-friend-family-members.md) | parity（trigger 已 ship,iOS 只呈現） | ✅ 後端 trigger（iOS 只在 listFriendUids re-fetch 呈現，無 client code） |
 
 ### P5 — Push + Settings
+> 🟡 **P5 全 code 收齊（2026-06-03），待實機驗收**：P5a `394b750`（settings shell + APNs registration + toggles + delete + guest upgrade）、P5b `6603f39`（data export；expo-file-system gate，web gate 綠）。
+> ⚠️ **APNs 推播實際送達的前置（DevOps，非 code）**：Firebase Console → Cloud Messaging 需註冊 iOS app 的 **APNs 金鑰/憑證**；build 已帶 `aps-environment` entitlement + `remote-notification` background mode。憑證設好前 token 可 mint 但收不到推播 → 實機驗證須在憑證就緒後。
+
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| 4 種 engagement push(A1/A2/B1/B2) | [`engagement-push-notifications.md`](./engagement-push-notifications.md) | **parity + native upgrade**（web FCM 在 iOS PWA 殘缺 → APNs native） | ⬜ |
-| Push toggle + 各 push opt-out | engagement-push | parity | ⬜ |
-| WalkAutoPhotoSection toggle | walks-auto-photo-share | parity | ⬜ |
-| DeleteAccount flow | settings | parity | ⬜ |
-| DataExport | settings | parity | ⬜ |
-| UI Polish bundle(friends icon / post default public / leaderboard refresh) | [`ui-polish-bundle-2026-05-25.md`](./ui-polish-bundle-2026-05-25.md) | parity（P7 統一 catch up 亦可） | ⬜ |
+| FCM→APNs push registration | [`engagement-push-notifications.md`](./engagement-push-notifications.md) | **parity + native upgrade**（web FCM 在 iOS PWA 殘缺 → APNs native） | 🟡 code done（`394b750`，messaging requestPermission/getToken → fcmTokens arrayUnion + reconcile + globalDisabled）；待 APNs 憑證 + 實機驗收 |
+| Push toggle + engagement opt-out（A1/A2/B1/B2 + comment/reaction/achievement） | engagement-push | parity | 🟡 code done（`394b750`，global toggle + 7 型 per-type opt-out arrayUnion/Remove + family-milestone personal greyed）；待實機驗收 |
+| WalkAutoPhotoSection toggle | walks-auto-photo-share | parity | 🟡 code done（`394b750`，walkPrefs.autoPhotoShare merge）；待實機驗收 |
+| Leaderboard Visibility Toggle | settings | parity | 🟡 code done（`394b750`，public/friends/off radio + setLeaderboardVisibility）；待實機驗收 |
+| Guest Login + Upgrade | settings/auth | **parity + native upgrade** | 🟡 code done（`394b750`，signInAsGuest + linkWithCredential Google/Apple，conflict→switch）；待實機驗收 |
+| DeleteAccount flow | settings | parity | 🟡 code done（`394b750`，previewImpact + typed-displayName confirm + callable + signOut）；待實機驗收 |
+| DataExport | settings | parity | 🟡 code done（`6603f39`，exportUserData → JSON file + native share）；待實機驗收 |
+| UI Polish bundle(friends icon / post default public / leaderboard refresh) | [`ui-polish-bundle-2026-05-25.md`](./ui-polish-bundle-2026-05-25.md) | parity（P7 統一 catch up 亦可） | 🟡 部分（post default public ✅ P3a composer；leaderboard refresh ✅ P4a；friends icon → P6） |
 
 ### P6 — Social
 | Web feature | Web spec | iOS policy | iOS 狀態 |
