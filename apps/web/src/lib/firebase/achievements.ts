@@ -34,14 +34,27 @@ export async function listEarnedAchievements(
 /** Live counts for the metrics not held in the lifetime-stats doc. Cheap
  *  aggregation reads (1 billed read each, no document download). `postCount`
  *  is skipped for guests (the social badges are guest-locked anyway) so a
- *  guest never pays for / is denied that query. */
+ *  guest never pays for / is denied that query.
+ *
+ *  ⚠️ The pet count is constrained to `familyId == null` (personal pets) —
+ *  that's the only rules-allowed shape. A bare `ownerUid == uid` query is
+ *  permission-denied because a family pet the user owns needs an
+ *  isFamilyMember() check the rules can't pre-verify for a list/aggregation
+ *  query (matches `listPersonalPets`). Family-mode pets therefore don't feed
+ *  the pet-badge PROGRESS bar, but the badge's EARNED state comes from the
+ *  authoritative backend grant either way, so only an un-earned bar could
+ *  under-count for a heavy family user. */
 export async function getAchievementCounts(
   uid: string,
   opts: { includePosts: boolean },
 ): Promise<{ petCount: number; postCount: number }> {
   const db = getDb();
   const petCountP = getCountFromServer(
-    query(collection(db, "pets"), where("ownerUid", "==", uid)),
+    query(
+      collection(db, "pets"),
+      where("ownerUid", "==", uid),
+      where("familyId", "==", null),
+    ),
   );
   const postCountP = opts.includePosts
     ? getCountFromServer(
