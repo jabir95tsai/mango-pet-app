@@ -224,3 +224,33 @@ title 兩語系（zh-TW / en），i18n key 建議 `Achievements.{id}.title` / `.
 - ACHIEVEMENTS 數值/品項要調 → 改 `@mango/shared-types` 的 `ACHIEVEMENTS` + `functions/src/achievements.ts` 鏡像（兩份保持同步）+ i18n。functions 不能 import workspace package，故刻意雙份。
 - 進度不存每枚 doc（只存已得）；未得進度前端即時算。
 - 排行榜類在 cron（日級）評估，當天遛狗後最快隔天 00:30 才授予 rank 徽章（設計如此，低頻控成本）。
+
+---
+
+## ✅ Feature Builder 已交付（Web/PWA session 2026-06-02 — commits 5f796f7 + 4ae994f）
+
+**Shipped to main → App Hosting（prod live + Chrome MCP 驗過）。**
+
+### 做了什麼
+- **`/app/achievements`** 頁（`apps/web/src/app/app/achievements/page.tsx`）：8 類分區（walks/streak/distance/duration/pets/family/social/rank），每區 earned/total 計數 + BadgeCard grid。
+- **資料層** `lib/firebase/achievements.ts`：讀 `users/{uid}/stats/lifetime` + `users/{uid}/achievements` grants + `getCountFromServer` 算 pet/post 數。頁面用 `allSettled` 降級。
+- **進度邏輯** `lib/achievements.ts`（純函式，好測）：per-metric current value + 0..1 progress；**earned 來自 backend grant（authoritative），不前端重算**。`singlePostReactions` / `leaderboardRank` 無前端值 → 只顯示 earned/未得、無進度條。
+- **BadgeCard**：earned（彩色 + 解鎖於 date）/ 未得（灰階 + 47/50 進度條）/ guest-locked（鎖 + 點擊開升級 dialog，對齊 guest-login gating）。
+- **設定頁入口**「成就徽章」row → `/app/achievements`（所有人可見，guest 也能解個人徽章）。
+- **achievement push opt-out**：engagement section 本來就 iterate `ENGAGEMENT_PUSH_TYPES`（已含 `achievement`），補上缺的 i18n label/hint 即自動出現開關（先前顯示 raw key，已修）。
+- **i18n** zh-TW + en：完整 `Achievements` namespace（26 枚 title/desc + 8 categories + 頁面字串）+ `Settings.achievements` + `Settings.engagementPush.achievement`。⚠️ i18n 已搬到 `packages/shared-i18n/src/messages/*.json`（非舊的 `apps/web/messages`）。
+
+### Prod 驗證（Chrome MCP，真 guest）
+建第 3 隻寵物 → backend `onPetCreatedAchievements` 即時授予 → 頁面 **pet-1 + pet-3 彩色 + 「解鎖於 2026年6月2日」**、summary「已解鎖 2/26」✅；未得徽章灰階 + 進度條 ✅；家庭/社群/排行榜對 guest 鎖定 + 「綁定帳號解鎖」CTA ✅；設定入口 + 解鎖成就 push 開關 ✅。
+
+### 過程中修的 bug（commit 4ae994f）
+- pet-count `getCountFromServer(pets where ownerUid==uid)` 被 rules **permission-denied**（family pet 需 isFamilyMember，list/aggregation query 無法預驗）→ allSettled 把 petCount 吞成 0（pet 徽章顯示 0/1、每次 load 噴 console error）。改成 `where ownerUid==uid AND familyId==null`（personal pets，同 listPersonalPets 的允許形狀）。family-mode 寵物因此不進「未得進度條」，但 earned 來自 grant 仍正確。
+
+### → UI/UX Handoff
+- 徽章視覺最終態（彩色/灰階/進度條/鎖定）目前是**功能性結構**，用 mango token + grayscale；請接手做最終 palette / 動效 / reduced-motion / emoji-vs-svg。
+- §D「同類分階：已得顯示最高階、未得顯示下一階進度」目前是**全 tier 平鋪**（每階一個 tile）。若要收斂成「最高階 + 下一階進度」由 UI/UX 決定資訊密度。
+- BadgeCard 在 `apps/web/src/components/achievements/badge-card.tsx`；分區/grid 在 page。
+- 入口目前只在設定頁（無 profile 頁）；若之後加 profile，再加一個入口。nav 是否要放 `/app/achievements` 由 UI/UX/PM 決定（目前未動 app-nav）。
+
+### → Backend（提醒，非本 session）
+- `backfillAchievements` 仍 **尚未執行**（task 7）→ 老用戶（含我測試 guest 早於成就上線建立的 2 隻舊寵物）的已達標徽章尚未補發。跑 backfill（先 dry-run）後老資料才會亮。
