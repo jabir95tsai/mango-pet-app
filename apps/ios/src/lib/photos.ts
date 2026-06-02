@@ -89,3 +89,25 @@ export async function uploadPetAvatar(
   const path = petAvatarPath(uid, petId, "jpg");
   return uploadJpeg(compressed, path);
 }
+
+/**
+ * Compress a receipt photo with the shared receipt preset (longest edge 2400,
+ * higher quality so OCR stays legible ~150 DPI) and return its base64 — fed
+ * straight to the Firebase AI Logic Gemini call (inlineData). Returns the
+ * local uri too (for the preview thumbnail). No Storage upload here; the AI
+ * scan is ephemeral.
+ */
+export async function compressReceiptToBase64(
+  uri: string,
+): Promise<{ uri: string; base64: string }> {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: IMAGE_PRESETS.receipt.maxWidthOrHeight } }],
+    {
+      compress: 0.85,
+      format: ImageManipulator.SaveFormat.JPEG,
+      base64: true,
+    },
+  );
+  return { uri: result.uri, base64: result.base64 ?? "" };
+}

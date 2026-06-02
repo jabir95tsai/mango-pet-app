@@ -19,7 +19,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Pet, Reminder } from "@mango/shared-types";
+import { fromLocalDateInput } from "@mango/shared-business";
+import type {
+  ExpenseSource,
+  ExtractedReceipt,
+  Pet,
+  Reminder,
+} from "@mango/shared-types";
 
 import { usePetsData } from "@/lib/use-pets-data";
 import { useAuth } from "@/state/auth-context";
@@ -34,8 +40,9 @@ import { PetHealthBody } from "@/components/pets/pet-health-body";
 import { PetsEmptyState } from "@/components/pets/pets-empty-state";
 import { PetForm } from "@/components/pets/pet-form";
 import { ReminderForm } from "@/components/pets/reminder-form";
-import { ExpenseForm } from "@/components/pets/expense-form";
+import { ExpenseForm, type ExpenseFormInitial } from "@/components/pets/expense-form";
 import { HealthForm } from "@/components/pets/health-form";
+import { ReceiptScanner } from "@/components/pets/receipt-scanner";
 import { colors, radius, spacing } from "@/theme/theme";
 
 const tPP = scoped("PetsPage");
@@ -43,7 +50,13 @@ const tPP = scoped("PetsPage");
 type FormState =
   | { kind: "pet"; pet?: Pet }
   | { kind: "reminder"; reminder?: Reminder }
-  | { kind: "expense" }
+  | {
+      kind: "expense";
+      initial?: ExpenseFormInitial;
+      source?: ExpenseSource;
+      items?: string[];
+    }
+  | { kind: "scanner" }
   | { kind: "health" }
   | null;
 
@@ -81,9 +94,26 @@ export default function PetsScreen() {
     setHealthKey((k) => k + 1);
   }
   function openTabFab() {
-    if (activeTab === "expenses") setForm({ kind: "expense" });
+    // Expenses FAB is camera-first (拍收據); manual entry is the in-scanner
+    // fallback. Other tabs open their form directly.
+    if (activeTab === "expenses") setForm({ kind: "scanner" });
     else if (activeTab === "health") setForm({ kind: "health" });
     else setForm({ kind: "reminder" }); // overview + reminders → new reminder
+  }
+
+  /** AI receipt → expense-form prefill (spentAt string → local Date). */
+  function onReceiptExtracted(receipt: ExtractedReceipt) {
+    setForm({
+      kind: "expense",
+      source: "ai_scan",
+      items: receipt.items,
+      initial: {
+        amount: receipt.amount,
+        vendor: receipt.vendor,
+        category: receipt.category,
+        spentAt: receipt.spentAt ? fromLocalDateInput(receipt.spentAt) : undefined,
+      },
+    });
   }
 
   // Initial load → spinner.
@@ -220,6 +250,13 @@ export default function PetsScreen() {
           onSaved={afterSave}
         />
       ) : null}
+      {form?.kind === "scanner" && activePet ? (
+        <ReceiptScanner
+          onClose={closeForm}
+          onExtracted={onReceiptExtracted}
+          onManual={() => setForm({ kind: "expense", source: "manual" })}
+        />
+      ) : null}
       {form?.kind === "expense" && activePet ? (
         <ExpenseForm
           familyId={familyId}
@@ -227,6 +264,9 @@ export default function PetsScreen() {
           displayName={displayName}
           petId={activePet.petId}
           petName={activePet.name}
+          initial={form.initial}
+          source={form.source}
+          items={form.items}
           onClose={closeForm}
           onSaved={afterSave}
         />
