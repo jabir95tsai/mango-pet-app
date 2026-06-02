@@ -12,21 +12,25 @@
  */
 import * as ImageManipulator from "expo-image-manipulator";
 import storage from "@react-native-firebase/storage";
-import { postPhotoPath, walkPhotoPath } from "./storage-paths";
+import { IMAGE_PRESETS } from "@mango/shared-business";
+import { petAvatarPath, postPhotoPath, walkPhotoPath } from "./storage-paths";
 
 const MAX_EDGE_PX = 1920;
 const JPEG_QUALITY = 0.8;
 
 /**
- * Resize (longest edge → 1920) + JPEG-compress a local image URI. Returns the
- * compressed local URI (always JPEG). NOTE: resize targets width 1920; phone
- * camera photos (≫1920px) downsize. A source already < 1920px wide would be
- * upscaled — acceptable for camera photos; revisit if we add gallery import.
+ * Resize (longest edge → `maxEdge`, default 1920) + JPEG-compress a local image
+ * URI. Returns the compressed local URI (always JPEG). expo-image-manipulator
+ * is quality-based (no maxSizeMB target), so we resize + jpeg-compress to the
+ * same order of magnitude as web's browser-image-compression presets.
  */
-export async function compressImage(uri: string): Promise<string> {
+export async function compressImage(
+  uri: string,
+  maxEdge: number = MAX_EDGE_PX,
+): Promise<string> {
   const result = await ImageManipulator.manipulateAsync(
     uri,
-    [{ resize: { width: MAX_EDGE_PX } }],
+    [{ resize: { width: maxEdge } }],
     { compress: JPEG_QUALITY, format: ImageManipulator.SaveFormat.JPEG },
   );
   return result.uri;
@@ -65,5 +69,23 @@ export async function uploadPostPhoto(
 ): Promise<string> {
   const compressed = await compressImage(uri);
   const path = postPhotoPath(authorUid, postId, idx, "jpg");
+  return uploadJpeg(compressed, path);
+}
+
+/**
+ * Compress (avatar preset → 800px longest edge) + upload a pet avatar to
+ * `users/{uid}/pets/{petId}/avatar.jpg`. Returns the Storage download URL to
+ * store in pet.photoURL. `uid` namespaces the upload (web parity).
+ */
+export async function uploadPetAvatar(
+  uri: string,
+  uid: string,
+  petId: string,
+): Promise<string> {
+  const compressed = await compressImage(
+    uri,
+    IMAGE_PRESETS.avatar.maxWidthOrHeight,
+  );
+  const path = petAvatarPath(uid, petId, "jpg");
   return uploadJpeg(compressed, path);
 }

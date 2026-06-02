@@ -9,7 +9,7 @@ import type { HealthRecord } from "@mango/shared-types";
 
 import { listHealthRecords } from "@/lib/health-data";
 
-export function useHealthRecords(petId: string | null) {
+export function useHealthRecords(petId: string | null, reloadKey: number = 0) {
   const [loading, setLoading] = useState(true);
   const [records, setRecords] = useState<HealthRecord[]>([]);
 
@@ -27,7 +27,8 @@ export function useHealthRecords(petId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [petId]);
+    // reloadKey bumps re-trigger a fetch after an add (deps below).
+  }, [petId, reloadKey]);
 
   useEffect(() => {
     void reload();

@@ -1,29 +1,44 @@
 /**
- * 0-pet empty state — hero paw disc + title/body + "新增寵物" CTA + hint.
- * P2a ships a flat version; P2c upgrades the disc to an expo-linear-gradient
- * radial (the dep lands in that sub-phase). Mirrors web pets-empty-state.
+ * 0-pet empty state — gradient hero paw disc + title/body + gradient
+ * "新增寵物" CTA + hint. The disc uses expo-linear-gradient (P2c). A true
+ * radial would need Skia; a diagonal amber→brand→brandDeep gradient is the
+ * lightweight stand-in. Mirrors web pets-empty-state.
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { scoped } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 
 const tPP = scoped("PetsPage");
+const MANGO_GRADIENT = [colors.amber, colors.brand, colors.brandDeep] as const;
 
 export function PetsEmptyState({ onAddPet }: { onAddPet?: () => void }) {
   return (
     <View style={styles.box}>
-      <View style={styles.disc}>
+      <LinearGradient
+        colors={MANGO_GRADIENT}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.disc}
+      >
         <Text style={styles.paw}>🐾</Text>
-      </View>
+      </LinearGradient>
       <Text style={styles.title}>{tPP("empty.title")}</Text>
       <Text style={styles.body}>{tPP("empty.body")}</Text>
       <Pressable
         onPress={onAddPet}
-        style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.ctaWrap, pressed && styles.pressed]}
         accessibilityRole="button"
       >
-        <Text style={styles.ctaText}>{tPP("empty.cta")}</Text>
+        <LinearGradient
+          colors={MANGO_GRADIENT}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.cta}
+        >
+          <Text style={styles.ctaText}>{tPP("empty.cta")}</Text>
+        </LinearGradient>
       </Pressable>
       <Text style={styles.hint}>{tPP("empty.hint")}</Text>
     </View>
@@ -56,12 +71,19 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingHorizontal: spacing.lg,
   },
-  cta: {
+  ctaWrap: {
     marginTop: spacing.md,
+    borderRadius: radius.pill,
+    overflow: "hidden",
+    shadowColor: colors.brandDeep,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  cta: {
     height: 48,
     paddingHorizontal: spacing.xxl,
-    borderRadius: radius.pill,
-    backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -17,8 +17,14 @@ import { HealthRecordCard } from "./health-record-card";
 const tPP = scoped("PetsPage");
 const tH = scoped("Health");
 
-export function PetHealthBody({ petId }: { petId: string }) {
-  const { loading, records } = useHealthRecords(petId);
+export function PetHealthBody({
+  petId,
+  reloadKey = 0,
+}: {
+  petId: string;
+  reloadKey?: number;
+}) {
+  const { loading, records } = useHealthRecords(petId, reloadKey);
   const weightPoints = useMemo(
     () => weightSeriesFromRecords(records),
     [records],

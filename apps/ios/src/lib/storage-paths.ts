@@ -26,3 +26,10 @@ export function postPhotoPath(
 ): string {
   return `users/${authorUid}/posts/${postId}/${idx}.${ext}`;
 }
+
+/** Pet avatar. Web: storage.ts:28 — `users/{uid}/pets/{petId}/avatar.{ext}`.
+ *  Namespaced under the uploading user even for family pets (the shared pet
+ *  doc all members read just points at the resulting URL). */
+export function petAvatarPath(uid: string, petId: string, ext: string): string {
+  return `users/${uid}/pets/${petId}/avatar.${ext}`;
+}
