@@ -591,3 +591,81 @@ export type FamilyMember = {
   /** User's createdAt proxy (no per-family join timestamp yet). */
   joinedAt: Timestamp;
 };
+
+// ── Push + prefs (P5) — mirrors apps/web/src/lib/types.ts. Stored on
+//    users/{uid}. Engagement opt-outs + global disable are client-written
+//    (setDoc merge); the backend cron/triggers read them before sending APNs.
+export const ENGAGEMENT_PUSH_TYPES = [
+  "evening-walk-reminder",
+  "streak-warning",
+  "rank-overtake",
+  "family-milestone",
+  "post-comment",
+  "post-reaction",
+  "achievement",
+] as const;
+export type EngagementPushType = (typeof ENGAGEMENT_PUSH_TYPES)[number];
+
+export type PushPrefs = {
+  /** Explicit "user turned push off" — keeps the client from re-minting a
+   *  token even while the OS permission is still granted. */
+  globalDisabled?: boolean;
+  /** Engagement push-type ids the user opted out of. Absent = all on. */
+  engagementOptOut?: EngagementPushType[];
+};
+
+export type WalkPrefs = {
+  /** Absent/undefined = ON (default). Only an explicit false disables the
+   *  walk start/end auto-photo prompts. */
+  autoPhotoShare?: boolean;
+};
+
+// ── Account export / delete (P5) — callable return shapes (asia-east1).
+export type UserDataExport = {
+  meta: { exportedAt: string; schemaVersion: "v1"; uid: string };
+  user: Record<string, unknown>;
+  friends: Record<string, unknown>[];
+  friendRequests: {
+    received: Record<string, unknown>[];
+    sent: Record<string, unknown>[];
+  };
+  favoriteRestaurants: Record<string, unknown>[];
+  knowledgeBookmarks: Record<string, unknown>[];
+  pets: Record<string, unknown>[];
+  walks: Record<string, unknown>[];
+  reminders: Record<string, unknown>[];
+  expenses: Record<string, unknown>[];
+  posts: Record<string, unknown>[];
+  postReactionsOnOthers: Record<string, unknown>[];
+  restaurantReviews: Record<string, unknown>[];
+  families: Record<string, unknown>[];
+};
+
+export type DeleteAccountImpact = {
+  personalPets: number;
+  familyPets: number;
+  familyWalks: number;
+  familyReminders: number;
+  familyExpenses: number;
+  posts: number;
+};
+
+export type DeleteAccountSummary = {
+  personalPetsHardDeleted: number;
+  personalWalksHardDeleted: number;
+  personalRemindersHardDeleted: number;
+  personalExpensesHardDeleted: number;
+  familyPetsHardDeleted: number;
+  familyPetSubcollectionsCascaded: number;
+  familyWalksHardDeleted: number;
+  familyRemindersHardDeleted: number;
+  familyRemindersDoneByCleared: number;
+  familyExpensesHardDeleted: number;
+  postsHardDeleted: number;
+  reactionsHardDeleted: number;
+  reviewsHardDeleted: number;
+  restaurantsSubmittedByCleared: number;
+  familiesLeft: number;
+  familiesDissolved: number;
+  storagePhotosDeleted: number;
+};
