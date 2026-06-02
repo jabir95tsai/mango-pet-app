@@ -130,10 +130,14 @@
 | My QR dialog | friends epic | **parity + native upgrade**（qrcode-svg + clipboard/share） | 🟡 code done（`4e9e49c`，InviteQR friend URL + copy/share）；待實機驗收 |
 
 ### P7 — Polish + Submit
+> 🟡 **P7 code 部分收齊（2026-06-03）**：`1972d6c`（onboarding + privacy/terms links）。reduced-motion QA 通過（lightbox / story ring / leaderboard glow / confetti 四個動效面全覆蓋）。i18n 全 surface 用 shared catalog 既有 key（少數 zh-TW 硬字串與既有 iOS feed/walks 一致）。
+
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| App icon / splash / screenshots / metadata | strategy P7 | ➖（iOS-only 上架物) | ⬜ |
-| 隱私 / 服務條款 | `/privacy` `/terms` | parity（App Store 必須有,內容可重用 web） | ⬜ |
+| Onboarding `/onboarding`（首登 create/join family + skip） | strategy P7 | parity-lite | 🟡 code done（`1972d6c`，root navigator 首登導向 + create/join/skip → walks）；待實機驗收 |
+| 隱私 / 服務條款 | `/privacy` `/terms` | parity（App Store 必須有,內容可重用 web） | ✅ settings 連結開 web `/privacy` `/terms`（`1972d6c`） |
+| reduced-motion + i18n + 全 surface QA | strategy P7 | parity | ✅ reduced-motion 4/4 動效面覆蓋；i18n shared catalog |
+| App icon / splash / screenshots / metadata | strategy P7 | ➖（iOS-only 上架物) | ⛔ **需 user/design**：無法由 dev session 產生真實 icon/splash 美術 + App Store Connect 截圖/文案；需 user 提供素材。app.json 目前用 Expo 預設 icon。 |
 
 ---
 
