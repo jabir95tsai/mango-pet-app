@@ -4,11 +4,12 @@
  * opt-outs, walk auto-photo, leaderboard visibility, (data export → P5b), delete
  * account. Guest-only / non-guest gating matches web.
  */
-import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { signOut } from "@/lib/auth";
+import { SITE_URL } from "@/lib/config";
 import { useAuth } from "@/state/auth-context";
 import { UserAvatar } from "@/components/feed/user-avatar";
 import { PushToggle } from "@/components/settings/push-toggle";
@@ -76,6 +77,17 @@ export default function SettingsScreen() {
             <DeleteAccountSection />
           </View>
         ) : null}
+
+        {/* Privacy / Terms (App Store required; content reused from web) */}
+        <View style={styles.legalRow}>
+          <Pressable onPress={() => Linking.openURL(`${SITE_URL}/privacy`)} hitSlop={6}>
+            <Text style={styles.legalLink}>{t("Common.privacy")}</Text>
+          </Pressable>
+          <Text style={styles.legalDot}>·</Text>
+          <Pressable onPress={() => Linking.openURL(`${SITE_URL}/terms`)} hitSlop={6}>
+            <Text style={styles.legalLink}>{t("Common.terms")}</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -124,4 +136,7 @@ const styles = StyleSheet.create({
   linkText: { fontSize: 15, fontWeight: "700", color: colors.ink },
   chevron: { fontSize: 22, color: colors.ink3 },
   danger: { marginTop: spacing.lg },
+  legalRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
+  legalLink: { fontSize: 12, color: colors.ink3, textDecorationLine: "underline" },
+  legalDot: { fontSize: 12, color: colors.ink3 },
 });
