@@ -120,11 +120,14 @@
 | UI Polish bundle(friends icon / post default public / leaderboard refresh) | [`ui-polish-bundle-2026-05-25.md`](./ui-polish-bundle-2026-05-25.md) | parity（P7 統一 catch up 亦可） | 🟡 部分（post default public ✅ P3a composer；leaderboard refresh ✅ P4a；friends icon → P6） |
 
 ### P6 — Social
+> 🟡 **P6 全 code 收齊（2026-06-03），待實機驗收**：`4e9e49c`（friends list/requests/search + send + accept/reject/remove + My QR + /friends/add deep-link）。無新 native dep（QR/functions/clipboard 已在 P4b 裝）。
+
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| Friends list + search(`/app/friends`) | friends-search-lowercase | parity | ⬜ |
-| Friend request send/accept(`/app/friends/add`) | family/friends epic | parity | ⬜ |
-| My QR dialog | friends epic | parity | ⬜ |
+| Friends list + search(`/app/friends`) | friends-search-lowercase | parity | 🟡 code done（`4e9e49c`，subscribeFriends onSnapshot + searchUsers email/displayNameLower prefix；listener unmount 清理）；待實機驗收 |
+| Incoming requests + send | family/friends epic | parity | 🟡 code done（`4e9e49c`，subscribeFriendRequests + accept/reject callable/delete + sendFriendRequest setDoc；guest gate by rules）；待實機驗收 |
+| QR Deep-Link 落地 `/friends/add?uid=` | family/friends epic | parity | 🟡 code done（`4e9e49c`，getUserProfile → profile + send + self/not-found state）；待實機驗收 |
+| My QR dialog | friends epic | **parity + native upgrade**（qrcode-svg + clipboard/share） | 🟡 code done（`4e9e49c`，InviteQR friend URL + copy/share）；待實機驗收 |
 
 ### P7 — Polish + Submit
 | Web feature | Web spec | iOS policy | iOS 狀態 |
