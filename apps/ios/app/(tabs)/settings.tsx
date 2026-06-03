@@ -50,6 +50,7 @@ export default function SettingsScreen() {
         {isGuest ? <GuestUpgradeSection /> : null}
 
         {/* Links */}
+        <Text style={styles.sectionLabel}>一般</Text>
         <Pressable onPress={() => router.push("/photos")} style={styles.linkRow}>
           <Text style={styles.linkText}>🖼️  {t("Settings.photosLink")}</Text>
           <Text style={styles.chevron}>›</Text>
@@ -65,11 +66,15 @@ export default function SettingsScreen() {
           </Pressable>
         ) : null}
 
+        <Text style={styles.sectionLabel}>通知</Text>
         <PushToggle />
         {!isGuest ? <EngagementPushSection /> : null}
+
+        {!isGuest ? <Text style={styles.sectionLabel}>遛狗與隱私</Text> : null}
         {!isGuest ? <WalkAutoPhotoSection /> : null}
         {!isGuest ? <LeaderboardVisibilitySection /> : null}
 
+        {!isGuest ? <Text style={styles.sectionLabel}>資料與帳號</Text> : null}
         {!isGuest ? <ExportDataSection /> : null}
 
         {!isGuest ? (
@@ -113,7 +118,7 @@ const styles = StyleSheet.create({
   email: { fontSize: 12, color: colors.ink3, marginTop: 1 },
   signOut: {
     paddingHorizontal: spacing.md,
-    height: 36,
+    minHeight: 44,
     borderRadius: radius.pill,
     backgroundColor: colors.bgAlt,
     borderWidth: 1,
@@ -122,6 +127,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   signOutText: { fontSize: 13, fontWeight: "700", color: colors.cookie },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.ink3,
+    marginTop: spacing.sm,
+    marginBottom: -spacing.xs,
+    paddingHorizontal: spacing.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   linkRow: {
     flexDirection: "row",
     alignItems: "center",
