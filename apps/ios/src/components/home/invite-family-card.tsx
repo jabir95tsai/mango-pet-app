@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
     minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill,
     backgroundColor: colors.brand, alignItems: "center", justifyContent: "center",
   },
-  ctaText: { fontSize: 13, fontWeight: "800", color: colors.ink },
+  ctaText: { fontSize: 13, fontWeight: "800", color: colors.card },
   pressed: { opacity: 0.85 },
 });

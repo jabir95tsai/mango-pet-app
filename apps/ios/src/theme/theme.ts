@@ -19,13 +19,28 @@ export const spacing = {
   xxl: 32,
 } as const;
 
+// Radius scale — 1:1 with web globals.css :root --radius-* (NOT the larger
+// native values we used in the native-feel pass). lg 14 = card default,
+// xl 18 = mockup Card, xl2 22 = MangoPhoto / pet-header avatar.
 export const radius = {
   sm: 8,
   md: 12,
-  lg: 16,
-  xl: 24,
-  pill: 999,
+  lg: 14,
+  xl: 18,
+  xl2: 22,
+  pill: 9999,
 } as const;
+
+// The mango primary-button / FAB gradient — 1:1 with web globals.css
+// `.btn-mango` (linear-gradient 160deg amber → brand 50% → brandDeep) with
+// white text + lifted shadow. expo-linear-gradient renders it; the 160deg is
+// approximated with start/end points.
+export const mangoGradient = {
+  colors: [colors.amber, colors.brand, colors.brandDeep] as const,
+  locations: [0, 0.5, 1] as const,
+  start: { x: 0.1, y: 0 },
+  end: { x: 0.9, y: 1 },
+};
 
 // Warm-brown drop-shadow base (rgb(80,50,10)), mirrors web --shadow-card /
 // --shadow-elevated tone. RN can't express multi-layer / negative-spread
@@ -50,12 +65,13 @@ export const shadows = {
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
-  // Brand emphasis under primary CTAs / the raised tab disc — --shadow-mango.
+  // Brand emphasis under primary CTAs / the raised tab disc — mirrors web
+  // --shadow-mango / .btn-mango (0 10-12px 22-24px -8px rgba(243,152,0,0.55)).
   mango: {
-    shadowColor: colors.brandDeep,
+    shadowColor: colors.brand,
     shadowOpacity: 0.45,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
 } satisfies Record<string, ViewStyle>;

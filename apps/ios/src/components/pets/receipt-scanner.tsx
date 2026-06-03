@@ -209,6 +209,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  manualBtnText: { fontSize: 16, fontWeight: "800", color: colors.ink },
+  manualBtnText: { fontSize: 16, fontWeight: "800", color: colors.card },
   cancelLink: { fontSize: 15, color: colors.ink3, marginTop: spacing.sm },
 });

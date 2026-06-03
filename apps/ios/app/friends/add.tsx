@@ -120,5 +120,5 @@ const styles = StyleSheet.create({
   notFoundTitle: { fontSize: 18, fontWeight: "800", color: colors.ink },
   notFoundDesc: { fontSize: 13, color: colors.ink2, textAlign: "center", lineHeight: 19 },
   sendBtn: { marginTop: spacing.xl, height: 52, paddingHorizontal: spacing.xxl, borderRadius: radius.pill, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center" },
-  sendText: { fontSize: 16, fontWeight: "800", color: colors.ink },
+  sendText: { fontSize: 16, fontWeight: "800", color: colors.card },
 });

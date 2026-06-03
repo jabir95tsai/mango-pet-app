@@ -209,6 +209,7 @@ export default function WalksScreen() {
             icon="▶"
             size="lg"
             fullWidth
+            pill
             disabled={pets.length === 0}
             onPress={handleStartWalking}
             accessibilityLabel="開始遛狗"

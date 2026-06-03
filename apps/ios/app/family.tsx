@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   row2: { flexDirection: "row", gap: spacing.md },
   btn: { flex: 1, height: 48, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   btnPrimary: { backgroundColor: colors.brand },
-  btnPrimaryText: { fontSize: 15, fontWeight: "800", color: colors.ink },
+  btnPrimaryText: { fontSize: 15, fontWeight: "800", color: colors.card },
   btnGhost: { backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.hairline },
   btnGhostText: { fontSize: 15, fontWeight: "800", color: colors.ink2 },
   switcher: { gap: spacing.sm, paddingVertical: spacing.xs },

@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   codeInput: { fontSize: 24, fontWeight: "800", letterSpacing: 8, textAlign: "center" },
   error: { fontSize: 12, color: colors.cookie },
   primary: { marginTop: spacing.sm, height: 52, borderRadius: radius.pill, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center" },
-  primaryText: { fontSize: 16, fontWeight: "800", color: colors.ink },
+  primaryText: { fontSize: 16, fontWeight: "800", color: colors.card },
   disabled: { opacity: 0.6 },
   back: { alignItems: "center", paddingVertical: spacing.md },
   backText: { fontSize: 14, fontWeight: "700", color: colors.ink2 },

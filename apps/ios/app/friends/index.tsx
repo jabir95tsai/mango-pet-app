@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   removeText: { fontSize: 14, color: colors.ink3, fontWeight: "700" },
   smallBtn: { paddingHorizontal: spacing.md, minHeight: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   accept: { backgroundColor: colors.brand },
-  acceptText: { fontSize: 13, fontWeight: "800", color: colors.ink },
+  acceptText: { fontSize: 13, fontWeight: "800", color: colors.card },
   reject: { backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.hairline },
   rejectText: { fontSize: 13, fontWeight: "700", color: colors.ink2 },
   sentBtn: { backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.hairline },
@@ -329,5 +329,5 @@ const styles = StyleSheet.create({
   qrActionBtn: { paddingHorizontal: spacing.lg, minHeight: 44, borderRadius: radius.pill, backgroundColor: colors.bgAlt, alignItems: "center", justifyContent: "center" },
   qrActionText: { fontSize: 13, fontWeight: "700", color: colors.ink2 },
   qrClose: { paddingHorizontal: spacing.xl, minHeight: 44, borderRadius: radius.pill, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center" },
-  qrCloseText: { fontSize: 14, fontWeight: "800", color: colors.ink },
+  qrCloseText: { fontSize: 14, fontWeight: "800", color: colors.card },
 });

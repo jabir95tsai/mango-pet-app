@@ -1,16 +1,15 @@
 /**
- * Button — the one CTA primitive for the iOS app (UX-0).
+ * Button — 1:1 with the web Button (apps/web/src/components/ui/button.tsx).
  *
- * Variants mirror the web button family:
- *  - primary   → mango.brand fill, ink label (white-on-orange fails AA — the
- *                visual-redesign spec uses ink #231B14 on brand, 5.2:1), shadow-mango.
- *  - secondary → brandTint fill, brandDeep label (light chip CTA).
- *  - ghost     → transparent, ink2 label (tertiary / cancel actions).
- *  - danger    → destructive red, used for delete/stop affordances.
+ * Variants mirror web exactly:
+ *  - primary   → `.btn-mango`: amber→brand→brandDeep gradient + WHITE text +
+ *                lifted mango shadow (globals.css .btn-mango). NOT ink-on-flat.
+ *  - secondary → white fill, ink text, hairline border.
+ *  - ghost     → transparent, ink2 text.
+ *  - danger    → red fill, white text.
  *
- * Guarantees the UX-0 a11y baseline: min 44pt tap target, button role, and a
- * pressed-state scale/opacity. No haptics — expo-haptics isn't installed and
- * the spec says skip it rather than add a dep.
+ * Web sizes: sm h-8, md h-10, lg h-12, rounded-lg, active:scale-[0.99]. We keep
+ * the 44pt min tap target as a native floor (doesn't change the look at md/lg).
  */
 import type { ReactNode } from "react";
 import {
@@ -18,14 +17,16 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  View,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
-import { colors, radius, shadows, spacing } from "@/theme/theme";
+import { colors, mangoGradient, radius, shadows, spacing } from "@/theme/theme";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
-export type ButtonSize = "md" | "lg";
+export type ButtonSize = "sm" | "md" | "lg";
 
 type Props = {
   label: string;
@@ -34,12 +35,15 @@ type Props = {
   size?: ButtonSize;
   disabled?: boolean;
   loading?: boolean;
-  /** Leading glyph (emoji / single char), rendered before the label. */
   icon?: ReactNode;
   fullWidth?: boolean;
+  /** Pill radius (rounded-full) instead of web's rounded-lg — for the big CTAs. */
+  pill?: boolean;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 };
+
+const HEIGHT: Record<ButtonSize, number> = { sm: 36, md: 44, lg: 48 };
 
 export function Button({
   label,
@@ -50,11 +54,32 @@ export function Button({
   loading = false,
   icon,
   fullWidth = false,
+  pill = false,
   accessibilityLabel,
   style,
 }: Props) {
   const isDisabled = disabled || loading;
   const v = VARIANT[variant];
+  const minHeight = HEIGHT[size];
+  const br = pill ? radius.pill : radius.lg;
+
+  const inner = (
+    <>
+      {loading ? (
+        <ActivityIndicator color={v.fg} />
+      ) : (
+        <>
+          {icon != null ? <Text style={[styles.icon, { color: v.fg }]}>{icon}</Text> : null}
+          <Text
+            style={[styles.label, size === "lg" && styles.labelLg, { color: v.fg }]}
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
+        </>
+      )}
+    </>
+  );
 
   return (
     <Pressable
@@ -64,38 +89,44 @@ export function Button({
       disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.base,
-        size === "lg" ? styles.lg : styles.md,
-        { backgroundColor: v.bg },
-        variant === "primary" && shadows.mango,
         fullWidth && styles.fullWidth,
+        variant === "primary" && !isDisabled && shadows.mango,
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={v.fg} />
+      {variant === "primary" ? (
+        <LinearGradient
+          colors={mangoGradient.colors}
+          locations={mangoGradient.locations}
+          start={mangoGradient.start}
+          end={mangoGradient.end}
+          style={[styles.base, { minHeight, borderRadius: br }]}
+        >
+          {inner}
+        </LinearGradient>
       ) : (
-        <>
-          {icon != null ? <Text style={[styles.icon, { color: v.fg }]}>{icon}</Text> : null}
-          <Text
-            style={[styles.label, size === "lg" ? styles.labelLg : null, { color: v.fg }]}
-            numberOfLines={1}
-          >
-            {label}
-          </Text>
-        </>
+        <View style={[styles.base, { minHeight, borderRadius: br, backgroundColor: v.bg }, v.border]}>
+          {inner}
+        </View>
       )}
     </Pressable>
   );
 }
 
-const VARIANT: Record<ButtonVariant, { bg: string; fg: string }> = {
-  primary: { bg: colors.brand, fg: colors.ink },
-  secondary: { bg: colors.brandTint, fg: colors.brandDeep },
+const VARIANT: Record<
+  ButtonVariant,
+  { bg: string; fg: string; border?: ViewStyle }
+> = {
+  primary: { bg: "transparent", fg: "#ffffff" },
+  secondary: {
+    bg: colors.card,
+    fg: colors.ink,
+    border: { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline },
+  },
   ghost: { bg: "transparent", fg: colors.ink2 },
-  danger: { bg: "#e5484d", fg: colors.card },
+  danger: { bg: "#dc2626", fg: "#ffffff" },
 };
 
 const styles = StyleSheet.create({
@@ -104,15 +135,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
-    borderRadius: radius.pill,
     paddingHorizontal: spacing.xl,
+    overflow: "hidden",
   },
-  md: { minHeight: 44 },
-  lg: { minHeight: 52, paddingHorizontal: spacing.xxl },
   fullWidth: { alignSelf: "stretch" },
-  label: { fontSize: 15, fontWeight: "800" },
+  label: { fontSize: 14, fontWeight: "700" },
   labelLg: { fontSize: 16 },
   icon: { fontSize: 16 },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
-  disabled: { opacity: 0.45 },
+  pressed: { opacity: 0.95, transform: [{ scale: 0.99 }] },
+  disabled: { opacity: 0.7 },
 });

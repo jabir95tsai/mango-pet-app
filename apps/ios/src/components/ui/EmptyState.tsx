@@ -48,7 +48,7 @@ export function EmptyState({
       <Text style={styles.title}>{title}</Text>
       {body ? <Text style={styles.body}>{body}</Text> : null}
       {ctaLabel && onPressCta ? (
-        <Button label={ctaLabel} onPress={onPressCta} style={styles.cta} />
+        <Button label={ctaLabel} onPress={onPressCta} size="lg" pill style={styles.cta} />
       ) : null}
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>

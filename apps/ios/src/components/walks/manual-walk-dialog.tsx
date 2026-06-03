@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  saveText: { fontSize: 15, fontWeight: "800", color: colors.ink },
+  saveText: { fontSize: 15, fontWeight: "800", color: colors.card },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.6 },
 });
