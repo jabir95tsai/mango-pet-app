@@ -245,17 +245,43 @@ export async function computeDogPeriodScore(
   let fallbackOwnerUid = "";
   let fallbackFamilyId: string | null = null;
 
+  // ── §C overlap dedup (walk-tracking-v3 spec) ──
+  // First pass: collect each qualifying walk as a time interval plus its
+  // stored metrics, and gather the display fallbacks. The merge happens
+  // below so two people walking the SAME dog at the same time don't double
+  // the dog's score. ONLY the dog board does this — the walker board keeps
+  // crediting each person their own walk (computeWalkerPeriodScore unchanged).
+  type WalkInterval = {
+    startMs: number;
+    endMs: number;
+    distanceKm: number;
+    durationMin: number;
+    score: number;
+  };
+  const intervals: WalkInterval[] = [];
   for (const d of snap.docs) {
     if (excludeWalkId && d.id === excludeWalkId) continue;
     const w = d.data();
     // NOTE: no `familyId == null` skip — personal-mode dogs count here.
     const startedAt = w.startedAt as Timestamp | undefined;
     if (!startedAt) continue;
-    totalScore += Number(w.score) || 0;
-    totalDistanceKm += Number(w.distanceKm) || 0;
-    totalDurationMin += Number(w.durationMin) || 0;
-    walkCount += 1;
-    walkDays.add(Math.floor(startedAt.toMillis() / 86_400_000));
+    const startMs = startedAt.toMillis();
+    const endedAt = w.endedAt as Timestamp | undefined;
+    const durationMin = Number(w.durationMin) || 0;
+    // Prefer the stored endedAt for the interval end; fall back to
+    // startMs + durationMin for legacy walks missing endedAt. Clamp so a
+    // bad/absent end never produces a negative-length interval.
+    const endMs = Math.max(
+      startMs,
+      endedAt ? endedAt.toMillis() : startMs + durationMin * 60_000,
+    );
+    intervals.push({
+      startMs,
+      endMs,
+      distanceKm: Number(w.distanceKm) || 0,
+      durationMin,
+      score: Number(w.score) || 0,
+    });
     if (!fallbackPetName && typeof w.petName === "string") fallbackPetName = w.petName;
     if (!fallbackOwnerUid) {
       fallbackOwnerUid = (w.ownerUid as string) || (w.walkerUid as string) || "";
@@ -263,7 +289,56 @@ export async function computeDogPeriodScore(
     if (w.familyId != null) fallbackFamilyId = w.familyId as string;
   }
 
-  if (walkCount === 0) return null;
+  if (intervals.length === 0) return null;
+
+  // Second pass: O(n log n) sort by start + O(n) interval merge. Two walks
+  // are "the same outing" when their [startedAt, endedAt] intervals truly
+  // OVERLAP (positive intersection) — strict `<` so back-to-back sequential
+  // walks (one ends exactly as the next begins) stay separate, which is the
+  // correct reading of C-2 "any intersection = walking together". We sort
+  // in memory because the all_time query has no startedAt range filter, so
+  // result order isn't guaranteed (no new index/query added).
+  intervals.sort((a, b) => a.startMs - b.startMs);
+
+  let i = 0;
+  while (i < intervals.length) {
+    const groupStart = intervals[i].startMs;
+    let groupEnd = intervals[i].endMs;
+    let maxDistance = intervals[i].distanceKm;
+    let maxScore = intervals[i].score;
+    const soloDuration = intervals[i].durationMin;
+    let size = 1;
+    let j = i + 1;
+    while (j < intervals.length && intervals[j].startMs < groupEnd) {
+      // overlaps the running union → same outing
+      groupEnd = Math.max(groupEnd, intervals[j].endMs);
+      maxDistance = Math.max(maxDistance, intervals[j].distanceKm);
+      maxScore = Math.max(maxScore, intervals[j].score);
+      size += 1;
+      j += 1;
+    }
+
+    if (size === 1) {
+      // Lone walk — keep its stored metrics exactly (no regression for
+      // non-overlapping walks; the common case).
+      totalDistanceKm += maxDistance;
+      totalDurationMin += soloDuration;
+      totalScore += maxScore;
+    } else {
+      // Overlapping outing — count it ONCE. distance = max (C-1: same path,
+      // take the more accurate single track, not the sum), duration = the
+      // union wall-clock span (overlap counted once), score = max (parallels
+      // distance; this is what stops the "score doubles" symptom since the
+      // board ranks on totalScore). The scoring FORMULA is untouched —
+      // we only choose which stored values feed the sum.
+      totalDistanceKm += maxDistance;
+      totalDurationMin += (groupEnd - groupStart) / 60_000;
+      totalScore += maxScore;
+    }
+    walkCount += 1; // merged outing = 1
+    walkDays.add(Math.floor(groupStart / 86_400_000)); // same outing = 1 day
+    i = j;
+  }
 
   // Pet doc — source of truth for name / photo / breed / species / owner.
   const petDoc = await db.doc(`pets/${petId}`).get();
