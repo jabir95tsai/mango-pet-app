@@ -121,3 +121,27 @@
 - 視覺方向參考 web [`visual-redesign-mango.md`](./visual-redesign-mango.md)（mango palette + Epic 4 決策）。
 - confetti/celebration：`confetti-engine-upgrade` / `walks-photo-and-celebration` / `achievements-badges` 已涵蓋，本 pass 不重做。
 - 功能 spec：各 phase（walks/pets/feed/leaderboard/settings/friends）為 behavior reference，本 pass 不改 behavior。
+
+---
+
+## 📦 Session 1 SHIPPED — UX-0 + S1 + S2（iOS UI/UX 工程師，2026-06-03）
+
+範圍照 spec line 91 建議：一個 session 做 **UX-0 + S1–S2（最常看到的）**，S3–S6 留下一棒。全程 `tsc --noEmit` 綠 + push main（**無 device build、未實機驗** — 依規則 5 末端一次 EAS）。**無新 dep**。
+
+### Commits（都在 main）
+| Surface | Commit | 內容 |
+|---|---|---|
+| UX-0 | `175345f` | `theme.ts` 加 shadow tiers（card/elevated/mango，暖棕底）+ typography scale（`type.*`），既有 colors/spacing/radius 不動。`useReducedMotion` hook（單一來源 + live 訂閱，收斂 4 處 ad-hoc `AccessibilityInfo`）。`components/ui/` primitives：`Button`（primary/secondary/ghost/danger、≥44pt、ink-on-brand AA、pressed scale）/`Card`/`Screen`（safe-area+scroll+kbd）/`Sheet`/`Pill`/`EmptyState`/`Avatar` + index barrel。`PetAvatar`/`UserAvatar` 改成 `Avatar` 薄殼。 |
+| S1 Walks | `6a373c4` | `walks-dial`：60-tick segmented ring → 單一 animated SVG arc（strokeDashoffset），brand→amber 漸層、達標轉 leaf→success 綠；中央 🐕 改 Reanimated 走路 bob+tilt（reduced-motion 靜態）。`walks-week-strip`：完成日 paw fill。`walks-streak-chip`（新）：≥7 天 leaf milestone + flame flicker（reduced-motion 靜態，flame a11y-hidden）。walks 畫面：0-pet → `EmptyState`、sticky CTA → `Button`（ink-on-brand 修掉先前白字 on 橘的 AA miss）。done-screen emerald 慶祝 + confetti 串接**已驗證不變**。 |
+| S2 Home/Feed | `a194097` | `pet-story-avatar`：flat 漸層 disc → 乾淨 SVG stroked status ring（done/tracking/pending），對齊 dial/donut SVG 慣例 + web conic。`post-card`：card radius 2xl + 暖 resting shadow、leaf tag 文字 → `#3f7a39`（修 leaf-on-leafTint AA）、留言 badge 36→44pt。`invite-family-card` CTA 36→44pt + ink-on-brand。`post-composer`：包 `KeyboardAvoidingView`。 |
+
+### a11y 修掉的 contrast/tap 問題（順手）
+- 白字 on 橘底（fail AA 2.6:1）→ ink-on-brand：walks sticky CTA、invite-family CTA。
+- leaf on leafTint（2.6:1）→ `#3f7a39`：post-card 寵物 tag。（同 web Phase 1 deviation 1 的精神，建議之後加 `mango.leafDeep` token 收斂。）
+- tap target < 44pt → ≥44pt：post-card 留言 badge、invite-family CTA。
+
+### 給 iOS PM
+- **parity §A 可標「視覺 ✅」對應列**：Walks（S1 全項）、Home/Feed（stories ring / PostCard / composer kbd）。Lightbox/reactions/confetti 視覺串接確認過、未改 flow。
+- **剩餘 surface（下一棒 iOS UI/UX session）**：**S3 Pets**（header/4-tab/donut/weight chart/forms/empty）、**S4 Leaderboard/Family**（rank glow/QR）、**S5 Settings/Friends**、**S6 全 app 收斂 QA**。下一棒直接複用 UX-0 primitives（`@/components/ui`）+ `useReducedMotion`。
+- **無發現功能 bug**（純視覺層，未碰 flow/資料層）。若末端 EAS 走查發現 runtime bug → iOS Bug Hunter。
+- **驗收**：S3–S6 收齊後，PM 發**一顆** EAS build，user 一次走 before/after。
