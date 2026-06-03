@@ -33,6 +33,7 @@ import {
   removeFamilyMember,
 } from "@/lib/families-write";
 import { InviteQR } from "@/components/family/invite-qr";
+import { Button } from "@/components/ui/Button";
 import { UserAvatar } from "@/components/feed/user-avatar";
 import { SITE_URL } from "@/lib/config";
 import { t } from "@/lib/i18n";
@@ -177,12 +178,8 @@ export default function FamilyScreen() {
               <Text style={styles.personalMode}>{t("Family.personalMode")}</Text>
               <Text style={styles.personalInfo}>{t("Family.personalInfo")}</Text>
               <View style={styles.row2}>
-                <Pressable onPress={() => setCreateOpen(true)} style={[styles.btn, styles.btnPrimary]}>
-                  <Text style={styles.btnPrimaryText}>{t("Family.create")}</Text>
-                </Pressable>
-                <Pressable onPress={() => setJoinOpen(true)} style={[styles.btn, styles.btnGhost]}>
-                  <Text style={styles.btnGhostText}>{t("Family.join")}</Text>
-                </Pressable>
+                <Button label={t("Family.create")} onPress={() => setCreateOpen(true)} size="lg" style={styles.flexBtn} />
+                <Button label={t("Family.join")} variant="secondary" onPress={() => setJoinOpen(true)} size="lg" style={styles.flexBtn} />
               </View>
             </View>
           ) : (
@@ -326,9 +323,7 @@ function CreateDialog({ open, onClose, onDone }: { open: boolean; onClose: () =>
             placeholderTextColor={colors.ink3}
             maxLength={30}
           />
-          <Pressable onPress={submit} disabled={busy} style={[styles.btn, styles.btnPrimary, styles.dialogSubmit]}>
-            {busy ? <ActivityIndicator color={colors.card} /> : <Text style={styles.btnPrimaryText}>{t("Family.createDialog.submit")}</Text>}
-          </Pressable>
+          <Button label={t("Family.createDialog.submit")} onPress={submit} loading={busy} size="lg" fullWidth style={styles.dialogSubmit} />
         </Pressable>
       </Pressable>
     </Modal>
@@ -382,9 +377,7 @@ function JoinDialog({ open, onClose, onDone }: { open: boolean; onClose: () => v
             maxLength={6}
           />
           {error ? <Text style={styles.dialogError}>{error}</Text> : null}
-          <Pressable onPress={submit} disabled={busy} style={[styles.btn, styles.btnPrimary, styles.dialogSubmit]}>
-            {busy ? <ActivityIndicator color={colors.card} /> : <Text style={styles.btnPrimaryText}>{t("Family.joinDialog.submit")}</Text>}
-          </Pressable>
+          <Button label={t("Family.joinDialog.submit")} onPress={submit} loading={busy} size="lg" fullWidth style={styles.dialogSubmit} />
         </Pressable>
       </Pressable>
     </Modal>
@@ -403,6 +396,7 @@ const styles = StyleSheet.create({
   personalMode: { fontSize: 14, fontWeight: "800", color: colors.ink },
   personalInfo: { fontSize: 13, color: colors.ink2, lineHeight: 19 },
   row2: { flexDirection: "row", gap: spacing.md },
+  flexBtn: { flex: 1 },
   btn: { flex: 1, height: 48, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   btnPrimary: { backgroundColor: colors.brand },
   btnPrimaryText: { fontSize: 15, fontWeight: "800", color: colors.card },
