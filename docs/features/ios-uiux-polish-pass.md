@@ -9,9 +9,17 @@
 
 > user 2026-06-01：「整個目前看起來 ok，接著做 ui/ux 部分。」P2–P7 功能已建（pets/feed/leaderboard/family/settings/friends/onboarding），現在做**視覺 polish pass**。
 
+## 🔄 視覺方向轉向（user 2026-06-03）— 改「忠實還原 PWA 視覺」
+
+> user：「我想要還原 PWA 的視覺到 app 裡面。」→ 選 **A：原生畫面 re-skin 成跟 PWA 一致**。
+>
+> **原方向（native-feel，非像素複製）作廢**。新方向：**iOS 畫面視覺忠實對齊 PWA**（佈局 / 間距 / 色票 / 元件外觀盡量跟 web 一樣），但**仍是 React Native 原生實作**（保留背景 GPS / 相機 / APNs push 等原生能力，D1 不變 —— 只改「長相」不改「技術路線」）。
+> **視覺真相來源 = `apps/web/src` 對應元件 + `globals.css`**：re-skin 時直接讀 web 元件對照，1:1 還原其視覺，不要自由發揮 iOS 風格。
+> ⚠️ **S1/S2 已用舊 native-feel 方向做**（dial/走路狗/卡片等）→ 需**回頭 re-align 到 web 視覺**（見 §剩餘工作）。
+
 ## 🎯 目標
 
-把「功能對、外觀粗胚」的 iOS app，整面拉到：**mango brand（amber/黃 + emerald + 桃粉，圓角 2xl + rounded-full）+ iOS 原生密度/手感 + safe-area + a11y + reduced-motion**。對齊 web 視覺方向，但**不是像素複製**（戰略 D1 = 原生手感）。
+把 iOS app 整面 re-skin 成**視覺上跟 PWA 一致**：讀 `apps/web` 對應畫面/元件，1:1 還原佈局、間距、色票、圓角、元件外觀（mango palette 已共用）。RN 原生實作不變、原生能力保留；只把「看起來不一樣」改成「看起來一樣」。safe-area / a11y / reduced-motion 仍要顧（原生必要），但**不為了「原生 idiom」而偏離 web 外觀**。
 
 ## ✅ 前提（好消息：無新 dep gate）
 
@@ -41,7 +49,9 @@
 
 ## 🎨 Per-surface polish（UX-0 後，依「最常看到 + 最粗」排序）
 
-> 每個 surface：對照 web 視覺 → iOS after。用 UX-0 primitives。
+> **新方向（2026-06-03）**：每個 surface **打開 `apps/web` 對應元件當視覺真相，1:1 還原**（佈局結構 / 間距 / 色票 / 圓角 / 字級）。UX-0 primitives 的視覺也要校到跟 web 一致。下列各 surface 的「iOS approach」描述若與「忠實還原 web」衝突，以**還原 web** 為準。
+>
+> **剩餘工作（含 S1/S2 re-align）**：S1 Walks + S2 Home/Feed 已用舊 native-feel 做 → 回頭對照 web re-align；S3–S6 直接 web-faithful 做。
 
 ### S1 — Walks（核心，user 已看過最粗）
 - **dial**：分段環 → **平滑 arc**（`react-native-svg` circle stroke-dashoffset），達標 leaf 綠漸層。

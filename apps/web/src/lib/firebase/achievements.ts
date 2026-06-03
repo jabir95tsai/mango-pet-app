@@ -4,7 +4,6 @@ import {
   getCountFromServer,
   getDoc,
   getDocs,
-  onSnapshot,
   query,
   where,
 } from "firebase/firestore";
@@ -30,23 +29,6 @@ export async function listEarnedAchievements(
 ): Promise<AchievementGrant[]> {
   const snap = await getDocs(collection(getDb(), "users", uid, "achievements"));
   return snap.docs.map((d) => d.data() as AchievementGrant);
-}
-
-/** Realtime subscription to the earned-badge docs. Powers the app-layer
- *  unlock celebration: when a Cloud Function writes a new grant (right after
- *  a walk / pet / post), the snapshot fires and the celebration layer diffs
- *  it against the locally-celebrated set. Read-only listener; unsubscribes
- *  via the returned fn. Spec achievements-badges.md §H. */
-export function subscribeEarnedAchievements(
-  uid: string,
-  cb: (grants: AchievementGrant[]) => void,
-  onError?: (e: Error) => void,
-): () => void {
-  return onSnapshot(
-    collection(getDb(), "users", uid, "achievements"),
-    (snap) => cb(snap.docs.map((d) => d.data() as AchievementGrant)),
-    (e) => onError?.(e),
-  );
 }
 
 /** Live counts for the metrics not held in the lifetime-stats doc. Cheap

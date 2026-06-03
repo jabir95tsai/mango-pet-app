@@ -456,21 +456,6 @@
     "locked": "Bind account to unlock",
     "guestHint": "Community & leaderboard badges need a bound account to unlock. Personal badges — walks, distance, pets — you can start earning right now.",
     "emptyHint": "No badges yet — take a walk or add a pet and they'll start lighting up one by one!",
-    "celebrate": {
-      "kicker": "🎉 Achievement unlocked!",
-      "categoryChip": "🏅 {category}",
-      "primary": "Awesome",
-      "secondary": "View all achievements",
-      "close": "Close",
-      "ariaLabel": "Badge earned: {name}",
-      "multiTitle": "{count} badges unlocked at once!",
-      "summaryTitle": "You've earned {count} achievements!",
-      "summaryBody": "Amazing! Tap below to see every badge you've unlocked.",
-      "prev": "Previous",
-      "next": "Next",
-      "goTo": "Go to badge {index}",
-      "counter": "{index} / {total}"
-    },
     "categories": {
       "walks": "Walk Milestones",
       "streak": "Streaks",
