@@ -182,3 +182,32 @@
 - **parity §A 可標「視覺 ✅」**：Pets / Leaderboard / Family / Settings / Friends（＋ Session 1 的 Walks / Home-Feed）。
 - **無新 dep**（svg/reanimated/gesture-handler/linear-gradient 已裝）。
 - **無發現功能 bug**（純視覺/互動層，未碰 flow/資料層/callable）。末端 EAS 走查若遇 runtime bug → iOS Bug Hunter。
+
+---
+
+## 📦 Session 3 — 視覺方向轉向後 re-align（iOS UI/UX 工程師，2026-06-03）
+
+方向改成「**忠實還原 PWA**」後，回頭把 native-feel 做法 re-align 到 `apps/web` 視覺。每步 `tsc --noEmit` 綠 + push main（**無 device build**）。**無新 dep**。
+
+### Commits（都在 main）
+| 範圍 | Commit | 內容 |
+|---|---|---|
+| UX-0 foundation | `d36f922` | **radius scale 改回 web `:root --radius-*`**（lg 16→14、xl 24→18、+xl2 22、pill 9999）。**Button primitive primary 改成 web `.btn-mango`**：amber→brand→brandDeep LinearGradient + **白字** + lifted mango shadow（先前 flat-brand+ink 作廢）。`shadows.mango` 對齊 web brand rgba。**把 Session 1-2/S6 的 ink-on-brand 全部還原成白字**（web 每顆橘鈕都是 btn-mango 白字；先前的 a11y「修正」其實偏離 PWA）。EmptyState CTA 改 pill+gradient。 |
+| S1 Walks | `1f94734` | 對照 web walks/* **1:1 重建**：`walks-dial`（solid brand/leaf ring、R96/stroke14、暖 bgRing、白 tick、中央漸層 disc、達標 leaf check badge、底部白 pill；arc sweep 600ms 保留）；**`walks-pet-walking`（新）= web 卡通狗 SVG 的 RN port**（body/head/legs/tail/ground + Reanimated 擺腿/搖尾/bob/ground，reduced-motion 靜態）；`walks-week-strip`（card + 34px 圈 + 白 paw SVG + today-done leaf halo）；`walks-streak-chip`（web 3-tier 漸層 + 火焰 SVG flicker）；`walk-row`（web walk-card 版型 + ⭐score）。 |
+| S2 Feed | `65f73bc` | `post-card` 對齊 web：card rounded-lg(8px)、author text-sm/semibold、photo grid 全 aspect-square gap-2。（web feed 是 zinc/white + Tailwind 圓角，非 mango var。）|
+| S3 Pets | `fac5457` | 寵物頁 ＋ FAB flat brand → **btn-mango 漸層**（globals.css 註明 .btn-mango = pets FAB）。 |
+
+### web reference → iOS after 已對齊
+- **Walks（最完整 1:1）**：dial 環色/幾何/tick/中央 disc/check badge/底 pill、走路狗 SVG、week strip、streak chip、walk-row 全部照 web 重建。
+- **全 app 橘色按鈕**：透過 Button primitive + 還原白字，**統一成 web btn-mango 漸層白字**（開始遛狗 CTA、pets FAB、empty CTA、各表單 save/送出/accept…）。
+- **圓角尺度**：改回 web `--radius-*`（卡片不再過圓）。
+- **Feed post-card**：rounded-lg + aspect-square 照片格對齊 web。
+
+### 護欄 / 狀態
+- **無新 dep**；**未碰 flow/資料層/callable**；只動 apps/ios UI + theme。
+- safe-area / reduced-motion / tap≥44pt 原生必要仍保留（不影響 web 外觀一致）。
+- **誠實註記（給 iOS PM）**：Foundation（Button 漸層 + radius + 還原白字）會 ripple 到**所有** surface；**S1 Walks 為最深度 1:1 重建**；S2 feed + S3 FAB 已對齊。**S3 其餘（donut/weight chart/forms 細節）、S4 Leaderboard/Family、S5 Settings/Friends 目前主要靠 foundation 對齊（漸層鈕/圓角/色票已一致），各畫面逐元件 pixel-parity 細修可視末端 EAS web-vs-app 走查結果再補一輪**。web 本身混用 mango + zinc 兩套（feed/settings 偏 zinc）、兩套圓角（Tailwind vs --radius-var），逐元件對照時需個別確認來源。
+
+### 給 iOS PM
+- 請發**末端一顆 EAS build**，user 直接 **web 開一個畫面 / app 開同畫面 對照**走查；落差清單回給本角色下一棒逐項補。
+- 重點先看 **Walks（已深度 1:1）** 確認方向對，再看其餘 surface 的漸層鈕/圓角/色票是否一致。
