@@ -21,12 +21,16 @@ import { useRouter } from "expo-router";
 import { useWalksData } from "@/lib/use-walks-data";
 import { WalksDial } from "@/components/walks/walks-dial";
 import { WalksWeekStrip } from "@/components/walks/walks-week-strip";
+import { WalksStreakChip } from "@/components/walks/walks-streak-chip";
 import { PetPill } from "@/components/walks/pet-pill";
 import { WalkRow } from "@/components/walks/walk-row";
 import { WalkTrackingView } from "@/components/walks/walk-tracking-view";
 import { ManualWalkDialog } from "@/components/walks/manual-walk-dialog";
 import { PhotoShareFlow } from "@/components/walks/photo-share-flow";
 import { newWalkId } from "@/lib/walks";
+import { Screen } from "@/components/ui/Screen";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 import { colors, radius, spacing } from "@/theme/theme";
 
 const WEEK_GOAL_COUNT = 5;
@@ -77,22 +81,15 @@ export default function WalksScreen() {
   // 0 pets → empty state (no dial), same gate as web.
   if (!loading && pets.length === 0) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyEmoji}>🐾</Text>
-          <Text style={styles.emptyTitle}>先新增一隻寵物</Text>
-          <Text style={styles.emptyBody}>
-            建立寵物後就能開始記錄每天的遛狗進度。
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push("/(tabs)/pets")}
-            style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
-          >
-            <Text style={styles.emptyCtaText}>去新增寵物</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+      <Screen scroll={false} padded={false}>
+        <EmptyState
+          emoji="🐾"
+          title="先新增一隻寵物"
+          body="建立寵物後就能開始記錄每天的遛狗進度。"
+          ctaLabel="去新增寵物"
+          onPressCta={() => router.push("/(tabs)/pets")}
+        />
+      </Screen>
     );
   }
 
@@ -127,9 +124,7 @@ export default function WalksScreen() {
             />
           ) : null}
           <View style={styles.flex} />
-          <View style={styles.streakChip}>
-            <Text style={styles.streakText}>{`🔥 ${streakDays} 天`}</Text>
-          </View>
+          <WalksStreakChip streakDays={streakDays} />
         </View>
 
         {/* Hero copy */}
@@ -209,19 +204,15 @@ export default function WalksScreen() {
       {/* Sticky CTA — floats above the bottom tab bar */}
       {!sessionOpen ? (
         <View style={[styles.ctaDock, { bottom: insets.bottom + 76 }]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="開始遛狗"
+          <Button
+            label="開始遛狗"
+            icon="▶"
+            size="lg"
+            fullWidth
             disabled={pets.length === 0}
             onPress={handleStartWalking}
-            style={({ pressed }) => [
-              styles.cta,
-              pressed && styles.pressed,
-              pets.length === 0 && styles.disabled,
-            ]}
-          >
-            <Text style={styles.ctaText}>▶  開始遛狗</Text>
-          </Pressable>
+            accessibilityLabel="開始遛狗"
+          />
         </View>
       ) : null}
 
@@ -271,13 +262,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   topBar: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.md },
   h1: { fontSize: 26, fontWeight: "800", color: colors.ink, letterSpacing: -0.5 },
-  streakChip: {
-    backgroundColor: colors.bellTint,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: radius.pill,
-  },
-  streakText: { fontSize: 12, fontWeight: "700", color: colors.ink2 },
   hero: { marginBottom: spacing.md, paddingHorizontal: spacing.xs },
   heroTitle: { fontSize: 26, fontWeight: "800", color: colors.ink, letterSpacing: -0.5 },
   heroSub: { marginTop: 4, fontSize: 13, fontWeight: "500", color: colors.ink2 },
@@ -305,33 +289,5 @@ const styles = StyleSheet.create({
   },
   manualText: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
   ctaDock: { position: "absolute", left: 0, right: 0, paddingHorizontal: spacing.lg },
-  cta: {
-    height: 52,
-    borderRadius: radius.pill,
-    backgroundColor: colors.brand,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.brandDeep,
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  ctaText: { fontSize: 16, fontWeight: "800", color: colors.card },
   pressed: { opacity: 0.85 },
-  disabled: { opacity: 0.5 },
-  emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.sm, padding: spacing.xl },
-  emptyEmoji: { fontSize: 56 },
-  emptyTitle: { fontSize: 20, fontWeight: "800", color: colors.ink },
-  emptyBody: { fontSize: 14, color: colors.ink2, textAlign: "center", lineHeight: 20 },
-  emptyCta: {
-    marginTop: spacing.md,
-    height: 48,
-    paddingHorizontal: spacing.xxl,
-    borderRadius: radius.pill,
-    backgroundColor: colors.brand,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyCtaText: { fontSize: 16, fontWeight: "800", color: colors.card },
 });

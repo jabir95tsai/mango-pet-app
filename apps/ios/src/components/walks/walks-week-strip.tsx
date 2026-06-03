@@ -1,6 +1,8 @@
 /**
  * 7-day week strip (Monday-first). A day is "done" when its total walk minutes
- * reached the active pet's goal. Today is ringed. Mirrors web WalksWeekStrip.
+ * reached the active pet's goal. S1 polish: done days fill with a paw mark
+ * (brand, or leaf once today's goal is hit), today is ringed + labelled brand.
+ * Mirrors web WalksWeekStrip.
  */
 import { StyleSheet, Text, View } from "react-native";
 
@@ -29,7 +31,7 @@ export function WalksWeekStrip({ days, todayIdx, complete }: Props) {
                 isToday && !done && styles.dotToday,
               ]}
             >
-              {done ? <Text style={styles.check}>✓</Text> : null}
+              {done ? <Text style={styles.paw}>🐾</Text> : null}
             </View>
             <Text style={[styles.label, isToday && styles.labelToday]}>
               {DAY_LABELS[i]}
@@ -55,7 +57,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dotToday: { borderColor: colors.brand },
-  check: { color: colors.card, fontSize: 15, fontWeight: "800" },
+  paw: { fontSize: 14 },
   label: { fontSize: 11, color: colors.ink3 },
   labelToday: { color: colors.brandDeep, fontWeight: "700" },
 });
