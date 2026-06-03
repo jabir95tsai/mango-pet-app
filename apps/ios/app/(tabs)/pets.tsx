@@ -43,7 +43,8 @@ import { ReminderForm } from "@/components/pets/reminder-form";
 import { ExpenseForm, type ExpenseFormInitial } from "@/components/pets/expense-form";
 import { HealthForm } from "@/components/pets/health-form";
 import { ReceiptScanner } from "@/components/pets/receipt-scanner";
-import { colors, radius, spacing } from "@/theme/theme";
+import { LinearGradient } from "expo-linear-gradient";
+import { colors, mangoGradient, radius, spacing } from "@/theme/theme";
 
 const tPP = scoped("PetsPage");
 
@@ -227,7 +228,15 @@ export default function PetsScreen() {
         accessibilityRole="button"
         accessibilityLabel={tPP(`fab.${activeTab}`)}
       >
-        <Text style={styles.fabPlus}>＋</Text>
+        <LinearGradient
+          colors={mangoGradient.colors}
+          locations={mangoGradient.locations}
+          start={mangoGradient.start}
+          end={mangoGradient.end}
+          style={styles.fabFill}
+        >
+          <Text style={styles.fabPlus}>＋</Text>
+        </LinearGradient>
       </Pressable>
 
       {/* Forms (mounted only while open → fresh state per open) */}
@@ -301,15 +310,14 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.brand,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.brandDeep,
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    overflow: "hidden",
+    shadowColor: colors.brand,
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
-  fabPressed: { opacity: 0.85 },
-  fabPlus: { fontSize: 30, fontWeight: "800", color: colors.card, marginTop: -2 },
+  fabFill: { flex: 1, alignItems: "center", justifyContent: "center" },
+  fabPressed: { opacity: 0.95 },
+  fabPlus: { fontSize: 30, fontWeight: "800", color: "#ffffff", marginTop: -2 },
 });
