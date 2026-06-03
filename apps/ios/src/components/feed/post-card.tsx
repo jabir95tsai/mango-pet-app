@@ -159,9 +159,9 @@ function PhotoGrid({
   onOpenPhotos?: (urls: string[], index: number) => void;
 }) {
   const single = photos.length === 1;
-  const gap = spacing.xs;
+  const gap = spacing.sm; // web photo grid gap-2
   const cellW = single ? contentW : Math.floor((contentW - gap) / 2);
-  const cellH = single ? Math.round(contentW * 0.62) : cellW;
+  const cellH = cellW; // web cells are all aspect-square
 
   return (
     <View style={[styles.grid, { gap }]}>
@@ -203,17 +203,18 @@ function PhotoGrid({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: radius.xl,
+    // web post-card uses Tailwind rounded-lg (8px) + shadow-sm, not the mango vars.
+    borderRadius: radius.sm,
     padding: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
-    gap: spacing.sm,
+    gap: spacing.md,
     ...shadows.card,
   },
   deleting: { opacity: 0.5 },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   headerText: { flex: 1 },
-  authorName: { fontSize: 15, fontWeight: "800", color: colors.ink },
+  authorName: { fontSize: 14, fontWeight: "600", color: colors.ink },
   meta: { fontSize: 12, color: colors.ink3, marginTop: 1 },
   menuBtn: { paddingHorizontal: spacing.sm, paddingVertical: 2 },
   menuText: { fontSize: 20, color: colors.ink3, fontWeight: "800" },
