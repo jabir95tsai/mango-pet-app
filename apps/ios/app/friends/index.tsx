@@ -35,6 +35,7 @@ import {
 } from "@/lib/friends-write";
 import { UserAvatar } from "@/components/feed/user-avatar";
 import { InviteQR } from "@/components/family/invite-qr";
+import { Segmented } from "@/components/leaderboard/segmented";
 import { SITE_URL } from "@/lib/config";
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
@@ -146,20 +147,15 @@ export default function FriendsScreen() {
       </View>
 
       <View style={styles.tabs}>
-        {(["friends", "requests", "search"] as Tab[]).map((tb) => {
-          const on = tab === tb;
-          const label =
-            tb === "friends"
-              ? t("Friends.tabs.friends", { count: friends.length })
-              : tb === "requests"
-                ? t("Friends.tabs.requests", { count: requests.length })
-                : t("Friends.tabs.search");
-          return (
-            <Pressable key={tb} onPress={() => setTab(tb)} style={[styles.tab, on && styles.tabOn]}>
-              <Text style={[styles.tabText, on && styles.tabTextOn]}>{label}</Text>
-            </Pressable>
-          );
-        })}
+        <Segmented<Tab>
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "friends", label: t("Friends.tabs.friends", { count: friends.length }) },
+            { value: "requests", label: t("Friends.tabs.requests", { count: requests.length }) },
+            { value: "search", label: t("Friends.tabs.search") },
+          ]}
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -295,7 +291,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: "800", color: colors.ink },
   qrBtn: { width: 40, height: 40, borderRadius: radius.pill, backgroundColor: colors.brandTint, alignItems: "center", justifyContent: "center" },
   qrBtnText: { fontSize: 18, color: colors.brandDeep },
-  tabs: { flexDirection: "row", paddingHorizontal: spacing.lg, gap: spacing.sm, marginBottom: spacing.sm },
+  tabs: { paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   tab: { flex: 1, minHeight: 44, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.bgAlt, alignItems: "center", justifyContent: "center" },
   tabOn: { backgroundColor: colors.brandTint, borderWidth: 1, borderColor: colors.brand },
   tabText: { fontSize: 13, fontWeight: "700", color: colors.ink3 },
