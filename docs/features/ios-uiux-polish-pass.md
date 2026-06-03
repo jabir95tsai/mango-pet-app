@@ -145,3 +145,30 @@
 - **剩餘 surface（下一棒 iOS UI/UX session）**：**S3 Pets**（header/4-tab/donut/weight chart/forms/empty）、**S4 Leaderboard/Family**（rank glow/QR）、**S5 Settings/Friends**、**S6 全 app 收斂 QA**。下一棒直接複用 UX-0 primitives（`@/components/ui`）+ `useReducedMotion`。
 - **無發現功能 bug**（純視覺層，未碰 flow/資料層）。若末端 EAS 走查發現 runtime bug → iOS Bug Hunter。
 - **驗收**：S3–S6 收齊後，PM 發**一顆** EAS build，user 一次走 before/after。
+
+---
+
+## 📦 Session 2 SHIPPED — S3 + S4 + S5 + S6（iOS UI/UX 工程師，2026-06-03）
+
+一個 session 一路做完 **S3→S4→S5→S6**，全程複用 Session 1 的 `@/components/ui` primitives + `useReducedMotion`（**沒有重刻**）。每步 `tsc --noEmit` 綠 + push main（**無 device build、未實機驗** — 規則 5 末端一次 EAS）。**無新 dep**。
+
+### Commits（都在 main）
+| Surface | Commit | 內容 |
+|---|---|---|
+| S3 Pets | `faeb50c` | `pet-tabs`：per-tab 背景切換 → 單一滑動白卡 indicator（Reanimated translateX 220ms，reduced-motion 直接定位），tab ≥44pt。`weight-chart`：漸層面積填色 + 上/底 faint gridline + min/max kg y-hint + 首/末日期 x 軸標籤（圖表算法不動）。`pets-empty-state`：bespoke 漸層 → `EmptyState` primitive（gradientHero）。 |
+| S4 Leaderboard+Family | `2ce2e9f` | `segmented`：per-seg 切換 → 單一滑動 indicator（Reanimated，reduced-motion snap），leaderboard dimension/scope/period 共用，active ≥44pt。`leaderboard-row`：glow 改 opacity-fade overlay（不再 animate bg），「我」row 可同時帶 cardSoft 底 + brand 邊（glow 仍吃 `useReducedMotion`）。human/dog 空狀態 CTA → `Button`。`family`：primary 按鈕 ink-on-brand、code 複製/分享/QR 38→44pt、My-QR dialog 改置中。 |
+| S5 Settings+Friends | `e69925b` | `settings`：flat card stack → iOS 分組 section（一般/通知/遛狗與隱私/資料與帳號 uppercase header），登出 36→44pt；native Switch+radio 既有原生樣式保留。`friends`：accept/加好友/QR-close ink-on-brand、tab 38→44pt、accept/reject/QR-action →44pt；My-QR dialog 已置中。`friends/add` 送出鈕 ink-on-brand。export/delete 危險動作（outline danger + white-on-cookie 4.2:1 + ink export）查核 OK 不動。 |
+| S6 收斂 QA | `2aa5988` | 跨 surface audit → 收掉**最後 9 個** white-on-brand 文字鈕（2.6:1 fail AA）統一 ink-on-brand：comment send / post publish / manual-walk save / walk-tracking save / camera 用此張 / receipt 手動輸入 / form-sheet SelectField active pill / join-family CTA / onboarding primary。 |
+
+### S6 一致性 audit 結論
+- **reduced-motion**：全 app 8 個有動畫的 component 全部吃 `useReducedMotion`（dial/走路狗/streak flame/story ring/pet-tabs/segmented/leaderboard glow/confetti/lightbox），**0 個殘留 ad-hoc `AccessibilityInfo`**。
+- **對比 AA**：所有 brand 底主要按鈕文字 = ink-on-brand（5.2:1）。white-on-dark（相機/lightbox 黑底）、white-on-cookie/red（destructive，≥4.2:1 或慣例）保留。
+- **tap target**：本 session 所有互動元件補到 ≥44pt（tabs/segmented/code 動作/friends 動作/登出）。
+- **token 一致**：圓角/色票/字級走 `theme` token；新卡片向 PostCard 的 radius 2xl + `shadows.card` 對齊。
+- **已知保留**（非 bug，記錄供 PM 判斷）：FAB「＋」與 your-story「＋」glyph 仍 white-on-brand（大型裝飾性 icon，沿用 Material/IG FAB 慣例；如要 100% ink 化再開一張小票）。
+
+### 給 iOS PM — ✅ 全 surface 視覺 polish 完成
+- **iOS 全 app（UX-0 + S1–S6）視覺 polish 已收齊**，請發**末端一顆 EAS build**，user 一次走完整 app before/after。
+- **parity §A 可標「視覺 ✅」**：Pets / Leaderboard / Family / Settings / Friends（＋ Session 1 的 Walks / Home-Feed）。
+- **無新 dep**（svg/reanimated/gesture-handler/linear-gradient 已裝）。
+- **無發現功能 bug**（純視覺/互動層，未碰 flow/資料層/callable）。末端 EAS 走查若遇 runtime bug → iOS Bug Hunter。
