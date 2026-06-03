@@ -5,10 +5,20 @@
  * users/{uid}.fcmTokens, and respect pushPrefs.globalDisabled so a disabled user
  * doesn't get re-minted on every settings open.
  *
- * ⚠️ Delivery prerequisite (DevOps, NOT code): an APNs auth key/cert must be
- * registered in Firebase Console → Cloud Messaging for the iOS app, and the
- * build must carry the aps-environment entitlement (app.json). Until then the
- * token mints but no push arrives — verify on a real device after the cert is up.
+ * ⚠️ ENABLING PUSH (DevOps, NOT code) — three steps, none doable from a
+ * non-interactive build, so the aps-environment entitlement was REMOVED from
+ * app.json to keep EAS builds green. This code stays dormant until:
+ *   1. Apple Developer: enable the Push Notifications capability on App ID
+ *      com.mangopet.app, then regenerate the provisioning profile. The easiest
+ *      path is `eas credentials` (or an interactive `eas build`) while signed
+ *      into Apple — EAS adds the capability + new profile automatically.
+ *   2. app.json: re-add  ios.entitlements = { "aps-environment": "development" }
+ *      (use "production" for TestFlight/App Store) + UIBackgroundModes
+ *      "remote-notification".
+ *   3. Firebase Console → Cloud Messaging: register the APNs auth key/cert for
+ *      the iOS app.
+ * Until all three are done getToken() throws on device (probe → "denied"), which
+ * the settings toggle handles gracefully.
  */
 import messaging from "@react-native-firebase/messaging";
 import firestore from "@react-native-firebase/firestore";
