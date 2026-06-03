@@ -426,6 +426,7 @@ export function ConfettiCanvas({
   count,
   origin,
   zIndex = 50,
+  portal = true,
 }: {
   mode?: ConfettiMode;
   /** Bump to fire a fresh burst (mount already fires the first one). */
@@ -434,6 +435,11 @@ export function ConfettiCanvas({
   count?: number;
   origin?: { x: number; y: number };
   zIndex?: number;
+  /** Portal to <body> as a fixed viewport overlay (default). Set false to
+   *  render inline (absolute) inside a positioned ancestor — e.g. the
+   *  celebration modal, where confetti must sit between the scrim and the
+   *  card. Still sizes to the window. */
+  portal?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
   const sim = useRef<Sim>({
@@ -516,19 +522,20 @@ export function ConfettiCanvas({
 
   if (typeof document === "undefined") return null;
 
-  return createPortal(
+  const canvas = (
     <canvas
       ref={ref}
       aria-hidden="true"
       style={{
-        position: "fixed",
+        position: portal ? "fixed" : "absolute",
         inset: 0,
         width: "100%",
         height: "100%",
         pointerEvents: "none",
         zIndex,
       }}
-    />,
-    document.body,
+    />
   );
+
+  return portal ? createPortal(canvas, document.body) : canvas;
 }

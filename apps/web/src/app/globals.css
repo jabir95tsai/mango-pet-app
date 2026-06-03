@@ -220,6 +220,104 @@ body {
   .badge-sweep { display: none; }
 }
 
+/* Achievement unlock celebration (spec §H) — the modal that fires the moment
+ * a badge is granted (after a walk, on app open, or from a push deep-link).
+ * Pixel values track the user's Claude Design hand-off. Every keyframe is
+ * hard-stopped under prefers-reduced-motion (design variant C: static medal,
+ * no confetti) at the bottom of this block. */
+.celebrate-scrim {
+  background: rgba(38, 24, 8, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: celebrateScrimIn 0.35s ease-out both;
+}
+@keyframes celebrateScrimIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.celebrate-modal {
+  animation: celebrateModalIn 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes celebrateModalIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* Mango gold medal — gradient coin, pops in with an over-shoot. Gradient /
+ * shadow / keyframe are the canonical values from the design hand-off
+ * (confetti-engine bundle's celebration-screen medal). */
+.celebrate-medal {
+  background-image: linear-gradient(
+    150deg,
+    var(--color-mango-amber) 0%,
+    var(--color-mango-brand) 45%,
+    var(--color-mango-brand-deep) 100%
+  );
+  box-shadow:
+    0 14px 28px -10px var(--color-mango-brand),
+    inset 0 2px 3px rgba(255, 255, 255, 0.45),
+    inset 0 -6px 13px rgba(120, 70, 0, 0.28);
+  animation: celebrateMedalPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes celebrateMedalPop {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+/* Soft halo behind the medal — gentle breathing pulse. */
+.celebrate-glow {
+  background: radial-gradient(
+    circle,
+    rgba(255, 194, 92, 0.55) 0%,
+    rgba(255, 194, 92, 0) 70%
+  );
+  animation: celebrateGlow 2.4s ease-in-out infinite;
+}
+@keyframes celebrateGlow {
+  0%, 100% { opacity: 0.5; transform: scale(0.92); }
+  50% { opacity: 0.9; transform: scale(1.08); }
+}
+/* Conic ray fan behind the medal — slow continuous spin. */
+.celebrate-rays {
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 194, 92, 0) 0deg,
+    rgba(255, 194, 92, 0.35) 12deg,
+    rgba(255, 194, 92, 0) 24deg,
+    rgba(255, 194, 92, 0) 30deg,
+    rgba(255, 194, 92, 0.35) 42deg,
+    rgba(255, 194, 92, 0) 54deg,
+    rgba(255, 194, 92, 0) 60deg,
+    rgba(255, 194, 92, 0.35) 72deg,
+    rgba(255, 194, 92, 0) 84deg,
+    rgba(255, 194, 92, 0) 90deg,
+    rgba(255, 194, 92, 0.35) 102deg,
+    rgba(255, 194, 92, 0) 114deg,
+    rgba(255, 194, 92, 0) 120deg,
+    rgba(255, 194, 92, 0.35) 132deg,
+    rgba(255, 194, 92, 0) 144deg,
+    rgba(255, 194, 92, 0) 150deg,
+    rgba(255, 194, 92, 0.35) 162deg,
+    rgba(255, 194, 92, 0) 174deg,
+    rgba(255, 194, 92, 0) 360deg
+  );
+  animation: celebrateRays 12s linear infinite;
+}
+@keyframes celebrateRays {
+  to { transform: rotate(360deg); }
+}
+/* Confetti itself is the shared <ConfettiCanvas> (confetti-canvas.tsx) — the
+ * modal omits it entirely under reduced motion (variant C), so there is no
+ * CSS confetti here. */
+@media (prefers-reduced-motion: reduce) {
+  .celebrate-scrim,
+  .celebrate-modal,
+  .celebrate-medal,
+  .celebrate-glow,
+  .celebrate-rays { animation: none; }
+  /* Variant C — static medal, halo held at a calm mid-state, no spin. */
+  .celebrate-glow { opacity: 0.6; transform: scale(1); }
+}
+
 /* Walk completion confetti — pure CSS, no canvas-confetti dep.
  * Spec docs/features/walks-photo-and-celebration.md Phase 2 D3.
  * 20 absolutely-positioned slivers fall + rotate; per-piece delay +

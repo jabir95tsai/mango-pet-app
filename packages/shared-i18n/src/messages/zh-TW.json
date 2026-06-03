@@ -456,6 +456,21 @@
     "locked": "綁定帳號解鎖",
     "guestHint": "社群與排行榜徽章需綁定帳號才能解鎖；遛狗、里程、寵物等個人徽章你現在就能累積。",
     "emptyHint": "還沒有解鎖徽章 — 開始遛狗、新增寵物，徽章就會一枚枚亮起來！",
+    "celebrate": {
+      "kicker": "🎉 恭喜解鎖！",
+      "categoryChip": "🏅 {category}",
+      "primary": "太棒了",
+      "secondary": "查看所有成就",
+      "close": "關閉",
+      "ariaLabel": "獲得徽章：{name}",
+      "multiTitle": "一次解鎖 {count} 枚徽章！",
+      "summaryTitle": "你已獲得 {count} 枚成就！",
+      "summaryBody": "太厲害了！點下方查看你解鎖的所有徽章。",
+      "prev": "上一枚",
+      "next": "下一枚",
+      "goTo": "看第 {index} 枚",
+      "counter": "{index} / {total}"
+    },
     "categories": {
       "walks": "遛狗里程碑",
       "streak": "連續天數",

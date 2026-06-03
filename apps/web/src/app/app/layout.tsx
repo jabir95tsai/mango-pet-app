@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AppProviders } from "@/components/auth/app-providers";
 import { GuestUpgradeNudge } from "@/components/auth/guest-upgrade-nudge";
+import { AchievementCelebrationProvider } from "@/components/achievements/celebration-provider";
 import { AppNav } from "@/components/nav/app-nav";
 import { NavDrawerProvider } from "@/components/nav/nav-drawer-context";
 import { RequireAuth } from "@/components/auth/require-auth";
@@ -20,6 +21,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </main>
           </div>
         </NavDrawerProvider>
+        {/* App-layer unlock celebration overlay (spec §H) — pops on a new
+            grant (post-walk / app open) or a push `?unlocked=` deep-link,
+            independent of the current page. */}
+        <AchievementCelebrationProvider />
       </RequireAuth>
     </AppProviders>
   );
