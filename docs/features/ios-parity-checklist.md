@@ -64,18 +64,20 @@
 
 ### P2 — Pets
 > 📋 **完整 spec（前置決策 + sub-phase P2-pre/a/b/c/d + 全 session prompt）** → [`ios-p2-pets.md`](./ios-p2-pets.md)（iOS PM 2026-06-01）。sub-phase = 骨架(P2a,無 dep) → svg charts(P2b) → forms/picker(P2c) → camera(P2d)，每碰 dep 走 branch+linux gate。
+> 🟡 **P2 全 sub-phase code 收齊（待實機驗收）**：P2a `3c16b6a`（list+switcher+header+4-tab+overview）、P2b `cd75b31`（svg expense donut + weight trend chart）、P2c `90c6d3f`（reminder/expense/health/pet forms + pickers + gradient empty）、P2d `a3f4529`（camera FAB + AI receipt scan）。UI/UX S3 polish 已套（`faeb50c` sliding tab indicator + weight chart axes）。
+> ✏️ **2026-06-03 Cross-platform PM 修 drift**：本段原全標 ⬜（stale）；apps/ios/src/components/pets/* 全 screen 已存在 + 上述 commit 佐證 → 更新為 🟡。
 
 | Web feature | Web spec | iOS policy | iOS 狀態 |
 |---|---|---|---|
-| Pets 全頁(list + switcher + header 真照片) | [`pets-v2-rebuild.md`](./pets-v2-rebuild.md) | parity | ⬜ P2a |
-| 4-tab(概覽/提醒/開銷/健康) | pets-v2 | parity（自刻 pill tab，不用 tab-view dep） | ⬜ P2a |
-| Overview tab(2×2 StatGrid + upcoming/recent cards) | pets-v2 | parity | ⬜ P2a |
-| 開銷 donut + filter + list | [`expenses-into-pets-page.md`](./expenses-into-pets-page.md) | parity（手刻 react-native-svg donut） | ⬜ P2b |
-| 健康(體重 trend chart + records) | pets-v2 | parity（手刻 svg area+line chart） | ⬜ P2b |
-| 提醒(list + form) | pets-v2 | parity（datetimepicker + repeat + notifyBefore） | ⬜ P2c |
-| Pet edit form(含 avatar picker + walkGoal stepper) | per-pet-walk-goal | parity（expo-image-picker/manipulator） | ⬜ P2c |
-| EmptyState 0 pets | pets-v2 | parity（expo-linear-gradient） | ⬜ P2c |
-| 開銷 camera FAB + AI 收據掃描(extractReceipt callable) | bug-receipt-ai-missing / receipt-scanner | **native-upgrade**（expo-camera first-flow；接同 callable，後端不改） | ⬜ P2d |
+| Pets 全頁(list + switcher + header 真照片) | [`pets-v2-rebuild.md`](./pets-v2-rebuild.md) | parity | 🟡 code done（`3c16b6a` P2a）；待實機驗收 |
+| 4-tab(概覽/提醒/開銷/健康) | pets-v2 | parity（自刻 pill tab，不用 tab-view dep） | 🟡 code done（`3c16b6a` P2a + `faeb50c` sliding indicator）；待實機驗收 |
+| Overview tab(2×2 StatGrid + upcoming/recent cards) | pets-v2 | parity | 🟡 code done（`3c16b6a` P2a）；待實機驗收 |
+| 開銷 donut + filter + list | [`expenses-into-pets-page.md`](./expenses-into-pets-page.md) | parity（手刻 react-native-svg donut） | 🟡 code done（`cd75b31` P2b）；待實機驗收 |
+| 健康(體重 trend chart + records) | pets-v2 | parity（手刻 svg area+line chart） | 🟡 code done（`cd75b31` P2b + `faeb50c` axes）；待實機驗收 |
+| 提醒(list + form) | pets-v2 | parity（datetimepicker + repeat + notifyBefore） | 🟡 code done（`90c6d3f` P2c）；待實機驗收 |
+| Pet edit form(含 avatar picker + walkGoal stepper) | per-pet-walk-goal | parity（expo-image-picker/manipulator） | 🟡 code done（`90c6d3f` P2c）；待實機驗收 |
+| EmptyState 0 pets | pets-v2 | parity（expo-linear-gradient） | 🟡 code done（`90c6d3f` P2c）；待實機驗收 |
+| 開銷 camera FAB + AI 收據掃描(extractReceipt callable) | bug-receipt-ai-missing / receipt-scanner | **native-upgrade**（expo-camera first-flow；接同 callable，後端不改） | 🟡 code done（`a3f4529` P2d，接同 callable 後端不改）；待實機驗收 |
 
 ### P3 — Home + Feed
 > 📋 spec → [`ios-p3-home-feed.md`](./ios-p3-home-feed.md)（最小 spec，依 master plan + web 實作）。sub-phase P3a（無 dep，main）→ P3b（reanimated gate）→ P3c（media-library+sharing gate）。
