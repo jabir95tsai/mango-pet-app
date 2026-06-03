@@ -5,11 +5,12 @@
  * highlight, and a fade-out glow flash when `isGlowing` ticks true (realtime
  * score write within 5s). Glow respects reduce-motion (instant, no flash).
  */
-import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, StyleSheet, Text, View } from "react-native";
 
 import { UserAvatar } from "@/components/feed/user-avatar";
 import { PetAvatar } from "@/components/pets/pet-avatar";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { groupThousands } from "@/lib/format";
 import { colors, radius, spacing } from "@/theme/theme";
 
@@ -43,11 +44,7 @@ export function LeaderboardRow({
   isDog?: boolean;
 }) {
   const glow = useRef(new Animated.Value(0)).current;
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
-  }, []);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!isGlowing) return;

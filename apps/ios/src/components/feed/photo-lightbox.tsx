@@ -7,7 +7,6 @@
  */
 import { useEffect, useState } from "react";
 import {
-  AccessibilityInfo,
   Image,
   Modal,
   Pressable,
@@ -26,6 +25,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { colors, spacing } from "@/theme/theme";
 
 const H_COMMIT = 50;
@@ -48,15 +48,11 @@ export function PhotoLightbox({
 }) {
   const { width, height } = useWindowDimensions();
   const [index, setIndex] = useState(initialIndex);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const translateX = useSharedValue(-initialIndex * width);
   const translateY = useSharedValue(0);
   const backdrop = useSharedValue(1);
-
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (open) {

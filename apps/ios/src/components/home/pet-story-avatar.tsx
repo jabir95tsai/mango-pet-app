@@ -9,19 +9,13 @@
  * Tap is a no-op for v1 (future: filter feed by pet) with an aria hint, mirroring
  * apps/web/src/components/home/pet-story-avatar.tsx.
  */
-import { useEffect, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { WalkStatus } from "@mango/shared-business";
 
 import { PetAvatar } from "@/components/pets/pet-avatar";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { t } from "@/lib/i18n";
 import { colors } from "@/theme/theme";
 
@@ -44,17 +38,7 @@ export function PetStoryAvatar({
   status: WalkStatus;
 }) {
   const pulse = useRef(new Animated.Value(1)).current;
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((v) => {
-      if (active) setReduceMotion(v);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (status !== "tracking" || reduceMotion) {

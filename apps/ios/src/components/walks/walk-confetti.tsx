@@ -4,26 +4,18 @@
  * fade once. Respects reduce-motion (AccessibilityInfo) → static slivers.
  * Decorative only: accessibilityElementsHidden / importantForAccessibility.
  */
-import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, View } from "react-native";
+
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const PALETTE = ["#f59e0b", "#10b981", "#fbbf24", "#34d399", "#fde68a"];
 const COUNT = 20;
 const FALL_HEIGHT = 360;
 
 export function WalkConfetti({ width = 320 }: { width?: number }) {
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useReducedMotion();
   const progress = useRef(Array.from({ length: COUNT }, () => new Animated.Value(0))).current;
-
-  useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((v) => {
-      if (active) setReduceMotion(v);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (reduceMotion) return;

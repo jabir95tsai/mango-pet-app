@@ -1,17 +1,9 @@
 /**
- * Circular person avatar for feed posts + comments — photoURL image, or a
- * brand-tint disc with the first grapheme of the name. Mirrors the web post
- * author avatar (round, unlike pets which use a rounded square).
+ * Person avatar for feed posts + comments — thin shim over the shared UX-0
+ * Avatar primitive (circle shape, smiley fallback). Kept as a named export so
+ * existing feed call sites don't need a sweeping rename.
  */
-import { Image, StyleSheet, Text, View } from "react-native";
-
-import { colors } from "@/theme/theme";
-
-function firstChar(name: string): string {
-  const trimmed = (name ?? "").trim();
-  if (!trimmed) return "🙂";
-  return Array.from(trimmed)[0] ?? "🙂";
-}
+import { Avatar } from "@/components/ui/Avatar";
 
 export function UserAvatar({
   name,
@@ -22,41 +14,7 @@ export function UserAvatar({
   photoURL?: string | null;
   size?: number;
 }) {
-  if (photoURL) {
-    return (
-      <Image
-        accessibilityIgnoresInvertColors
-        source={{ uri: photoURL }}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: colors.brandTint,
-        }}
-      />
-    );
-  }
   return (
-    <View
-      style={[styles.disc, { width: size, height: size, borderRadius: size / 2 }]}
-    >
-      <Text
-        style={{
-          fontSize: Math.round(size * 0.44),
-          fontWeight: "800",
-          color: colors.brandDeep,
-        }}
-      >
-        {firstChar(name)}
-      </Text>
-    </View>
+    <Avatar name={name} photoURL={photoURL} size={size} shape="circle" fallbackChar="🙂" />
   );
 }
-
-const styles = StyleSheet.create({
-  disc: {
-    backgroundColor: colors.brandTint,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
