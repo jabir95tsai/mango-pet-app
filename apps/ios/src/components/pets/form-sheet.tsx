@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   },
   optPillActive: { backgroundColor: colors.brand, borderColor: colors.brand },
   optLabel: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
-  optLabelActive: { color: colors.card, fontWeight: "800" },
+  optLabelActive: { color: colors.ink, fontWeight: "800" },
   stepper: {
     flexDirection: "row",
     alignItems: "center",

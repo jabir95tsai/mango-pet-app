@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  publishText: { fontSize: 15, fontWeight: "800", color: colors.card },
+  publishText: { fontSize: 15, fontWeight: "800", color: colors.ink },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.5 },
 });

@@ -96,5 +96,5 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 48 },
   message: { fontSize: 16, fontWeight: "700", color: colors.ink, textAlign: "center" },
   btn: { height: 48, paddingHorizontal: spacing.xxl, borderRadius: radius.pill, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center" },
-  btnText: { fontSize: 15, fontWeight: "800", color: colors.card },
+  btnText: { fontSize: 15, fontWeight: "800", color: colors.ink },
 });

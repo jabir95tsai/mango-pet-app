@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sendText: { fontSize: 14, fontWeight: "800", color: colors.card },
+  sendText: { fontSize: 14, fontWeight: "800", color: colors.ink },
   remaining: { fontSize: 11, color: colors.ink3, textAlign: "right" },
   disabled: { opacity: 0.5 },
   pressed: { opacity: 0.85 },

@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { fontSize: 16, fontWeight: "800", color: colors.card },
+  primaryText: { fontSize: 16, fontWeight: "800", color: colors.ink },
   secondaryBtn: { height: 44, alignItems: "center", justifyContent: "center" },
   secondaryText: { fontSize: 14, fontWeight: "600", color: colors.ink3 },
 });

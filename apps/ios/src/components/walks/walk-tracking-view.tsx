@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  saveText: { fontSize: 16, fontWeight: "800", color: colors.card },
+  saveText: { fontSize: 16, fontWeight: "800", color: colors.ink },
   discardBtn: {
     height: 44,
     alignItems: "center",
