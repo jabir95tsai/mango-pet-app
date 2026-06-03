@@ -71,3 +71,14 @@
 - **→ Feature Builder / UI/UX**：§A（停止確認 dialog + 暫停/繼續按鈕 + pausedMs 計時 + wake lock）、§B（移除背景自動暫停、wall-clock 純跑、失控 safeguard、背景未記距離提示）+ i18n。
 - **→ Backend**：§C（`computeDogPeriodScore` 加重疊區間合併；只動狗榜；duration=union、distance=max、count/streak 去重）。
 - **→ PM**：開放問題 B-1 / C-1 / C-2 / C-3 收 user 確認後鎖定。
+
+---
+
+## ✅ 開放問題全鎖定 — user 2026-06-02「都預設」
+
+- **B-1 失控保護** → 採預設：背景計時超過 **3 小時** → 跳「還在散步嗎？」+ 自動停止。
+- **C-1 重疊 distance** → 採預設：重疊群組 distance 取 **max**（非 sum）。
+- **C-2 重疊門檻** → 採預設：`[startedAt,endedAt]` **任何交集即視為一起遛**（不設最小分鐘閾值）。
+- **C-3 歷史資料** → 採預設：**接受漂移，不回算**；該狗下次 walk 變動時自然重算去重。
+
+→ spec READY-FOR-DEV，無待決項。實作直接照上述預設。
