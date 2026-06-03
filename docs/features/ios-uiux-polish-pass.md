@@ -1,0 +1,123 @@
+# iOS UI/UX Polish Pass — 全 app 視覺/原生手感
+
+狀態：**READY-FOR-DEV**（iOS PM 2026-06-01）
+建立日期：2026-06-01
+規格作者：iOS PM session
+角色執行：**iOS UI/UX 工程師**（純視覺/互動，不碰資料層）
+上承：P0–P7 feature 全 code-done（功能對、外觀粗胚）→ 本 pass 把整個 app 視覺拉到 mango 設計 + iOS 原生手感
+配合：[`ios-port-master-plan.md`](./ios-port-master-plan.md)、[`ios-parity-checklist.md`](./ios-parity-checklist.md)、各 phase ship note
+
+> user 2026-06-01：「整個目前看起來 ok，接著做 ui/ux 部分。」P2–P7 功能已建（pets/feed/leaderboard/family/settings/friends/onboarding），現在做**視覺 polish pass**。
+
+## 🎯 目標
+
+把「功能對、外觀粗胚」的 iOS app，整面拉到：**mango brand（amber/黃 + emerald + 桃粉，圓角 2xl + rounded-full）+ iOS 原生密度/手感 + safe-area + a11y + reduced-motion**。對齊 web 視覺方向，但**不是像素複製**（戰略 D1 = 原生手感）。
+
+## ✅ 前提（好消息：無新 dep gate）
+
+動畫/繪圖 dep **全部已裝**（P2/P3 引入並過 gate）：`react-native-svg` / `react-native-reanimated` / `react-native-gesture-handler` / `expo-linear-gradient`。
+→ **本 pass 預設不加新 dep → 不需 web rollout gate**（純 apps/ios style/animation）。若某項真要新 dep（少見）→ 停手回報 iOS PM 走 branch+gate。
+→ 驗收依 **規則 5 批次**：一路 polish merge（每步 tsc），**末端一次 EAS build 實機驗整個 app**。
+
+## 🚫 不做（已完成 / 別重做）
+- **confetti 引擎**：已升級（canvas confetti `b92e966` + `confetti-engine-upgrade` spec）→ 不重做，只確認其他 surface 引用一致。
+- **achievements/解鎖慶祝**：已有 spec（`achievements-badges`）→ 不在本 pass。
+- **onboarding/privacy**：P7 已做（`1972d6c`）→ 只做視覺 polish，不改 flow。
+- 資料層 / Firestore / functions / callable 簽名 → 完全不碰。
+
+---
+
+## 🧱 UX-0 — 跨切面 primitives + token 細修（先做，後面全 surface 共用）
+
+> 先建可重用 native primitives + 對齊 token，後面每個 surface polish 都複用，避免各畫面各刻一套。
+
+- **mango tokens 細修**（`@mango/shared-tokens` → iOS `theme.ts`）：確認 amber/emerald/桃粉、文字階層、radius（2xl / full）、spacing、shadow/elevation 對齊 web `globals.css` @theme。
+- **Reusable primitives**（`apps/ios/src/components/ui/`）：`Button`（primary/secondary/ghost + pressed state + 觸覺 `expo-haptics`?僅若已裝，否則略）、`Card`、`Screen`（safe-area + scroll + keyboard avoidance wrapper）、`Sheet`（Expo Router modal 包裝）、`Pill`/`Chip`、`EmptyState`、`Avatar`。
+- **safe-area 策略**：`react-native-safe-area-context`（已裝）統一 top/bottom inset；full-screen modal（tracking / lightbox）避瀏海 + home indicator。
+- **reduced-motion helper**：`AccessibilityInfo.isReduceMotionEnabled` 包成一個 hook，所有動畫（dial/走路狗/glow/confetti/sheet transition）統一吃它。
+- **a11y 基線**：tap target ≥ 44pt、accessibilityLabel/Role、focus 順序、對比 WCAG AA。
+
+---
+
+## 🎨 Per-surface polish（UX-0 後，依「最常看到 + 最粗」排序）
+
+> 每個 surface：對照 web 視覺 → iOS after。用 UX-0 primitives。
+
+### S1 — Walks（核心，user 已看過最粗）
+- **dial**：分段環 → **平滑 arc**（`react-native-svg` circle stroke-dashoffset），達標 leaf 綠漸層。
+- **走路狗**：靜態 → **Reanimated 走路動畫**（對齊 web 6-keyframe 精神：bob/腿擺/尾搖），reduced-motion 時靜態。
+- **week strip / streak chip**：完成日 paw fill、today 高亮、streak ≥7 leaf 變體 + flame flicker（reduced-motion skip）。
+- **tracking full-screen**：safe-area、timer/距離視覺層級、紅停止鈕 affordance。
+- **done screen**：emerald 慶祝 wash + 達標標題 + streak badge pop（confetti 引擎已做，確認串接）。
+
+### S2 — Home + Feed
+- **Stories bar**：pet walk status conic ring（done/pending/tracking）— svg/reanimated；user dashed ring。
+- **PostCard**：author 區、photo grid(1/2/2+) 間距/圓角、reaction/comment badge、visibility icon。
+- **Reactions long-press tray** + **PhotoLightbox**：gesture-handler 手勢順滑（水平切換/下滑關閉）、reduced-motion。
+- **Composer / sheets**：keyboard avoidance、photo grid、發佈 affordance。
+- **empty/no-posts/invite cards**：linear-gradient + CTA 視覺。
+
+### S3 — Pets
+- **header**（avatar + chips）、**4-tab pill** 切換動效/active 視覺、**StatGrid**。
+- **開銷 donut + legend**、**健康 weight chart**：色彩/標籤/座標視覺細修（功能已對，純美化）。
+- **forms（reminder/expense/health/pet-edit）**：sheet 呈現、欄位密度、datepicker 樣式、stepper。
+- **0-pet EmptyState** gradient hero。
+
+### S4 — Leaderboard + Family
+- **rank list**：名次視覺、自己高亮、**glow 更新動效**（reduced-motion skip）、human/dog/period tab 切換。
+- **family section**：member list、invite QR 卡、code/share 視覺。
+
+### S5 — Settings + Friends
+- **settings**：section 分組、toggle 原生樣式、photos preview grid、delete/export 危險動作視覺。
+- **friends**：list、search、request accept/reject、My QR dialog。
+
+### S6 — 全 app 收斂 QA
+- 一致性 audit（間距/圓角/色票/字級跨 surface 一致）、loading/error/empty tone、reduced-motion 全 surface、Dynamic Type 不破版、bottom nav raised disc 與各頁互動。
+
+---
+
+## 🤝 角色 / 護欄
+- **iOS UI/UX 工程師**主導；只動 `apps/ios/**` UI + `shared-tokens` + `shared-i18n` 文案微調。
+- **不碰**：Firestore/Storage/functions/callable 簽名、shared-firebase API、web UI、feature flow（功能缺口 → iOS Feature Builder）。
+- 預設不加 dep；真要加 → 停手回報 iOS PM 走 gate。
+
+## ✅ 驗收（規則 5 批次）
+- 一路 polish，每步 `npx tsc --noEmit`（apps/ios）+ merge，**中途不發 device build**。
+- 全 surface polish 收齊 → iOS PM 發**一顆** EAS build → user 一次走完整 app 看視覺（before/after 對照 web）。
+- a11y / reduced-motion / safe-area / tap target 抽查。
+
+## 🚀 Launch prompt（開 iOS UI/UX session）
+
+> 範圍大 → 可一個 session 做 UX-0 + S1–S2（最常看到的），再開第二個 session 做 S3–S6;或一個 session 慢慢全做。驗收一樣 batched 末端一次。
+
+```
+平台：iOS｜角色：iOS UI/UX 工程師
+先讀：AGENTS.md、docs/team/README.md（規則 5 批次驗收）、docs/team/ios-ui-ux.md、docs/features/ios-uiux-polish-pass.md（本 spec）、docs/features/visual-redesign-mango.md（web 視覺方向參考）
+先跑：git fetch && git log -8 --stat origin/main
+
+任務：iOS 全 app UI/UX polish pass（功能已 code-done，做視覺/原生手感）。
+順序：先 UX-0（primitives + token + safe-area + reduced-motion hook + a11y 基線）→ 再 S1 Walks → S2 Home/Feed →（同 session 或下一棒）S3 Pets → S4 Leaderboard/Family → S5 Settings/Friends → S6 收斂 QA。
+細節照 ios-uiux-polish-pass.md 各 surface 清單。
+
+護欄：
+- 只動 apps/ios/** UI + shared-tokens + shared-i18n 文案微調
+- 不碰 Firestore/Storage/functions/callable/shared-firebase API/web UI/feature flow
+- 動畫 dep（svg/reanimated/gesture-handler/linear-gradient）已裝 → **不要加新 dep**；真要加停手回報 iOS PM
+- 動畫一律吃 reduced-motion hook；safe-area 用 safe-area-context；tap target ≥44pt
+- confetti 引擎/achievements/onboarding flow 已做 → 不重做（只確認視覺串接）
+
+驗收（規則 5 批次）：
+- 每步 npx tsc --noEmit（apps/ios）pass + merge；**中途不發 device build、不要 user 中途驗**
+- 全 surface 收齊 → 通知 iOS PM 發一顆 EAS build，user 一次走完整 app 看 before/after
+
+回報：
+1. 角色 + 做了哪些 surface（commit hash）
+2. before/after 或 web reference 對照（截圖或描述）
+3. 有沒有加 dep（應為無）/ 有沒有發現功能 bug（丟 iOS Bug Hunter，不自己修 flow）
+4. 給 iOS PM：哪些 surface polish 完、parity §A 對應列可標視覺 ✅、剩哪些 surface 待下一棒
+```
+
+## 跟其他 spec 的關聯
+- 視覺方向參考 web [`visual-redesign-mango.md`](./visual-redesign-mango.md)（mango palette + Epic 4 決策）。
+- confetti/celebration：`confetti-engine-upgrade` / `walks-photo-and-celebration` / `achievements-badges` 已涵蓋，本 pass 不重做。
+- 功能 spec：各 phase（walks/pets/feed/leaderboard/settings/friends）為 behavior reference，本 pass 不改 behavior。
