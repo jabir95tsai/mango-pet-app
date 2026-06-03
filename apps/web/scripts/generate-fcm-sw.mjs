@@ -69,18 +69,14 @@ importScripts("https://www.gstatic.com/firebasejs/${firebaseVersion}/firebase-me
 
 firebase.initializeApp(${JSON.stringify(config, null, 2)});
 
+// Registering firebase.messaging() in the SW installs the SDK's own push
+// handler, which AUTO-DISPLAYS messages that carry a \`notification\` payload
+// (all our sends do — the native iOS/Android FCM clients require it). We do
+// NOT add an onBackgroundMessage handler that calls showNotification: doing
+// so displays a SECOND copy of the same push (the SDK already showed one),
+// which is the "推播推兩次" duplicate-notification bug. Leave display to the
+// SDK; only customise click routing below.
 const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const title = (payload.notification && payload.notification.title) || "Mango Pet";
-  const options = {
-    body: (payload.notification && payload.notification.body) || "",
-    icon: (payload.notification && payload.notification.icon) || "/web-app-manifest-192x192.png",
-    badge: "/favicon-96x96.png",
-    data: payload.data || {},
-  };
-  self.registration.showNotification(title, options);
-});
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
