@@ -317,3 +317,29 @@ hero「已解鎖 2/26」+ 環 ✓；寵物區 2/2 滿條、第一隻毛孩 + 多
 ### Handoff
 - **→ Feature Builder**：newly-earned 偵測（localStorage diff + push `?unlocked=` deep-link）+ app 層掛載 + 慶祝 queue（多枚）+ CTA 路由 + 慶祝後寫回 localStorage。
 - **→ UI/UX**：modal/獎章/紙花/變體 A·B·C 像素級 port（上方視覺規格）+ a11y + reduced-motion；i18n key 接 Feature Builder。
+
+---
+
+## H.1 已符合即補發 + 首次開啟「取得成就」慶祝（user 2026-06-02 拍板）
+
+把 open question #4（backfill）與 §H 的 newly-earned hook 串起來，達成 user 要的：**讀現有資料 → 已符合者直接取得 → 玩家更新後第一次開 app 跳出取得成就**。
+
+### A) 補發（backfill）— 確認要做 + 執行（Backend/ops）
+- `backfillAchievements` callable **已部署但尚未執行**（上方 task 7）。**user 確認：要執行**，讓已符合條件的使用者直接取得徽章。open question #4 → **RESOLVED：做 + 跑**。
+- 執行（需 admin claim，PM 不執行 → handoff Backend session）：先 `{dryRun:true}`（或 `{targetUid}` 單人）看 `achievementsBackfills/{ISO}` audit 的 candidate set 合理 → 再 `{dryRun:false}` 全量。
+- backfill 本身**維持不發 push**（避免老徽章推播洗版）—— 慶祝改走「首次開啟 in-app 慶祝」（下方 B），不是 push。
+
+### B) 首次開啟取得慶祝（§H hook 首跑行為）— Feature Builder
+- **機制**：§H 的 localStorage「已慶祝集合」對既有使用者**首次更新後開啟時為空** → `diff(當前 grants, 已慶祝集合)` = 全部（含 backfill 補發的）→ 視為 newly-earned → 跳出取得慶祝 → 慶祝後寫回集合；之後開啟不再重播。
+- ⚠️ **不要**「靜默把已慶祝集合 seed = 當前 grants 而不慶祝」——那會壓掉首次慶祝；user 明確要首開跳出。
+- 自然涵蓋兩種人：全新 0 徽章使用者 → 無可慶祝（不跳）；既有使用者 backfill 後 → 首開慶祝一次。
+- ⚠️ **大量 N 處理**（活躍老用戶可能一次補發很多枚）：
+  - `N ≤ 6` → §H 變體 B（一次解鎖 N 枚，縮圖 strip 翻看）。
+  - `N > 6` → **精簡彙總**「🎉 你已獲得 N 枚成就！」+ 疊放幾枚代表徽章 + 「查看所有成就」→ `/app/achievements`，不逼使用者翻 20 張。
+  - 門檻 6 為 PM 預設，可調。
+- **時序**：慶祝在「app 讀到 grants（已含 backfill）後」觸發。若 backfill 尚未對該 user 跑完，該次開啟先不跳，待 grants 出現後的下次開啟再跳（可接受）。
+
+### Handoff
+- **→ Backend / ops**：執行 `backfillAchievements`（dry-run → 看 audit → real，全量），補發已達標徽章；維持不發 push。
+- **→ Feature Builder**：§H hook 首跑行為如上（空集合 → 慶祝全部 backfilled；`N>6` 走彙總版）。
+- **→ UI/UX**：`N>6` 彙總版慶祝版型（N 枚疊放 + 計數 + 查看所有成就）。
