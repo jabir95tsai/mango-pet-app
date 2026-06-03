@@ -61,7 +61,9 @@ export function PetExpensesBody({
       EXPENSE_CATEGORIES.map((c) => ({
         category: c,
         amount: byCategory.get(c) ?? 0,
-      })).filter((s) => s.amount > 0),
+      }))
+        .filter((s) => s.amount > 0)
+        .sort((a, b) => b.amount - a.amount), // largest at 12 o'clock (web parity)
     [byCategory],
   );
 

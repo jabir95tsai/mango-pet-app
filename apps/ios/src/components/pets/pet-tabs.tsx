@@ -1,31 +1,16 @@
 /**
- * 4-tab pill bar (概覽 / 提醒 / 開銷 / 健康) — hand-rolled, no react-native-
- * tab-view (D-tab decision: web is also a pill bar with no swipe). S3 polish:
- * the active white card pill is now a single sliding indicator that animates
- * between tabs (Reanimated), instead of toggling per-tab background. Reduced-
- * motion snaps without sliding. Mirrors web pet-tabs.
+ * 4-tab pill bar (概覽 / 提醒 / 開銷 / 健康) — 1:1 with apps/web/src/components/
+ * pets/pet-tabs.tsx: a single bg-alt pill (rounded-full, hairline border, p-1)
+ * with a simple per-tab colour toggle (active = card bg + soft shadow + bold
+ * ink; inactive = ink-2 semibold). Web uses a 200ms colour transition, not a
+ * sliding indicator — so we toggle, not slide.
  */
-import { useEffect, useState } from "react";
-import {
-  StyleSheet,
-  Pressable,
-  Text,
-  View,
-  type LayoutChangeEvent,
-} from "react-native";
-import Reanimated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+import { StyleSheet, Pressable, Text, View } from "react-native";
 
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { scoped } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 
 const tPP = scoped("PetsPage");
-const PAD = 4;
 
 export const PET_TABS = ["overview", "reminders", "expenses", "health"] as const;
 export type PetTabKey = (typeof PET_TABS)[number];
@@ -37,41 +22,15 @@ export function PetTabs({
   active: PetTabKey;
   onChange: (tab: PetTabKey) => void;
 }) {
-  const reduceMotion = useReducedMotion();
-  const [barW, setBarW] = useState(0);
-  const x = useSharedValue(0);
-
-  const cellW = barW > 0 ? (barW - PAD * 2) / PET_TABS.length : 0;
-  const activeIdx = PET_TABS.indexOf(active);
-
-  const onLayout = (e: LayoutChangeEvent) => setBarW(e.nativeEvent.layout.width);
-
-  // Keep the indicator under the active tab as width/active changes.
-  useEffect(() => {
-    if (cellW <= 0) return;
-    const target = PAD + activeIdx * cellW;
-    x.value = reduceMotion
-      ? target
-      : withTiming(target, { duration: 220, easing: Easing.out(Easing.cubic) });
-  }, [activeIdx, cellW, reduceMotion, x]);
-
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }],
-    width: cellW,
-  }));
-
   return (
-    <View style={styles.bar} onLayout={onLayout}>
-      {cellW > 0 ? (
-        <Reanimated.View style={[styles.indicator, indicatorStyle]} />
-      ) : null}
+    <View style={styles.bar}>
       {PET_TABS.map((key) => {
         const isActive = key === active;
         return (
           <Pressable
             key={key}
             onPress={() => onChange(key)}
-            style={styles.tab}
+            style={[styles.tab, isActive && styles.tabActive]}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
           >
@@ -88,22 +47,12 @@ export function PetTabs({
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    padding: PAD,
+    gap: 4,
+    padding: 4,
     backgroundColor: colors.bgAlt,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
     borderRadius: radius.pill,
-  },
-  indicator: {
-    position: "absolute",
-    top: PAD,
-    bottom: PAD,
-    left: 0,
-    borderRadius: radius.pill,
-    backgroundColor: colors.card,
-    shadowColor: colors.paw,
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   tab: {
     flex: 1,
@@ -113,6 +62,14 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radius.pill,
   },
-  label: { fontSize: 13, fontWeight: "600", color: colors.ink3 },
-  labelActive: { color: colors.ink, fontWeight: "800" },
+  tabActive: {
+    backgroundColor: colors.card,
+    shadowColor: "#50320a",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  label: { fontSize: 13.5, fontWeight: "600", letterSpacing: 0.2, color: colors.ink2 },
+  labelActive: { color: colors.ink, fontWeight: "700" },
 });

@@ -13,7 +13,7 @@ import type { Expense, Pet, Reminder, Walk } from "@mango/shared-types";
 import { CATEGORY_EMOJI } from "@/lib/expense-ui";
 import { groupThousands, monthDay } from "@/lib/format";
 import { scoped } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 const tPP = scoped("PetsPage");
 const tExp = scoped("Expense");
@@ -23,30 +23,58 @@ function ms(ts: { toMillis?: () => number } | undefined): number {
   return ts?.toMillis?.() ?? 0;
 }
 
-type StatTone = "brand" | "leaf" | "cookie" | "muted";
+type StatTone = "brand" | "leaf" | "cookie";
+
+const ICON_BG: Record<StatTone, string> = {
+  brand: colors.brandTint,
+  cookie: colors.cookieTint,
+  leaf: colors.leafTint,
+};
+const ICON_FG: Record<StatTone, string> = {
+  brand: colors.brandDeep,
+  cookie: colors.cookie,
+  leaf: colors.leaf,
+};
+const SUB_COLOR = {
+  brand: colors.brandDeep,
+  cookie: colors.cookie,
+  leaf: colors.leaf,
+  muted: colors.ink3,
+} as const;
 
 function PetStatTile({
+  icon,
   label,
   value,
   unit,
   sub,
-  tone = "muted",
+  tone,
+  subTone = "muted",
 }: {
+  icon: string;
   label: string;
   value: string;
   unit?: string;
   sub?: string;
-  tone?: StatTone;
+  tone: StatTone;
+  subTone?: StatTone | "muted";
 }) {
   return (
     <View style={styles.tile}>
-      <Text style={styles.tileLabel}>{label}</Text>
+      <View style={styles.tileHead}>
+        <View style={[styles.tileIcon, { backgroundColor: ICON_BG[tone] }]}>
+          <Text style={[styles.tileIconText, { color: ICON_FG[tone] }]}>{icon}</Text>
+        </View>
+        <Text style={styles.tileLabel} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
       <View style={styles.tileValueRow}>
-        <Text style={[styles.tileValue, toneStyle[tone]]}>{value}</Text>
+        <Text style={styles.tileValue}>{value}</Text>
         {unit ? <Text style={styles.tileUnit}>{unit}</Text> : null}
       </View>
       {sub ? (
-        <Text style={styles.tileSub} numberOfLines={1}>
+        <Text style={[styles.tileSub, { color: SUB_COLOR[subTone] }]} numberOfLines={1}>
           {sub}
         </Text>
       ) : null}
@@ -109,31 +137,39 @@ export function PetOverviewBody({
       {/* 2×2 stat grid */}
       <View style={styles.grid}>
         <PetStatTile
+          icon="🔔"
           label={tPP("stat.nextReminder")}
           value={reminderStat ? reminderStat.value : "—"}
           unit={reminderStat ? reminderStat.unit : undefined}
           sub={nextR ? nextR.title : tPP("stat.noReminder")}
           tone="brand"
+          subTone={nextR ? "brand" : "muted"}
         />
         <PetStatTile
+          icon="🍪"
           label={tPP("stat.monthSpend")}
           value={`$${groupThousands(monthSpend)}`}
           sub={tPP("stat.subThisMonth")}
           tone="cookie"
+          subTone="muted"
         />
         <PetStatTile
+          icon="⚖️"
           label={tPP("stat.weight")}
           value={pet.weightKg != null ? `${pet.weightKg}` : "—"}
           unit={pet.weightKg != null ? tPP("kgUnit") : undefined}
           sub={pet.weightKg != null ? tPP("stat.subRecent") : tPP("stat.noWeight")}
           tone="leaf"
+          subTone={pet.weightKg != null ? "leaf" : "muted"}
         />
         <PetStatTile
+          icon="🐾"
           label={tPP("stat.walkDays")}
           value={`${walkDays}`}
           unit="天"
           sub={tPP("stat.subKeepGoing")}
           tone="brand"
+          subTone="muted"
         />
       </View>
 
@@ -194,32 +230,41 @@ export function PetOverviewBody({
   );
 }
 
-const toneStyle = StyleSheet.create({
-  brand: { color: colors.brandDeep },
-  leaf: { color: colors.leaf },
-  cookie: { color: colors.cookie },
-  muted: { color: colors.ink },
-});
-
 const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   tile: {
     flexGrow: 1,
     flexBasis: "47%",
-    minHeight: 96,
+    minHeight: 116,
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
+    borderRadius: radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
-    padding: spacing.md,
-    justifyContent: "space-between",
+    padding: 14,
+    gap: 8,
+    ...shadows.card,
   },
-  tileLabel: { fontSize: 12, fontWeight: "600", color: colors.ink3 },
-  tileValueRow: { flexDirection: "row", alignItems: "baseline", gap: 3, marginTop: 6 },
-  tileValue: { fontSize: 26, fontWeight: "800", letterSpacing: -0.5 },
-  tileUnit: { fontSize: 13, fontWeight: "700", color: colors.ink2 },
-  tileSub: { fontSize: 11, color: colors.ink3, marginTop: 4 },
+  tileHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  tileIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tileIconText: { fontSize: 15 },
+  tileLabel: {
+    flex: 1,
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: colors.ink3,
+    letterSpacing: 0.3,
+  },
+  tileValueRow: { flexDirection: "row", alignItems: "baseline", gap: 3 },
+  tileValue: { fontSize: 26, fontWeight: "800", letterSpacing: -0.7, color: colors.ink },
+  tileUnit: { fontSize: 12, fontWeight: "600", color: colors.ink2 },
+  tileSub: { fontSize: 12, fontWeight: "500", marginTop: -2 },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "800",
