@@ -11,6 +11,19 @@ const GEO_PERMISSION_DENIED = 1;
 const GEO_POSITION_UNAVAILABLE = 2;
 const GEO_TIMEOUT = 3;
 
+/** Runaway safeguard (spec §B / B-1): with background no longer auto-pausing
+ *  the timer, a user who forgets to stop could rack up hours of phantom
+ *  duration. At this cap the session auto-stops and flags `autoStopped` so the
+ *  view can surface a "還在散步嗎?" notice. */
+const RUNAWAY_CAP_MIN = 180; // 3 hours
+
+/** Below this, a background interval is too short to plausibly have dropped
+ *  GPS distance — don't nag the user with the "no distance in background"
+ *  hint for a quick tab-switch. */
+const BG_HINT_MIN_MS = 3000;
+/** How long the transient background hint stays up after returning. */
+const BG_HINT_TTL_MS = 6000;
+
 export type WalkErrorKind =
   | "unsupported"
   | "permission_denied"
@@ -21,7 +34,9 @@ export type WalkErrorKind =
 
 export type WalkSessionState = {
   isTracking: boolean;
-  /** True when the tab is backgrounded — duration ticker pauses. */
+  /** True while the USER has manually paused (spec §A). Time + GPS distance
+   *  both freeze. (Previously this meant "tab backgrounded" — §B removed the
+   *  auto-background-pause; the timer now runs wall-clock in the background.) */
   isPaused: boolean;
   startedAt: Date | null;
   totalDistanceKm: number;
@@ -29,8 +44,13 @@ export type WalkSessionState = {
   path: WalkPathPoint[];
   lastError: string | null;
   errorKind: WalkErrorKind | null;
-  /** Wall-clock ms accumulated while tab was hidden — subtracted from duration. */
-  hiddenMs: number;
+  /** Total ms spent in user-initiated pauses — subtracted from wall-clock
+   *  duration. (Replaces the old `hiddenMs`, which subtracted background
+   *  time; §B no longer does that.) */
+  pausedMs: number;
+  /** Set true once the runaway-cap (3h) auto-stop fired. The view shows a
+   *  "還在散步嗎?" notice and moves to the done screen. */
+  autoStopped: boolean;
 };
 
 export type WalkSessionListener = (state: WalkSessionState) => void;
@@ -45,7 +65,8 @@ function emptyState(): WalkSessionState {
     path: [],
     lastError: null,
     errorKind: null,
-    hiddenMs: 0,
+    pausedMs: 0,
+    autoStopped: false,
   };
 }
 
@@ -54,8 +75,15 @@ export class WalkSession {
   private state: WalkSessionState = emptyState();
   private listeners = new Set<WalkSessionListener>();
   private ticker: ReturnType<typeof setInterval> | null = null;
-  /** Timestamp (ms) when tab was last hidden, or null if visible. */
+  /** ms when the user last hit pause, or null when not paused. Drives the
+   *  pausedMs accumulation on resume + freezes the duration tick meanwhile. */
+  private pausedSince: number | null = null;
+  /** ms when the tab was last hidden, or null if visible. §B: used ONLY to
+   *  decide whether to show the "no distance in background" hint on return —
+   *  it no longer affects duration. */
   private hiddenSince: number | null = null;
+  /** Auto-clear timer for the transient background hint. */
+  private bgHintTimer: ReturnType<typeof setTimeout> | null = null;
   private visibilityHandler: (() => void) | null = null;
   private pageHideHandler: (() => void) | null = null;
   private resumeHandler: (() => void) | null = null;
@@ -109,18 +137,28 @@ export class WalkSession {
 
     this.ticker = setInterval(() => {
       if (!this.state.startedAt) return;
-      // Subtract time spent backgrounded so duration reflects only foreground tracking.
-      const accumulatedHidden =
-        this.state.hiddenMs + (this.hiddenSince ? Date.now() - this.hiddenSince : 0);
+      // §B: wall-clock duration — background/lock-screen time COUNTS. Only the
+      // user's own manual pauses are subtracted (pausedMs + the in-flight pause
+      // interval, which keeps the readout frozen while paused).
+      const pausedTotal =
+        this.state.pausedMs +
+        (this.pausedSince ? Date.now() - this.pausedSince : 0);
       const elapsedMs =
-        Date.now() - this.state.startedAt.getTime() - accumulatedHidden;
-      const mins = Math.max(0, elapsedMs / 60_000);
-      this.update({ durationMin: Math.round(mins * 100) / 100 });
+        Date.now() - this.state.startedAt.getTime() - pausedTotal;
+      const durationMin = Math.max(0, Math.round((elapsedMs / 60_000) * 100) / 100);
+
+      // Runaway safeguard (§B / B-1): cap at 3h and auto-stop so a forgotten
+      // session can't inflate duration (and thus leaderboard score).
+      if (durationMin >= RUNAWAY_CAP_MIN && !this.state.autoStopped) {
+        this.update({ durationMin: RUNAWAY_CAP_MIN });
+        this.autoStop();
+        return;
+      }
+      this.update({ durationMin });
     }, 1000);
 
-    // Pause when tab hidden — mobile browsers stop firing watchPosition while
-    // backgrounded, so without this the duration would inflate and create
-    // "phantom walks" with 0 km but non-zero duration.
+    // §B: hidden/background no longer pauses the timer. These handlers now only
+    // manage the wake lock + the transient "no distance in background" hint.
     if (typeof document !== "undefined") {
       this.visibilityHandler = () => this.handleVisibilityChange();
       document.addEventListener("visibilitychange", this.visibilityHandler);
@@ -140,6 +178,39 @@ export class WalkSession {
     // through to the existing background-pause warning. Fire-and-forget
     // — we don't want to delay start() if this races.
     void this.requestWakeLock();
+  }
+
+  /** User taps "暫停" (spec §A). Freezes the duration tick (via pausedSince)
+   *  and stops distance accumulation (handlePosition early-returns while
+   *  paused). Releases the wake lock so the phone can sleep during the break. */
+  pause(): void {
+    if (!this.state.isTracking || this.state.isPaused) return;
+    this.pausedSince = Date.now();
+    this.clearWakeLockRetryTimers();
+    this.clearBgHint();
+    void this.releaseWakeLock();
+    this.update({ isPaused: true, lastError: null, errorKind: null });
+  }
+
+  /** User taps "繼續". Banks the elapsed pause into pausedMs and re-acquires
+   *  the wake lock so the screen stays awake again. */
+  resume(): void {
+    if (!this.state.isTracking || !this.state.isPaused) return;
+    if (this.pausedSince !== null) {
+      this.update({
+        pausedMs: this.state.pausedMs + (Date.now() - this.pausedSince),
+      });
+      this.pausedSince = null;
+    }
+    this.update({ isPaused: false, lastError: null, errorKind: null });
+    this.scheduleWakeLockReacquire();
+  }
+
+  private clearBgHint(): void {
+    if (this.bgHintTimer) {
+      clearTimeout(this.bgHintTimer);
+      this.bgHintTimer = null;
+    }
   }
 
   private clearWakeLockRetryTimers(): void {
@@ -167,6 +238,8 @@ export class WalkSession {
   private async requestWakeLock(options?: { force?: boolean }): Promise<void> {
     if (typeof navigator === "undefined" || !("wakeLock" in navigator)) return;
     if (typeof document !== "undefined" && document.hidden) return;
+    // Don't fight the user's pause — a paused walk should let the screen sleep.
+    if (this.state.isPaused) return;
     const staleLock = this.wakeLock;
     if (staleLock && !options?.force) return;
     this.wakeLock = null;
@@ -260,42 +333,44 @@ export class WalkSession {
 
   private handlePageHidden() {
     if (!this.state.isTracking) return;
+    // §B: do NOT pause the timer — wall-clock keeps running in the background.
+    // We only release the wake lock (the OS does this anyway) and note when we
+    // went hidden so we can hint about the GPS gap on return.
     this.clearWakeLockRetryTimers();
-    this.hiddenSince = Date.now();
+    if (this.hiddenSince === null) this.hiddenSince = Date.now();
     void this.releaseWakeLock();
-    this.update({
-      isPaused: true,
-      lastError: "App 在背景時 GPS 會暫停，請保持畫面開啟",
-      errorKind: "backgrounded",
-    });
   }
 
   private handlePageVisible() {
     if (!this.state.isTracking) return;
     if (typeof document !== "undefined" && document.hidden) return;
-    if (this.hiddenSince !== null) {
-      const delta = Date.now() - this.hiddenSince;
-      this.hiddenSince = null;
-      this.update({
-        isPaused: false,
-        hiddenMs: this.state.hiddenMs + delta,
-        lastError: null,
-        errorKind: null,
-      });
-    } else {
-      this.update({
-        isPaused: false,
-        lastError: null,
-        errorKind: null,
-      });
+    const wasHiddenFor =
+      this.hiddenSince !== null ? Date.now() - this.hiddenSince : 0;
+    this.hiddenSince = null;
+
+    // §B: distance can't accumulate while watchPosition is suspended in the
+    // background (existing web GPS limit), but time DID keep counting. Surface
+    // a transient hint so the user understands the km didn't move. Skipped
+    // while manually paused (that state owns the messaging).
+    if (wasHiddenFor > BG_HINT_MIN_MS && !this.state.isPaused) {
+      this.update({ lastError: null, errorKind: "backgrounded" });
+      this.clearBgHint();
+      this.bgHintTimer = setTimeout(() => {
+        this.bgHintTimer = null;
+        if (this.state.errorKind === "backgrounded") {
+          this.update({ errorKind: null, lastError: null });
+        }
+      }, BG_HINT_TTL_MS);
     }
-    // Wake Lock auto-releases on hide; re-acquire so a second auto-lock
-    // attempt during the same walk is also blocked. iOS/PWA restore can run
-    // before Wake Lock is requestable again, so schedule a few short retries.
-    this.scheduleWakeLockReacquire();
+
+    // Wake Lock auto-releases on hide; re-acquire (unless the user paused).
+    // iOS/PWA restore can run before Wake Lock is requestable, so retry a few.
+    if (!this.state.isPaused) this.scheduleWakeLockReacquire();
   }
 
-  stop(): WalkSessionState {
+  /** Tear down watch / ticker / listeners / wake lock + timers. Shared by the
+   *  user-initiated `stop()` and the runaway `autoStop()`. */
+  private teardown(): void {
     if (this.watchId !== null) {
       navigator.geolocation.clearWatch(this.watchId);
       this.watchId = null;
@@ -321,18 +396,33 @@ export class WalkSession {
         this.resumeHandler = null;
       }
     }
+    this.clearBgHint();
     this.clearWakeLockRetryTimers();
-    // Release the wake lock so the phone can sleep normally again
-    // after the walk ends. Fire-and-forget — caller doesn't await stop().
+    // Release the wake lock so the phone can sleep normally again after the
+    // walk ends. Fire-and-forget — callers don't await teardown.
     void this.releaseWakeLock();
-    // Flush any in-progress hidden interval into hiddenMs so duration is final.
-    if (this.hiddenSince !== null) {
-      const delta = Date.now() - this.hiddenSince;
-      this.hiddenSince = null;
-      this.update({ hiddenMs: this.state.hiddenMs + delta });
+    // Bank any in-flight pause so the final duration is exact.
+    if (this.pausedSince !== null) {
+      this.state = {
+        ...this.state,
+        pausedMs: this.state.pausedMs + (Date.now() - this.pausedSince),
+      };
+      this.pausedSince = null;
     }
+    this.hiddenSince = null;
+  }
+
+  stop(): WalkSessionState {
+    this.teardown();
     this.update({ isTracking: false, isPaused: false });
     return this.state;
+  }
+
+  /** Runaway safeguard: same teardown as stop() but flags `autoStopped` so the
+   *  view can surface the "還在散步嗎?" notice and move to the done screen. */
+  private autoStop(): void {
+    this.teardown();
+    this.update({ isTracking: false, isPaused: false, autoStopped: true });
   }
 
   reset() {
@@ -360,6 +450,18 @@ export class WalkSession {
   }
 
   private handlePosition(pos: GeolocationPosition) {
+    // §A: while manually paused, ignore samples so distance freezes with the
+    // timer. (The watch stays active so the first post-resume sample has a
+    // fresh fix; addGpsSample's own min-distance gate handles the jump.)
+    if (this.state.isPaused) return;
+
+    // A real foreground sample means we're tracking again — clear any stale
+    // "no distance in background" hint early.
+    if (this.state.errorKind === "backgrounded") {
+      this.clearBgHint();
+      this.update({ errorKind: null, lastError: null });
+    }
+
     // Delegate accuracy/min-distance filtering, distance accumulation and
     // path-capping to the shared pure helper (identical to iOS). Returns the
     // SAME accumulator object when the sample is rejected → no state emit.

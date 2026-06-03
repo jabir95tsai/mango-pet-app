@@ -8,6 +8,8 @@ import {
   AlertTriangle,
   Camera,
   ChevronDown,
+  Pause,
+  Play,
   RotateCw,
   Square,
   Trophy,
@@ -16,6 +18,7 @@ import {
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFamily } from "@/components/family/family-provider";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { Textarea } from "@/components/ui/textarea";
 import { SaveToAlbumButton } from "@/components/ui/save-to-album-button";
@@ -142,6 +145,8 @@ export function WalkTrackingView({
   const tP = useTranslations("Walks.photo");
   const tCel = useTranslations("Walks.celebration");
   const tPP = useTranslations("WalksPhotoPrompt");
+  const tCommon = useTranslations("Common");
+  const askConfirm = useConfirm();
   const { user, isGuest } = useAuth();
   const { family } = useFamily();
   const router = useRouter();
@@ -416,10 +421,34 @@ export function WalkTrackingView({
     };
   }, [open]);
 
-  function handleStop() {
+  // §A1: the stop button sits on a full-screen `fixed inset-0` layout and is
+  // easy to mis-tap, so confirm before ending. Confirm → stop + done screen.
+  async function handleStop() {
+    const ok = await askConfirm({
+      title: tW("stopConfirmTitle"),
+      message: tW("stopConfirmBody"),
+      confirmText: tW("stopConfirmYes"),
+      cancelText: tCommon("cancel"),
+      danger: true,
+    });
+    if (!ok) return;
     sessionRef.current?.stop();
     setPhase("done");
   }
+
+  // §A2: manual pause / resume — freezes both time + distance.
+  function handlePauseResume() {
+    const session = sessionRef.current;
+    if (!session) return;
+    if (state?.isPaused) session.resume();
+    else session.pause();
+  }
+
+  // §B: runaway safeguard — when the session auto-stops at the 3h cap, move to
+  // the done screen (the notice there explains why it ended).
+  useEffect(() => {
+    if (state?.autoStopped && phase === "tracking") setPhase("done");
+  }, [state?.autoStopped, phase]);
 
   /**
    * Save the walk exactly once. Notes are taken from current state so the
@@ -681,14 +710,30 @@ export function WalkTrackingView({
             )}
           </div>
 
-          <Button
-            variant="danger"
-            onClick={handleStop}
-            className="h-14 w-full max-w-xs text-base font-semibold"
-          >
-            <Square className="size-5" />
-            {tW("stop")}
-          </Button>
+          {/* §A2: pause/resume beside stop. Pause freezes time + distance;
+              the status pill above flips to "已暫停" and drops its pulse. */}
+          <div className="flex w-full max-w-xs gap-3">
+            <Button
+              variant="secondary"
+              onClick={handlePauseResume}
+              className="h-14 flex-1 text-base font-semibold"
+            >
+              {state.isPaused ? (
+                <Play className="size-5" />
+              ) : (
+                <Pause className="size-5" />
+              )}
+              {state.isPaused ? tW("resume") : tW("pause")}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleStop}
+              className="h-14 flex-1 text-base font-semibold"
+            >
+              <Square className="size-5" />
+              {tW("stop")}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -763,6 +808,15 @@ export function WalkTrackingView({
                   ),
                 })}
               </p>
+            </div>
+          )}
+
+          {/* §B runaway safeguard: walk auto-ended at the 3h cap. Explain why
+              so the (frozen-at-3h) duration doesn't look like a glitch. */}
+          {state.autoStopped && (
+            <div className="flex w-full max-w-xs items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+              <span>{tW("autoStoppedNotice")}</span>
             </div>
           )}
 
