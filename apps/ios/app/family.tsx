@@ -279,7 +279,7 @@ export default function FamilyScreen() {
       />
 
       <Modal visible={qrOpen} transparent animationType="fade" onRequestClose={() => setQrOpen(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setQrOpen(false)}>
+        <Pressable style={styles.qrBackdrop} onPress={() => setQrOpen(false)}>
           <Pressable style={styles.qrSheet}>
             <Text style={styles.qrTitle}>{family?.name}</Text>
             {family ? <InviteQR url={inviteUrl} size={240} /> : null}
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   row2: { flexDirection: "row", gap: spacing.md },
   btn: { flex: 1, height: 48, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   btnPrimary: { backgroundColor: colors.brand },
-  btnPrimaryText: { fontSize: 15, fontWeight: "800", color: colors.card },
+  btnPrimaryText: { fontSize: 15, fontWeight: "800", color: colors.ink },
   btnGhost: { backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.hairline },
   btnGhostText: { fontSize: 15, fontWeight: "800", color: colors.ink2 },
   switcher: { gap: spacing.sm, paddingVertical: spacing.xs },
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   code: { fontSize: 36, fontWeight: "900", color: colors.brandDeep, letterSpacing: 6, fontVariant: ["tabular-nums"] },
   codeHelp: { fontSize: 12, color: colors.ink3, textAlign: "center" },
   codeActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
-  codeBtn: { paddingHorizontal: spacing.md, height: 38, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
+  codeBtn: { paddingHorizontal: spacing.md, minHeight: 44, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
   codeBtnText: { fontSize: 12, fontWeight: "700", color: colors.ink2 },
   regenBtn: { marginTop: spacing.xs, paddingVertical: 6 },
   regenText: { fontSize: 12, fontWeight: "700", color: colors.cookie },
@@ -434,6 +434,7 @@ const styles = StyleSheet.create({
   leaveBtn: { marginTop: spacing.md, height: 48, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.cookie, alignItems: "center", justifyContent: "center" },
   leaveText: { fontSize: 14, fontWeight: "800", color: colors.cookie },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  qrBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   dialog: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, gap: spacing.sm },
   dialogTitle: { fontSize: 18, fontWeight: "800", color: colors.ink },
   dialogBody: { fontSize: 13, color: colors.ink2 },

@@ -56,18 +56,16 @@ export function LeaderboardRow({
     Animated.timing(glow, { toValue: 0, duration: 1500, useNativeDriver: false }).start();
   }, [isGlowing, reduceMotion, glow]);
 
-  const glowBg = glow.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["rgba(255,231,191,0)", "rgba(255,231,191,1)"],
-  });
-
   const delta =
     previousRank != null && previousRank > 0 ? previousRank - rank : 0;
 
   return (
-    <Animated.View
-      style={[styles.row, isMe && styles.rowMe, { backgroundColor: glowBg }]}
-    >
+    <View style={[styles.row, isMe && styles.rowMe]}>
+      {/* glow flash overlay — fades out over the base (incl. the me tint) */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.glow, { opacity: glow }]}
+      />
       <View style={styles.rankCol}>
         {rank <= 3 ? (
           <Text style={styles.medal}>{MEDALS[rank - 1]}</Text>
@@ -103,7 +101,7 @@ export function LeaderboardRow({
         <Text style={styles.score}>{groupThousands(score)}</Text>
         <Text style={styles.scoreUnit}>分</Text>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -115,8 +113,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
+    overflow: "hidden",
   },
-  rowMe: { borderWidth: 1.5, borderColor: colors.brand },
+  rowMe: {
+    borderWidth: 1.5,
+    borderColor: colors.brand,
+    backgroundColor: colors.cardSoft,
+  },
+  glow: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.brandTint,
+  },
   rankCol: { width: 34, alignItems: "center" },
   medal: { fontSize: 20 },
   rankNum: { fontSize: 16, fontWeight: "800", color: colors.ink2 },

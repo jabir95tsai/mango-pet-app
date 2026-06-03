@@ -18,8 +18,9 @@ import { listFriendUids } from "@/lib/friends-read";
 import { LeaderboardRow } from "./leaderboard-row";
 import { Segmented } from "./segmented";
 import { useDogEntryGlow } from "./use-glow";
+import { Button } from "@/components/ui/Button";
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, spacing } from "@/theme/theme";
 
 const SCOPE_KEY = "mango.leaderboard.dogScope";
 type DogScope = "friends" | "all";
@@ -135,9 +136,11 @@ export function DogLeaderboard({ onAddFriend }: { onAddFriend: () => void }) {
               : t("Leaderboard.dog.emptyAll.subtitle")}
           </Text>
           {scope === "friends" ? (
-            <Pressable onPress={onAddFriend} style={styles.cta}>
-              <Text style={styles.ctaText}>{t("Leaderboard.dog.emptyFriends.cta")}</Text>
-            </Pressable>
+            <Button
+              label={t("Leaderboard.dog.emptyFriends.cta")}
+              onPress={onAddFriend}
+              style={styles.cta}
+            />
           ) : null}
         </View>
       ) : (
@@ -176,9 +179,5 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center", gap: spacing.sm, padding: spacing.xl },
   emptyTitle: { fontSize: 16, fontWeight: "800", color: colors.ink, textAlign: "center" },
   emptyBody: { fontSize: 13, color: colors.ink2, textAlign: "center", lineHeight: 19 },
-  cta: {
-    marginTop: spacing.sm, height: 44, paddingHorizontal: spacing.xl, borderRadius: radius.pill,
-    backgroundColor: colors.brand, alignItems: "center", justifyContent: "center",
-  },
-  ctaText: { fontSize: 14, fontWeight: "800", color: colors.card },
+  cta: { marginTop: spacing.sm },
 });

@@ -22,8 +22,9 @@ import { subscribeLeaderboard } from "@/lib/leaderboards";
 import { LeaderboardRow } from "./leaderboard-row";
 import { Segmented } from "./segmented";
 import { useLeaderboardEntryGlow } from "./use-glow";
+import { Button } from "@/components/ui/Button";
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, spacing } from "@/theme/theme";
 
 const SCOPE_KEY = "mango.leaderboard.scope";
 type Scope = "all" | "family";
@@ -98,9 +99,11 @@ export function HumanLeaderboard({ onCreateFamily }: { onCreateFamily: () => voi
       <View style={styles.empty}>
         <Text style={styles.emptyTitle}>{t("Leaderboard.personalEmpty.title")}</Text>
         <Text style={styles.emptyBody}>{t("Leaderboard.personalEmpty.subtitle")}</Text>
-        <Pressable onPress={onCreateFamily} style={styles.cta}>
-          <Text style={styles.ctaText}>{t("Leaderboard.personalEmpty.cta")}</Text>
-        </Pressable>
+        <Button
+          label={t("Leaderboard.personalEmpty.cta")}
+          onPress={onCreateFamily}
+          style={styles.cta}
+        />
       </View>
     );
   }
@@ -167,9 +170,5 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center", gap: spacing.sm, padding: spacing.xl },
   emptyTitle: { fontSize: 16, fontWeight: "800", color: colors.ink, textAlign: "center" },
   emptyBody: { fontSize: 13, color: colors.ink2, textAlign: "center", lineHeight: 19 },
-  cta: {
-    marginTop: spacing.sm, height: 44, paddingHorizontal: spacing.xl, borderRadius: radius.pill,
-    backgroundColor: colors.brand, alignItems: "center", justifyContent: "center",
-  },
-  ctaText: { fontSize: 14, fontWeight: "800", color: colors.card },
+  cta: { marginTop: spacing.sm },
 });
