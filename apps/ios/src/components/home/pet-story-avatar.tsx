@@ -1,17 +1,17 @@
 /**
- * Pet story slot (P3a) — pet avatar with a walk-status ring:
- *   done     → brand→leaf linear-gradient ring (goal met today)
- *   pending  → grey hairline ring (needs walk)
- *   tracking → brand→cookie gradient ring, pulsing (live session)
- * (Web uses a conic gradient; a precise conic/SVG-stroke ring is a P3c polish.
- * The linear-gradient ring here uses an already-installed dep.)
+ * Pet story slot (S2 polish) — pet avatar with a walk-status ring:
+ *   done     → brand→leaf gradient stroke ring (goal met today)
+ *   pending  → grey hairline track ring (needs walk)
+ *   tracking → brand→cookie gradient stroke ring, pulsing (live session)
  *
- * Tap is a no-op for v1 (future: filter feed by pet) with an aria hint, mirroring
- * apps/web/src/components/home/pet-story-avatar.tsx.
+ * Upgraded from a flat linear-gradient disc-behind-a-hole to a crisp SVG
+ * stroked ring (react-native-svg, already a dep), matching the dial/donut SVG
+ * convention and reading closer to the web conic ring. Tracking pulse respects
+ * reduce-motion. Tap is a no-op for v1 (future: filter feed by pet).
  */
 import { useEffect, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import type { WalkStatus } from "@mango/shared-business";
 
 import { PetAvatar } from "@/components/pets/pet-avatar";
@@ -20,7 +20,9 @@ import { t } from "@/lib/i18n";
 import { colors } from "@/theme/theme";
 
 const SIZE = 64;
-const INNER = SIZE - 8;
+const STROKE = 3;
+const R = (SIZE - STROKE) / 2;
+const INNER = SIZE - 12;
 
 const STATUS_HINT: Record<WalkStatus, string> = {
   done: "Home.stories.doneWalk",
@@ -55,23 +57,10 @@ export function PetStoryAvatar({
     return () => loop.stop();
   }, [status, reduceMotion, pulse]);
 
-  const ringInner =
-    status === "pending" ? (
-      <View style={styles.pendingRing} />
-    ) : (
-      <Animated.View style={{ opacity: status === "tracking" ? pulse : 1 }}>
-        <LinearGradient
-          colors={
-            status === "tracking"
-              ? [colors.brand, colors.cookie]
-              : [colors.brand, colors.leaf]
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientRing}
-        />
-      </Animated.View>
-    );
+  const ringStops =
+    status === "tracking"
+      ? [colors.brand, colors.cookie]
+      : [colors.brand, colors.leaf];
 
   return (
     <Pressable
@@ -80,7 +69,31 @@ export function PetStoryAvatar({
       style={styles.wrap}
     >
       <View style={styles.ring}>
-        {ringInner}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            status === "tracking" ? { opacity: pulse } : null,
+          ]}
+        >
+          <Svg width={SIZE} height={SIZE}>
+            {status !== "pending" ? (
+              <Defs>
+                <LinearGradient id={`ring-${status}`} x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0" stopColor={ringStops[0]} />
+                  <Stop offset="1" stopColor={ringStops[1]} />
+                </LinearGradient>
+              </Defs>
+            ) : null}
+            <Circle
+              cx={SIZE / 2}
+              cy={SIZE / 2}
+              r={R}
+              fill="none"
+              stroke={status === "pending" ? colors.hairline : `url(#ring-${status})`}
+              strokeWidth={STROKE}
+            />
+          </Svg>
+        </Animated.View>
         <View style={styles.avatarHole}>
           <PetAvatar name={name} photoURL={photoURL} size={INNER} />
         </View>
@@ -101,26 +114,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  gradientRing: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: SIZE / 2,
-  },
-  pendingRing: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: SIZE / 2,
-    borderWidth: 2,
-    borderColor: colors.hairline,
-    backgroundColor: colors.bgAlt,
-  },
   avatarHole: {
     position: "absolute",
     width: INNER,
     height: INNER,
     borderRadius: INNER / 2,
-    borderWidth: 2,
-    borderColor: colors.card,
     overflow: "hidden",
   },
   label: { marginTop: 4, fontSize: 11, fontWeight: "600", color: colors.ink2 },

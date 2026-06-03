@@ -19,7 +19,7 @@ import type { Post, Visibility } from "@mango/shared-types";
 
 import { deletePost } from "@/lib/posts";
 import { relativeTime } from "@/lib/format";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
 import { UserAvatar } from "./user-avatar";
 import { EmojiReactions } from "./emoji-reactions";
 import { CommentSection } from "./comment-section";
@@ -203,11 +203,12 @@ function PhotoGrid({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.lg,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
     gap: spacing.sm,
+    ...shadows.card,
   },
   deleting: { opacity: 0.5 },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.leafTint,
   },
-  tagText: { fontSize: 12, fontWeight: "600", color: colors.leaf },
+  tagText: { fontSize: 12, fontWeight: "700", color: "#3f7a39" },
   grid: { flexDirection: "row", flexWrap: "wrap" },
   actions: {
     flexDirection: "row",
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   commentBtn: {
-    minHeight: 36,
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
     backgroundColor: colors.bgAlt,

@@ -10,7 +10,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -136,8 +138,12 @@ export function PostComposer({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <SafeAreaView edges={["bottom"]} style={styles.sheetWrap}>
-          <Pressable style={styles.sheet}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.kav}
+        >
+          <SafeAreaView edges={["bottom"]} style={styles.sheetWrap}>
+            <Pressable style={styles.sheet}>
             <ScrollView
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
@@ -267,7 +273,8 @@ export function PostComposer({
               </View>
             </ScrollView>
           </Pressable>
-        </SafeAreaView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
       </Pressable>
 
       <CameraCaptureModal
@@ -284,6 +291,7 @@ export function PostComposer({
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  kav: { justifyContent: "flex-end" },
   sheetWrap: {
     backgroundColor: colors.card,
     borderTopLeftRadius: radius.xl,
