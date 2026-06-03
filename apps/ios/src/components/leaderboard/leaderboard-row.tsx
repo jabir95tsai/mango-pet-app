@@ -12,7 +12,7 @@ import { UserAvatar } from "@/components/feed/user-avatar";
 import { PetAvatar } from "@/components/pets/pet-avatar";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { groupThousands } from "@/lib/format";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -106,35 +106,40 @@ export function LeaderboardRow({
 }
 
 const styles = StyleSheet.create({
+  // web: every row is a white card (rounded-lg, amber-200 border, shadow-sm);
+  // highlight = amber-100 bg + amber-400 border.
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
     overflow: "hidden",
+    backgroundColor: colors.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.bellTint,
+    ...shadows.card,
   },
   rowMe: {
     borderWidth: 1.5,
     borderColor: colors.brand,
-    backgroundColor: colors.cardSoft,
+    backgroundColor: colors.brandTint,
   },
   glow: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.brandTint,
   },
-  rankCol: { width: 34, alignItems: "center" },
-  medal: { fontSize: 20 },
-  rankNum: { fontSize: 16, fontWeight: "800", color: colors.ink2 },
+  rankCol: { width: 32, alignItems: "center" },
+  medal: { fontSize: 18 },
+  rankNum: { fontSize: 18, fontWeight: "700", color: colors.ink3 },
   delta: { fontSize: 10, fontWeight: "800", marginTop: 1 },
   up: { color: colors.leaf },
   down: { color: colors.cookie },
   body: { flex: 1 },
-  name: { fontSize: 15, fontWeight: "800", color: colors.ink },
+  name: { fontSize: 14, fontWeight: "600", color: colors.ink },
   you: { fontSize: 12, fontWeight: "800", color: colors.brandDeep },
   stats: { fontSize: 12, color: colors.ink3, marginTop: 1 },
   scoreCol: { alignItems: "flex-end" },
-  score: { fontSize: 18, fontWeight: "900", color: colors.brandDeep },
+  score: { fontSize: 18, fontWeight: "700", color: colors.brandDeep, fontVariant: ["tabular-nums"] },
   scoreUnit: { fontSize: 10, color: colors.ink3, marginTop: -2 },
 });
