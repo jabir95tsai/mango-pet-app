@@ -17,6 +17,23 @@
 > **視覺真相來源 = `apps/web/src` 對應元件 + `globals.css`**：re-skin 時直接讀 web 元件對照，1:1 還原其視覺，不要自由發揮 iOS 風格。
 > ⚠️ **S1/S2 已用舊 native-feel 方向做**（dial/走路狗/卡片等）→ 需**回頭 re-align 到 web 視覺**（見 §剩餘工作）。
 
+## 🎯 Fidelity Goal（user 2026-06-03）：iOS UI ≈ 99% 對齊 web PWA
+
+> user：「設定一個 goal 讓 iOS 的 ui/ux 跟網頁 99% 像。」採用為本 pass 的硬目標。
+
+**量測方法（per-screen side-by-side diff）**：每個畫面拿 **PWA 截圖 vs iOS 截圖** 並排，逐 7 維打分，差異列成 fidelity backlog 給 iOS UI/UX 收：
+1. **佈局/結構**（區塊順序、層級）
+2. **間距/密度**（padding/margin/行距）
+3. **色票**（背景/卡/文字/accent 是否同色）
+4. **字級/字重**（標題/內文比例）
+5. **元件外觀**（radius / shadow / border / pill / FAB 形狀）
+6. **iconography**（圖示風格、bottom nav、emoji vs icon）
+7. **文案/i18n**（含上面抓到的「瀏覽器」push 文案漏字 → iOS 要原生措辭）
+
+**流程**：user 給 PWA 截圖 → iOS PM 逐頁 diff 出 gap 清單（標 P0 明顯/ P1 細節）→ iOS UI/UX session 修 → 批次驗收（規則 5，末端一顆 EAS build 並排對照）。**目標 = 並排看「幾乎分不出哪個是 web 哪個是 app」**。
+
+**目前 iOS 5 畫面已收到**（Home/Feed、Pets、Walks、Leaderboard、Settings，re-skin 後）→ 等 PWA 對應 5 畫面進來開 diff。
+
 ## 🎯 目標
 
 把 iOS app 整面 re-skin 成**視覺上跟 PWA 一致**：讀 `apps/web` 對應畫面/元件，1:1 還原佈局、間距、色票、圓角、元件外觀（mango palette 已共用）。RN 原生實作不變、原生能力保留；只把「看起來不一樣」改成「看起來一樣」。safe-area / a11y / reduced-motion 仍要顧（原生必要），但**不為了「原生 idiom」而偏離 web 外觀**。
