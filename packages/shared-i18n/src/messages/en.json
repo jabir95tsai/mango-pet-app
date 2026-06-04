@@ -855,6 +855,7 @@
       "unsupported": "Not supported on this device",
       "disabled": "Not enabled yet",
       "denied": "Blocked — re-enable notifications in your browser settings",
+      "deniedIos": "Notifications are off — turn them on in iOS Settings",
       "enabled": "Active — you'll get a push when reminders fire"
     },
     "eveningWalkReminder": {

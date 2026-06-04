@@ -46,7 +46,7 @@ export function PushToggle() {
             {status === "checking"
               ? t("Push.status.checking")
               : denied
-                ? t("Push.status.denied")
+                ? t("Push.status.deniedIos")
                 : status === "enabled"
                   ? t("Push.status.enabled")
                   : t("Push.status.disabled")}

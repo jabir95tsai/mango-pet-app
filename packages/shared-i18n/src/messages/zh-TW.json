@@ -855,6 +855,7 @@
       "unsupported": "此裝置不支援推播",
       "disabled": "尚未啟用",
       "denied": "瀏覽器已拒絕，請到瀏覽器設定開啟通知權限",
+      "deniedIos": "通知權限已關閉，請到 iOS 設定 開啟通知",
       "enabled": "已啟用，提醒到時會推播"
     },
     "eveningWalkReminder": {
