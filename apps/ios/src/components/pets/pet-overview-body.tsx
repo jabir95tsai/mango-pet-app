@@ -1,23 +1,23 @@
 /**
  * Overview tab body — 2×2 StatGrid (next reminder / month spend / weight /
  * walk days) + an "即將到期" upcoming-reminder card + a "最近開銷" recent-
- * expense card. Pure presentation over already-loaded arrays; all the month
- * math comes from @mango/shared-business (startOfMonth / dayDiffFromNow).
- * Mirrors web pet-overview-body.
+ * expense card. The two cards reuse the shared PetReminderCard /
+ * PetExpenseCard (read-only here — no action handlers), and empty states are
+ * white rounded cards, all 1:1 with web pet-overview-body. Month math comes
+ * from @mango/shared-business.
  */
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { dayDiffFromNow, startOfMonth } from "@mango/shared-business";
 import type { Expense, Pet, Reminder, Walk } from "@mango/shared-types";
 
-import { CATEGORY_EMOJI } from "@/lib/expense-ui";
-import { groupThousands, monthDay } from "@/lib/format";
+import { groupThousands } from "@/lib/format";
 import { scoped } from "@/lib/i18n";
 import { colors, radius, shadows, spacing } from "@/theme/theme";
+import { PetReminderCard } from "./pet-reminder-card";
+import { PetExpenseCard } from "./pet-expense-card";
 
 const tPP = scoped("PetsPage");
-const tExp = scoped("Expense");
-const tRem = scoped("Reminder");
 
 function ms(ts: { toMillis?: () => number } | undefined): number {
   return ts?.toMillis?.() ?? 0;
@@ -148,7 +148,8 @@ export function PetOverviewBody({
         <PetStatTile
           icon="🍪"
           label={tPP("stat.monthSpend")}
-          value={`$${groupThousands(monthSpend)}`}
+          value={groupThousands(monthSpend)}
+          unit="NT$"
           sub={tPP("stat.subThisMonth")}
           tone="cookie"
           subTone="muted"
@@ -166,42 +167,26 @@ export function PetOverviewBody({
           icon="🐾"
           label={tPP("stat.walkDays")}
           value={`${walkDays}`}
-          unit="天"
+          unit="天 · 本月"
           sub={tPP("stat.subKeepGoing")}
           tone="brand"
           subTone="muted"
         />
       </View>
 
-      {/* Upcoming reminder */}
+      {/* Upcoming reminder (read-only — actions are no-ops, same as web) */}
       <Text style={styles.sectionTitle}>{tPP("overview.upcoming")}</Text>
       {nextR ? (
-        <View style={styles.card}>
-          <View style={[styles.cardIcon, { backgroundColor: colors.bellTint }]}>
-            <Text style={styles.cardIconText}>🔔</Text>
-          </View>
-          <View style={styles.cardBody}>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              {nextR.title}
-            </Text>
-            <View style={styles.cardSubRow}>
-              {nextR.repeat !== "none" ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {tRem(`repeat.${nextR.repeat}`)}
-                  </Text>
-                </View>
-              ) : null}
-              {reminderStat ? (
-                <Text style={styles.cardSub}>
-                  {`${reminderStat.value} ${reminderStat.unit}`}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        </View>
+        <PetReminderCard
+          reminder={nextR}
+          petName={pet.name}
+          onComplete={() => {}}
+          onDelete={() => {}}
+        />
       ) : (
-        <Text style={styles.empty}>{tPP("overview.noReminder")}</Text>
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyText}>{tPP("overview.noReminder")}</Text>
+        </View>
       )}
 
       {/* Recent expense */}
@@ -209,22 +194,11 @@ export function PetOverviewBody({
         {tPP("overview.recentExpense")}
       </Text>
       {recentE ? (
-        <View style={styles.card}>
-          <View style={[styles.cardIcon, { backgroundColor: colors.cookieTint }]}>
-            <Text style={styles.cardIconText}>
-              {CATEGORY_EMOJI[recentE.category] ?? "🧾"}
-            </Text>
-          </View>
-          <View style={styles.cardBody}>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              {recentE.vendor ?? tExp(`categories.${recentE.category}`)}
-            </Text>
-            <Text style={styles.cardSub}>{monthDay(recentE.spentAt)}</Text>
-          </View>
-          <Text style={styles.amount}>{`$${groupThousands(recentE.amount)}`}</Text>
-        </View>
+        <PetExpenseCard expense={recentE} />
       ) : (
-        <Text style={styles.empty}>{tPP("overview.noExpense")}</Text>
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyText}>{tPP("overview.noExpense")}</Text>
+        </View>
       )}
     </View>
   );
@@ -272,40 +246,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   sectionGap: { marginTop: spacing.sm },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
+  emptyCard: {
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.hairline,
-    padding: spacing.md,
-  },
-  cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 20,
     alignItems: "center",
-    justifyContent: "center",
+    ...shadows.card,
   },
-  cardIconText: { fontSize: 18 },
-  cardBody: { flex: 1, gap: 3 },
-  cardTitle: { fontSize: 15, fontWeight: "700", color: colors.ink },
-  cardSubRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  cardSub: { fontSize: 12, color: colors.ink3 },
-  badge: {
-    backgroundColor: colors.brandTint,
-    borderRadius: radius.sm,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-  },
-  badgeText: { fontSize: 11, fontWeight: "700", color: colors.brandDeep },
-  amount: { fontSize: 16, fontWeight: "800", color: colors.ink },
-  empty: {
-    fontSize: 13,
-    color: colors.ink3,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
+  emptyText: { fontSize: 14, color: colors.ink3, textAlign: "center" },
 });

@@ -162,7 +162,18 @@ export default function PetsScreen() {
           />
         }
       >
-        <Text style={styles.h1}>{tPP("title.list")}</Text>
+        {/* Title row — h1 + brand-tint「＋寵物」pill (web PetsTopBar). */}
+        <View style={styles.topBar}>
+          <Text style={styles.h1}>{tPP("title.list")}</Text>
+          <Pressable
+            onPress={() => setForm({ kind: "pet" })}
+            accessibilityRole="button"
+            accessibilityLabel={tPP("addPet")}
+            style={({ pressed }) => [styles.addPetBtn, pressed && styles.addPetPressed]}
+          >
+            <Text style={styles.addPetText}>＋ {tPP("addPet")}</Text>
+          </Pressable>
+        </View>
 
         {activePet ? (
           <>
@@ -203,6 +214,7 @@ export default function PetsScreen() {
             ) : activeTab === "reminders" ? (
               <PetRemindersBody
                 petId={activePet.petId}
+                petName={activePet.name}
                 reminders={reminders}
                 uid={uid}
                 onChanged={refresh}
@@ -296,13 +308,30 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   h1: {
     fontSize: 26,
     fontWeight: "800",
     color: colors.ink,
     letterSpacing: -0.5,
-    marginBottom: spacing.xs,
   },
+  addPetBtn: {
+    height: 34,
+    flexShrink: 0,
+    borderRadius: radius.pill,
+    backgroundColor: colors.brandTint,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addPetText: { fontSize: 14, fontWeight: "700", color: colors.brandDeep },
+  addPetPressed: { opacity: 0.85 },
   tabsWrap: { marginVertical: spacing.sm },
   fab: {
     position: "absolute",
