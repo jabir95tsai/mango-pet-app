@@ -48,6 +48,10 @@
 
 ---
 
+## 🎯 完成定義（GOAL — 一次做完）
+
+**DoD = 本檔所有 gap（P0 + P1，全 5 頁）全部關閉，iOS 並排 PWA「幾乎分不出」。** 一個 UI/UX session 一次做完全部，不分批；每項對照 `apps/web` 對應元件 1:1。收齊 → 末端一顆 EAS build，user 並排總驗收（規則 5）。
+
 ## 修正優先序
 - **P0 先做**（一眼差異）：H1 品牌列、H3 nav 中央 paw + label、P1a ＋寵物鈕、P2a 提醒 row（icon+操作鈕+wording）、L1 toggle 上移、L2 rank row（去頭像+品種chip+我的狗 pill）、S5a 登出黑pill+友 icon、S5c 照片圖庫卡+grid、S5d 家庭 inline 卡、S5e 推播文案。
 - **P1 後做**（細節）：H2/H4、P3a/P4a/P5a、L3/L4、S5b。
