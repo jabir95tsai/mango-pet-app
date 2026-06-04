@@ -156,7 +156,7 @@ export function PushToggle() {
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+          <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-mango-brand-tint text-mango-brand-deep">
             {status.kind === "enabled" ? (
               <BellRing className="size-4" />
             ) : status.kind === "denied" || status.kind === "unsupported" ? (
@@ -167,7 +167,7 @@ export function PushToggle() {
           </span>
           <div className="min-w-0">
             <p className="font-medium text-sm">{tP("title")}</p>
-            <p className="text-xs leading-5 text-zinc-500">{tP(`status.${status.kind}`)}</p>
+            <p className="text-xs leading-5 text-mango-ink-2">{tP(`status.${status.kind}`)}</p>
           </div>
         </div>
 
@@ -200,14 +200,14 @@ export function PushToggle() {
       )}
 
       {showIosHint && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-mango-brand-tint/40 p-3 text-xs text-mango-ink-2">
           <Info className="size-4 shrink-0 mt-0.5" />
           <span>{tP("iosHint")}</span>
         </div>
       )}
 
       {isVapidMissingError && (
-        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
+        <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
           <Info className="size-4 shrink-0 mt-0.5" />
           <span>{tP("vapidHint")}</span>
         </div>

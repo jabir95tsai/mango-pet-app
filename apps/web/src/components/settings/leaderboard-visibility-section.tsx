@@ -79,19 +79,19 @@ export function LeaderboardVisibilitySection() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+        <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-mango-brand-tint text-mango-brand-deep">
           <Trophy className="size-4" />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold">{t("title")}</p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-mango-ink-2">
             {t("subtitle")}
           </p>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-xs text-zinc-500">{t("loading")}</p>
+        <p className="text-xs text-mango-ink-2">{t("loading")}</p>
       ) : (
         <div
           role="radiogroup"
@@ -109,29 +109,27 @@ export function LeaderboardVisibilitySection() {
                 disabled={pending}
                 onClick={() => handleSelect(optValue)}
                 className={cn(
-                  "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  "flex items-start gap-3 rounded-[var(--radius-md)] border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   selected
-                    ? "border-amber-400 bg-amber-50 dark:border-amber-500/50 dark:bg-amber-500/10"
-                    : "border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900",
+                    ? "border-mango-brand bg-mango-brand-tint/40"
+                    : "border-mango-hairline hover:bg-mango-bg-alt",
                   pending && "cursor-not-allowed opacity-60",
                 )}
               >
                 <Icon
                   className={cn(
                     "mt-0.5 size-4 shrink-0",
-                    selected
-                      ? "text-amber-700 dark:text-amber-300"
-                      : "text-zinc-500 dark:text-zinc-400",
+                    selected ? "text-mango-brand-deep" : "text-mango-ink-3",
                   )}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{t(`${optValue}.label`)}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="mt-0.5 text-xs text-mango-ink-2">
                     {t(`${optValue}.hint`)}
                   </p>
                 </div>
                 {selected && (
-                  <Check className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <Check className="mt-0.5 size-4 shrink-0 text-mango-brand-deep" />
                 )}
               </button>
             );

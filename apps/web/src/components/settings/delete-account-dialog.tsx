@@ -112,7 +112,7 @@ export function DeleteAccountDialog({
   return (
     <Dialog open={open} onClose={busy ? () => {} : onClose} title={t("dialogTitle")}>
       <div className="flex flex-col gap-4">
-        <div className="flex gap-3 rounded-lg border border-red-300/70 bg-red-50 p-3 text-red-900 dark:border-red-500/40 dark:bg-red-950/40 dark:text-red-200">
+        <div className="flex gap-3 rounded-[var(--radius-md)] border border-red-300/70 bg-red-50 p-3 text-red-900 dark:border-red-500/40 dark:bg-red-950/40 dark:text-red-200">
           <AlertTriangle className="size-5 shrink-0 mt-0.5" />
           <div className="flex flex-col gap-1 text-sm">
             <p className="font-semibold">{t("warning")}</p>
@@ -121,15 +121,15 @@ export function DeleteAccountDialog({
         </div>
 
         {impactLoading ? (
-          <p className="text-sm text-zinc-500">{t("previewLoading")}</p>
+          <p className="text-sm text-mango-ink-2">{t("previewLoading")}</p>
         ) : impactError ? (
-          <p className="text-xs text-zinc-500">{t("previewFailed")}</p>
+          <p className="text-xs text-mango-ink-2">{t("previewFailed")}</p>
         ) : impact ? (
           <ImpactSummary impact={impact} t={t} />
         ) : null}
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          <label className="text-xs font-medium text-mango-ink-2">
             {t("confirmInputLabel", { name: expectedName || "—" })}
           </label>
           <Input
@@ -140,12 +140,12 @@ export function DeleteAccountDialog({
             disabled={busy}
           />
           {confirmName.length > 0 && !matches && (
-            <p className="text-xs text-zinc-500">{t("confirmInputHint")}</p>
+            <p className="text-xs text-mango-ink-2">{t("confirmInputHint")}</p>
           )}
         </div>
 
         {error && (
-          <p className="rounded-md bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-200">
+          <p className="rounded-[var(--radius-sm)] bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-200">
             {t("errorPrefix")}: {error}
           </p>
         )}
@@ -199,12 +199,12 @@ function ImpactSummary({
     personalTotal + familyTotal + myActivity + social === 0;
 
   if (everythingZero) {
-    return <p className="text-xs text-zinc-500">{t("nothingToDelete")}</p>;
+    return <p className="text-xs text-mango-ink-2">{t("nothingToDelete")}</p>;
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+      <p className="text-xs font-semibold uppercase tracking-wider text-mango-ink-2">
         {t("impactHeader")}
       </p>
       <ul className="flex flex-col gap-1.5 text-sm">
@@ -220,7 +220,7 @@ function ImpactSummary({
               <span className="font-medium">{t("familyDataSection")}：</span>
               {t("familyDataCount", { n: familyTotal })}
             </li>
-            <li className="rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+            <li className="rounded-[var(--radius-sm)] bg-mango-brand-tint/50 px-2 py-1.5 text-xs text-mango-ink-2">
               ⚠ {t("cascadeWarning")}
             </li>
           </>

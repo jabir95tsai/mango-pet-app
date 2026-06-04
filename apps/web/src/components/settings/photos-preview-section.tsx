@@ -52,7 +52,7 @@ export function PhotosPreviewSection() {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-mango-card-soft text-mango-brand-deep ring-1 ring-mango-hairline">
+          <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-mango-card-soft text-mango-brand-deep ring-1 ring-mango-hairline">
             <Images className="size-4" />
           </span>
           <p className="font-semibold">{tS("photosLink")}</p>
@@ -70,14 +70,14 @@ export function PhotosPreviewSection() {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="aspect-square animate-pulse rounded-lg bg-zinc-100 motion-reduce:animate-none dark:bg-zinc-800"
+              className="aspect-square animate-pulse rounded-[var(--radius-md)] bg-mango-bg-alt motion-reduce:animate-none"
             />
           ))}
         </div>
       ) : photos.length === 0 ? (
         <Link
           href="/app/photos"
-          className="grid place-items-center rounded-lg border border-dashed border-zinc-300/80 py-6 text-sm text-zinc-500 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+          className="grid place-items-center rounded-[var(--radius-md)] border border-dashed border-mango-hairline py-6 text-sm text-mango-ink-2 transition-colors hover:bg-mango-bg-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
         >
           {tPv("empty")}
         </Link>
@@ -88,7 +88,7 @@ export function PhotosPreviewSection() {
               key={p.id}
               href="/app/photos"
               aria-label={tS("photosLink")}
-              className="relative aspect-square overflow-hidden rounded-lg bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:bg-zinc-800"
+              className="relative aspect-square overflow-hidden rounded-[var(--radius-md)] bg-mango-bg-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
             >
               <Image
                 src={p.url}

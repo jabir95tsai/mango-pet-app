@@ -59,7 +59,7 @@ export default function SettingsPage() {
             onClick={() => setDrawerOpen(true)}
             aria-label={t("more")}
             aria-expanded={drawerOpen}
-            className="grid size-10 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 md:hidden dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+            className="grid size-10 place-items-center rounded-[var(--radius-md)] text-mango-ink-3 transition-colors hover:bg-mango-bg-alt hover:text-mango-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep md:hidden"
           >
             <MoreHorizontal className="size-5" />
           </button>
@@ -67,7 +67,7 @@ export default function SettingsPage() {
       />
 
       <div className="flex flex-col gap-4">
-        <section className="flex flex-col gap-4 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+        <section className="flex flex-col gap-4 rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
           <div className="flex items-center gap-3">
             <Avatar
               src={resolveUserPhotoURL(user)}
@@ -78,7 +78,7 @@ export default function SettingsPage() {
               <p className="truncate font-medium">
                 {resolveUserDisplayName(user) ?? "Guest"}
               </p>
-              <p className="truncate text-sm text-zinc-500">{user?.email ?? "—"}</p>
+              <p className="truncate text-sm text-mango-ink-2">{user?.email ?? "—"}</p>
             </div>
             {/* Friends entry — moved here from the nav sidebar/drawer per
                 docs/features/ui-polish-bundle-2026-05-25.md Item #1. The
@@ -101,7 +101,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => signOutCurrent()}
-              className="h-10 self-start rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="h-10 self-start rounded-[var(--radius-pill)] bg-mango-ink px-4 text-sm font-medium text-white transition-colors hover:bg-mango-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {tAuth("signOut")}
             </button>
@@ -112,7 +112,7 @@ export default function SettingsPage() {
             one-time nudge banner can be dismissed; this stays). Binds the
             anonymous account to Google/Apple, preserving pets/walks. Spec §5. */}
         {isGuest && (
-          <section className="flex flex-col gap-3 rounded-lg border border-mango-brand/40 bg-mango-brand-tint/50 p-6 dark:border-mango-brand/30 dark:bg-mango-brand/10">
+          <section className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-mango-brand/40 bg-mango-brand-tint/50 p-6">
             <div className="flex items-center gap-3">
               <Sparkles className="size-5 text-mango-brand-deep" />
               <p className="font-semibold text-mango-ink">{tG("settings.title")}</p>
@@ -128,18 +128,18 @@ export default function SettingsPage() {
             personal badges too). Spec achievements-badges.md §E. */}
         <Link
           href="/app/achievements"
-          className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 transition-colors hover:border-mango-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none"
+          className="flex items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card transition-colors hover:border-mango-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
         >
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+            <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-mango-brand-tint text-mango-brand-deep">
               <Trophy className="size-4" />
             </span>
             <div className="min-w-0">
               <p className="font-medium">{tS("achievements.title")}</p>
-              <p className="text-sm text-zinc-500">{tS("achievements.subtitle")}</p>
+              <p className="text-sm text-mango-ink-2">{tS("achievements.subtitle")}</p>
             </div>
           </div>
-          <ChevronRight className="size-5 shrink-0 text-zinc-400" />
+          <ChevronRight className="size-5 shrink-0 text-mango-ink-3" />
         </Link>
 
         {/* 拍收據 quick-action removed 2026-05-26 — spec
@@ -153,16 +153,16 @@ export default function SettingsPage() {
             3 most-recent photos as a tap-through to /app/photos; sits just
             above the family block. */}
         {user && (
-          <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <section className="rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
             <PhotosPreviewSection />
           </section>
         )}
 
-        <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+        <section className="rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
           <FamilySection />
         </section>
 
-        <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+        <section className="rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
           <PushToggle />
         </section>
 
@@ -170,7 +170,7 @@ export default function SettingsPage() {
             the global PushToggle so the relationship is obvious — that
             switch kills ALL push, this section narrows by type. */}
         {user && (
-          <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <section className="rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
             <EngagementPushSection />
           </section>
         )}
@@ -182,7 +182,7 @@ export default function SettingsPage() {
             behaviour. Hidden when signed-out — toggle persists per
             user. */}
         {user && (
-          <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <section className="rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
             <WalkAutoPhotoSection />
           </section>
         )}
@@ -194,14 +194,14 @@ export default function SettingsPage() {
             their dogs never appear on the boards (backend excludes them),
             so the visibility control is moot. Spec §C. */}
         {user && !isGuest && (
-          <section className="rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <section className="rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
             <LeaderboardVisibilitySection />
           </section>
         )}
 
-        <section className="flex flex-row items-center justify-between gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+        <section className="flex flex-row items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
           <div className="flex min-w-0 items-center gap-3">
-            <Globe className="size-5 shrink-0 text-amber-700 dark:text-amber-300" />
+            <Globe className="size-5 shrink-0 text-mango-brand-deep" />
             <p className="font-medium">語言 / Language</p>
           </div>
           <LanguageSwitcher />
@@ -211,12 +211,12 @@ export default function SettingsPage() {
             zone so the order reads: see your data → delete your account.
             Spec docs/features/data-export.md. */}
         {user && (
-          <section className="flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white p-6 shadow-sm shadow-zinc-200/40 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+          <section className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
             <div className="flex items-center gap-3">
-              <ShieldCheck className="size-5 text-amber-700 dark:text-amber-300" />
+              <ShieldCheck className="size-5 text-mango-brand-deep" />
               <p className="font-semibold">{tPd("title")}</p>
             </div>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-mango-ink-2">
               {tPd("subtitle")}
             </p>
             <ExportDataButton />
@@ -228,7 +228,7 @@ export default function SettingsPage() {
             wrong. Sits last in the settings list since it's an end-of-
             relationship action. */}
         {user && (
-          <section className="flex flex-col gap-3 rounded-lg border border-red-300/70 bg-red-50/50 p-6 dark:border-red-500/40 dark:bg-red-950/20">
+          <section className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-red-300/70 bg-red-50/50 p-6">
             <div className="flex items-center gap-3">
               <AlertTriangle className="size-5 text-red-600 dark:text-red-400" />
               <p className="font-semibold text-red-700 dark:text-red-300">

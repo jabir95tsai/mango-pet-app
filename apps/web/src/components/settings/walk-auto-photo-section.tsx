@@ -73,12 +73,12 @@ export function WalkAutoPhotoSection() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+        <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-mango-brand-tint text-mango-brand-deep">
           <Camera className="size-4" />
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold">{t("title")}</p>
-          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="mt-0.5 text-xs text-mango-ink-2">
             {t("body")}
           </p>
         </div>
@@ -90,10 +90,8 @@ export function WalkAutoPhotoSection() {
           disabled={disabled}
           onClick={handleToggle}
           className={cn(
-            "relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-            enabled
-              ? "bg-amber-500"
-              : "bg-zinc-300 dark:bg-zinc-700",
+            "relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            enabled ? "bg-mango-brand" : "bg-mango-hairline",
             disabled && "cursor-not-allowed opacity-50",
           )}
         >

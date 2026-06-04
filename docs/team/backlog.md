@@ -198,9 +198,10 @@ _目前沒有 active 條目。已 SHIPPED 的見「已處理（audit trail）」
 - **發現於**：2026-06-03、iOS UI/UX session 審 web 時抓到 + PM 立 SoT
 - **類型**：技術債 / 設計一致性
 - **觀察**：web 有 drift，已立 `docs/design-system.md`（品牌 SoT）；以下既有 surface 未對齊，漸進收（新 code 已一律遵守 SoT，不阻擋其他進度）：
-  - feed / leaderboard / settings 仍 zinc/amber → 換 mango token（design-system §1）
-  - 散落 `rounded-lg`(8px) → 統一 `--radius-*`（§2）
+  - ~~settings~~ ✅ SHIPPED（UI/UX 2026-06-04）：`app/app/settings/page.tsx` + `components/settings/*`（7 元件）全 zinc/amber → mango token、`rounded-lg` → `rounded-[var(--radius-*)]`（卡片 xl / 小元件 md/sm）、focus ring → brand-deep、toggle 開 bg-mango-brand；danger 紅 + push 測試成功綠（emerald）語意保留；無 tabs（toggle/radio 本來就無滑動 indicator，§4 合規）。
+  - feed / leaderboard 仍 zinc/amber → 換 mango token（design-system §1）— **待**
+  - 散落 `rounded-lg`(8px) → 統一 `--radius-*`（§2）— settings 已收，feed/leaderboard 待
   - 確認 web/iOS tabs 都已回 simple toggle（先前 Reanimated 滑動 indicator 已退；§4）
-- **建議交付給**：UI/UX（逐 surface 對齊，可一頁一 commit）
+- **建議交付給**：UI/UX（逐 surface 對齊，可一頁一 commit）— **feed + leaderboard 仍待**
 - **優先級提示**：P2（不影響功能；視覺一致性 + 技術債。可在各 surface 下次有改動時順手對齊）
 - **PM 排序提示**：不必一次做完；每次有人動到 feed/leaderboard/settings 就順手 mango 化 + 換 radius。

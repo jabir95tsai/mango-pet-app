@@ -92,19 +92,19 @@ export function EngagementPushSection() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+        <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-mango-brand-tint text-mango-brand-deep">
           <Sparkles className="size-4" />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold">{t("title")}</p>
-          <p className="text-xs text-zinc-500">{t("subtitle")}</p>
+          <p className="text-xs text-mango-ink-2">{t("subtitle")}</p>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-xs text-zinc-500">{t("loading")}</p>
+        <p className="text-xs text-mango-ink-2">{t("loading")}</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
+        <ul className="flex flex-col divide-y divide-mango-hairline">
           {ENGAGEMENT_PUSH_TYPES.map((type) => {
             const isOn = !optOut.includes(type);
             const disabled =
@@ -118,21 +118,19 @@ export function EngagementPushSection() {
                 <Bell
                   className={cn(
                     "mt-0.5 size-4 shrink-0",
-                    disabled
-                      ? "text-zinc-300 dark:text-zinc-700"
-                      : "text-zinc-500 dark:text-zinc-400",
+                    disabled ? "text-mango-hairline" : "text-mango-ink-3",
                   )}
                 />
                 <div className="flex-1 min-w-0">
                   <p
                     className={cn(
                       "text-sm font-medium",
-                      disabled && "text-zinc-400 dark:text-zinc-600",
+                      disabled && "text-mango-ink-3",
                     )}
                   >
                     {t(`${type}.label`)}
                   </p>
-                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="mt-0.5 text-xs text-mango-ink-2">
                     {type === "family-milestone" && isPersonalMode
                       ? t("familyOnlyHint")
                       : t(`${type}.hint`)}
@@ -148,10 +146,8 @@ export function EngagementPushSection() {
                   disabled={disabled}
                   onClick={() => handleToggle(type, isOn)}
                   className={cn(
-                    "relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    isOn
-                      ? "bg-amber-500"
-                      : "bg-zinc-300 dark:bg-zinc-700",
+                    "relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    isOn ? "bg-mango-brand" : "bg-mango-hairline",
                     disabled && "cursor-not-allowed opacity-50",
                   )}
                 >
