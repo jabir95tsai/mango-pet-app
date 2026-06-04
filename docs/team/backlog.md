@@ -193,3 +193,14 @@ _目前沒有 active 條目。已 SHIPPED 的見「已處理（audit trail）」
 - **建議做法**：Feature Builder 提供 hook —— 例 (a) 前端用 localStorage 存上次已知 grant id 集合，load 後 diff 出新增；或 (b) 解鎖 push deep-link 帶 query（`/app/achievements?unlocked=walk-50`）。拿到訊號後 UI/UX 接慶祝動效（沿用既有 `.walk-confetti` / `.walk-streak-pop` + prefers-reduced-motion）。
 - **建議交付給**：Feature Builder（出 hook）→ UI/UX（接動效）
 - **優先級提示**：P2
+
+### 🎨 設計系統對齊 — 既有頁面遷移（design-system.md §7）
+- **發現於**：2026-06-03、iOS UI/UX session 審 web 時抓到 + PM 立 SoT
+- **類型**：技術債 / 設計一致性
+- **觀察**：web 有 drift，已立 `docs/design-system.md`（品牌 SoT）；以下既有 surface 未對齊，漸進收（新 code 已一律遵守 SoT，不阻擋其他進度）：
+  - feed / leaderboard / settings 仍 zinc/amber → 換 mango token（design-system §1）
+  - 散落 `rounded-lg`(8px) → 統一 `--radius-*`（§2）
+  - 確認 web/iOS tabs 都已回 simple toggle（先前 Reanimated 滑動 indicator 已退；§4）
+- **建議交付給**：UI/UX（逐 surface 對齊，可一頁一 commit）
+- **優先級提示**：P2（不影響功能；視覺一致性 + 技術債。可在各 surface 下次有改動時順手對齊）
+- **PM 排序提示**：不必一次做完；每次有人動到 feed/leaderboard/settings 就順手 mango 化 + 換 radius。
