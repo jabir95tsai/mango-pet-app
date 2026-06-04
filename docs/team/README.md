@@ -145,7 +145,18 @@ monorepo 化之後，**任何動到 `package.json` / `package-lock.json` / nativ
 
 **dev session 紀律**：碰 dep → branch + tsc + web-gate 綠 → merge；**不主動發 device build、不要 user 中途驗**。phase 全 code 收齊 → iOS PM 發該 phase 唯一一顆 EAS build + 端到端清單給 user。
 
-### 進階選項：Git Worktree（真要長期雙開）
+### 規則 6（血淚換來，2026-06-03）：並行 = 強制 git worktree 隔離，**不要共用同一個 working tree**
+
+> 背景：一次 PWA PM + iOS/UI 並行期，兩邊共用同一個 working tree，連環肇事 — commit 落錯 branch、push 不到 main、merge 衝突擋住所有 commit，最後一個基於「舊 base」的並行 session 在共用 index 裡**逐一刪掉剛建立的 PM docs（design-system SoT / 多份 spec）**。全部只發生在本地、靠人工發現+還原才沒上 origin。根因都是**同一個 working tree 被多 session 同時動 + 切 branch**。
+
+**規則**：只要有第二個 session 會動 code/docs，**第二個 session 一律用獨立 git worktree**（見下方指令），不要兩個 session 開同一個資料夾。
+
+- 每個 worktree 從**當前 origin/main** 開（`git fetch` 後再 `worktree add`），自帶最新檔案（含 SoT / 最新 spec），不會基於 stale base。
+- 共用 `.git`、各自獨立 working tree / index / 當前 branch → 不會互相落錯 branch、不會在彼此 index 留殘留。
+- 各自 push 仍走規則 1 三件套。
+- ⚠️ 若發現某 session 在共用 tree 裡顯示「刪掉一堆本來存在的檔」→ 多半是它基於 stale base。**先 `git fetch && git rebase origin/main`（或重開 worktree）對齊現況再繼續**，不要把刪除 commit/push 上去。
+
+### 進階選項細節：Git Worktree 指令（規則 6 的具體做法）
 
 如果你預期長期雙開、想徹底隔離兩邊的 working tree（連 system-reminder「intentional change」狂噴都消除），用 git worktree：
 
