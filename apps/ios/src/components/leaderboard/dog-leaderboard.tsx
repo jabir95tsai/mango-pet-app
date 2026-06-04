@@ -8,7 +8,7 @@
  * score writes.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { DogLeaderboardEntry, LeaderboardPeriod } from "@mango/shared-types";
 
@@ -17,6 +17,7 @@ import { subscribeDogLeaderboard } from "@/lib/leaderboards";
 import { listFriendUids } from "@/lib/friends-read";
 import { LeaderboardRow } from "./leaderboard-row";
 import { Segmented } from "./segmented";
+import { RefreshIconButton } from "./refresh-icon-button";
 import { useDogEntryGlow } from "./use-glow";
 import { Button } from "@/components/ui/Button";
 import { t } from "@/lib/i18n";
@@ -102,6 +103,14 @@ export function DogLeaderboard({ onAddFriend }: { onAddFriend: () => void }) {
 
   return (
     <View style={styles.wrap}>
+      <View style={styles.headerRow}>
+        <View style={styles.headerText}>
+          <Text style={styles.title}>{t("Leaderboard.title")}</Text>
+          <Text style={styles.subtitle}>{t("Leaderboard.dog.subtitle")}</Text>
+        </View>
+        <RefreshIconButton refreshing={refreshing} onPress={refresh} />
+      </View>
+
       <Segmented
         options={[
           { value: "friends", label: t("Leaderboard.dog.scope.friends") },
@@ -111,15 +120,6 @@ export function DogLeaderboard({ onAddFriend }: { onAddFriend: () => void }) {
         onChange={changeScope}
       />
       <Segmented options={PERIODS} value={period} onChange={setPeriod} compact />
-      <Text style={styles.subtitle}>{t("Leaderboard.dog.subtitle")}</Text>
-
-      <View style={styles.refreshRow}>
-        <Pressable onPress={refresh} disabled={refreshing} style={styles.refreshBtn} hitSlop={6}>
-          <Text style={styles.refreshText}>
-            {refreshing ? "…" : "↻"} {t("Leaderboard.refreshButton")}
-          </Text>
-        </Pressable>
-      </View>
 
       {loading ? (
         <ActivityIndicator color={colors.brand} style={styles.loader} />
@@ -150,7 +150,8 @@ export function DogLeaderboard({ onAddFriend }: { onAddFriend: () => void }) {
               key={e.petId}
               rank={i + 1}
               name={e.petName}
-              subtitle={t("Leaderboard.dog.byOwner", { owner: e.ownerName })}
+              breed={e.breed}
+              ownerLabel={t("Leaderboard.dog.byOwner", { owner: e.ownerName })}
               photoURL={e.petPhotoURL}
               score={e.totalScore}
               distanceKm={e.totalDistanceKm}
@@ -170,10 +171,10 @@ export function DogLeaderboard({ onAddFriend }: { onAddFriend: () => void }) {
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
-  subtitle: { fontSize: 11, color: colors.ink3, textAlign: "center" },
-  refreshRow: { alignItems: "flex-end" },
-  refreshBtn: { paddingVertical: 4, paddingHorizontal: spacing.sm },
-  refreshText: { fontSize: 12, fontWeight: "700", color: colors.brandDeep },
+  headerRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  headerText: { flex: 1, minWidth: 0 },
+  title: { fontSize: 22, fontWeight: "800", color: colors.ink },
+  subtitle: { fontSize: 11, color: colors.ink3, marginTop: 2 },
   loader: { marginVertical: spacing.xl },
   list: { gap: spacing.xs },
   empty: { alignItems: "center", gap: spacing.sm, padding: spacing.xl },

@@ -3,7 +3,7 @@
  * realtime boards. Mirrors web apps/web/src/app/app/leaderboard/page.tsx.
  */
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -37,14 +37,14 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.flex}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t("Leaderboard.title")}</Text>
-      </View>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* 人/狗 dimension toggle sits at the very top — above the board's
+            own「排行榜」title — matching web (page-level Tabs over each
+            self-contained board). */}
         <Segmented
           options={[
-            { value: "human", label: t("Leaderboard.dimension.human") },
-            { value: "dog", label: t("Leaderboard.dimension.dog") },
+            { value: "human", label: `🧑 ${t("Leaderboard.dimension.human")}` },
+            { value: "dog", label: `🐕 ${t("Leaderboard.dimension.dog")}` },
           ]}
           value={dimension}
           onChange={changeDimension}
@@ -63,8 +63,6 @@ export default function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  title: { fontSize: 22, fontWeight: "800", color: colors.ink },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   board: { marginTop: spacing.sm },
 });

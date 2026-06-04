@@ -1,9 +1,12 @@
 /**
- * Leaderboard row (P4a) — shared by the human + dog boards. Rank medal/number,
- * avatar (circle for people, rounded square for dogs), name + optional subtitle,
- * score + distance/walks/streak, a ▲▼ rank-delta vs previousRank, a "yours"
- * highlight, and a fade-out glow flash when `isGlowing` ticks true (realtime
- * score write within 5s). Glow respects reduce-motion (instant, no flash).
+ * Leaderboard row (P4a) — shared by the human + dog boards, 1:1 with web
+ * leaderboard-row / dog-leaderboard-row. Rank medal/number, avatar (36),
+ * name + (dog) breed chip + (dog & mine)「我的狗」pill, a meta line ordered
+ * 「{n}次 · {km} km · 🔥{streak} · 飼主{owner}」, score, a "mine" highlight,
+ * and a fade-out glow flash when `isGlowing` ticks (reduce-motion safe).
+ *
+ * Web has no per-row「·我」text — the highlight bg carries "mine" on the
+ * human board, and the dog board uses the「我的狗」pill instead.
  */
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
@@ -12,6 +15,7 @@ import { UserAvatar } from "@/components/feed/user-avatar";
 import { PetAvatar } from "@/components/pets/pet-avatar";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { groupThousands } from "@/lib/format";
+import { t } from "@/lib/i18n";
 import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -19,7 +23,8 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 export function LeaderboardRow({
   rank,
   name,
-  subtitle,
+  breed,
+  ownerLabel,
   photoURL,
   score,
   distanceKm,
@@ -32,7 +37,10 @@ export function LeaderboardRow({
 }: {
   rank: number;
   name: string;
-  subtitle?: string;
+  /** Dog breed → amber chip beside the name (dog board only). */
+  breed?: string | null;
+  /** Pre-formatted「飼主 X」label, appended last in the meta line (dog only). */
+  ownerLabel?: string;
   photoURL?: string | null;
   score: number;
   distanceKm: number;
@@ -59,6 +67,14 @@ export function LeaderboardRow({
   const delta =
     previousRank != null && previousRank > 0 ? previousRank - rank : 0;
 
+  // Meta order mirrors web: walks · distance · 🔥streak · 飼主owner.
+  const meta: string[] = [
+    t("Leaderboard.unitWalks", { count: walkCount }),
+    `${distanceKm.toFixed(1)} km`,
+  ];
+  if (streakDays > 0) meta.push(`🔥 ${streakDays}`);
+  if (ownerLabel) meta.push(ownerLabel);
+
   return (
     <View style={[styles.row, isMe && styles.rowMe]}>
       {/* glow flash overlay — fades out over the base (incl. the me tint) */}
@@ -80,26 +96,37 @@ export function LeaderboardRow({
       </View>
 
       {isDog ? (
-        <PetAvatar name={name} photoURL={photoURL ?? undefined} size={40} />
+        <PetAvatar name={name} photoURL={photoURL ?? undefined} size={36} />
       ) : (
-        <UserAvatar name={name} photoURL={photoURL} size={40} />
+        <UserAvatar name={name} photoURL={photoURL} size={36} />
       )}
 
       <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={1}>
-          {name}
-          {isMe ? <Text style={styles.you}> ·我</Text> : null}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {name}
+          </Text>
+          {isDog && breed ? (
+            <View style={styles.breedChip}>
+              <Text style={styles.breedText} numberOfLines={1}>
+                {breed}
+              </Text>
+            </View>
+          ) : null}
+          {isDog && isMe ? (
+            <View style={styles.yoursPill}>
+              <Text style={styles.yoursText}>{t("Leaderboard.dog.yours")}</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={styles.stats} numberOfLines={1}>
-          {subtitle ? `${subtitle} · ` : ""}
-          {distanceKm.toFixed(1)}km · {walkCount}次
-          {streakDays > 0 ? ` · 🔥${streakDays}` : ""}
+          {meta.join(" · ")}
         </Text>
       </View>
 
       <View style={styles.scoreCol}>
         <Text style={styles.score}>{groupThousands(score)}</Text>
-        <Text style={styles.scoreUnit}>分</Text>
+        <Text style={styles.scoreUnit}>{t("Leaderboard.unitScore")}</Text>
       </View>
     </View>
   );
@@ -136,8 +163,23 @@ const styles = StyleSheet.create({
   up: { color: colors.leaf },
   down: { color: colors.cookie },
   body: { flex: 1 },
-  name: { fontSize: 14, fontWeight: "600", color: colors.ink },
-  you: { fontSize: 12, fontWeight: "800", color: colors.brandDeep },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  name: { flexShrink: 1, fontSize: 14, fontWeight: "600", color: colors.ink },
+  breedChip: {
+    flexShrink: 1,
+    borderRadius: radius.pill,
+    backgroundColor: colors.brandTint,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  breedText: { fontSize: 10, fontWeight: "500", color: colors.brandDeep },
+  yoursPill: {
+    borderRadius: radius.pill,
+    backgroundColor: colors.brand,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  yoursText: { fontSize: 10, fontWeight: "700", color: "#ffffff" },
   stats: { fontSize: 12, color: colors.ink3, marginTop: 1 },
   scoreCol: { alignItems: "flex-end" },
   score: { fontSize: 18, fontWeight: "700", color: colors.brandDeep, fontVariant: ["tabular-nums"] },
