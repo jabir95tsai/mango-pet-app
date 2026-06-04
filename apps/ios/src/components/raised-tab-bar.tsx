@@ -20,19 +20,23 @@ export type TabBarProps = {
   };
 };
 
+// Icons mirror web app-nav: pets + the raised centre (walks) both render the
+// paw print (web hardcodes <PawPrint> for the raised disc), home/trophy/gear
+// for the rest. Labels are the shared-i18n Nav catalog values verbatim
+// (我的寵物 / 排行榜, not the old short 寵物 / 排行).
 const ICONS: Record<string, string> = {
   index: "🏠",
   pets: "🐾",
-  walks: "🐕",
+  walks: "🐾",
   leaderboard: "🏆",
   settings: "⚙️",
 };
 
 const LABELS: Record<string, string> = {
   index: "首頁",
-  pets: "寵物",
+  pets: "我的寵物",
   walks: "遛狗",
-  leaderboard: "排行",
+  leaderboard: "排行榜",
   settings: "設定",
 };
 

@@ -1,42 +1,44 @@
 /**
- * Home top bar (P3a) — compact: family name (or user display name in personal
- * mode) on the left, a notification bell on the right. The unread-count badge is
- * intentionally not wired (no notification-center system yet — same as web v3).
- * Mirrors apps/web/src/components/home/home-top-bar.tsx.
+ * Home top bar — 1:1 with apps/web/src/components/home/home-top-bar.tsx.
+ * Left cluster: 🥭 + brand title (App.name "芒果寵物") + a family/user pill
+ * (home glyph + name). Right: a single notification bell inside a white
+ * circle (the unread-count badge is intentionally not wired — no
+ * notification-center system yet, same as web v3). The photo-frame icon the
+ * iOS bar used to carry is gone — photos live in Settings (web parity).
  */
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme/theme";
+import { t } from "@/lib/i18n";
+import { colors, radius, spacing } from "@/theme/theme";
 
 export function HomeTopBar({
   familyName,
   userDisplayName,
-  onOpenPhotos,
 }: {
   familyName?: string | null;
   userDisplayName?: string | null;
-  onOpenPhotos?: () => void;
 }) {
-  const title = familyName ?? userDisplayName ?? "Mango Pet";
+  const label = familyName ?? userDisplayName ?? null;
   return (
     <View style={styles.bar}>
-      <Text style={styles.title} numberOfLines={1}>
-        {title}
+      {/* Brand: 🥭 + locale-aware App.name ("芒果寵物") — the mango emoji is
+          the visual hook, matching web. */}
+      <Text style={styles.brand} numberOfLines={1}>
+        <Text aria-hidden>🥭</Text> {t("App.name")}
       </Text>
-      <View style={styles.actions}>
-        {onOpenPhotos ? (
-          <Pressable
-            accessibilityLabel="照片圖庫"
-            onPress={onOpenPhotos}
-            hitSlop={8}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Text style={styles.icon}>🖼️</Text>
-          </Pressable>
-        ) : null}
-        <Text style={styles.icon} accessibilityLabel="通知">
-          🔔
-        </Text>
+      {label ? (
+        <View style={styles.pill}>
+          <Text style={styles.pillIcon} accessibilityElementsHidden>
+            🏠
+          </Text>
+          <Text style={styles.pillLabel} numberOfLines={1}>
+            {label}
+          </Text>
+        </View>
+      ) : null}
+      <View style={styles.spacer} />
+      <View style={styles.bell} accessibilityLabel="通知" accessibilityRole="button">
+        <Text style={styles.bellIcon}>🔔</Text>
       </View>
     </View>
   );
@@ -46,12 +48,41 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs,
   },
-  title: { flex: 1, fontSize: 22, fontWeight: "800", color: colors.ink },
-  actions: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginLeft: spacing.md },
-  icon: { fontSize: 20 },
-  pressed: { opacity: 0.6 },
+  brand: {
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: -0.6,
+    color: colors.ink,
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    maxWidth: 168,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.card,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  pillIcon: { fontSize: 11 },
+  pillLabel: { flexShrink: 1, fontSize: 12.5, fontWeight: "700", color: colors.ink2 },
+  spacer: { flex: 1 },
+  bell: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bellIcon: { fontSize: 18 },
 });

@@ -126,15 +126,18 @@ export function PostCard({
           uid={currentUid}
           initialCounts={post.reactionCounts}
         />
+        {/* Comment toggle — 💬 icon only (web is a MessageCircle icon, no
+            「留言」label); the count shows only when there are comments. */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="留言"
           onPress={() => setCommentsOpen((v) => !v)}
           style={({ pressed }) => [styles.commentBtn, pressed && styles.pressed]}
         >
-          <Text style={styles.commentBtnText}>
-            💬 {commentCount > 0 ? commentCount : "留言"}
-          </Text>
+          <Text style={styles.commentIcon}>💬</Text>
+          {commentCount > 0 ? (
+            <Text style={styles.commentCount}>{commentCount}</Text>
+          ) : null}
         </Pressable>
       </View>
 
@@ -235,7 +238,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   commentBtn: {
+    flexDirection: "row",
     minHeight: 44,
+    gap: 6,
     paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
     backgroundColor: colors.bgAlt,
@@ -244,6 +249,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  commentBtnText: { fontSize: 13, fontWeight: "700", color: colors.ink2 },
+  commentIcon: { fontSize: 16 },
+  commentCount: { fontSize: 12, fontWeight: "600", color: colors.ink2 },
   pressed: { opacity: 0.7 },
 });

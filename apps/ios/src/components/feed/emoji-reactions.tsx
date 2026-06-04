@@ -89,6 +89,8 @@ export function EmojiReactions({
   return (
     <View>
       <View style={styles.row}>
+        {/* Main toggle — emoji only; the count lives in the summary cluster
+            (web puts no number inside this button). */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={mine === "❤️" ? "取消愛心" : "按愛心"}
@@ -103,30 +105,31 @@ export function EmojiReactions({
           ]}
         >
           <Text style={styles.mainEmoji}>{mine ?? "❤️"}</Text>
-          {total > 0 ? (
-            <Text style={[styles.count, mine ? styles.countOn : null]}>
-              {total}
-            </Text>
-          ) : null}
         </Pressable>
 
+        {/* "Add reaction" opener — web renders a SmilePlus icon (a smiley
+            with a +); the RN equivalent is a smiley face. */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="更多反應"
           onPress={() => setTrayOpen((v) => !v)}
           style={({ pressed }) => [styles.moreBtn, pressed && styles.pressed]}
         >
-          <Text style={styles.moreText}>{trayOpen ? "✕" : "＋"}</Text>
+          <Text style={styles.moreEmoji}>{trayOpen ? "✕" : "🙂"}</Text>
         </Pressable>
 
-        {activeEmojis.length > 0 ? (
-          <View style={styles.breakdown}>
-            {activeEmojis.map((e) => (
-              <Text key={e} style={styles.breakdownItem}>
-                {e}
-                {counts[e]}
-              </Text>
-            ))}
+        {/* Summary — the emojis that appeared (overlapping) + the total,
+            FB-style, matching web. */}
+        {total > 0 ? (
+          <View style={styles.summary}>
+            <View style={styles.summaryEmojis}>
+              {activeEmojis.map((e, i) => (
+                <Text key={e} style={[styles.summaryEmoji, i > 0 && styles.summaryEmojiOverlap]}>
+                  {e}
+                </Text>
+              ))}
+            </View>
+            <Text style={styles.summaryCount}>{total}</Text>
           </View>
         ) : null}
       </View>
@@ -169,8 +172,6 @@ const styles = StyleSheet.create({
   },
   mainBtnOn: { backgroundColor: colors.brandTint, borderColor: colors.brand },
   mainEmoji: { fontSize: 16 },
-  count: { fontSize: 13, fontWeight: "700", color: colors.ink2 },
-  countOn: { color: colors.brandDeep },
   moreBtn: {
     width: 36,
     height: 36,
@@ -181,9 +182,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  moreText: { fontSize: 16, fontWeight: "700", color: colors.ink2 },
-  breakdown: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginLeft: 2 },
-  breakdownItem: { fontSize: 13, color: colors.ink3, fontWeight: "600" },
+  moreEmoji: { fontSize: 16 },
+  summary: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 2 },
+  summaryEmojis: { flexDirection: "row", alignItems: "center" },
+  summaryEmoji: { fontSize: 13 },
+  summaryEmojiOverlap: { marginLeft: -2 },
+  summaryCount: { fontSize: 12, color: colors.ink3, fontWeight: "600" },
   tray: {
     flexDirection: "row",
     gap: spacing.sm,

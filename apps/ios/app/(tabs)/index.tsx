@@ -80,7 +80,6 @@ export default function HomeScreen() {
       <HomeTopBar
         familyName={isPersonal ? null : familyName}
         userDisplayName={userName}
-        onOpenPhotos={() => router.push("/photos")}
       />
       <ScrollView
         contentContainerStyle={styles.scroll}
