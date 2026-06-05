@@ -31,8 +31,16 @@ function startOfMonth(d = new Date()): Date {
 function dayDiffFromNow(t: Timestamp): { value: string; unit: string } {
   const ms = t.toMillis() - Date.now();
   if (ms < 0) {
-    const days = Math.ceil(-ms / 86_400_000);
-    return { value: `-${days}`, unit: "天前" };
+    // Overdue. Mirror the future branches but with "前" (ago) units and NO
+    // leading minus: "天前"/"小時前" already mean "ago", so the old
+    // `value: "-${days}"` rendered the nonsensical "-1天前" the instant a
+    // reminder came due (and showed days even when only hours overdue).
+    const past = -ms;
+    const hours = past / 3_600_000;
+    if (hours < 24) {
+      return { value: `${Math.max(1, Math.round(hours))}`, unit: "小時前" };
+    }
+    return { value: `${Math.ceil(past / 86_400_000)}`, unit: "天前" };
   }
   const hours = ms / 3_600_000;
   if (hours < 24) {
