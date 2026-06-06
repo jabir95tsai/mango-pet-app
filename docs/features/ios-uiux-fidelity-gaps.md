@@ -8,6 +8,14 @@
 
 ---
 
+## S0 — Icon 系統對齊（root cause of icon 差異）
+> 實查：**web 用 `lucide-react`；iOS 沒裝 icon 庫**（emoji / 自刻 svg 拼）。要 99% 一致就要讓 iOS 跟 web 同源。
+| # | gap → 解法 | 維度 | 級 |
+|---|---|---|---|
+| I1 | **iOS 線條 icon 不同源** → 加 **`lucide-react-native`**（lucide 的 RN 版，跟 web lucide-react 同套），把 app 內所有 UI 線條 icon（首頁/齒輪/獎盃/鈴鐺/分享/複製/刷新/編輯/check/trash…）逐一換成 **與 web 同名的 lucide icon**（對照 apps/web 各元件 import 的 lucide 名稱 1:1）。⚠️ **新 dep → branch + linux gate** | icon 系統 | **P0** |
+| I2 | **emoji 選錯字元** → 把 iOS code 裡跟 web 不同的 emoji 改成**同一個字元**（如 nav 中央 🐕→🐾）。同支 iPhone 上 emoji 本來就同字型，改字元即一致。保留 emoji 的地方（🥭🔥🥇🥈♀）確認字元與 web 相同 | icon/文案 | P1 |
+| I3 | **launcher（桌面）app icon + splash 未設** → app.json 加 `icon`（1024×1024、不透明、不預先圓角的 Mango master）+ `splash`。來源用 Mango logo；現有 `apps/web/public/web-app-manifest-512x512.png` / `apple-touch-icon.png` 可當素材（512² 會略軟，最好出 1024² master）。**App Store 送審必備** | asset | **P0** |
+
 ## S2 Home / Feed
 | # | gap（iOS 現況 → PWA 目標） | 維度 | 級 |
 |---|---|---|---|
