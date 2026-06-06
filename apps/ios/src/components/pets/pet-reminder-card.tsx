@@ -11,6 +11,7 @@
  * formatDistanceToNow(addSuffix) shape: 「內」for future, 「前」for past.
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Check } from "lucide-react-native";
 import type { Reminder } from "@mango/shared-types";
 
 import { scoped } from "@/lib/i18n";
@@ -105,7 +106,7 @@ export function PetReminderCard({
           accessibilityLabel={tRem("markDone")}
           style={({ pressed }) => [styles.checkBtn, pressed && styles.pressed]}
         >
-          <Text style={styles.checkText}>✓</Text>
+          <Check size={18} color={colors.ink3} strokeWidth={2.6} />
         </Pressable>
         {onEdit ? (
           <Pressable

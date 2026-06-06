@@ -15,6 +15,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { Trash2 } from "lucide-react-native";
 import type { Post, Visibility } from "@mango/shared-types";
 
 import { deletePost } from "@/lib/posts";
@@ -95,7 +96,7 @@ export function PostCard({
             hitSlop={8}
             style={styles.menuBtn}
           >
-            <Text style={styles.menuText}>⋯</Text>
+            <Trash2 size={16} color={colors.ink3} strokeWidth={2} />
           </Pressable>
         ) : null}
       </View>

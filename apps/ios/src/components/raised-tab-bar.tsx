@@ -3,6 +3,14 @@
 // "walks" tab floats above the bar as a brand disc — the core 遛狗 entry point.
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  Footprints,
+  Home,
+  PawPrint,
+  Settings,
+  Trophy,
+  type LucideIcon,
+} from "lucide-react-native";
 
 import { colors, radius, spacing } from "@/theme/theme";
 
@@ -20,16 +28,18 @@ export type TabBarProps = {
   };
 };
 
-// Icons mirror web app-nav: pets + the raised centre (walks) both render the
-// paw print (web hardcodes <PawPrint> for the raised disc), home/trophy/gear
-// for the rest. Labels are the shared-i18n Nav catalog values verbatim
-// (我的寵物 / 排行榜, not the old short 寵物 / 排行).
-const ICONS: Record<string, string> = {
-  index: "🏠",
-  pets: "🐾",
-  walks: "🐾",
-  leaderboard: "🏆",
-  settings: "⚙️",
+// Icons are the SAME lucide set as web app-nav (lucide-react-native ↔
+// lucide-react): home→Home, pets→PawPrint, walks→Footprints, leaderboard→
+// Trophy, settings→Settings. Web's NAV_ITEMS maps walks→Footprints; the raised
+// centre uses Footprints here (per iOS PM directive) so pets (PawPrint) and
+// walks (Footprints) read as distinct, not two paws. Labels are the shared-i18n
+// Nav catalog values verbatim (我的寵物 / 排行榜).
+const ICONS: Record<string, LucideIcon> = {
+  index: Home,
+  pets: PawPrint,
+  walks: Footprints,
+  leaderboard: Trophy,
+  settings: Settings,
 };
 
 const LABELS: Record<string, string> = {
@@ -62,6 +72,8 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
           }
         };
 
+        const Icon = ICONS[route.name];
+
         if (isCenter) {
           return (
             <View key={route.key} style={styles.centerSlot}>
@@ -75,7 +87,7 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.centerIcon}>{ICONS[route.name]}</Text>
+                {Icon ? <Icon size={26} color="#ffffff" strokeWidth={2} /> : null}
               </Pressable>
               <Text style={styles.centerLabel}>{LABELS[route.name]}</Text>
             </View>
@@ -91,9 +103,13 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
             onPress={onPress}
             style={styles.tab}
           >
-            <Text style={[styles.icon, focused && styles.iconActive]}>
-              {ICONS[route.name] ?? "•"}
-            </Text>
+            {Icon ? (
+              <Icon
+                size={24}
+                color={focused ? colors.brandDeep : colors.ink3}
+                strokeWidth={2}
+              />
+            ) : null}
             <Text style={[styles.label, focused && styles.labelActive]}>
               {LABELS[route.name] ?? route.name}
             </Text>
@@ -120,9 +136,7 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingVertical: spacing.xs,
   },
-  icon: { fontSize: 22, opacity: 0.55 },
-  iconActive: { opacity: 1 },
-  label: { fontSize: 10, color: colors.ink3 },
+  label: { fontSize: 10, color: colors.ink3, marginTop: 2 },
   labelActive: { color: colors.brandDeep, fontWeight: "700" },
   centerSlot: {
     flex: 1,
@@ -145,7 +159,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  centerIcon: { fontSize: 28 },
   centerLabel: {
     fontSize: 10,
     color: colors.brandDeep,

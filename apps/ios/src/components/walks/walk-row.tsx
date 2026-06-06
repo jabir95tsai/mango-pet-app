@@ -5,6 +5,7 @@
  * 3-col 📏km · ⏱️min · ⭐score grid (score in brand-deep).
  */
 import { StyleSheet, Text, View } from "react-native";
+import { Footprints, Hand } from "lucide-react-native";
 import type { Walk } from "@mango/shared-types";
 
 import { colors, radius, shadows, spacing } from "@/theme/theme";
@@ -26,7 +27,11 @@ export function WalkRow({ walk }: { walk: Walk }) {
   return (
     <View style={styles.row}>
       <View style={[styles.icon, walk.isManual ? styles.iconManual : styles.iconWalk]}>
-        <Text style={styles.iconEmoji}>{walk.isManual ? "✋" : "🐾"}</Text>
+        {walk.isManual ? (
+          <Hand size={20} color={colors.ink2} strokeWidth={2} />
+        ) : (
+          <Footprints size={20} color={colors.brandDeep} strokeWidth={2} />
+        )}
       </View>
       <View style={styles.body}>
         <View style={styles.titleRow}>

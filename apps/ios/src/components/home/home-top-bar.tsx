@@ -7,6 +7,7 @@
  * iOS bar used to carry is gone — photos live in Settings (web parity).
  */
 import { StyleSheet, Text, View } from "react-native";
+import { Bell, Home } from "lucide-react-native";
 
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
@@ -28,9 +29,7 @@ export function HomeTopBar({
       </Text>
       {label ? (
         <View style={styles.pill}>
-          <Text style={styles.pillIcon} accessibilityElementsHidden>
-            🏠
-          </Text>
+          <Home size={13} color={colors.ink2} strokeWidth={2} />
           <Text style={styles.pillLabel} numberOfLines={1}>
             {label}
           </Text>
@@ -38,7 +37,7 @@ export function HomeTopBar({
       ) : null}
       <View style={styles.spacer} />
       <View style={styles.bell} accessibilityLabel="通知" accessibilityRole="button">
-        <Text style={styles.bellIcon}>🔔</Text>
+        <Bell size={18} color={colors.ink2} strokeWidth={1.8} />
       </View>
     </View>
   );

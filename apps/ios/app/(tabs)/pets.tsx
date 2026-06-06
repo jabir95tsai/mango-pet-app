@@ -44,6 +44,7 @@ import { ExpenseForm, type ExpenseFormInitial } from "@/components/pets/expense-
 import { HealthForm } from "@/components/pets/health-form";
 import { ReceiptScanner } from "@/components/pets/receipt-scanner";
 import { LinearGradient } from "expo-linear-gradient";
+import { Plus } from "lucide-react-native";
 import { colors, mangoGradient, radius, spacing } from "@/theme/theme";
 
 const tPP = scoped("PetsPage");
@@ -247,7 +248,7 @@ export default function PetsScreen() {
           end={mangoGradient.end}
           style={styles.fabFill}
         >
-          <Text style={styles.fabPlus}>＋</Text>
+          <Plus size={28} color="#ffffff" strokeWidth={2.5} />
         </LinearGradient>
       </Pressable>
 

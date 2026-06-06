@@ -6,6 +6,7 @@
  * - species label falls back breed → speciesOther → localized species
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pencil } from "lucide-react-native";
 import { formatAge } from "@mango/shared-business";
 import type { Pet } from "@mango/shared-types";
 
@@ -81,7 +82,7 @@ export function PetHeader({
         accessibilityRole="button"
         accessibilityLabel={tPet("petDetail")}
       >
-        <Text style={styles.editIcon}>✎</Text>
+        <Pencil size={16} color={colors.ink2} strokeWidth={2} />
       </Pressable>
     </View>
   );
@@ -125,6 +126,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  editIcon: { fontSize: 16, color: colors.ink2 },
   pressed: { opacity: 0.7 },
 });

@@ -8,6 +8,7 @@
  */
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { Bell, Cookie, PawPrint, Scale, type LucideIcon } from "lucide-react-native";
 import { dayDiffFromNow, startOfMonth } from "@mango/shared-business";
 import type { Expense, Pet, Reminder, Walk } from "@mango/shared-types";
 
@@ -43,7 +44,7 @@ const SUB_COLOR = {
 } as const;
 
 function PetStatTile({
-  icon,
+  Icon,
   label,
   value,
   unit,
@@ -51,7 +52,7 @@ function PetStatTile({
   tone,
   subTone = "muted",
 }: {
-  icon: string;
+  Icon: LucideIcon;
   label: string;
   value: string;
   unit?: string;
@@ -63,7 +64,7 @@ function PetStatTile({
     <View style={styles.tile}>
       <View style={styles.tileHead}>
         <View style={[styles.tileIcon, { backgroundColor: ICON_BG[tone] }]}>
-          <Text style={[styles.tileIconText, { color: ICON_FG[tone] }]}>{icon}</Text>
+          <Icon size={16} color={ICON_FG[tone]} strokeWidth={1.8} />
         </View>
         <Text style={styles.tileLabel} numberOfLines={1}>
           {label}
@@ -137,7 +138,7 @@ export function PetOverviewBody({
       {/* 2×2 stat grid */}
       <View style={styles.grid}>
         <PetStatTile
-          icon="🔔"
+          Icon={Bell}
           label={tPP("stat.nextReminder")}
           value={reminderStat ? reminderStat.value : "—"}
           unit={reminderStat ? reminderStat.unit : undefined}
@@ -146,7 +147,7 @@ export function PetOverviewBody({
           subTone={nextR ? "brand" : "muted"}
         />
         <PetStatTile
-          icon="🍪"
+          Icon={Cookie}
           label={tPP("stat.monthSpend")}
           value={groupThousands(monthSpend)}
           unit="NT$"
@@ -155,7 +156,7 @@ export function PetOverviewBody({
           subTone="muted"
         />
         <PetStatTile
-          icon="⚖️"
+          Icon={Scale}
           label={tPP("stat.weight")}
           value={pet.weightKg != null ? `${pet.weightKg}` : "—"}
           unit={pet.weightKg != null ? tPP("kgUnit") : undefined}
@@ -164,7 +165,7 @@ export function PetOverviewBody({
           subTone={pet.weightKg != null ? "leaf" : "muted"}
         />
         <PetStatTile
-          icon="🐾"
+          Icon={PawPrint}
           label={tPP("stat.walkDays")}
           value={`${walkDays}`}
           unit="天 · 本月"
@@ -227,7 +228,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  tileIconText: { fontSize: 15 },
   tileLabel: {
     flex: 1,
     fontSize: 11.5,
