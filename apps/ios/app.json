@@ -7,6 +7,12 @@
     "scheme": "mangopet",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fbf1dd"
+    },
     "ios": {
       "bundleIdentifier": "com.mangopet.app",
       "supportsTablet": true,
