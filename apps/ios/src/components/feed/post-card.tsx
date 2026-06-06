@@ -15,7 +15,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Trash2 } from "lucide-react-native";
+import { MessageCircle, Trash2 } from "lucide-react-native";
 import type { Post, Visibility } from "@mango/shared-types";
 
 import { deletePost } from "@/lib/posts";
@@ -135,7 +135,7 @@ export function PostCard({
           onPress={() => setCommentsOpen((v) => !v)}
           style={({ pressed }) => [styles.commentBtn, pressed && styles.pressed]}
         >
-          <Text style={styles.commentIcon}>💬</Text>
+          <MessageCircle size={18} color={colors.ink2} strokeWidth={2} />
           {commentCount > 0 ? (
             <Text style={styles.commentCount}>{commentCount}</Text>
           ) : null}

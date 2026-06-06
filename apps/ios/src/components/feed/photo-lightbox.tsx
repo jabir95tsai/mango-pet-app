@@ -15,6 +15,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { X } from "lucide-react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -132,7 +133,7 @@ export function PhotoLightbox({
             onPress={onClose}
             style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
           >
-            <Text style={styles.iconText}>✕</Text>
+            <X size={22} color="#ffffff" strokeWidth={2} />
           </Pressable>
         </View>
 

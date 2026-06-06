@@ -14,6 +14,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
@@ -87,7 +88,7 @@ export function CameraCaptureModal({ visible, onCaptured, onCancel }: Props) {
             onPress={onCancel}
             style={styles.closeBtn}
           >
-            <Text style={styles.closeText}>✕</Text>
+            <X size={20} color="#ffffff" strokeWidth={2} />
           </Pressable>
         </View>
         <View style={styles.bottomRow}>

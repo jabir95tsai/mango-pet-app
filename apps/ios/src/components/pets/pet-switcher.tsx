@@ -5,6 +5,7 @@
  * pets. Mirrors web pet-switcher-dropdown.
  */
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Check } from "lucide-react-native";
 import type { Pet } from "@mango/shared-types";
 
 import { scoped } from "@/lib/i18n";
@@ -62,7 +63,7 @@ export function PetSwitcher({
                   </Text>
                 ) : null}
               </View>
-              {active ? <Text style={styles.check}>✓</Text> : null}
+              {active ? <Check size={16} color={colors.brandDeep} strokeWidth={2.5} /> : null}
             </Pressable>
           );
         })}

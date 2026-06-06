@@ -17,6 +17,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { ArrowLeft, Copy, QrCode, RefreshCw, Share2, X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -161,7 +162,7 @@ export default function FamilyScreen() {
     <SafeAreaView edges={["top", "bottom"]} style={styles.flex}>
       <View style={styles.header}>
         <Pressable accessibilityLabel="返回" onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
-          <Text style={styles.backText}>‹</Text>
+          <ArrowLeft size={22} color={colors.ink} strokeWidth={2} />
         </Pressable>
         <Text style={styles.title}>{t("Family.title")}</Text>
         <View style={styles.backBtn} />
@@ -209,17 +210,21 @@ export default function FamilyScreen() {
                 <Text style={styles.codeHelp}>{t("Family.inviteHelp")}</Text>
                 <View style={styles.codeActions}>
                   <Pressable onPress={copyCode} style={styles.codeBtn}>
-                    <Text style={styles.codeBtnText}>📋 {t("Family.copyCode")}</Text>
+                    <Copy size={14} color={colors.ink2} strokeWidth={2} />
+                    <Text style={styles.codeBtnText}>{t("Family.copyCode")}</Text>
                   </Pressable>
                   <Pressable onPress={shareInvite} style={styles.codeBtn}>
-                    <Text style={styles.codeBtnText}>🔗 {t("Family.invite.shareAria")}</Text>
+                    <Share2 size={14} color={colors.ink2} strokeWidth={2} />
+                    <Text style={styles.codeBtnText}>{t("Family.invite.shareAria")}</Text>
                   </Pressable>
                   <Pressable onPress={() => setQrOpen(true)} style={styles.codeBtn}>
-                    <Text style={styles.codeBtnText}>▦ QR</Text>
+                    <QrCode size={14} color={colors.ink2} strokeWidth={2} />
+                    <Text style={styles.codeBtnText}>QR</Text>
                   </Pressable>
                 </View>
                 {isOwner ? (
                   <Pressable onPress={confirmRegen} disabled={busy} style={styles.regenBtn}>
+                    <RefreshCw size={12} color={colors.cookie} strokeWidth={2} />
                     <Text style={styles.regenText}>{t("Family.regenCode")}</Text>
                   </Pressable>
                 ) : null}
@@ -242,7 +247,7 @@ export default function FamilyScreen() {
                       </View>
                       {isOwner && !memberIsOwner ? (
                         <Pressable onPress={() => confirmRemove(m)} hitSlop={6} style={styles.removeBtn}>
-                          <Text style={styles.removeText}>✕</Text>
+                          <X size={16} color={colors.ink3} strokeWidth={2} />
                         </Pressable>
                       ) : null}
                     </View>
@@ -413,9 +418,9 @@ const styles = StyleSheet.create({
   code: { fontSize: 36, fontWeight: "900", color: colors.brandDeep, letterSpacing: 6, fontVariant: ["tabular-nums"] },
   codeHelp: { fontSize: 12, color: colors.ink3, textAlign: "center" },
   codeActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
-  codeBtn: { paddingHorizontal: spacing.md, minHeight: 44, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
+  codeBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: spacing.md, minHeight: 44, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairline, justifyContent: "center" },
   codeBtnText: { fontSize: 12, fontWeight: "700", color: colors.ink2 },
-  regenBtn: { marginTop: spacing.xs, paddingVertical: 6 },
+  regenBtn: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: spacing.xs, paddingVertical: 6 },
   regenText: { fontSize: 12, fontWeight: "700", color: colors.cookie },
   sectionLabel: { fontSize: 13, fontWeight: "800", color: colors.ink2, marginTop: spacing.sm },
   members: { gap: spacing.xs },

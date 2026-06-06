@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Trash2 } from "lucide-react-native";
 import { COMMENT_MAX_LEN, type Comment } from "@mango/shared-types";
 import type { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 
@@ -175,7 +176,7 @@ export function CommentSection({
                       hitSlop={8}
                       style={styles.del}
                     >
-                      <Text style={styles.delText}>✕</Text>
+                      <Trash2 size={13} color={colors.ink3} strokeWidth={2} />
                     </Pressable>
                   ) : null}
                 </View>

@@ -15,6 +15,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import type { ExtractedReceipt } from "@mango/shared-types";
@@ -109,7 +110,7 @@ export function ReceiptScanner({
         <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <Pressable onPress={onClose} hitSlop={10} disabled={scanning}>
-              <Text style={styles.close}>✕</Text>
+              <X size={26} color="#ffffff" strokeWidth={2} />
             </Pressable>
             <Text style={styles.hint}>拍張收據，AI 自動辨識金額/商家/日期</Text>
             <View style={styles.closeSpacer} />

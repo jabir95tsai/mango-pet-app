@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { PublicUserProfile } from "@mango/shared-types";
@@ -59,7 +60,7 @@ export default function FriendAddScreen() {
     <SafeAreaView style={styles.flex}>
       <View style={styles.header}>
         <Pressable accessibilityLabel="返回" onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
-          <Text style={styles.backText}>‹</Text>
+          <ArrowLeft size={22} color={colors.ink} strokeWidth={2} />
         </Pressable>
         <Text style={styles.title}>{t("Friends.add.title")}</Text>
         <View style={styles.backBtn} />

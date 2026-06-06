@@ -20,6 +20,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import type { Pet, Visibility } from "@mango/shared-types";
@@ -170,7 +171,7 @@ export function PostComposer({
                         onPress={() => removePhoto(i)}
                         style={styles.removeBtn}
                       >
-                        <Text style={styles.removeText}>✕</Text>
+                        <X size={12} color="#ffffff" strokeWidth={2.5} />
                       </Pressable>
                     </View>
                   ))}

@@ -11,7 +11,18 @@
  * formatDistanceToNow(addSuffix) shape: 「內」for future, 「前」for past.
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Check } from "lucide-react-native";
+import {
+  Bell,
+  Check,
+  Clock,
+  Pencil,
+  Repeat,
+  Scissors,
+  Stethoscope,
+  Syringe,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react-native";
 import type { Reminder } from "@mango/shared-types";
 
 import { scoped } from "@/lib/i18n";
@@ -20,16 +31,17 @@ import { colors, radius, shadows, spacing } from "@/theme/theme";
 const tRem = scoped("Reminder");
 const tC = scoped("Common");
 
-type Tone = { bg: string; fg: string; icon: string };
+type Tone = { bg: string; fg: string; Icon: LucideIcon };
 
+// 1:1 with web pet-reminder-card toneForTitle: Syringe/Stethoscope/Scissors/Bell.
 function toneForTitle(title: string): Tone {
   const t = title.toLowerCase();
-  if (/疫苗|vaccine/.test(t)) return { bg: colors.leafTint, fg: colors.leaf, icon: "💉" };
+  if (/疫苗|vaccine/.test(t)) return { bg: colors.leafTint, fg: colors.leaf, Icon: Syringe };
   if (/驅蟲|心絲蟲|deworm|heartworm/.test(t))
-    return { bg: colors.brandTint, fg: colors.brandDeep, icon: "🩺" };
+    return { bg: colors.brandTint, fg: colors.brandDeep, Icon: Stethoscope };
   if (/洗澡|美容|bath|groom/.test(t))
-    return { bg: colors.peachTint, fg: colors.cookie, icon: "✂️" };
-  return { bg: colors.brandTint, fg: colors.brandDeep, icon: "🔔" };
+    return { bg: colors.peachTint, fg: colors.cookie, Icon: Scissors };
+  return { bg: colors.brandTint, fg: colors.brandDeep, Icon: Bell };
 }
 
 /** date-fns zh-TW formatDistanceToNow(addSuffix) lookalike: future → 「內」,
@@ -76,7 +88,7 @@ export function PetReminderCard({
   return (
     <View style={styles.card}>
       <View style={[styles.icon, { backgroundColor: tone.bg }]}>
-        <Text style={[styles.iconText, { color: tone.fg }]}>{tone.icon}</Text>
+        <tone.Icon size={18} color={tone.fg} strokeWidth={1.8} />
       </View>
 
       <View style={styles.body}>
@@ -89,12 +101,14 @@ export function PetReminderCard({
         <View style={styles.chipRow}>
           {reminder.repeat !== "none" ? (
             <View style={styles.repeatChip}>
-              <Text style={styles.repeatText}>🔁 {tRem(`repeat.${reminder.repeat}`)}</Text>
+              <Repeat size={11} color={colors.ink2} strokeWidth={2} />
+              <Text style={styles.repeatText}>{tRem(`repeat.${reminder.repeat}`)}</Text>
             </View>
           ) : null}
-          <Text style={[styles.due, due.overdue && styles.dueOverdue]}>
-            ⏰ {due.text}
-          </Text>
+          <View style={styles.dueRow}>
+            <Clock size={12} color={due.overdue ? "#dc2626" : colors.ink2} strokeWidth={2} />
+            <Text style={[styles.due, due.overdue && styles.dueOverdue]}>{due.text}</Text>
+          </View>
         </View>
       </View>
 
@@ -116,7 +130,7 @@ export function PetReminderCard({
             accessibilityLabel={tC("edit")}
             style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
           >
-            <Text style={styles.iconBtnText}>✏️</Text>
+            <Pencil size={16} color={colors.ink2} strokeWidth={2} />
           </Pressable>
         ) : null}
         <Pressable
@@ -126,7 +140,7 @@ export function PetReminderCard({
           accessibilityLabel={tC("delete")}
           style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
         >
-          <Text style={styles.iconBtnText}>🗑️</Text>
+          <Trash2 size={16} color={colors.ink2} strokeWidth={2} />
         </Pressable>
       </View>
     </View>
@@ -160,12 +174,16 @@ const styles = StyleSheet.create({
   petName: { fontSize: 11, color: colors.ink3 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm },
   repeatChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
     borderRadius: radius.pill,
     backgroundColor: colors.bgAlt,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   repeatText: { fontSize: 11, fontWeight: "600", color: colors.ink2 },
+  dueRow: { flexDirection: "row", alignItems: "center", gap: 3 },
   due: { fontSize: 11.5, fontWeight: "600", color: colors.ink2 },
   dueOverdue: { color: "#dc2626" },
   actions: { flexDirection: "row", alignItems: "center", gap: 4 },

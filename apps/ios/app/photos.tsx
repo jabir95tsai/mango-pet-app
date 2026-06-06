@@ -17,6 +17,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { ArrowLeft, Check } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import type {
@@ -155,7 +156,7 @@ export default function PhotosScreen() {
     <SafeAreaView edges={["top", "bottom"]} style={styles.flex}>
       <View style={styles.header}>
         <Pressable accessibilityLabel="返回" onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
-          <Text style={styles.backText}>‹</Text>
+          <ArrowLeft size={22} color={colors.ink} strokeWidth={2} />
         </Pressable>
         <View style={styles.headerText}>
           <Text style={styles.title}>{t("Photos.title")}</Text>
@@ -224,7 +225,7 @@ export default function PhotosScreen() {
                   hitSlop={8}
                   style={[styles.checkbox, isSel && styles.checkboxOn]}
                 >
-                  {isSel ? <Text style={styles.checkMark}>✓</Text> : null}
+                  {isSel ? <Check size={14} color="#ffffff" strokeWidth={3} /> : null}
                 </Pressable>
                 <View style={styles.srcBadge}>
                   <Text style={styles.srcText}>{t(SOURCE_LABEL[a.source])}</Text>

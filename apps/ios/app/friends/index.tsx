@@ -16,6 +16,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { ArrowLeft, QrCode, X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -138,11 +139,11 @@ export default function FriendsScreen() {
     <SafeAreaView edges={["top", "bottom"]} style={styles.flex}>
       <View style={styles.header}>
         <Pressable accessibilityLabel="返回" onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
-          <Text style={styles.backText}>‹</Text>
+          <ArrowLeft size={22} color={colors.ink} strokeWidth={2} />
         </Pressable>
         <Text style={styles.title}>好友</Text>
         <Pressable accessibilityLabel={t("Friends.myQr")} onPress={() => setQrOpen(true)} hitSlop={8} style={styles.qrBtn}>
-          <Text style={styles.qrBtnText}>▦</Text>
+          <QrCode size={20} color={colors.brandDeep} strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -168,7 +169,7 @@ export default function FriendsScreen() {
                 <UserAvatar name={f.displayName} photoURL={f.photoURL} size={44} />
                 <Text style={styles.rowName} numberOfLines={1}>{f.displayName}</Text>
                 <Pressable onPress={() => confirmRemove(f)} hitSlop={6} style={styles.rowAction}>
-                  <Text style={styles.removeText}>✕</Text>
+                  <X size={16} color={colors.ink3} strokeWidth={2} />
                 </Pressable>
               </View>
             ))

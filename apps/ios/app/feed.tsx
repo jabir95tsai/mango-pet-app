@@ -14,6 +14,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -49,7 +50,7 @@ export default function FeedScreen() {
           hitSlop={8}
           style={styles.backBtn}
         >
-          <Text style={styles.backText}>‹</Text>
+          <ArrowLeft size={22} color={colors.ink} strokeWidth={2} />
         </Pressable>
         <Text style={styles.title}>{t("Home.feed.title")}</Text>
         <Pressable

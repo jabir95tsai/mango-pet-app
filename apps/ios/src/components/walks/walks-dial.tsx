@@ -10,6 +10,7 @@
  */
 import { memo, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { Check } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, G } from "react-native-svg";
 import Reanimated, {
@@ -87,7 +88,7 @@ function WalksDialBase({ percent, complete, doneMin, goalMin }: Props) {
       {/* Goal-hit check badge */}
       {complete ? (
         <View style={styles.checkBadge}>
-          <Text style={styles.checkMark}>✓</Text>
+          <Check size={18} color="#ffffff" strokeWidth={3} />
         </View>
       ) : null}
 
