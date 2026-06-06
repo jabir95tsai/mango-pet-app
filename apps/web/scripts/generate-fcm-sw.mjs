@@ -78,6 +78,18 @@ firebase.initializeApp(${JSON.stringify(config, null, 2)});
 // SDK; only customise click routing below.
 const messaging = firebase.messaging();
 
+// Take control as soon as an updated SW is fetched. Without this the new
+// version installs as "waiting" and the PREVIOUS SW keeps handling push
+// until every tab/PWA window is closed — so an earlier push fix (e.g.
+// removing the duplicate showNotification) never reaches users who keep the
+// app open, and they keep getting the old double-notification behaviour.
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || "/app";
