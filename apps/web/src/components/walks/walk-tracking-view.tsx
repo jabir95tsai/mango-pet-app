@@ -710,25 +710,28 @@ export function WalkTrackingView({
             )}
           </div>
 
-          {/* §A2: pause/resume beside stop. Pause freezes time + distance;
-              the status pill above flips to "已暫停" and drops its pulse. */}
-          <div className="flex w-full max-w-xs gap-3">
+          {/* §A2: pause/resume + stop. Stop is the dominant, centered action
+              (full-width, like the pre-pause design) — the pause/resume
+              control is deliberately smaller and secondary, sitting above it.
+              Pause freezes time + distance; the status pill above flips to
+              "已暫停" and drops its pulse. */}
+          <div className="flex w-full max-w-xs flex-col items-center gap-3">
             <Button
               variant="secondary"
               onClick={handlePauseResume}
-              className="h-14 flex-1 text-base font-semibold"
+              className="h-10 rounded-full px-5 text-sm font-medium"
             >
               {state.isPaused ? (
-                <Play className="size-5" />
+                <Play className="size-4" />
               ) : (
-                <Pause className="size-5" />
+                <Pause className="size-4" />
               )}
               {state.isPaused ? tW("resume") : tW("pause")}
             </Button>
             <Button
               variant="danger"
               onClick={handleStop}
-              className="h-14 flex-1 text-base font-semibold"
+              className="h-14 w-full text-base font-semibold"
             >
               <Square className="size-5" />
               {tW("stop")}
