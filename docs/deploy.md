@@ -10,7 +10,7 @@
 | Firebase CLI | `npm i -g firebase-tools` |
 | Firebase 專案 | 在 [Firebase Console](https://console.firebase.google.com) 建立，已升級 Blaze 方案 |
 | GCP 預算警報 | $5/月 警報 ([Billing → Budgets](https://console.cloud.google.com/billing/budgets)) |
-| Vercel 帳號 | [vercel.com](https://vercel.com) 用 Google 登入 |
+| GitHub repo | App Hosting 採 GitHub 連動自動部署，需把本 repo 推到 GitHub |
 
 ## 1. 環境變數 `.env.local`
 
@@ -57,7 +57,9 @@ NEXT_PUBLIC_SITE_URL=https://mango-pet.app
 ```
 http://localhost:3000/*
 https://你的網域.com/*
-https://*.vercel.app/*
+https://*.web.app/*
+https://*.firebaseapp.com/*
+https://*.run.app/*
 ```
 
 ## 4. 部署 Firestore / Storage rules + indexes
@@ -100,31 +102,41 @@ npm run dev
 ```
 打開 http://localhost:3000
 
-## 8. 部署到 Vercel
+## 8. 部署到 Firebase App Hosting
+
+本專案用 **Firebase App Hosting**（非 Vercel）。設定在 [`firebase.json`](../firebase.json) 的 `apphosting` 區塊：`backendId: mango-pet`、`rootDir: apps/web`，runtime 設定在 [`apps/web/apphosting.yaml`](../apps/web/apphosting.yaml)。
+
+### 8.1 建立 backend（一次性）
+
+到 Firebase Console → **App Hosting** → 建立 backend：
+- 連動 **GitHub repo** 與分支（通常是 `main`）
+- Root directory 設 **`apps/web`**
+- Backend ID 設 **`mango-pet`**（要和 `firebase.json` 一致）
+
+連動後，**每次 push 到該分支就會自動 build + rollout**，不需手動跑 deploy 指令。
+
+### 8.2 環境變數
+
+分兩種，別放錯地方：
+
+- **`NEXT_PUBLIC_*`（要進瀏覽器的）**：Next.js 在 **build 階段**就把值 inline 進 client bundle，所以必須在 build 時可見。Console 設的變數預設只有 runtime，因此這些要在 [`apps/web/apphosting.yaml`](../apps/web/apphosting.yaml) 的 `env:` 宣告 `availability: [BUILD, RUNTIME]`（VAPID key、APP_ID 已在裡面）。
+- **server-only 機密**：用 Console → App Hosting → backend → Settings → 環境變數（runtime-only 即可），或用 Cloud Secret Manager 綁 `secret:`。
+
+> ⚠️ 已知雷：`NEXT_PUBLIC_FIREBASE_APP_ID` 必須是完整的 `1:{sender}:web:{hash}` 形式，不能只填 sender ID，否則 FCM `getToken()` 會回 `INVALID_ARGUMENT`。yaml 裡的值會覆蓋 Console 的值。
+
+### 8.3 手動觸發 rollout（可選）
+
+平常靠 git push 即可。若要手動：
 
 ```powershell
-npm i -g vercel
-vercel
+firebase deploy --only apphosting
 ```
 
-首次會問：
-- Set up and deploy? **Y**
-- Which scope? 你的帳號
-- Link to existing? **N**
-- Project name? **mango-pet**
-- Directory? **.**
-- Override settings? **N**
-
-部署後到 Vercel dashboard → Project → Settings → Environment Variables，把 `.env.local` 全部 key 加上去（**Production + Preview + Development** 全勾）。
-
-設定後重新部署：
-```powershell
-vercel --prod
-```
+build log 與 rollout 狀態都在 Console → App Hosting → backend 看。
 
 ## 9. 自訂網域
 
-Vercel → Project → Settings → Domains → 加入你的網域，照指示在 DNS 設定 CNAME 或 A 紀錄。
+Firebase Console → **App Hosting** → backend → **自訂網域 (Custom domains)** → 加入網域，照指示在 DNS 設定 A / TXT 紀錄，憑證會自動配發。設定完記得把該網域加進第 3 步的 Maps API referrer 白名單。
 
 ## 10. 上線後 checklist
 
