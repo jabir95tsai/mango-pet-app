@@ -70,11 +70,21 @@
 
 ## 7. 遷移清單（未對齊 → 漸進收，已記 backlog）
 
-> 新 code 直接遵守 §1–§6。以下既有 surface 未對齊，列為 backlog migration（不阻擋其他進度）：
+> 新 code 直接遵守 §1–§6。以下既有 surface 未對齊，列為 backlog migration（不阻擋其他進度）。
+> ⚠️ **drift 實際範圍經 audit-2026-06 量化遠大於原估**：`zinc-*` 59 檔 / `amber-*` 44 檔 / Tailwind 預設 rounded ~170 處（詳 [`docs/research/audit-2026-06.md`](research/audit-2026-06.md) P2-5）。
 
-- **feed / leaderboard / settings**：仍 zinc/amber → 換成 mango token（§1）。
-- **散落 `rounded-lg`（8px）**：→ `--radius-*`（§2）。
-- 退掉的 Reanimated 滑動 tab indicator：確認 web/iOS 都已回 simple toggle（§4）。
+**收的順序（audit 建議）：**
+1. **`ui/` primitives 先收一批**（button / input / textarea / select / dialog / tabs / empty-state / skeleton）——它們被所有頁複用，先對齊後，後續頁面遷移成本減半。**這是重災區且原清單漏列。**
+2. 高頻頁元件：`walk-tracking-view`、`walk-card` / `reminder-card` / `health-record-card`、`family-section`、landing `app/page.tsx`、`onboarding/`。
+3. 其餘頁：feed / leaderboard / settings 殘餘、`restaurants/[id]`（⚠️ 餐廳功能暫停＝不投入新功能，純 token 對齊是否做由 PM 視情況；不急）。
+
+**逐項類型：**
+- zinc/amber 原生色（含 `dark:` 變體）→ mango token（§1）。
+- Tailwind 預設 `rounded-md/lg/xl/2xl` → `rounded-[var(--radius-*)]`（§2）。
+- 寫死 hex `bg-[#f7c168]`（`app/walks/page.tsx`）→ `bg-mango-amber`。
+- ✅ 已驗證無殘留（audit 確認）：Reanimated 滑動 tab indicator（web/iOS 皆 simple toggle）、動畫 library、reduced-motion guard。
+
+> 策略仍是「動到哪頁順手收哪頁」，但 `ui/` primitives 值得獨立一批主動先做。
 
 ## 8. 跨平台備註
 
