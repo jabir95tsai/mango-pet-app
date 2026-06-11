@@ -67,6 +67,53 @@ const messaging = getMessaging();
 const LOOK_AHEAD_MS = 7 * 24 * 60 * 60 * 1000;
 const FUNCTION_REGION = "asia-east1";
 
+// ── PII split (security-hardening #2) ──────────────────────────────────
+// email + fcmTokens moved out of the world-readable users/{uid} doc into
+// the owner-only users/{uid}/private/contact subdoc. These helpers are the
+// single read/write path for tokens from the server. They DUAL-READ
+// (private first, fall back to the legacy public-doc field) so push never
+// gaps while the one-time migration runs and old clients still write the
+// old field for a beat. Once the strip-migration has run and clients ship
+// the private write, the public fallback is simply never hit.
+const USER_PRIVATE_DOC = "private/contact";
+
+/** Read a user's FCM tokens: private subdoc first, public-doc field as
+ *  fallback. `publicData` (optional) lets callers that already fetched the
+ *  user doc skip a read for the fallback. */
+async function readUserFcmTokens(
+  uid: string,
+  publicData?: FirebaseFirestore.DocumentData,
+): Promise<string[]> {
+  const priv = await db.doc(`users/${uid}/${USER_PRIVATE_DOC}`).get();
+  const fromPriv = priv.exists
+    ? ((priv.data()?.fcmTokens ?? []) as string[])
+    : [];
+  if (fromPriv.length > 0) return fromPriv.filter(Boolean);
+  // Fallback to the legacy public field (pre-migration / old client).
+  const pub = publicData ?? (await db.doc(`users/${uid}`).get()).data() ?? {};
+  return ((pub.fcmTokens ?? []) as string[]).filter(Boolean);
+}
+
+/** Remove invalid tokens from BOTH the private subdoc and the legacy public
+ *  field (best-effort) so a stale token can't linger in whichever location
+ *  still holds it during the migration window. */
+async function removeInvalidFcmTokens(
+  uid: string,
+  invalid: string[],
+): Promise<void> {
+  if (invalid.length === 0) return;
+  await Promise.all([
+    db
+      .doc(`users/${uid}/${USER_PRIVATE_DOC}`)
+      .set({ fcmTokens: FieldValue.arrayRemove(...invalid) }, { merge: true })
+      .catch(() => {}),
+    db
+      .doc(`users/${uid}`)
+      .update({ fcmTokens: FieldValue.arrayRemove(...invalid) })
+      .catch(() => {}),
+  ]);
+}
+
 /** True when the callable's auth token is an anonymous (guest) sign-in.
  *  Guests are blocked from community callables (createFamily /
  *  joinFamilyByCode / acceptFriendRequest) — a defense-in-depth layer on
@@ -151,12 +198,8 @@ export const scanReminders = onSchedule(
         // happens against its own user doc, so we keep track of which uid
         // each token came from for later cleanup.
         const tokensWithOwner: { uid: string; token: string }[] = [];
-        const userRefByUid = new Map<string, FirebaseFirestore.DocumentReference>();
         for (const recipUid of recipientUids) {
-          const userRef = db.doc(`users/${recipUid}`);
-          const userSnap = await userRef.get();
-          userRefByUid.set(recipUid, userRef);
-          const t = ((userSnap.data()?.fcmTokens ?? []) as string[]).filter(Boolean);
+          const t = await readUserFcmTokens(recipUid);
           for (const tok of t) tokensWithOwner.push({ uid: recipUid, token: tok });
         }
 
@@ -204,11 +247,7 @@ export const scanReminders = onSchedule(
           }
         });
         for (const [uid, tokens] of invalidByUid) {
-          const ref = userRefByUid.get(uid);
-          if (!ref) continue;
-          await ref.update({
-            fcmTokens: FieldValue.arrayRemove(...tokens),
-          });
+          await removeInvalidFcmTokens(uid, tokens);
         }
 
         await reminderDoc.ref.update({ notified: true, notifiedAt: now });
@@ -1176,7 +1215,7 @@ async function resolveAuthorPushTarget(
   const authorSnap = await db.doc(`users/${authorUid}`).get();
   if (!authorSnap.exists) return null;
   const a = authorSnap.data() ?? {};
-  const tokens = ((a.fcmTokens ?? []) as string[]).filter(Boolean);
+  const tokens = await readUserFcmTokens(authorUid, a);
   if (tokens.length === 0) return null; // gate 2: has tokens
   const optOut = (a.pushPrefs?.engagementOptOut ?? []) as string[];
   if (optOut.includes(pushType)) return null; // gate 3: not opted out
@@ -1437,7 +1476,7 @@ async function resolveSelfPushTarget(
   const snap = await db.doc(`users/${uid}`).get();
   if (!snap.exists) return null;
   const u = snap.data() ?? {};
-  const tokens = ((u.fcmTokens ?? []) as string[]).filter(Boolean);
+  const tokens = await readUserFcmTokens(uid, u);
   if (tokens.length === 0) return null;
   const optOut = (u.pushPrefs?.engagementOptOut ?? []) as string[];
   if (optOut.includes(pushType)) return null;
@@ -1656,7 +1695,7 @@ async function runRankOvertakePushes(
     const userDoc = await db.doc(`users/${uid}`).get();
     if (!userDoc.exists) continue;
     const u = userDoc.data() ?? {};
-    const tokens = ((u.fcmTokens ?? []) as string[]).filter(Boolean);
+    const tokens = await readUserFcmTokens(uid, u);
     if (tokens.length === 0) {
       skippedNoToken++;
       continue;
@@ -1821,9 +1860,7 @@ export const sendTestPush = onCall(
       throw new HttpsError("not-found", "User doc not found");
     }
     const userData = userSnap.data() ?? {};
-    const tokens = ((userData.fcmTokens as string[] | undefined) ?? []).filter(
-      Boolean,
-    );
+    const tokens = await readUserFcmTokens(uid, userData);
     if (tokens.length === 0) {
       throw new HttpsError(
         "failed-precondition",
@@ -1858,9 +1895,7 @@ export const sendTestPush = onCall(
       }
     });
     if (invalidTokens.length > 0) {
-      await userSnap.ref.update({
-        fcmTokens: FieldValue.arrayRemove(...invalidTokens),
-      });
+      await removeInvalidFcmTokens(uid, invalidTokens);
     }
 
     return {
@@ -2856,12 +2891,17 @@ export const deleteUserAccount = onCall(
       await deleteIdsInBatches(outgoingReqs.docs, (b, d) => b.delete(d.ref));
     }
 
-    // ─── Step 8: small per-user subcollections (favorites + bookmarks).
+    // ─── Step 8: small per-user subcollections (favorites + bookmarks +
+    // private contact PII). The private subcollection (security-hardening #2)
+    // holds email + fcmTokens; deleting the user doc alone wouldn't remove a
+    // subcollection, so nuke it explicitly.
     {
       const favSnap = await userRef.collection("favoriteRestaurants").get();
       await deleteIdsInBatches(favSnap.docs, (b, d) => b.delete(d.ref));
       const bmSnap = await userRef.collection("knowledgeBookmarks").get();
       await deleteIdsInBatches(bmSnap.docs, (b, d) => b.delete(d.ref));
+      const privSnap = await userRef.collection("private").get();
+      await deleteIdsInBatches(privSnap.docs, (b, d) => b.delete(d.ref));
     }
 
     // ─── Step 9: leaderboard entries (one per period).
@@ -3293,7 +3333,12 @@ export const exportUserData = onCall(
     if (!userSnap.exists) {
       throw new HttpsError("not-found", "User profile not found");
     }
-    const userData = userSnap.data() ?? {};
+    // Fold the private contact subdoc (email + fcmTokens; security-hardening
+    // #2) back into the exported user object so the data export stays
+    // complete after PII moved off the public doc.
+    const privContact =
+      (await db.doc(`users/${uid}/private/contact`).get()).data() ?? {};
+    const userData = { ...(userSnap.data() ?? {}), ...privContact };
 
     // ── Per-user sub-collections ─────────────────────────────────────
     const [friendsSnap, incomingReqsSnap, favSnap, bmSnap] = await Promise.all([
@@ -3511,9 +3556,7 @@ async function sendEngagementPush(args: {
     }
   });
   if (invalidTokens.length > 0) {
-    await db
-      .doc(`users/${uid}`)
-      .update({ fcmTokens: FieldValue.arrayRemove(...invalidTokens) });
+    await removeInvalidFcmTokens(uid, invalidTokens);
   }
   return { ok: response.successCount > 0, invalidCount: invalidTokens.length };
 }
@@ -3611,7 +3654,7 @@ export const eveningWalkReminder = onSchedule(
     for (const userDoc of usersSnap.docs) {
       const uid = userDoc.id;
       const u = userDoc.data();
-      const tokens = ((u.fcmTokens ?? []) as string[]).filter(Boolean);
+      const tokens = await readUserFcmTokens(uid, u);
       if (tokens.length === 0) {
         skippedNoToken++;
         continue;
@@ -3796,7 +3839,7 @@ export const streakBreakWarning = onSchedule(
     for (const userDoc of usersSnap.docs) {
       const uid = userDoc.id;
       const u = userDoc.data();
-      const tokens = ((u.fcmTokens ?? []) as string[]).filter(Boolean);
+      const tokens = await readUserFcmTokens(uid, u);
       if (tokens.length === 0) {
         skippedNoToken++;
         continue;
@@ -4013,7 +4056,7 @@ export const familyGoalMilestone = onDocumentCreated(
       const rDoc = await db.doc(`users/${recipientUid}`).get();
       if (!rDoc.exists) continue;
       const r = rDoc.data() ?? {};
-      const tokens = ((r.fcmTokens ?? []) as string[]).filter(Boolean);
+      const tokens = await readUserFcmTokens(recipientUid, r);
       if (tokens.length === 0) {
         skippedNoToken++;
         continue;

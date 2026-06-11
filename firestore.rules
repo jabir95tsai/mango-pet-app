@@ -32,17 +32,27 @@ service cloud.firestore {
 
     // ── Users & owned sub-collections ──
     match /users/{uid} {
-      // Family members need to read each other's profile (displayName, photo)
-      // to render member lists / attribution. Email + tokens stay private
-      // because Firestore rules can't filter fields — clients must request
-      // only the fields they need (the AppUser type already excludes them
-      // from rendered UI). For now, allow any signed-in user to read public
-      // profile docs; tighten later if PII concerns emerge.
+      // The public profile doc holds ONLY non-sensitive fields needed by
+      // leaderboard / friends / feed to render other users: displayName,
+      // photoURL, displayNameLower, authProvider, isGuest (+ the caller's
+      // own prefs). Any signed-in user may read it — required for those
+      // features and now safe. PII (email, fcmTokens) lives in the
+      // owner-only `private/contact` subdoc below (security-hardening #2);
+      // Firestore reads are all-or-nothing per doc, so keeping PII OUT of
+      // this doc is the only real protection (a client-side field filter
+      // wouldn't be — the raw SDK read returns every field).
       allow read: if request.auth != null;
       allow create: if request.auth.uid == uid
         && request.resource.data.uid == uid;
       allow update: if request.auth.uid == uid;
       allow delete: if false;
+
+      // ── Private contact PII (security-hardening #2) ──
+      // email + fcmTokens, OWNER-ONLY. Cloud Functions read this via the
+      // Admin SDK (rules bypass) to send push.
+      match /private/{docId} {
+        allow read, write: if request.auth.uid == uid;
+      }
 
       // ── Legacy paths removed 2026-05-23 ──
       // The pre-family schema kept pets/reminders/walks/expenses under
@@ -453,6 +463,13 @@ service cloud.firestore {
     // granted counts + a sample. No client surface. Spec
     // achievements-badges.md §F.
     match /achievementsBackfills/{id} {
+      allow read, write: if false;
+    }
+
+    // ── piiMigrations audit log (server-only) ──
+    // Written by the migrate-user-pii.mjs script (security-hardening #2)
+    // via Admin SDK. One doc per commit run keyed by ISO. No client surface.
+    match /piiMigrations/{id} {
       allow read, write: if false;
     }
 

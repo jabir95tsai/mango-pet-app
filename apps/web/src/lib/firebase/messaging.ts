@@ -10,7 +10,6 @@ import {
   arrayUnion,
   doc,
   setDoc,
-  updateDoc,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getDb, getFirebaseApp } from "./config";
@@ -99,15 +98,20 @@ export async function enablePush(uid: string): Promise<{ token: string } | null>
   if (!token) return null;
 
   // Clear any prior "user turned push off" intent — they just opted back
-  // in. setDoc/merge so pushPrefs.engagementOptOut is preserved.
-  await setDoc(
-    doc(getDb(), "users", uid),
-    {
-      fcmTokens: arrayUnion(token),
-      pushPrefs: { globalDisabled: false },
-    },
-    { merge: true },
-  );
+  // in. fcmTokens are PII → owner-only private subdoc (security-hardening
+  // #2); pushPrefs stays on the public doc (read by the Settings probe).
+  await Promise.all([
+    setDoc(
+      doc(getDb(), "users", uid, "private", "contact"),
+      { fcmTokens: arrayUnion(token) },
+      { merge: true },
+    ),
+    setDoc(
+      doc(getDb(), "users", uid),
+      { pushPrefs: { globalDisabled: false } },
+      { merge: true },
+    ),
+  ]);
 
   return { token };
 }
@@ -122,14 +126,19 @@ export async function enablePush(uid: string): Promise<{ token: string } | null>
  * "off" stick while permission stays "granted".
  */
 export async function disablePush(uid: string): Promise<void> {
-  await setDoc(
-    doc(getDb(), "users", uid),
-    {
-      fcmTokens: [],
-      pushPrefs: { globalDisabled: true },
-    },
-    { merge: true },
-  );
+  // fcmTokens → private subdoc; pushPrefs → public doc (security-hardening #2).
+  await Promise.all([
+    setDoc(
+      doc(getDb(), "users", uid, "private", "contact"),
+      { fcmTokens: [] },
+      { merge: true },
+    ),
+    setDoc(
+      doc(getDb(), "users", uid),
+      { pushPrefs: { globalDisabled: true } },
+      { merge: true },
+    ),
+  ]);
 }
 
 /** Reconcile the in-memory FCM token for the **current browser context**
@@ -179,10 +188,14 @@ export async function reconcileCurrentToken(
     if (!token) return null;
     // arrayUnion is idempotent at the doc level — already-present
     // tokens make this a no-op write that still updates server time.
-    // Acceptable: probe runs once per Settings page open.
-    await updateDoc(doc(getDb(), "users", uid), {
-      fcmTokens: arrayUnion(token),
-    });
+    // Acceptable: probe runs once per Settings page open. fcmTokens →
+    // owner-only private subdoc (security-hardening #2). setDoc/merge
+    // (not updateDoc) so the subdoc is created on first write.
+    await setDoc(
+      doc(getDb(), "users", uid, "private", "contact"),
+      { fcmTokens: arrayUnion(token) },
+      { merge: true },
+    );
     return token;
   } catch {
     return null;

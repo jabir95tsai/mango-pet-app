@@ -28,6 +28,12 @@ function fns() {
   return getFunctions(getFirebaseApp(), FN_REGION);
 }
 
+/** Owner-only private contact subdoc — holds PII (email, fcmTokens) kept
+ *  OUT of the world-readable public profile doc. Security-hardening #2. */
+function privateContactRef(uid: string) {
+  return doc(getDb(), "users", uid, "private", "contact");
+}
+
 const LAST_SEEN_THROTTLE_MS = 60 * 60 * 1000; // 1 hour
 
 function inferProvider(user: User): AuthProviderKind {
@@ -70,21 +76,29 @@ export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<vo
   if (!snap.exists()) {
     // Guest profile: minimal, flagged, and DELIBERATELY no displayNameLower
     // (keeps guests out of friend prefix-search — they can't be friended).
-    await setDoc(ref, {
-      uid: user.uid,
-      displayName: desiredName,
-      ...(isGuest ? {} : { displayNameLower: toDisplayNameLower(desiredName) }),
-      email: user.email,
-      photoURL: desiredPhoto,
-      authProvider: isGuest ? "anonymous" : inferProvider(user),
-      ...(isGuest ? { isGuest: true } : {}),
-      locale,
-      createdAt: serverTimestamp(),
-      lastSeenAt: serverTimestamp(),
-      defaultPostVisibility: "friends",
-      allowFriendRequests: true,
-      fcmTokens: [],
-    });
+    // PII split (security-hardening #2): email + fcmTokens go to the
+    // owner-only users/{uid}/private/contact subdoc, NOT the world-readable
+    // public profile doc. The public doc keeps only displayName / photoURL /
+    // displayNameLower / authProvider / isGuest (+ prefs the app needs).
+    await Promise.all([
+      setDoc(ref, {
+        uid: user.uid,
+        displayName: desiredName,
+        ...(isGuest ? {} : { displayNameLower: toDisplayNameLower(desiredName) }),
+        photoURL: desiredPhoto,
+        authProvider: isGuest ? "anonymous" : inferProvider(user),
+        ...(isGuest ? { isGuest: true } : {}),
+        locale,
+        createdAt: serverTimestamp(),
+        lastSeenAt: serverTimestamp(),
+        defaultPostVisibility: "friends",
+        allowFriendRequests: true,
+      }),
+      setDoc(privateContactRef(user.uid), {
+        email: user.email ?? null,
+        fcmTokens: [],
+      }),
+    ]);
     return;
   }
 
@@ -120,6 +134,20 @@ export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<vo
   const lastSeenMs = (existing.lastSeenAt as Timestamp | undefined)?.toMillis?.() ?? 0;
   if (Date.now() - lastSeenMs > LAST_SEEN_THROTTLE_MS) {
     patch.lastSeenAt = serverTimestamp();
+  }
+
+  // Strip any legacy PII still sitting on the public doc (pre-migration
+  // accounts wrote email/fcmTokens here). Mirror email into the private
+  // subdoc so it isn't lost. fcmTokens are managed by messaging.ts (private),
+  // so we only need to delete the stale public copy here.
+  if ("email" in existing || "fcmTokens" in existing) {
+    patch.email = deleteField();
+    patch.fcmTokens = deleteField();
+    await setDoc(
+      privateContactRef(user.uid),
+      { email: user.email ?? (existing as { email?: string | null }).email ?? null },
+      { merge: true },
+    );
   }
 
   if (Object.keys(patch).length > 0) {

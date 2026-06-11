@@ -102,7 +102,11 @@ export type AppUser = {
    *  after that all new writes set it. See spec
    *  docs/features/friends-search-lowercase.md. */
   displayNameLower?: string;
-  email: string | null;
+  /** @deprecated PII moved to users/{uid}/private/contact (security-hardening
+   *  #2). No longer on the public profile doc; optional only so transitional
+   *  reads during migration still type-check. Read `email` from the Auth
+   *  object or the private subdoc, not here. */
+  email?: string | null;
   photoURL: string | null;
   /** `"anonymous"` for guest (anonymous-auth) users — see `isGuest`. */
   authProvider: AuthProviderKind | "anonymous";
@@ -120,6 +124,9 @@ export type AppUser = {
   lastSeenAt: Timestamp;
   defaultPostVisibility: Visibility;
   allowFriendRequests: boolean;
+  /** @deprecated PII moved to users/{uid}/private/contact (security-hardening
+   *  #2). Managed by messaging.ts (private subdoc) + read server-side by
+   *  Cloud Functions. Not on the public profile doc anymore. */
   fcmTokens?: string[];
   /** Families the user belongs to. Empty array before first migration. */
   familyIds?: string[];
