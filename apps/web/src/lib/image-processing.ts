@@ -125,10 +125,3 @@ export async function processImage(
  *  re-exported here so existing `@/lib/image-processing` imports of
  *  `IMAGE_PRESETS` keep working unchanged. */
 export { IMAGE_PRESETS } from "@mango/shared-business";
-
-/** Human-readable file size, e.g. "2.3 MB". */
-export function humanSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
