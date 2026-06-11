@@ -25,6 +25,12 @@ node_modules/
 *.pem
 __pycache__/
 
+# secrets / service-account keys (防呆：別誤 commit Admin 私鑰)
+*.key
+service-account*.json
+*-adminsdk*.json
+.design-tmp/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
