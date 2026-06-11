@@ -2,12 +2,54 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // ── User-owned files: pets, posts ──
-    match /users/{uid}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == uid
+    // ── User-owned image files ──
+    // Security-hardening #1 (docs/features/security-hardening.md): the old
+    // `match /users/{uid}/{allPaths=**} { allow read: if request.auth != null }`
+    // let ANY signed-in user read EVERY user's files via the recursive
+    // wildcard. We grounded the actual upload paths (apps/web/src/lib/firebase/
+    // storage.ts): there are exactly three, all genuinely shared content that
+    // must stay readable to render the feed / leaderboard / family views:
+    //   - users/{uid}/pets/{petId}/avatar.{ext}     → leaderboard + family
+    //   - users/{uid}/posts/{postId}/{idx}.{ext}    → feed (family/friends)
+    //   - users/{uid}/walks/{walkId}/photos/...      → feed share photos
+    // These keep authenticated-read (Storage rules can't read a Firestore
+    // post's visibility; authenticated-read is the accepted posture for
+    // deliberately-shared photos). Everything else under users/{uid} is
+    // owner-only by default — so any FUTURE private path (e.g. a receipt or
+    // private-gallery upload) is never world-readable by accident. Receipts
+    // today are NOT stored (ai-receipt.ts sends base64 inline to AI Logic),
+    // so there is no private path to special-case yet.
+    //
+    // Storage evaluates ALL matching rules and grants on ANY allow (OR
+    // semantics). The broad owner-only floor below + the three shared-read
+    // subtrees → shared paths are authenticated-read, every other path under
+    // users/{uid} stays owner-only.
+    function ownerImageWrite(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
         && request.resource.size < 10 * 1024 * 1024  // 10 MB
         && request.resource.contentType.matches("image/.*");
+    }
+
+    // Shared, authenticated-readable content (renders in feed/leaderboard).
+    match /users/{uid}/pets/{petId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if ownerImageWrite(uid);
+    }
+    match /users/{uid}/posts/{postId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if ownerImageWrite(uid);
+    }
+    match /users/{uid}/walks/{walkId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if ownerImageWrite(uid);
+    }
+
+    // Default for everything else under a user's namespace: OWNER-ONLY read.
+    // Closes the blanket-read hole; future private uploads are safe by default.
+    match /users/{uid}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if ownerImageWrite(uid);
     }
   }
 }
