@@ -45,7 +45,8 @@ _2026-05-29 PWA PM session 已清空一輪：原 Inbox 10 條全 triage 完 — 
 - **發現於**：2026-06-11、audit session
 - **類型**：設計 / a11y / 文件矛盾
 - **重現 / 觀察**：`.btn-mango`（`apps/web/src/app/globals.css:145-152`）`color:#fff` on mango 漸層，white on #f39800 = 2.6:1 < AA 4.5:1。但 `globals.css:26` a11y 註解寫「CTAs put ink #231B14 on brand instead」（與實作矛盾），而 design-system §4 拍板「主鈕漸層**白字**」、iOS re-skin 也拍板 white-on-gradient → 三方不一致。**不可單方面改**（雙平台品牌決策）。
-- **建議交付給**：PM 裁決（a. 接受現狀+修註解與 §6 明寫 exception / b. 漸層加深到 AA / c. 白字→ink）→ UI/UX 執行
+- **✅ PM 裁決（user 2026-06-03）= 選項 b**：**保留白字、漸層加深讓白字達大字 AA ≥3:1**（字落在 brandDeep 為主的深橘區；不改成 ink）。已鎖進 `docs/design-system.md` §4。
+- **建議交付給**：UI/UX 執行 —（1）`.btn-mango`（`globals.css:145-152`）漸層加深至白字 ≥3:1；（2）**修正 `globals.css:26` 那句錯誤註解**「CTAs put ink on brand」（與 SoT/實作不符）；（3）雙平台一致（iOS 同步）。改後 Chrome MCP 量對比驗 ≥3:1。
 - **優先級提示**：P2
 
 ### 🔒 users/{uid} update rule 無欄位白名單（可寫任意欄位進自己 doc）

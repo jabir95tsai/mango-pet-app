@@ -53,7 +53,9 @@
 
 ## 4. 元件慣例
 
-- **按鈕**：膠囊 `rounded-[var(--radius-pill)]`；主鈕漸層 `linear-gradient(180deg, brand, brandDeep)` 白字 + `--shadow-mango`；按壓 `active:scale-[.97]`。
+- **按鈕**：膠囊 `rounded-[var(--radius-pill)]`；主鈕漸層 `linear-gradient(180deg, brand, brandDeep)` **白字**（品牌定案，雙平台一致）+ `--shadow-mango`；按壓 `active:scale-[.97]`。
+  - ⚠️ **白字對比要求（user 2026-06-03 裁決 P2-1）**：白字 on `brand`(#f39800) 僅 2.6:1，**漸層需加深到讓白字達大字 WCAG AA ≥3:1**（CTA 為 19px/800 大粗字，適用大字門檻；做法：字落在以 `brandDeep`(#d77b00) 為主的深橘區，或整體漸層下移）。**保留白字、不改成 ink**。
+  - 📌 **三方矛盾已裁決**：以本條為準 → `globals.css` 頭部那句「CTAs put ink on brand」**註解是錯的**（與實作/SoT 不符），UI/UX 實作 P2-1 時一併修正該註解。
 - **卡片**：`bg-mango-card`/`card-soft` + `1px hairline` + `--radius-lg/xl` + 暖色柔光 shadow。
 - **Tabs**：**簡單 toggle（active/inactive 切換），不做滑動 indicator。**（codify：web 的 `pet-tabs` / `ui/Tabs` 都是 toggle；先前 session 加的 Reanimated 滑動 indicator 已退掉，**不要再加**。）
 - **頭像**：沿用 `Avatar` 元件（無 src → initials fallback）。
