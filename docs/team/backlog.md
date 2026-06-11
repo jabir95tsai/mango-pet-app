@@ -34,6 +34,34 @@ P3 = 也許永遠不做的「想法」。
 
 _2026-05-29 PWA PM session 已清空一輪：原 Inbox 10 條全 triage 完 — 4 條 SHIPPED/RESOLVED 收進「已處理（audit trail）」、1 條 doc-accuracy 當場修掉、2 條升到對應角色待接、3 條(QR scanner / B4 dormant / settings onboarding link)歸 Deferred。下一個角色 session 新發現的事丟這裡。_
 
+### 📋 全專案健檢 audit-2026-06 — 發現清單待 PM triage（索引條目）
+- **發現於**：2026-06-11、audit session（獨立 worktree，唯讀掃描 + 抽查驗證）
+- **類型**：技術債 / 安全 / 成本 / 設計一致性（綜合）
+- **重現 / 觀察**：完整報告在 [`docs/research/audit-2026-06.md`](../research/audit-2026-06.md)。**P0 新發現 0 條 / P1 1 條 / P2 6 條 / P3 13 條**。重點：App Check 殘餘三件（enforce + GCP key 限制 + iOS）、btn-mango 對比矛盾（見下條）、users rules 無欄位白名單（見下條）、`doc.data() as X` 無 runtime 驗證（40+ 處）、aggregateLeaderboards 成本成長（見下條）、design-system drift 量化（zinc 59 檔 / amber 44 檔 / rounded ~170 處，§7 範圍應擴大到 `ui/` primitives）、walk 統計 helpers 重複 4 份（roadmap 既有 follow-up「stat helpers 收 shared-business」的精確檔位已補在報告 P2-6）。報告含「已排除誤報」與「合格亮點」區（a11y/reduced-motion 全面合格），未來 audit 不用重查。
+- **建議交付給**：PM（讀報告 §1 排序、§4 per-角色摘要直接派工）
+- **優先級提示**：P1（內含 P1/P2 條目，索引本身下個 PM session 處理）
+
+### 🎨 btn-mango 白字對比 2.6:1（AA fail）+ SoT/註解/實作三方矛盾 — 待 PM 裁決
+- **發現於**：2026-06-11、audit session
+- **類型**：設計 / a11y / 文件矛盾
+- **重現 / 觀察**：`.btn-mango`（`apps/web/src/app/globals.css:145-152`）`color:#fff` on mango 漸層，white on #f39800 = 2.6:1 < AA 4.5:1。但 `globals.css:26` a11y 註解寫「CTAs put ink #231B14 on brand instead」（與實作矛盾），而 design-system §4 拍板「主鈕漸層**白字**」、iOS re-skin 也拍板 white-on-gradient → 三方不一致。**不可單方面改**（雙平台品牌決策）。
+- **建議交付給**：PM 裁決（a. 接受現狀+修註解與 §6 明寫 exception / b. 漸層加深到 AA / c. 白字→ink）→ UI/UX 執行
+- **優先級提示**：P2
+
+### 🔒 users/{uid} update rule 無欄位白名單（可寫任意欄位進自己 doc）
+- **發現於**：2026-06-11、audit session
+- **類型**：技術債 / 安全硬化
+- **重現 / 觀察**：`firestore.rules:47` `allow update: if request.auth.uid == uid;` 無 `hasOnly()`/型別約束 → user 可往自己 public profile doc 寫任意欄位（垃圾欄位、偽 `isGuest` 顯示值、超大 doc）。緩解：rules `isGuest()` 是 token-based 不受 doc 欄位影響、PII 已移 private 子集合（#2 done）→ 影響限資料品質非權限突破。
+- **建議交付給**：Backend（加欄位白名單，對齊 pets/photoDownloadState 既有寫法；可掛 security-hardening spec 補 #5）
+- **優先級提示**：P2
+
+### 💰 aggregateLeaderboards 每日全量掃 walks，讀量隨歷史資料無上限成長
+- **發現於**：2026-06-11、audit session
+- **類型**：技術債 / 成本（成本即優先級）
+- **重現 / 觀察**：`functions/src/index.ts:406-409` 每日 cron `collectionGroup("walks").where("familyId","!=",null).get()` 無時間下界全量讀，+ 每 walker × 3 期間重查（all_time 每天重讀該 walker 全部 walks）。code 註解自承是共用 realtime codepath 的刻意 tradeoff — 現在量小可忽略，但這是 app 內唯一隨總 walk 數單調成長的每日全量掃描，量大前要還。選項見報告 P2-4。
+- **建議交付給**：Backend
+- **優先級提示**：P2（觸發條件：walks 總數上萬或 Firestore 帳單可見時升 P1）
+
 ### 🚨 production 早上/下午斷續「進不去」（2026-05-30 user 回報）
 - **發現於**：2026-05-30、PWA PM session（user 回報「今天早上下午好像 app 進不去」）
 - **類型**：bug / production incident / availability
