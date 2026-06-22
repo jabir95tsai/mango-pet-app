@@ -218,7 +218,15 @@ async function findExistingFcmSwRegistration(): Promise<ServiceWorkerRegistratio
   if (!("serviceWorker" in navigator)) return null;
   try {
     const reg = await navigator.serviceWorker.getRegistration(FCM_SCOPE);
-    if (reg) cachedRegistration = reg;
+    if (reg) {
+      cachedRegistration = reg;
+      // Force an update check on app load. Installed PWAs (esp. iOS) keep
+      // running a stale FCM SW for a long time, so push-SW fixes (e.g. the
+      // duplicate-notification fix) never reach the device. The new SW
+      // self.skipWaiting()s, so once this fetch installs it, it activates
+      // and replaces the old one. Fire-and-forget — never blocks lookup.
+      reg.update().catch(() => {});
+    }
     return reg ?? null;
   } catch {
     return null;
