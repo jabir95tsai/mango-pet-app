@@ -59,3 +59,19 @@ glass 化既有 primitives（沿用 fidelity 的 `@/components/ui`）：
 - 不追 iOS 26 私有 Liquid Glass API。
 - 不為玻璃犧牲可讀性 / 效能 / a11y（三者優先於酷炫）。
 - 不改 feature flow / 資料層。
+
+---
+
+## 📦 P-glass-0 + P-glass-1 done（iOS UI/UX，branch `ios-glass-blur`，待 user dev-client 驗）
+
+`tsc --noEmit` 綠；**無新 dep**（expo-blur 已由 Backend merge）。未 merge main — 等 user 用 dev-client 看遛狗頁真玻璃過了再鋪其餘 surface。
+
+| 階段 | commit | 內容 |
+|---|---|---|
+| P-glass-0 | `42f1228` | theme.ts glass 區（3 級 blur intensity + 暖 tint overlay + 實心 fallback、微光邊 top highlight+0.5px ring、mango 暖陰影、glassRadius、cream→amber 背景漸層）；`useReduceTransparency` hook（live 訂閱，硬 a11y）；`@/components/ui` glass primitives 建在共用 `GlassSurface` 上：GlassSurface / GlassCard / GlassPill / GlassBackground / GlassTopBar / GlassFab / GlassSheet / GlassNavBar（raised disc 用 absolute overlay 浮出 blur 裁切）。Reduce Transparency → 全退實心暖面。 |
+| P-glass-1（hero） | `24bae23` | 遛狗頁：底部 nav → `GlassNavBar`（毛玻璃條 + 玻璃 raised disc + mango 漸層核心）；頁面包 `GlassBackground`（mango 漸層 canvas）；dial 中央 disc → `GlassSurface`（毛玻璃透出漸層，走路狗在上）；week strip → `GlassCard`；最近遛狗 row 保持實色卡（不每列 blur）。同畫面 ~3 個 BlurView。 |
+
+### 待 user（dev-client，先看這一頁）
+- 切到 `ios-glass-blur` branch + metro hot-reload → 看**遛狗頁**真玻璃。
+- 看：①玻璃方向對不對 ②scroll 效能順不順（3 個 blur）③Reduce Transparency 開了有沒有正確退實心 ④文字在玻璃上 AA 可讀。
+- 過了 → 鋪 home/feed（大圖測 scrim）/pets/leaderboard/settings。
