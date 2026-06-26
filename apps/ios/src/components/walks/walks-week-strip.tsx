@@ -9,7 +9,8 @@
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Ellipse, Path } from "react-native-svg";
 
-import { colors, radius, shadows, spacing } from "@/theme/theme";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { colors, spacing } from "@/theme/theme";
 
 const DAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
 
@@ -33,7 +34,7 @@ type Props = {
 
 export function WalksWeekStrip({ days, todayIdx, complete }: Props) {
   return (
-    <View style={styles.card}>
+    <GlassCard level="regular" padded={false} contentStyle={styles.card}>
       {days.map((done, i) => {
         const isToday = i === todayIdx;
         const todayDone = isToday && complete;
@@ -64,21 +65,17 @@ export function WalksWeekStrip({ days, todayIdx, complete }: Props) {
           </View>
         );
       })}
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
+  // GlassCard provides the surface; this is just the inner day-row layout.
   card: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: colors.card,
-    borderRadius: radius.xl2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
-    ...shadows.card,
   },
   col: { alignItems: "center", gap: 6, flex: 1 },
   label: { fontSize: 11, fontWeight: "600", letterSpacing: 0.4, color: colors.ink3 },
