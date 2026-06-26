@@ -22,6 +22,7 @@ import { useWalksData } from "@/lib/use-walks-data";
 import { WalksDial } from "@/components/walks/walks-dial";
 import { WalksWeekStrip } from "@/components/walks/walks-week-strip";
 import { WalksStreakChip } from "@/components/walks/walks-streak-chip";
+import { WalksStartCta } from "@/components/walks/walks-start-cta";
 import { PetPill } from "@/components/walks/pet-pill";
 import { WalkRow } from "@/components/walks/walk-row";
 import { WalkTrackingView } from "@/components/walks/walk-tracking-view";
@@ -30,7 +31,6 @@ import { PhotoShareFlow } from "@/components/walks/photo-share-flow";
 import { newWalkId } from "@/lib/walks";
 import { Screen } from "@/components/ui/Screen";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Button } from "@/components/ui/Button";
 import { colors, radius, spacing } from "@/theme/theme";
 
 const WEEK_GOAL_COUNT = 5;
@@ -204,16 +204,7 @@ export default function WalksScreen() {
       {/* Sticky CTA — floats above the bottom tab bar */}
       {!sessionOpen ? (
         <View style={[styles.ctaDock, { bottom: insets.bottom + 76 }]}>
-          <Button
-            label="開始遛狗"
-            icon="▶"
-            size="lg"
-            fullWidth
-            pill
-            disabled={pets.length === 0}
-            onPress={handleStartWalking}
-            accessibilityLabel="開始遛狗"
-          />
+          <WalksStartCta onPress={handleStartWalking} disabled={pets.length === 0} />
         </View>
       ) : null}
 
