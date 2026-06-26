@@ -11,7 +11,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { HumanLeaderboard } from "@/components/leaderboard/human-leaderboard";
 import { DogLeaderboard } from "@/components/leaderboard/dog-leaderboard";
 import { Segmented } from "@/components/leaderboard/segmented";
-import { GlassBackground } from "@/components/ui/GlassBackground";
 import { t } from "@/lib/i18n";
 import { colors, spacing } from "@/theme/theme";
 
@@ -37,8 +36,7 @@ export default function LeaderboardScreen() {
   const goFriends = () => router.push("/friends");
 
   return (
-    <GlassBackground>
-    <SafeAreaView edges={["top"]} style={styles.flexGlass}>
+    <SafeAreaView edges={["top"]} style={styles.flex}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* 人/狗 dimension toggle sits at the very top — above the board's
             own「排行榜」title — matching web (page-level Tabs over each
@@ -60,13 +58,11 @@ export default function LeaderboardScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
-    </GlassBackground>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
-  flexGlass: { flex: 1, backgroundColor: "transparent" },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   board: { marginTop: spacing.sm },
 });

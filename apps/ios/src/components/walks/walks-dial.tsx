@@ -11,6 +11,7 @@
 import { memo, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Check } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, G } from "react-native-svg";
 import Reanimated, {
   Easing,
@@ -20,7 +21,6 @@ import Reanimated, {
 } from "react-native-reanimated";
 
 import { WalksPetWalking } from "./walks-pet-walking";
-import { GlassSurface } from "@/components/ui/GlassSurface";
 import { colors } from "@/theme/theme";
 
 const SIZE = 232;
@@ -75,16 +75,15 @@ function WalksDialBase({ percent, complete, doneMin, goalMin }: Props) {
         </G>
       </Svg>
 
-      {/* Centre glass disc with the walking dog (frosts the page gradient) */}
-      <GlassSurface
-        level="regular"
-        radius={DISC / 2}
-        shadow={false}
-        style={styles.discPos}
-        contentStyle={styles.disc}
+      {/* Centre gradient disc with the walking dog */}
+      <LinearGradient
+        colors={complete ? ["#fff7e0", "#ffeec2"] : ["#ffe9b8", "#ffcf75"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.disc}
       >
         <WalksPetWalking complete={complete} />
-      </GlassSurface>
+      </LinearGradient>
 
       {/* Goal-hit check badge */}
       {complete ? (
@@ -125,10 +124,13 @@ const styles = StyleSheet.create({
     borderRadius: (SIZE + 20) / 2,
     backgroundColor: "rgba(95,168,88,0.10)",
   },
-  discPos: { position: "absolute", top: 28, left: 28 },
   disc: {
+    position: "absolute",
+    top: 28,
+    left: 28,
     width: DISC,
     height: DISC,
+    borderRadius: DISC / 2,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -1,15 +1,15 @@
 import { Tabs } from "expo-router";
 
-import { GlassNavBar, type TabBarProps } from "@/components/ui/GlassNavBar";
+import { RaisedTabBar, type TabBarProps } from "@/components/raised-tab-bar";
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{ headerShown: false }}
-      // Glass raised-disc bar; cast to our minimal prop shape to stay decoupled
-      // from the @react-navigation version.
+      // Custom bar handles the raised center disc; cast to our minimal prop
+      // shape to stay decoupled from the @react-navigation version.
       tabBar={(props) => (
-        <GlassNavBar {...(props as unknown as TabBarProps)} />
+        <RaisedTabBar {...(props as unknown as TabBarProps)} />
       )}
     >
       <Tabs.Screen name="index" options={{ title: "首頁" }} />

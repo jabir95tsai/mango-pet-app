@@ -45,7 +45,6 @@ import { HealthForm } from "@/components/pets/health-form";
 import { ReceiptScanner } from "@/components/pets/receipt-scanner";
 import { LinearGradient } from "expo-linear-gradient";
 import { Plus } from "lucide-react-native";
-import { GlassBackground } from "@/components/ui/GlassBackground";
 import { colors, mangoGradient, radius, spacing } from "@/theme/theme";
 
 const tPP = scoped("PetsPage");
@@ -122,39 +121,34 @@ export default function PetsScreen() {
   // Initial load → spinner.
   if (loading && pets.length === 0) {
     return (
-      <GlassBackground>
-        <SafeAreaView style={styles.safeGlass} edges={["top"]}>
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.brand} />
-          </View>
-        </SafeAreaView>
-      </GlassBackground>
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.brand} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   // 0 pets → empty state, no tabs.
   if (pets.length === 0) {
     return (
-      <GlassBackground>
-        <SafeAreaView style={styles.safeGlass} edges={["top"]}>
-          <PetsEmptyState onAddPet={() => setForm({ kind: "pet" })} />
-          {form?.kind === "pet" ? (
-            <PetForm
-              familyId={familyId}
-              uid={uid}
-              pet={form.pet}
-              onClose={closeForm}
-              onSaved={afterSave}
-            />
-          ) : null}
-        </SafeAreaView>
-      </GlassBackground>
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <PetsEmptyState onAddPet={() => setForm({ kind: "pet" })} />
+        {form?.kind === "pet" ? (
+          <PetForm
+            familyId={familyId}
+            uid={uid}
+            pet={form.pet}
+            onClose={closeForm}
+            onSaved={afterSave}
+          />
+        ) : null}
+      </SafeAreaView>
     );
   }
 
   return (
-    <GlassBackground>
-    <SafeAreaView style={styles.safeGlass} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
@@ -308,13 +302,11 @@ export default function PetsScreen() {
         />
       ) : null}
     </SafeAreaView>
-    </GlassBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  safeGlass: { flex: 1, backgroundColor: "transparent" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm },
   topBar: {

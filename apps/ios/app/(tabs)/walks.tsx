@@ -31,7 +31,6 @@ import { newWalkId } from "@/lib/walks";
 import { Screen } from "@/components/ui/Screen";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { GlassBackground } from "@/components/ui/GlassBackground";
 import { colors, radius, spacing } from "@/theme/theme";
 
 const WEEK_GOAL_COUNT = 5;
@@ -105,8 +104,7 @@ export default function WalksScreen() {
   const visibleWalks = showAllWalks ? walks : walks.slice(0, RECENT_LIMIT);
 
   return (
-    <GlassBackground>
-    <SafeAreaView style={styles.safeGlass} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
@@ -256,13 +254,11 @@ export default function WalksScreen() {
         onSaved={data.refresh}
       />
     </SafeAreaView>
-    </GlassBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  safeGlass: { flex: 1, backgroundColor: "transparent" },
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   flex: { flex: 1 },
   topBar: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.md },

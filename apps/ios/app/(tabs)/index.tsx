@@ -30,8 +30,6 @@ import { StoriesBar } from "@/components/home/stories-bar";
 import { FeedSectionHeader } from "@/components/home/feed-section-header";
 import { HomeEmptyState } from "@/components/home/home-empty-state";
 import { InviteFamilyCard } from "@/components/home/invite-family-card";
-import { GlassBackground } from "@/components/ui/GlassBackground";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { t } from "@/lib/i18n";
 import { colors, spacing } from "@/theme/theme";
 
@@ -71,17 +69,14 @@ export default function HomeScreen() {
   // Variant: 0 pets → full hero
   if (pets.length === 0) {
     return (
-      <GlassBackground>
-        <SafeAreaView edges={["top"]} style={styles.flexGlass}>
-          <HomeEmptyState onAddPet={() => router.push("/(tabs)/pets")} />
-        </SafeAreaView>
-      </GlassBackground>
+      <SafeAreaView edges={["top"]} style={styles.flex}>
+        <HomeEmptyState onAddPet={() => router.push("/(tabs)/pets")} />
+      </SafeAreaView>
     );
   }
 
   return (
-    <GlassBackground>
-    <SafeAreaView edges={["top"]} style={styles.flexGlass}>
+    <SafeAreaView edges={["top"]} style={styles.flex}>
       <HomeTopBar
         familyName={isPersonal ? null : familyName}
         userDisplayName={userName}
@@ -113,10 +108,10 @@ export default function HomeScreen() {
         />
 
         {posts.length === 0 ? (
-          <GlassCard style={styles.hintWrap} contentStyle={styles.hintInner}>
+          <View style={styles.hint}>
             <Text style={styles.hintTitle}>{t("Home.feed.emptyTitle")}</Text>
             <Text style={styles.hintBody}>{t("Home.feed.emptyHint")}</Text>
-          </GlassCard>
+          </View>
         ) : (
           <View style={styles.feed}>
             {posts.map((p) => (
@@ -157,18 +152,25 @@ export default function HomeScreen() {
         />
       ) : null}
     </SafeAreaView>
-    </GlassBackground>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
-  flexGlass: { flex: 1, backgroundColor: "transparent" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
   scroll: { paddingBottom: spacing.xxl },
   feed: { gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.xs },
-  hintWrap: { marginHorizontal: spacing.lg, marginTop: spacing.sm },
-  hintInner: { padding: spacing.xl, alignItems: "center", gap: spacing.xs },
+  hint: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    padding: spacing.xl,
+    borderRadius: 16,
+    backgroundColor: colors.cardSoft,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: "center",
+    gap: spacing.xs,
+  },
   hintTitle: { fontSize: 15, fontWeight: "800", color: colors.ink },
   hintBody: { fontSize: 13, color: colors.ink2, textAlign: "center" },
 });

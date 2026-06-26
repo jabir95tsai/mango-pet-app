@@ -99,25 +99,21 @@ export type TypeToken = keyof typeof type;
 // and a `solid` fallback used when Reduce Transparency is on (see
 // useReduceTransparency) — the whole point of the a11y path is NO blur, an
 // opaque warm surface instead.
-// Tuned to the user's confirmed direction (glass-direction tuner 2026-06-26):
-// regular card ≈ blur 20 / tint 16% / edge 40% / radius 20 (frosted, calm).
-// thin/thick scale around regular; "frosted not heavy" → thick kept moderate.
 export const glass = {
   // nav / chips — light blur, faint white tint.
-  thin: { intensity: 22, overlay: "rgba(255,255,255,0.10)", solid: colors.cardSoft },
-  // cards / hero panels — medium blur, warm mango-white tint (the tuned level).
-  regular: { intensity: 44, overlay: "rgba(255,250,238,0.16)", solid: colors.card },
-  // sheets / modals — heavier, but not a thick fog.
-  thick: { intensity: 62, overlay: "rgba(255,248,235,0.22)", solid: colors.card },
+  thin: { intensity: 24, overlay: "rgba(255,255,255,0.10)", solid: colors.cardSoft },
+  // cards / hero panels — medium blur, warm mango-white tint.
+  regular: { intensity: 46, overlay: "rgba(255,250,238,0.16)", solid: colors.card },
+  // sheets / modals — heavy blur, thicker tint for contrast.
+  thick: { intensity: 72, overlay: "rgba(255,248,235,0.22)", solid: colors.card },
 } as const;
 
 export type GlassLevel = keyof typeof glass;
 
 // Micro-light edge — a 1px top highlight + a 0.5px full ring give the pane its
-// "lifted glass" 3-D read. Top highlight at 40% per the tuner (softer than the
-// initial 55%); ring slightly under that.
+// "lifted glass" 3-D read. Keep subtle; too bright reads as a white border.
 export const glassEdge = {
-  topHighlight: "rgba(255,255,255,0.40)",
+  topHighlight: "rgba(255,255,255,0.55)",
   ring: "rgba(255,255,255,0.32)",
 };
 
@@ -131,8 +127,8 @@ export const glassShadow = {
   elevation: 8,
 } satisfies ViewStyle;
 
-// Continuous large corners for glass surfaces (card 20 per the tuner).
-export const glassRadius = { card: 20, sheet: 24, nav: 24, pill: 9999 } as const;
+// Continuous large corners for glass surfaces.
+export const glassRadius = { card: 24, sheet: 28, nav: 28, pill: 9999 } as const;
 
 // Page canvas — a warm mango gradient (cream → soft amber) so glass has
 // something to refract; pure white behind glass reads as flat. Vertical.
