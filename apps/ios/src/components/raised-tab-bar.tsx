@@ -63,21 +63,22 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
     if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
   };
 
+  // ONE continuous SVG covers the notched bar AND the safe-area below it — no
+  // two-piece seam. Scale the viewBox height with the render height so the notch
+  // (y 0-40) keeps its pixel size while the extra fill extends straight down.
+  const renderH = BAR_H + insets.bottom;
+  const vbH = Math.round((78 * renderH) / BAR_H);
+  const NOTCH = "M0,0 H143 C169,0 161,40 195,40 C229,40 221,0 247,0 H390";
+
   return (
-    <View style={[styles.wrap, { height: BAR_H + insets.bottom }]}>
-      {/* safe-area strip below the notched bar */}
-      <View style={[styles.safeStrip, { height: insets.bottom }]} pointerEvents="none" />
-      {/* notched card-soft bar */}
+    <View style={[styles.wrap, { height: renderH }]}>
       <View style={styles.barShadow} pointerEvents="none">
-        <Svg width={width} height={BAR_H} viewBox="0 0 390 78" preserveAspectRatio="none">
-          {/* fill only — no stroke, so no seam line on the bottom / sides */}
+        <Svg width={width} height={renderH} viewBox={`0 0 390 ${vbH}`} preserveAspectRatio="none">
+          {/* fill only — no stroke, so no seam line anywhere */}
+          <Path d={`${NOTCH} V${vbH} H0 Z`} fill={colors.cardSoft} />
+          {/* stroke ONLY the top edge + notch curve (open path) */}
           <Path
-            d="M0,0 H143 C169,0 161,40 195,40 C229,40 221,0 247,0 H390 V78 H0 Z"
-            fill={colors.cardSoft}
-          />
-          {/* stroke ONLY the top edge + the notch curve (open path) */}
-          <Path
-            d="M0,0 H143 C169,0 161,40 195,40 C229,40 221,0 247,0 H390"
+            d={NOTCH}
             fill="none"
             stroke={colors.hairline}
             strokeWidth={1}
@@ -148,13 +149,6 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
 
 const styles = StyleSheet.create({
   wrap: { position: "relative", backgroundColor: "transparent" },
-  safeStrip: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.cardSoft,
-  },
   barShadow: {
     position: "absolute",
     top: 0,
