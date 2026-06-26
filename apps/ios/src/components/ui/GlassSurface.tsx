@@ -16,9 +16,17 @@
 import type { ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { BlurView } from "expo-blur";
+import { requireOptionalNativeModule } from "expo-modules-core";
 
 import { useReduceTransparency } from "@/lib/use-reduce-transparency";
 import { colors, glass, glassEdge, glassRadius, glassShadow, type GlassLevel } from "@/theme/theme";
+
+// Is the expo-blur NATIVE view actually in this binary? A dev-client / build
+// made before expo-blur was added won't have it — rendering <BlurView> there
+// throws "Unimplemented component: ExpoBlurView". Probe once (non-throwing) and
+// fall back to the opaque surface so the app never errors; real glass appears
+// automatically once a blur-enabled build is installed.
+const BLUR_AVAILABLE = requireOptionalNativeModule("ExpoBlurView") != null;
 
 type Props = {
   children?: ReactNode;
@@ -46,8 +54,9 @@ export function GlassSurface({
   const reduce = useReduceTransparency();
   const g = glass[level];
 
-  if (reduce) {
-    // Opaque warm fallback — keeps full contrast, no translucency.
+  if (reduce || !BLUR_AVAILABLE) {
+    // Opaque warm fallback — Reduce Transparency (a11y) OR a build without the
+    // expo-blur native view. Keeps full contrast, no translucency.
     return (
       <View
         style={[
