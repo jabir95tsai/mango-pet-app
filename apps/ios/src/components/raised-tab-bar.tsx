@@ -46,8 +46,13 @@ const LABELS: Record<string, string> = {
   settings: "設定",
 };
 const CENTER_ROUTE = "walks";
-const BAR_H = 62;
+// Taller than the web px so the raised disc's real RN footprint (it pops up AND
+// extends down) clears the centre label below it. The cream ring is a real
+// circle here (RN has no box-shadow spread), so it adds layout — accounted for.
+const BAR_H = 72;
 const DISC = 62;
+const RING = DISC + 10; // 5px cream ring (web box-shadow 0 0 0 5px mango-bg)
+const DISC_TOP = -20;
 
 export function RaisedTabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
@@ -161,14 +166,14 @@ const styles = StyleSheet.create({
   labelActive: { fontWeight: "700", color: colors.brandDeep },
   dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.brand, opacity: 0 },
   dotActive: { opacity: 1 },
-  centerCell: { flex: 1, alignItems: "center", justifyContent: "flex-end", paddingBottom: 6 },
+  centerCell: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
   // 5px cream ring around the 62px disc (web: box-shadow 0 0 0 5px mango-bg).
   discRing: {
     position: "absolute",
-    top: -16,
-    width: DISC + 10,
-    height: DISC + 10,
-    borderRadius: (DISC + 10) / 2,
+    top: DISC_TOP,
+    width: RING,
+    height: RING,
+    borderRadius: RING / 2,
     backgroundColor: colors.bg,
     alignItems: "center",
     justifyContent: "center",
@@ -186,5 +191,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  centerLabel: { fontSize: 10.5, lineHeight: 12, fontWeight: "700", color: colors.brandDeep },
+  // pinned to the cell bottom so the popped-up disc never covers it.
+  centerLabel: {
+    position: "absolute",
+    bottom: 5,
+    fontSize: 10.5,
+    lineHeight: 12,
+    fontWeight: "700",
+    color: colors.brandDeep,
+  },
 });
