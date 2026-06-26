@@ -93,12 +93,63 @@ export const type = {
 
 export type TypeToken = keyof typeof type;
 
+// ── Apple Glass material system (docs/features/ios-apple-glass-design-system) ──
+// Glassmorphism via expo-blur BlurView + a warm mango-white tint overlay + a
+// micro-light edge. Each level pairs a blur `intensity` with a tint `overlay`
+// and a `solid` fallback used when Reduce Transparency is on (see
+// useReduceTransparency) — the whole point of the a11y path is NO blur, an
+// opaque warm surface instead.
+export const glass = {
+  // nav / chips — light blur, faint white tint.
+  thin: { intensity: 24, overlay: "rgba(255,255,255,0.10)", solid: colors.cardSoft },
+  // cards / hero panels — medium blur, warm mango-white tint.
+  regular: { intensity: 46, overlay: "rgba(255,250,238,0.16)", solid: colors.card },
+  // sheets / modals — heavy blur, thicker tint for contrast.
+  thick: { intensity: 72, overlay: "rgba(255,248,235,0.22)", solid: colors.card },
+} as const;
+
+export type GlassLevel = keyof typeof glass;
+
+// Micro-light edge — a 1px top highlight + a 0.5px full ring give the pane its
+// "lifted glass" 3-D read. Keep subtle; too bright reads as a white border.
+export const glassEdge = {
+  topHighlight: "rgba(255,255,255,0.55)",
+  ring: "rgba(255,255,255,0.32)",
+};
+
+// Floating depth — soft, low, mango-tinted (warm brown) rather than a hard
+// black shadow.
+export const glassShadow = {
+  shadowColor: "#7a4a12",
+  shadowOpacity: 0.18,
+  shadowRadius: 24,
+  shadowOffset: { width: 0, height: 12 },
+  elevation: 8,
+} satisfies ViewStyle;
+
+// Continuous large corners for glass surfaces.
+export const glassRadius = { card: 24, sheet: 28, nav: 28, pill: 9999 } as const;
+
+// Page canvas — a warm mango gradient (cream → soft amber) so glass has
+// something to refract; pure white behind glass reads as flat. Vertical.
+export const glassBgGradient = {
+  colors: ["#fff7ec", "#fdeccb", "#fbe2bd"] as const,
+  locations: [0, 0.55, 1] as const,
+  start: { x: 0.5, y: 0 },
+  end: { x: 0.5, y: 1 },
+};
+
 export const theme = {
   colors,
   spacing,
   radius,
   shadows,
   type,
+  glass,
+  glassEdge,
+  glassShadow,
+  glassRadius,
+  glassBgGradient,
 } as const;
 
 export type Theme = typeof theme;
