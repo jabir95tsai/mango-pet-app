@@ -70,9 +70,15 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
       {/* notched card-soft bar */}
       <View style={styles.barShadow} pointerEvents="none">
         <Svg width={width} height={BAR_H} viewBox="0 0 390 78" preserveAspectRatio="none">
+          {/* fill only — no stroke, so no seam line on the bottom / sides */}
           <Path
             d="M0,0 H143 C169,0 161,40 195,40 C229,40 221,0 247,0 H390 V78 H0 Z"
             fill={colors.cardSoft}
+          />
+          {/* stroke ONLY the top edge + the notch curve (open path) */}
+          <Path
+            d="M0,0 H143 C169,0 161,40 195,40 C229,40 221,0 247,0 H390"
+            fill="none"
             stroke={colors.hairline}
             strokeWidth={1}
             vectorEffect="non-scaling-stroke"
