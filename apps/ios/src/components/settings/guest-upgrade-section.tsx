@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   body: { fontSize: 12, color: colors.ink2, lineHeight: 18 },
   actions: { gap: spacing.sm, marginTop: spacing.xs },
   btn: { height: 48, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  google: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairline },
+  google: { backgroundColor: "rgba(255,255,255,0.55)", borderWidth: 1, borderColor: colors.hairline },
   googleText: { fontSize: 15, fontWeight: "700", color: colors.ink },
   apple: { backgroundColor: "#000" },
   appleText: { fontSize: 15, fontWeight: "700", color: "#fff" },

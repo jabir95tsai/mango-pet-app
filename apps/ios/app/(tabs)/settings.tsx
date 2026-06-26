@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { signOut } from "@/lib/auth";
+import { GlassBackground } from "@/components/ui/GlassBackground";
 import { SITE_URL } from "@/lib/config";
 import { useAuth } from "@/state/auth-context";
 import { UserAvatar } from "@/components/feed/user-avatar";
@@ -31,7 +32,8 @@ export default function SettingsScreen() {
   const name = user?.displayName ?? (isGuest ? "訪客" : user?.email?.split("@")[0] ?? "");
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.flex}>
+    <GlassBackground>
+    <SafeAreaView edges={["top"]} style={styles.flexGlass}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>設定</Text>
       </View>
@@ -102,20 +104,22 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </GlassBackground>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
+  flexGlass: { flex: 1, backgroundColor: "transparent" },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   headerTitle: { fontSize: 22, fontWeight: "800", color: colors.ink },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   profile: {
     gap: spacing.md,
-    backgroundColor: colors.card,
+    backgroundColor: "rgba(255,255,255,0.55)",
     borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.hairline,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.5)",
     padding: spacing.lg,
   },
   profileRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },

@@ -87,7 +87,7 @@ export function EngagementPushSection() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: "rgba(255,255,255,0.55)",
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.hairline,

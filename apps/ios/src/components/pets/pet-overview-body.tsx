@@ -14,6 +14,7 @@ import type { Expense, Pet, Reminder, Walk } from "@mango/shared-types";
 
 import { groupThousands } from "@/lib/format";
 import { scoped } from "@/lib/i18n";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { colors, radius, shadows, spacing } from "@/theme/theme";
 import { PetReminderCard } from "./pet-reminder-card";
 import { PetExpenseCard } from "./pet-expense-card";
@@ -61,7 +62,7 @@ function PetStatTile({
   subTone?: StatTone | "muted";
 }) {
   return (
-    <View style={styles.tile}>
+    <GlassCard style={styles.tileWrap} contentStyle={styles.tile}>
       <View style={styles.tileHead}>
         <View style={[styles.tileIcon, { backgroundColor: ICON_BG[tone] }]}>
           <Icon size={16} color={ICON_FG[tone]} strokeWidth={1.8} />
@@ -79,7 +80,7 @@ function PetStatTile({
           {sub}
         </Text>
       ) : null}
-    </View>
+    </GlassCard>
   );
 }
 
@@ -208,18 +209,8 @@ export function PetOverviewBody({
 const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  tile: {
-    flexGrow: 1,
-    flexBasis: "47%",
-    minHeight: 116,
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    padding: 14,
-    gap: 8,
-    ...shadows.card,
-  },
+  tileWrap: { flexGrow: 1, flexBasis: "47%" },
+  tile: { minHeight: 116, padding: 14, gap: 8 },
   tileHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   tileIcon: {
     width: 30,

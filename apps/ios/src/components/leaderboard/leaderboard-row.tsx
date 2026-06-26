@@ -142,9 +142,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.lg,
     overflow: "hidden",
-    backgroundColor: colors.card,
+    // list row → translucent SOLID (cheap "glass" — no per-row BlurView, per the
+    // glass perf guardrail). The warm gradient shows faintly through.
+    backgroundColor: "rgba(255,255,255,0.55)",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.bellTint,
+    borderColor: "rgba(255,255,255,0.5)",
     ...shadows.card,
   },
   rowMe: {

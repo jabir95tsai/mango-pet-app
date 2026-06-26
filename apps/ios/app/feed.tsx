@@ -24,6 +24,7 @@ import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { PhotoLightbox } from "@/components/feed/photo-lightbox";
 import { savePhotoToAlbum } from "@/lib/save-photo";
+import { GlassBackground } from "@/components/ui/GlassBackground";
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 
@@ -42,7 +43,8 @@ export default function FeedScreen() {
   );
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.flex}>
+    <GlassBackground>
+    <SafeAreaView edges={["top"]} style={styles.flexGlass}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="返回"
@@ -117,11 +119,13 @@ export default function FeedScreen() {
         />
       ) : null}
     </SafeAreaView>
+    </GlassBackground>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
+  flexGlass: { flex: 1, backgroundColor: "transparent" },
   header: {
     flexDirection: "row",
     alignItems: "center",

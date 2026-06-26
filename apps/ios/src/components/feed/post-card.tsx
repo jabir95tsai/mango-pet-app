@@ -20,7 +20,8 @@ import type { Post, Visibility } from "@mango/shared-types";
 
 import { deletePost } from "@/lib/posts";
 import { relativeTime } from "@/lib/format";
-import { colors, radius, shadows, spacing } from "@/theme/theme";
+import { colors, radius, spacing } from "@/theme/theme";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { UserAvatar } from "./user-avatar";
 import { EmojiReactions } from "./emoji-reactions";
 import { CommentSection } from "./comment-section";
@@ -78,7 +79,7 @@ export function PostCard({
   }
 
   return (
-    <View style={[styles.card, deleting && styles.deleting]}>
+    <GlassCard padded={false} contentStyle={[styles.card, deleting && styles.deleting]}>
       <View style={styles.header}>
         <UserAvatar name={post.authorName} photoURL={post.authorPhotoURL} size={40} />
         <View style={styles.headerText}>
@@ -149,7 +150,7 @@ export function PostCard({
           onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
         />
       ) : null}
-    </View>
+    </GlassCard>
   );
 }
 
@@ -205,15 +206,10 @@ function PhotoGrid({
 }
 
 const styles = StyleSheet.create({
+  // surface (bg/border/shadow/radius) comes from GlassCard; this is inner only.
   card: {
-    backgroundColor: colors.card,
-    // web post-card uses Tailwind rounded-lg (8px) + shadow-sm, not the mango vars.
-    borderRadius: radius.sm,
     padding: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
     gap: spacing.md,
-    ...shadows.card,
   },
   deleting: { opacity: 0.5 },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
