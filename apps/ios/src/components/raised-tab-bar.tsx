@@ -1,10 +1,15 @@
-// Custom 5-tab bottom nav with a raised center disc, aligned to web Epic 4
-// Phase 0.5 IA: [home, pets, walks(center), leaderboard, settings]. The center
-// "walks" tab floats above the bar as a brand disc — the core 遛狗 entry point.
-import { Pressable, StyleSheet, Text, View } from "react-native";
+// Bottom 5-tab nav — 1:1 with the web PWA app-nav.tsx mobile bar:
+//  · a notched card-soft bar (SVG path, dip in the middle) + soft top shadow
+//  · 4 side tabs: lucide icon (24) + 10px label + a 5px brand active dot;
+//    active = brand-deep (icon nudged up), inactive = ink-2
+//  · raised centre "walks" disc: 62px, top -16, brand→brand-deep gradient,
+//    amber shadow + 5px cream (mango-bg) ring, white filled PawPrint + label.
+// Matches web exactly (incl. pets + centre both PawPrint — the web does this).
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Path } from "react-native-svg";
 import {
-  Footprints,
   Home,
   PawPrint,
   Settings,
@@ -12,10 +17,8 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors } from "@/theme/theme";
 
-// Minimal structural type of what React Navigation hands a custom tabBar.
-// Typed locally to avoid coupling to a specific @react-navigation version.
 export type TabBarProps = {
   state: { index: number; routes: { key: string; name: string }[] };
   navigation: {
@@ -28,20 +31,13 @@ export type TabBarProps = {
   };
 };
 
-// Icons are the SAME lucide set as web app-nav (lucide-react-native ↔
-// lucide-react): home→Home, pets→PawPrint, walks→Footprints, leaderboard→
-// Trophy, settings→Settings. Web's NAV_ITEMS maps walks→Footprints; the raised
-// centre uses Footprints here (per iOS PM directive) so pets (PawPrint) and
-// walks (Footprints) read as distinct, not two paws. Labels are the shared-i18n
-// Nav catalog values verbatim (我的寵物 / 排行榜).
+// Side-tab icons (centre handled separately). pets = PawPrint, like web.
 const ICONS: Record<string, LucideIcon> = {
   index: Home,
   pets: PawPrint,
-  walks: Footprints,
   leaderboard: Trophy,
   settings: Settings,
 };
-
 const LABELS: Record<string, string> = {
   index: "首頁",
   pets: "我的寵物",
@@ -49,121 +45,146 @@ const LABELS: Record<string, string> = {
   leaderboard: "排行榜",
   settings: "設定",
 };
-
 const CENTER_ROUTE = "walks";
+const BAR_H = 62;
+const DISC = 62;
 
 export function RaisedTabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  const press = (route: { key: string; name: string }, focused: boolean) => () => {
+    const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+    if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+  };
 
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom || spacing.sm }]}>
-      {state.routes.map((route, index) => {
-        const focused = state.index === index;
-        const isCenter = route.name === CENTER_ROUTE;
+    <View style={[styles.wrap, { height: BAR_H + insets.bottom }]}>
+      {/* safe-area strip below the notched bar */}
+      <View style={[styles.safeStrip, { height: insets.bottom }]} pointerEvents="none" />
+      {/* notched card-soft bar */}
+      <View style={styles.barShadow} pointerEvents="none">
+        <Svg width={width} height={BAR_H} viewBox="0 0 390 78" preserveAspectRatio="none">
+          <Path
+            d="M0,0 H143 C169,0 161,40 195,40 C229,40 221,0 247,0 H390 V78 H0 Z"
+            fill={colors.cardSoft}
+            stroke={colors.hairline}
+            strokeWidth={1}
+            vectorEffect="non-scaling-stroke"
+          />
+        </Svg>
+      </View>
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: "tabPress",
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        };
+      {/* tabs row */}
+      <View style={[styles.row, { height: BAR_H }]}>
+        {state.routes.map((route, index) => {
+          const focused = state.index === index;
 
-        const Icon = ICONS[route.name];
-
-        if (isCenter) {
-          return (
-            <View key={route.key} style={styles.centerSlot}>
+          if (route.name === CENTER_ROUTE) {
+            return (
               <Pressable
+                key={route.key}
                 accessibilityRole="button"
                 accessibilityLabel={LABELS[route.name]}
                 accessibilityState={{ selected: focused }}
-                onPress={onPress}
-                style={({ pressed }) => [
-                  styles.centerDisc,
-                  pressed && styles.pressed,
-                ]}
+                onPress={press(route, focused)}
+                style={styles.centerCell}
               >
-                {Icon ? <Icon size={26} color="#ffffff" strokeWidth={2} /> : null}
+                <View style={[styles.discRing, focused && styles.discActive]}>
+                  <LinearGradient
+                    colors={[colors.brand, colors.brandDeep]}
+                    start={{ x: 0.15, y: 0 }}
+                    end={{ x: 0.85, y: 1 }}
+                    style={styles.discCore}
+                  >
+                    <PawPrint size={26} color="#ffffff" fill="#ffffff" strokeWidth={2} />
+                  </LinearGradient>
+                </View>
+                <Text style={styles.centerLabel}>{LABELS[route.name]}</Text>
               </Pressable>
-              <Text style={styles.centerLabel}>{LABELS[route.name]}</Text>
-            </View>
-          );
-        }
+            );
+          }
 
-        return (
-          <Pressable
-            key={route.key}
-            accessibilityRole="button"
-            accessibilityLabel={LABELS[route.name]}
-            accessibilityState={{ selected: focused }}
-            onPress={onPress}
-            style={styles.tab}
-          >
-            {Icon ? (
-              <Icon
-                size={24}
-                color={focused ? colors.brandDeep : colors.ink3}
-                strokeWidth={2}
-              />
-            ) : null}
-            <Text style={[styles.label, focused && styles.labelActive]}>
-              {LABELS[route.name] ?? route.name}
-            </Text>
-          </Pressable>
-        );
-      })}
+          const Icon = ICONS[route.name];
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityLabel={LABELS[route.name]}
+              accessibilityState={{ selected: focused }}
+              onPress={press(route, focused)}
+              style={styles.tab}
+            >
+              {Icon ? (
+                <Icon
+                  size={24}
+                  color={focused ? colors.brandDeep : colors.ink2}
+                  strokeWidth={2}
+                  style={focused ? styles.iconActive : undefined}
+                />
+              ) : null}
+              <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
+                {LABELS[route.name] ?? route.name}
+              </Text>
+              <View style={[styles.dot, focused && styles.dotActive]} />
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    backgroundColor: colors.card,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.hairline,
-    paddingTop: spacing.sm,
+  wrap: { position: "relative", backgroundColor: "transparent" },
+  safeStrip: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.cardSoft,
   },
-  tab: {
-    flex: 1,
+  barShadow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    shadowColor: "#50320a",
+    shadowOpacity: 0.1,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: -8 },
+  },
+  row: { position: "absolute", top: 0, left: 0, right: 0, flexDirection: "row" },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 4 },
+  iconActive: { transform: [{ translateY: -2 }] },
+  label: { maxWidth: "100%", fontSize: 10, lineHeight: 12, fontWeight: "500", color: colors.ink2 },
+  labelActive: { fontWeight: "700", color: colors.brandDeep },
+  dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.brand, opacity: 0 },
+  dotActive: { opacity: 1 },
+  centerCell: { flex: 1, alignItems: "center", justifyContent: "flex-end", paddingBottom: 6 },
+  // 5px cream ring around the 62px disc (web: box-shadow 0 0 0 5px mango-bg).
+  discRing: {
+    position: "absolute",
+    top: -16,
+    width: DISC + 10,
+    height: DISC + 10,
+    borderRadius: (DISC + 10) / 2,
+    backgroundColor: colors.bg,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
-    paddingVertical: spacing.xs,
+    shadowColor: colors.brand,
+    shadowOpacity: 0.55,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
   },
-  label: { fontSize: 10, color: colors.ink3, marginTop: 2 },
-  labelActive: { color: colors.brandDeep, fontWeight: "700" },
-  centerSlot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-end",
-  },
-  centerDisc: {
-    width: 60,
-    height: 60,
-    borderRadius: radius.pill,
-    backgroundColor: colors.brand,
+  discActive: { transform: [{ scale: 1.06 }] },
+  discCore: {
+    width: DISC,
+    height: DISC,
+    borderRadius: DISC / 2,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -28,
-    borderWidth: 4,
-    borderColor: colors.card,
-    shadowColor: colors.paw,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
   },
-  centerLabel: {
-    fontSize: 10,
-    color: colors.brandDeep,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-  pressed: { opacity: 0.85 },
+  centerLabel: { fontSize: 10.5, lineHeight: 12, fontWeight: "700", color: colors.brandDeep },
 });
