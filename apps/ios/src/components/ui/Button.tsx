@@ -1,16 +1,15 @@
 /**
- * Button — Liquid Glass control. Per the 2026-06-26 direction call, the glass
- * material lives ONLY on buttons; every other surface stays solid mango. So the
- * button is a frosted glass pill (GlassSurface → BlurView + micro-light specular
- * edge) with a per-variant tint:
- *   primary → warm mango-amber tint, ink label (the brand CTA)
- *   secondary → clear glass, ink label
- *   ghost → no surface, ink-2 label (tertiary)
- *   danger → red tint, deep-red label
+ * Button — 1:1 with the web Button (apps/web/src/components/ui/button.tsx).
  *
- * GlassSurface handles the a11y / capability fallbacks: Reduce Transparency OR a
- * build without expo-blur native → an opaque warm panel (the tint still applies,
- * so primary still reads amber). 44pt min tap target kept.
+ * Variants mirror web exactly:
+ *  - primary   → `.btn-mango`: amber→brand→brandDeep gradient + WHITE text +
+ *                lifted mango shadow (globals.css .btn-mango). NOT ink-on-flat.
+ *  - secondary → white fill, ink text, hairline border.
+ *  - ghost     → transparent, ink2 text.
+ *  - danger    → red fill, white text.
+ *
+ * Web sizes: sm h-8, md h-10, lg h-12, rounded-lg, active:scale-[0.99]. We keep
+ * the 44pt min tap target as a native floor (doesn't change the look at md/lg).
  */
 import type { ReactNode } from "react";
 import {
@@ -22,9 +21,9 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
-import { GlassSurface } from "./GlassSurface";
-import { colors, glassRadius, radius as radii, spacing } from "@/theme/theme";
+import { colors, mangoGradient, radius, shadows, spacing } from "@/theme/theme";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -38,20 +37,13 @@ type Props = {
   loading?: boolean;
   icon?: ReactNode;
   fullWidth?: boolean;
-  /** Pill radius instead of the rounded-rect default — for the big CTAs. */
+  /** Pill radius (rounded-full) instead of web's rounded-lg — for the big CTAs. */
   pill?: boolean;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 };
 
 const HEIGHT: Record<ButtonSize, number> = { sm: 36, md: 44, lg: 48 };
-
-const VARIANT: Record<ButtonVariant, { tint: string; fg: string }> = {
-  primary: { tint: "rgba(243,152,0,0.34)", fg: colors.ink },
-  secondary: { tint: "transparent", fg: colors.ink },
-  ghost: { tint: "transparent", fg: colors.ink2 },
-  danger: { tint: "rgba(220,38,38,0.32)", fg: "#7f1d1d" },
-};
 
 export function Button({
   label,
@@ -69,23 +61,25 @@ export function Button({
   const isDisabled = disabled || loading;
   const v = VARIANT[variant];
   const minHeight = HEIGHT[size];
-  const br = pill ? glassRadius.pill : radii.md;
+  const br = pill ? radius.pill : radius.lg;
 
-  const inner = loading ? (
-    <ActivityIndicator color={v.fg} />
-  ) : (
+  const inner = (
     <>
-      {icon != null ? <Text style={[styles.icon, { color: v.fg }]}>{icon}</Text> : null}
-      <Text
-        style={[styles.label, size === "lg" && styles.labelLg, { color: v.fg }]}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
+      {loading ? (
+        <ActivityIndicator color={v.fg} />
+      ) : (
+        <>
+          {icon != null ? <Text style={[styles.icon, { color: v.fg }]}>{icon}</Text> : null}
+          <Text
+            style={[styles.label, size === "lg" && styles.labelLg, { color: v.fg }]}
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
+        </>
+      )}
     </>
   );
-
-  const content = [styles.row, { minHeight }];
 
   return (
     <Pressable
@@ -96,37 +90,58 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         fullWidth && styles.fullWidth,
+        variant === "primary" && !isDisabled && shadows.mango,
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
       ]}
     >
-      {variant === "ghost" ? (
-        <View style={[content, { borderRadius: br }]}>{inner}</View>
-      ) : (
-        <GlassSurface level="regular" radius={br} contentStyle={content}>
-          {v.tint !== "transparent" ? (
-            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: v.tint }]} />
-          ) : null}
+      {variant === "primary" ? (
+        <LinearGradient
+          colors={mangoGradient.colors}
+          locations={mangoGradient.locations}
+          start={mangoGradient.start}
+          end={mangoGradient.end}
+          style={[styles.base, { minHeight, borderRadius: br }]}
+        >
           {inner}
-        </GlassSurface>
+        </LinearGradient>
+      ) : (
+        <View style={[styles.base, { minHeight, borderRadius: br, backgroundColor: v.bg }, v.border]}>
+          {inner}
+        </View>
       )}
     </Pressable>
   );
 }
 
+const VARIANT: Record<
+  ButtonVariant,
+  { bg: string; fg: string; border?: ViewStyle }
+> = {
+  primary: { bg: "transparent", fg: "#ffffff" },
+  secondary: {
+    bg: colors.card,
+    fg: colors.ink,
+    border: { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline },
+  },
+  ghost: { bg: "transparent", fg: colors.ink2 },
+  danger: { bg: "#dc2626", fg: "#ffffff" },
+};
+
 const styles = StyleSheet.create({
-  row: {
+  base: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.xl,
+    overflow: "hidden",
   },
   fullWidth: { alignSelf: "stretch" },
-  label: { fontSize: 14, fontWeight: "800" },
+  label: { fontSize: 14, fontWeight: "700" },
   labelLg: { fontSize: 16 },
   icon: { fontSize: 16 },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
-  disabled: { opacity: 0.55 },
+  pressed: { opacity: 0.95, transform: [{ scale: 0.99 }] },
+  disabled: { opacity: 0.7 },
 });
