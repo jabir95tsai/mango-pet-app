@@ -77,3 +77,7 @@ firestore-debug.log
 /.codex-build-check/
 /.codex-build-check.tar
 /.codex-npm-cache/
+
+# Local Expo/Metro dev-server logs written by the harness when it starts the
+# iOS dev server. Pure local noise — never belongs in the repo.
+/outputs/
