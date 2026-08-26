@@ -22,6 +22,7 @@ import {
   View,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import { Users, Share2, Copy, RefreshCw, LogOut, UserMinus } from "lucide-react-native";
 import type { Family, FamilyMember } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
@@ -158,7 +159,7 @@ export function FamilySection() {
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <View style={styles.iconDisc}>
-            <Text style={styles.iconText}>👥</Text>
+            <Users size={18} color={colors.brandDeep} strokeWidth={1.8} />
           </View>
           <View style={styles.headerText}>
             <Text style={styles.title}>{t("Family.title")}</Text>
@@ -211,14 +212,14 @@ export function FamilySection() {
               </View>
               <View style={styles.codeActions}>
                 <Pressable onPress={shareInvite} style={styles.codeBtn} accessibilityLabel={t("Family.invite.shareAria")}>
-                  <Text style={styles.codeBtnIcon}>🔗</Text>
+                  <Share2 size={16} color={colors.brandDeep} strokeWidth={1.8} />
                 </Pressable>
                 <Pressable onPress={copyCode} style={styles.codeBtn} accessibilityLabel={t("Family.copyCode")}>
-                  <Text style={styles.codeBtnIcon}>📋</Text>
+                  <Copy size={16} color={colors.brandDeep} strokeWidth={1.8} />
                 </Pressable>
                 {isOwner ? (
                   <Pressable onPress={confirmRegen} disabled={busy} style={styles.codeBtn} accessibilityLabel={t("Family.regenCode")}>
-                    <Text style={styles.codeBtnIcon}>↻</Text>
+                    <RefreshCw size={16} color={colors.brandDeep} strokeWidth={1.8} />
                   </Pressable>
                 ) : null}
               </View>
@@ -245,8 +246,14 @@ export function FamilySection() {
                     </Text>
                   </View>
                   {isOwner && !memberIsOwner ? (
-                    <Pressable onPress={() => confirmRemove(m)} hitSlop={6} style={styles.removeBtn}>
-                      <Text style={styles.removeText}>✕</Text>
+                    <Pressable
+                      onPress={() => confirmRemove(m)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t("Family.removeMember")} ${m.displayName}`}
+                      style={styles.removeBtn}
+                    >
+                      <UserMinus size={16} color={colors.ink3} strokeWidth={1.8} />
                     </Pressable>
                   ) : null}
                 </View>
@@ -256,7 +263,8 @@ export function FamilySection() {
 
           {/* Leave */}
           <Pressable onPress={confirmLeave} disabled={busy} style={styles.leaveBtn}>
-            <Text style={styles.leaveText}>🚪 {t("Family.leave")}</Text>
+            <LogOut size={15} color={colors.cookie} strokeWidth={1.8} />
+            <Text style={styles.leaveText}>{t("Family.leave")}</Text>
           </Pressable>
         </>
       )}
@@ -393,7 +401,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconText: { fontSize: 16 },
   headerText: { flexShrink: 1 },
   title: { fontSize: 15, fontWeight: "800", color: colors.ink },
   sub: { fontSize: 12, color: colors.ink3, marginTop: 1 },
@@ -431,7 +438,6 @@ const styles = StyleSheet.create({
   code: { fontSize: 28, fontWeight: "900", color: colors.brandDeep, letterSpacing: 6, fontVariant: ["tabular-nums"], marginTop: 2 },
   codeActions: { flexDirection: "row", gap: spacing.xs },
   codeBtn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
-  codeBtnIcon: { fontSize: 15, color: colors.brandDeep, fontWeight: "700" },
   codeHelp: { fontSize: 11, color: colors.ink3 },
   membersLabel: { fontSize: 11, fontWeight: "800", color: colors.ink3, letterSpacing: 0.5, textTransform: "uppercase" },
   members: { gap: spacing.xs },
@@ -440,9 +446,9 @@ const styles = StyleSheet.create({
   memberName: { fontSize: 14, fontWeight: "600", color: colors.ink },
   ownerTag: { fontSize: 11, fontWeight: "700", color: colors.brandDeep },
   youTag: { fontSize: 12, color: colors.ink3 },
-  removeBtn: { padding: 6 },
-  removeText: { fontSize: 14, color: colors.ink3, fontWeight: "700" },
-  leaveBtn: { alignSelf: "flex-start", paddingHorizontal: spacing.md, height: 36, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  // 28x28 box + hitSlop 8 = 44x44 effective tap target (iOS HIG minimum).
+  removeBtn: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
+  leaveBtn: { flexDirection: "row", alignItems: "center", gap: spacing.xs, alignSelf: "flex-start", paddingHorizontal: spacing.md, height: 36, borderRadius: radius.md, justifyContent: "center" },
   leaveText: { fontSize: 14, fontWeight: "700", color: colors.cookie },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
   dialog: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, gap: spacing.sm },

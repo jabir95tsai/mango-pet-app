@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ShieldCheck } from "lucide-react-native";
 
 import { useAuth } from "@/state/auth-context";
 import { exportAndShareUserData } from "@/lib/data-export";
@@ -30,7 +31,10 @@ export function ExportDataSection() {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{t("Settings.privacyData.title")}</Text>
+      <View style={styles.headerRow}>
+        <ShieldCheck size={20} color={colors.brandDeep} />
+        <Text style={styles.title}>{t("Settings.privacyData.title")}</Text>
+      </View>
       <Text style={styles.subtitle}>{t("Settings.privacyData.subtitle")}</Text>
       <Pressable onPress={run} disabled={busy} style={[styles.btn, busy && styles.disabled]}>
         {busy ? (
@@ -53,6 +57,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
   },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontSize: 15, fontWeight: "800", color: colors.ink },
   subtitle: { fontSize: 12, color: colors.ink3, lineHeight: 17 },
   btn: {

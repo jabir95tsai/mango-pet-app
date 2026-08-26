@@ -8,6 +8,7 @@
 import { Linking, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { Users, AlertTriangle } from "lucide-react-native";
 
 import { signOut } from "@/lib/auth";
 import { SITE_URL } from "@/lib/config";
@@ -54,7 +55,7 @@ export default function SettingsScreen() {
                 accessibilityLabel={t("Settings.friendsLink")}
                 style={({ pressed }) => [styles.friendsDisc, pressed && styles.dim]}
               >
-                <Text style={styles.friendsIcon}>👥</Text>
+                <Users size={20} color={colors.brandDeep} strokeWidth={1.8} />
               </Pressable>
             ) : null}
           </View>
@@ -84,8 +85,15 @@ export default function SettingsScreen() {
 
         {!isGuest ? <ExportDataSection /> : null}
 
+        {/* Danger zone — red-bordered card + warning icon so a mis-tap looks
+            obviously wrong (web parity: settings/page.tsx danger section). */}
         {!isGuest ? (
-          <View style={styles.danger}>
+          <View style={styles.dangerCard}>
+            <View style={styles.dangerHeader}>
+              <AlertTriangle size={20} color={colors.danger} />
+              <Text style={styles.dangerTitle}>{t("Settings.dangerZone.title")}</Text>
+            </View>
+            <Text style={styles.dangerSubtitle}>{t("Settings.dangerZone.subtitle")}</Text>
             <DeleteAccountSection />
           </View>
         ) : null}
@@ -130,7 +138,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  friendsIcon: { fontSize: 19 },
   signOut: {
     alignSelf: "flex-start",
     height: 40,
@@ -142,7 +149,18 @@ const styles = StyleSheet.create({
   },
   signOutText: { fontSize: 14, fontWeight: "600", color: "#ffffff" },
   dim: { opacity: 0.7 },
-  danger: { marginTop: spacing.lg },
+  dangerCard: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+    backgroundColor: "rgba(254,242,242,0.6)", // red-50/50
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: "rgba(252,165,165,0.7)", // red-300/70
+    padding: spacing.lg,
+  },
+  dangerHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  dangerTitle: { fontSize: 15, fontWeight: "700", color: colors.dangerDeep },
+  dangerSubtitle: { fontSize: 13, color: "rgba(127,29,29,0.8)", lineHeight: 18 }, // red-900/80
   legalRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
   legalLink: { fontSize: 12, color: colors.ink3, textDecorationLine: "underline" },
   legalDot: { fontSize: 12, color: colors.ink3 },
