@@ -1,0 +1,41 @@
+/* design-sync Tailwind v4 entry. Compiled by `npm run ds:css` (see
+ * .design-sync/NOTES.md) into apps/web/.design-sync.css, which cfg.cssEntry
+ * points at. Sources: the whole web app (so the class vocabulary the app
+ * really uses ships) + the authored preview cards. */
+@import "../apps/web/src/app/globals.css";
+@source "../apps/web/src";
+@source "./previews";
+
+/* Safelist the design-system token vocabulary (docs/design-system.md §1/§2/§4)
+ * so every mango colour / radius / shadow utility ships even when the app
+ * does not use that exact class yet — the design agent builds with these. */
+@source inline("{bg,text,border,ring,divide,placeholder}-mango-{bg,bg-alt,card,card-soft,hairline,ink,ink-2,ink-3,brand,brand-deep,brand-tint,amber,leaf,leaf-tint,success,success-tint,bell-tint,cookie,cookie-tint,peach,peach-tint,paw}");
+@source inline("{hover:,focus:,active:,}bg-mango-{brand,brand-deep,brand-tint,card,card-soft,bg-alt}");
+@source inline("rounded-[var(--radius-{sm,md,lg,xl,2xl,pill})]");
+@source inline("shadow-{card,elevated,mango}");
+@source inline("font-{sans,mono}");
+
+/* next/font (apps/web/src/app/layout.tsx) sets these on <html> at runtime; outside
+ * Next they must be declared here so globals.css body/@theme font stacks resolve.
+ * The @font-face rules live in ./fonts/geist.css (cfg.extraFonts). */
+:root {
+  --font-geist-sans: "Geist", "Geist Fallback";
+  --font-geist-mono: "Geist Mono", "Geist Mono Fallback";
+}
+
+/* next/font metric-adjusted fallbacks (src: local(Arial)) — the converter only
+ * keeps url()-backed @font-face rules from extraFonts, so these live here. */
+@font-face{
+  font-family:Geist Fallback;
+  src:local(Arial);
+  ascent-override:95.94%;
+  descent-override:28.16%;
+  line-gap-override:0.0%;
+  size-adjust:104.76%}
+@font-face{
+  font-family:Geist Mono Fallback;
+  src:local(Arial);
+  ascent-override:74.67%;
+  descent-override:21.92%;
+  line-gap-override:0.0%;
+  size-adjust:134.59%}

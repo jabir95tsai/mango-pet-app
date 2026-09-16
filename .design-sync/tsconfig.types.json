@@ -1,0 +1,22 @@
+{
+  "extends": "../apps/web/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "incremental": false,
+    "outDir": "../apps/web/.design-sync-types",
+    "rootDir": "../apps/web/src",
+    "baseUrl": "../apps/web",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "plugins": []
+  },
+  "include": [
+    "../apps/web/src/components/ui/*.tsx"
+  ],
+  "exclude": []
+}

@@ -77,3 +77,12 @@ firestore-debug.log
 /.codex-build-check/
 /.codex-build-check.tar
 /.codex-npm-cache/
+
+# design-sync (claude.ai/design) — staged scripts, build output, machine state
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+apps/web/.design-sync.css
+apps/web/.design-sync-types/
