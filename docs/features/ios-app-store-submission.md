@@ -16,7 +16,9 @@
 - **背景定位 entitlement** + session-only 行為（§F）
 - **App 內刪除帳號**（`deleteUserAccount`）← Apple 強制（有註冊就要能刪），常見拒絕點，已有 ✅
 - **資料匯出**（`exportUserData`）
-- app.json 已設 `icon`（確認是真 Mango master、非 placeholder/512 略軟版 → 見 ❌-icon）
+- ✅ **App icon 1024²**（2026-09-27 確認乾淨 Mango master，非 placeholder，非預圓角）
+- ✅ **UGC 檢舉/封鎖**（2026-09-27 code done + 部署，見下方 UGC 段落）
+- ✅ **App Store Connect listing 文案草稿**（2026-09-27，見 [`ios-app-store-listing.md`](./ios-app-store-listing.md)）
 
 ## ❌ 缺（上架 blocking，要補）
 
@@ -26,19 +28,12 @@
 - **APNs Auth Key (.p8)** 上傳 Firebase Console → Cloud Messaging：**push 真正送達的前置**（§parity 111 已記）。沒設 → token 能 mint 但收不到推播。
 
 ### 素材
-- **App icon 1024²**：app.json 指 `./assets/icon.png` → **確認是乾淨 1024² Mango master（不透明、不預圓角）**，不是 Expo 預設或 512 上採樣的略軟版。
-- **Splash**：Mango brand asset（icon session 處理中）。
-- **截圖**：**6.7"（iPhone 15/16 Pro Max）必交**；`supportsTablet: true` → **iPad 截圖也必交**（見 ⚠️-iPad）。中英各一組。
+- ✅ **App icon 1024²**（2026-09-27 確認）：`apps/ios/assets/icon.png` 實測 1024×1024、RGB 不透明、四角像素取樣確認**非預圓角**（角落與邊緣同色漸層，非白/透明遮罩）——是乾淨 Mango 芒果+爪印 icon，非 placeholder。`splash.png` 1242×1242 同樣確認存在。
+- **截圖**：**6.7"（iPhone 15/16 Pro Max）必交**；`supportsTablet: true` → **iPad 截圖也必交**（見 ⚠️-iPad）。中英各一組。**尚未產生**——需要 EAS build 裝置或 simulator 截圖。
 - （可選）App preview 影片。
 
-### App Store Connect listing（PM 寫內容）
-- **描述**（中 + en，~300 字）、**關鍵字**、副標題、宣傳文字
-- **分類**（主：生活風格 或 健康健身，二擇一拍板）+ 次分類
-- **年齡分級問卷**
-- **Support URL**（必填）+ Marketing URL（選）
-- **隱私政策 URL（必填）**：web 有 `/privacy`，需公開可達的 URL（production 網域）
-- **App Privacy 資料標籤問卷**：申報 Firebase 蒐集的資料類型（位置、照片/使用者內容、識別碼、用量、聯絡資訊？）— 漏報/錯報會被拒
-- **審查備註**：附 (a) 背景定位用途說明（§F.2 英文草稿）+ (b) 登入方式（guest 可進，或附 demo 帳號讓審查員用）
+### App Store Connect listing（PM 寫內容）— ✅ 草稿已完成
+→ [`ios-app-store-listing.md`](./ios-app-store-listing.md)（2026-09-27）：描述（中+en）、關鍵字、副標題、分類建議（生活風格 主 / 社交 次）、年齡分級問卷逐項推薦答案、Support/Marketing/隱私政策 URL（沿用現有 Firebase Hosting 網域，不需等自訂網域）、App Privacy 資料標籤（已 grep 確認無 Analytics SDK，位置/照片/UGC/聯絡資訊/識別碼需申報）、審查備註英文草稿（guest 登入 + 背景定位 + UGC 審核機制）。**待你複製貼上進 ASC**——分類與年齡問卷仍要在 ASC 介面互動點選，這裡只給推薦答案。
 
 ### 送審管線
 - **eas.json `submit.production`** 設定（ascAppId / Apple ID / team）或互動式 `eas submit`
@@ -66,19 +61,20 @@ Apple 重點審查。審查備註要講清 session-only、結束即停（§F.2 �
 ### ⚠️ 登入牆 / 審查員存取
 app 一開要登入 → 審查員需能進。guest 登入可解（審查備註寫「點訪客即可體驗」），或提供 demo 帳號。
 
-## 📋 建議順序（2026-08-26 user 拍板，以此為準）
+## 📋 建議順序（2026-09-27 更新 — 3 項已完成）
 
-**決策**：Apple Glass redesign **defer 到上架後**（見 [`ios-apple-glass-design-system.md`](./ios-apple-glass-design-system.md)）；UGC 檢舉/封鎖 **下一個 dev session 立即開工**（唯一硬性 code blocker）。
+**決策**：Apple Glass redesign **defer 到上架後**；UGC 檢舉/封鎖 **✅ 已 code-done + 已部署**。
 
-1. ✅ **UGC 檢舉/封鎖 — CODE DONE（2026-09-27）**，剩：`firebase deploy --only firestore:rules` + functions 部署 → 部署後 web/iOS 各跑一次檢舉+封鎖端到端驗證（`ugc-moderation.md` §✅ 驗收清單）。這條部署+驗完才算真正解掉 Guideline 1.2 blocker。
-2. **iPad responsive QA**（`supportsTablet:true` 已拍板保留）→ iOS UI/UX 一輪，避免大螢幕拉伸/留白破版（截圖也要交 iPad 版）。
+1. ✅ **UGC 檢舉/封鎖 — CODE DONE + 已部署（2026-09-27）**：`firebase deploy --only firestore:rules` + `functions:onReportCreated` 都成功。**剩：真人帳號端到端驗一次**（web 或 EAS build 裝置——檢舉貼文/留言 → 「已收到」提示;封鎖 → 對方內容從 feed 消失 + settings 能看到並解封鎖）。
+2. **iPad responsive QA**（`supportsTablet:true` 已拍板保留）→ 需要 iOS UI/UX session 動 code，避免大螢幕拉伸/留白破版（截圖也要交 iPad 版）。**尚未開始。**
 3. **user 手動（可與 1、2 平行進行，不擋 dev）**：
    - App Store Connect 建 App 紀錄（name/SKU/主要語言/bundle id）
    - 接受 Agreements, Tax, and Banking（含 Free Apps 協議）
    - APNs Auth Key (.p8) 上傳 Firebase Console → Cloud Messaging
-4. **PM 寫 metadata**（下一個 iOS PM session）：描述（中+en）/ 關鍵字 / 分類 / 隱私政策 URL（web `/privacy` 已有，需確認 production 可達）/ App Privacy 資料標籤問卷 / 審查備註（背景定位用途 + 登入方式說明）。
-5. **素材確認**：`apps/ios/assets/icon.png`（6/6 已加入，需目視確認是乾淨 1024² Mango master、非糊版）+ splash + 截圖（6.7" 必交 + iPad 若 supportsTablet true）。
-6. **`eas.json` `submit.production`** 目前是空物件 `{}` → 需填 ascAppId/Apple ID/team（或改走互動式 `eas submit`）。
+   - **尚未開始**（2026-09-27 user 確認）
+4. ✅ **PM metadata 草稿完成（2026-09-27）** → [`ios-app-store-listing.md`](./ios-app-store-listing.md)：描述/關鍵字/分類建議/年齡分級推薦答案/URL 三件套/App Privacy 標籤/審查備註全部草稿好，**待你複製貼上進 ASC**（分類 + 年齡問卷仍要在 ASC 介面互動點選）。
+5. ✅ **素材確認（2026-09-27）**：icon 1024² 乾淨非預圓角、splash 1242² 都確認存在。**尚缺**：截圖（6.7" + iPad，需要真機/simulator 產生，還沒做）。
+6. **`eas.json` `submit.production`** 目前是空物件 `{}` → 需填 ascAppId/Apple ID/team（依賴步驟 3 先建好 ASC App 紀錄才能填）。
 7. EAS production build（`eas build --profile production`）→ `eas submit` → **TestFlight 一輪** → 正式送審。
 
-> UGC（步驟 1）是唯一必須寫 code 才能過審的項目，其餘多是 user 手動（Apple 帳號/Console）+ PM 內容（metadata）+ 素材確認。步驟 1–3 可平行推進，加速上架時程。
+> 剩下的路徑清楚：③ ASC 帳號設定是 user 手動、擋住⑥；② iPad QA 需要開一個 iOS UI/UX code session；①的端到端驗證 + ⑤的截圖都需要一次 EAS build 或真機一起做。
