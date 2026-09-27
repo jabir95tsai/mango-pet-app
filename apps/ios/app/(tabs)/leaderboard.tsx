@@ -12,7 +12,7 @@ import { HumanLeaderboard } from "@/components/leaderboard/human-leaderboard";
 import { DogLeaderboard } from "@/components/leaderboard/dog-leaderboard";
 import { Segmented } from "@/components/leaderboard/segmented";
 import { t } from "@/lib/i18n";
-import { colors, spacing } from "@/theme/theme";
+import { colors, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 const DIMENSION_KEY = "mango.leaderboard.dimension";
 type Dimension = "human" | "dog";
@@ -63,6 +63,6 @@ export default function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
+  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   board: { marginTop: spacing.sm },
 });

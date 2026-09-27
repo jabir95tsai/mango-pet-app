@@ -23,7 +23,7 @@ import { useFamily } from "@/state/family-context";
 import { createFamily, joinFamilyByCode } from "@/lib/families-write";
 import { ONBOARDED_KEY } from "@/lib/onboarding";
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -138,7 +138,7 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: spacing.xl, gap: spacing.md, flexGrow: 1, justifyContent: "center" },
+  scroll: { padding: spacing.xl, gap: spacing.md, flexGrow: 1, justifyContent: "center", width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   logo: { fontSize: 56, textAlign: "center" },
   title: { fontSize: 24, fontWeight: "900", color: colors.ink, textAlign: "center" },
   subtitle: { fontSize: 14, color: colors.ink2, textAlign: "center", lineHeight: 20, marginBottom: spacing.md },

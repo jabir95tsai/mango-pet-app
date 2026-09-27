@@ -35,7 +35,7 @@ import {
 import { savePhotoToAlbum } from "@/lib/save-photo";
 import { PhotoLightbox } from "@/components/feed/photo-lightbox";
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 type FilterKey = "all" | GalleryPhotoSource;
 const FILTERS: FilterKey[] = ["all", "post", "walk", "pet-avatar", "expense-receipt"];
@@ -57,7 +57,10 @@ const SOURCE_LABEL: Record<GalleryPhotoSource, string> = {
 export default function PhotosScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { width } = useWindowDimensions();
+  // Capped like the other screens (CONTENT_MAX_WIDTH) so the 2-col grid
+  // doesn't blow up into huge tiles on iPad. iPad QA pass.
+  const { width: windowWidth } = useWindowDimensions();
+  const width = Math.min(windowWidth, CONTENT_MAX_WIDTH);
 
   const [assets, setAssets] = useState<GalleryPhotoAsset[]>([]);
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
@@ -293,13 +296,13 @@ export default function PhotosScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   backText: { fontSize: 30, color: colors.ink, fontWeight: "700", lineHeight: 32 },
   headerText: { flex: 1, marginLeft: spacing.xs },
   title: { fontSize: 18, fontWeight: "800", color: colors.ink },
   subtitle: { fontSize: 12, color: colors.ink3 },
-  pillsWrap: { maxHeight: 52, flexGrow: 0 },
+  pillsWrap: { maxHeight: 52, flexGrow: 0, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   pills: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingVertical: spacing.sm },
   pill: {
     paddingHorizontal: spacing.md, height: 34, borderRadius: radius.pill, justifyContent: "center",
@@ -311,7 +314,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.xs, padding: spacing.xl },
   emptyTitle: { fontSize: 16, fontWeight: "800", color: colors.ink },
   emptyBody: { fontSize: 13, color: colors.ink2, textAlign: "center", lineHeight: 19 },
-  grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: spacing.lg, paddingBottom: 96 },
+  grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: spacing.lg, paddingBottom: 96, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   checkbox: {
     position: "absolute", top: 6, left: 6, width: 26, height: 26, borderRadius: 13,
     borderWidth: 2, borderColor: "#fff", backgroundColor: "rgba(0,0,0,0.3)",

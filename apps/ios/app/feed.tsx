@@ -25,7 +25,7 @@ import { PostComposer } from "@/components/feed/post-composer";
 import { PhotoLightbox } from "@/components/feed/photo-lightbox";
 import { savePhotoToAlbum } from "@/lib/save-photo";
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -142,5 +142,5 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.xs, padding: spacing.xl },
   emptyTitle: { fontSize: 16, fontWeight: "800", color: colors.ink },
   emptyBody: { fontSize: 13, color: colors.ink2, textAlign: "center" },
-  scroll: { gap: spacing.md, padding: spacing.lg, paddingBottom: spacing.xxl },
+  scroll: { gap: spacing.md, padding: spacing.lg, paddingBottom: spacing.xxl, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
 });

@@ -19,6 +19,14 @@ export const spacing = {
   xxl: 32,
 } as const;
 
+// Every screen's UI was authored against phone widths. `supportsTablet: true`
+// (app.json) means iPad renders the same tree at up to ~1024–1366pt wide —
+// without a cap, single-column content stretches edge-to-edge (giant text
+// lines, oversized cards/photos). Capping + centering gives a phone-width
+// reading column on iPad instead of a rewrite into a real tablet layout.
+// iPad QA pass, docs/features/ios-app-store-submission.md ⚠️-iPad.
+export const CONTENT_MAX_WIDTH = 480;
+
 // Radius scale — 1:1 with web globals.css :root --radius-* (NOT the larger
 // native values we used in the native-feel pass). lg 14 = card default,
 // xl 18 = mockup Card, xl2 22 = MangoPhoto / pet-header avatar.

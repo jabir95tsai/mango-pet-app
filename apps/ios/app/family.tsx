@@ -38,7 +38,7 @@ import { Button } from "@/components/ui/Button";
 import { UserAvatar } from "@/components/feed/user-avatar";
 import { SITE_URL } from "@/lib/config";
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 export default function FamilyScreen() {
   const router = useRouter();
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
   backText: { fontSize: 30, color: colors.ink, fontWeight: "700", lineHeight: 32 },
   title: { fontSize: 18, fontWeight: "800", color: colors.ink },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
+  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   personalCard: { backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.hairline, padding: spacing.lg, gap: spacing.md },
   personalMode: { fontSize: 14, fontWeight: "800", color: colors.ink },
   personalInfo: { fontSize: 13, color: colors.ink2, lineHeight: 19 },

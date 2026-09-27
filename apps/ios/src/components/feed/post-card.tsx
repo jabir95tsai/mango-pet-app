@@ -20,7 +20,7 @@ import type { Post, Visibility } from "@mango/shared-types";
 
 import { deletePost } from "@/lib/posts";
 import { relativeTime } from "@/lib/format";
-import { colors, radius, shadows, spacing } from "@/theme/theme";
+import { colors, radius, shadows, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 import { UserAvatar } from "./user-avatar";
 import { EmojiReactions } from "./emoji-reactions";
 import { CommentSection } from "./comment-section";
@@ -49,7 +49,12 @@ export function PostCard({
    *  the current view without a full refetch (ugc-moderation.md). */
   onBlocked?: (blockedUid: string) => void;
 }) {
-  const { width } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
+  // Cards render inside a CONTENT_MAX_WIDTH-capped column (Screen / each
+  // feed screen's scroll style) — on iPad the raw window width is much
+  // wider than the card actually renders at, which would overflow the photo
+  // grid past the card edge. Match the same cap here. iPad QA pass.
+  const width = Math.min(windowWidth, CONTENT_MAX_WIDTH);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(post.commentCount ?? 0);
   const [deleting, setDeleting] = useState(false);

@@ -39,7 +39,7 @@ import { InviteQR } from "@/components/family/invite-qr";
 import { Segmented } from "@/components/leaderboard/segmented";
 import { SITE_URL } from "@/lib/config";
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 type Tab = "friends" | "requests" | "search";
 
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   tabOn: { backgroundColor: colors.brandTint, borderWidth: 1, borderColor: colors.brand },
   tabText: { fontSize: 13, fontWeight: "700", color: colors.ink3 },
   tabTextOn: { color: colors.brandDeep, fontWeight: "800" },
-  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.sm },
+  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.sm, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.hairline, padding: spacing.md },
   rowBody: { flex: 1 },
   rowName: { flex: 1, fontSize: 15, fontWeight: "700", color: colors.ink },

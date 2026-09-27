@@ -24,7 +24,7 @@ import {
   type Edge,
 } from "react-native-safe-area-context";
 
-import { colors, spacing } from "@/theme/theme";
+import { colors, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 type Props = {
   children: ReactNode;
@@ -52,6 +52,7 @@ export function Screen({
   const inner = scroll ? (
     <ScrollView
       contentContainerStyle={[
+        styles.capped,
         padded && styles.padded,
         { paddingBottom: contentBottom },
         contentStyle,
@@ -62,7 +63,9 @@ export function Screen({
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.flex, padded && styles.padded, contentStyle]}>{children}</View>
+    <View style={[styles.flex, styles.capped, padded && styles.padded, contentStyle]}>
+      {children}
+    </View>
   );
 
   return (
@@ -85,4 +88,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
   padded: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  // Phone-width reading column, centered — see CONTENT_MAX_WIDTH.
+  capped: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
 });

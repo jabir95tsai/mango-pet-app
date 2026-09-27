@@ -52,8 +52,15 @@ app 有**社群 feed**（貼文 / 留言 / 反應 / 好友）= 使用者產生�
 → ✅ **已實作**（見 [`ugc-moderation.md`](./ugc-moderation.md) §2026-09-27 實作紀錄）：`reports`/`moderationAudit` rules + `onReportCreated` trigger（達 3 報自動 hidden）+ web/iOS 檢舉/封鎖 UI + client 過濾 + rules 層擋封鎖者互動 + `/terms` 零容忍條款。三個 `tsc --noEmit` 全過。
 → **⚠️ 還沒做**：`firebase deploy --only firestore:rules,functions:onReportCreated` 部署（rules/functions 在 repo 裡但還沒推上 production）+ EAS build 實機驗證檢舉/封鎖流程一次跑通。**部署前確認不影響現有 feed/comments（rules 改動影響 web+iOS 共用後端）**。
 
-### ⚠️ iPad 範圍 — ✅ user 拍板 **支援 iPad**（2026-06-03）
-`supportsTablet: true` 保留。代價：(a) **要交 iPad 截圖**（12.9"/13"）；(b) **iPad 上 layout 要能看**（RN 畫面原為 phone 設計 → 需一輪 **iPad responsive QA**，避免大螢幕拉伸/留白破版 → 交 iOS UI/UX）。列入上架前工項。
+### ⚠️ iPad 範圍 — ✅ user 拍板 **支援 iPad**（2026-06-03）；✅ 2026-09-27 responsive QA code done，待真機/simulator 目視驗證
+`supportsTablet: true` 保留。代價：(a) **要交 iPad 截圖**（12.9"/13"）；(b) **iPad 上 layout 要能看**。
+
+**2026-09-27 已做**（iOS UI/UX cross-role）：
+- 新增 `CONTENT_MAX_WIDTH`（480pt，`apps/ios/src/theme/theme.ts`）——所有主要畫面的 `ScrollView` content 加 `maxWidth` + `alignSelf:"center"`，iPad 上呈現「置中、電話寬度的閱讀欄」而不是整頁拉伸：`(tabs)/index.tsx`（首頁）、`leaderboard.tsx`、`pets.tsx`、`settings.tsx`、`feed.tsx`、`family.tsx`、`friends/index.tsx`、`onboarding.tsx`、`photos.tsx`（含內部 2 欄 grid 寬度計算）+ 共用 `components/ui/Screen.tsx`（`walks.tsx` 用這個）。
+- **`raised-tab-bar.tsx`（底部 5-tab nav）— 最嚴重的一處已修**：notch SVG 的 viewBox 是照 390pt（iPhone 參考寬）畫的、用 `preserveAspectRatio="none"` 拉伸，在 iPad 原始寬度（768–1366pt）下會把 notch 曲線嚴重扭曲、5 個 tab 間距被拉得很開。改成 bar 本身 cap 在 430pt 並置中（浮動膠囊 nav），phone 上因為螢幕寬度本來就 < 430pt，行為完全不變（no-op）。
+- `post-card.tsx` 的照片 grid 寬度計算也同步 cap（不然卡片外層欄寬變窄了，但卡片內部還用裝置原始寬度算，照片會溢出卡片邊界）。
+- **驗證方式的限制**：這台開發機是 Windows，沒有 macOS/Xcode/iOS Simulator，**這次改動全靠讀 code + 手算寬度邏輯，沒有實際跑在 iPad 尺寸畫面上看過**。`tsc --noEmit` 過，但這不能取代目視驗證。
+- **👉 下一步（user）**：裝新 EAS build 在 iPad（或 Xcode iPad Simulator，若你有 Mac）走一輪 5 個分頁 + feed + settings + pets，確認：底部 nav 沒有被拉伸/扭曲、主要內容欄置中不頂滿版、feed 照片沒有溢出卡片。有任何一處還是難看，回報給下一個 iOS UI/UX session 微調（cap 寬度數字 480/430 可以再調）。
 
 ### ⚠️ 背景定位（§F）
 Apple 重點審查。審查備註要講清 session-only、結束即停（§F.2 草稿）。最常見拒絕 = 用途不充分。
@@ -66,7 +73,7 @@ app 一開要登入 → 審查員需能進。guest 登入可解（審查備註�
 **決策**：Apple Glass redesign **defer 到上架後**；UGC 檢舉/封鎖 **✅ 已 code-done + 已部署**。
 
 1. ✅ **UGC 檢舉/封鎖 — CODE DONE + 已部署（2026-09-27）**：`firebase deploy --only firestore:rules` + `functions:onReportCreated` 都成功。**剩：真人帳號端到端驗一次**（web 或 EAS build 裝置——檢舉貼文/留言 → 「已收到」提示;封鎖 → 對方內容從 feed 消失 + settings 能看到並解封鎖）。
-2. **iPad responsive QA**（`supportsTablet:true` 已拍板保留）→ 需要 iOS UI/UX session 動 code，避免大螢幕拉伸/留白破版（截圖也要交 iPad 版）。**尚未開始。**
+2. ✅ **iPad responsive QA — CODE DONE（2026-09-27），待真機/simulator 目視驗證**（見上方 ⚠️-iPad 段落；開發機無 macOS，無法自己看過畫面）。
 3. **user 手動（可與 1、2 平行進行，不擋 dev）**：
    - App Store Connect 建 App 紀錄（name/SKU/主要語言/bundle id）
    - 接受 Agreements, Tax, and Banking（含 Free Apps 協議）

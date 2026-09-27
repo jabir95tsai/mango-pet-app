@@ -31,7 +31,7 @@ import { FeedSectionHeader } from "@/components/home/feed-section-header";
 import { HomeEmptyState } from "@/components/home/home-empty-state";
 import { InviteFamilyCard } from "@/components/home/invite-family-card";
 import { t } from "@/lib/i18n";
-import { colors, spacing } from "@/theme/theme";
+import { colors, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -160,7 +160,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
-  scroll: { paddingBottom: spacing.xxl },
+  scroll: { paddingBottom: spacing.xxl, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   feed: { gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.xs },
   hint: {
     marginHorizontal: spacing.lg,

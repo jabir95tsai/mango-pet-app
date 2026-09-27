@@ -53,10 +53,19 @@ const BAR_H = 72;
 const DISC = 62;
 const RING = DISC + 10; // 5px cream ring (web box-shadow 0 0 0 5px mango-bg)
 const DISC_TOP = -20;
+// The notch SVG's viewBox is authored for a 390pt (iPhone) reference width and
+// stretches with `preserveAspectRatio="none"` — rendering it at the RAW window
+// width on iPad (768–1366pt) distorts the notch curve and spreads the 5 tabs
+// across a huge gap. Cap the bar at the widest phone size and center it —
+// a floating capsule nav on iPad, same bar on phone (width === MAX_BAR_WIDTH
+// there, so this is a no-op below the cap). iPad QA pass, docs/features/
+// ios-app-store-submission.md ⚠️-iPad.
+const MAX_BAR_WIDTH = 430;
 
 export function RaisedTabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
+  const width = Math.min(windowWidth, MAX_BAR_WIDTH);
 
   const press = (route: { key: string; name: string }, focused: boolean) => () => {
     const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
@@ -71,7 +80,7 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
   const NOTCH = "M0,0 H143 C169,0 161,40 195,40 C229,40 221,0 247,0 H390";
 
   return (
-    <View style={[styles.wrap, { height: renderH }]}>
+    <View style={[styles.wrap, { height: renderH, width, alignSelf: "center" }]}>
       <View style={styles.barShadow} pointerEvents="none">
         <Svg width={width} height={renderH} viewBox={`0 0 390 ${vbH}`} preserveAspectRatio="none">
           {/* fill only — no stroke, so no seam line anywhere */}

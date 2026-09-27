@@ -24,7 +24,7 @@ import { FamilySection } from "@/components/settings/family-section";
 import { ExportDataSection } from "@/components/settings/export-data-section";
 import { DeleteAccountSection } from "@/components/settings/delete-account-section";
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 export default function SettingsScreen() {
   const { user } = useAuth();
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   headerTitle: { fontSize: 22, fontWeight: "800", color: colors.ink },
-  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
+  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   profile: {
     gap: spacing.md,
     backgroundColor: colors.card,

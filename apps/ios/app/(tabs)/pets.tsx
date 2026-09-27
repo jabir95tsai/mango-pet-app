@@ -45,7 +45,7 @@ import { HealthForm } from "@/components/pets/health-form";
 import { ReceiptScanner } from "@/components/pets/receipt-scanner";
 import { LinearGradient } from "expo-linear-gradient";
 import { Plus } from "lucide-react-native";
-import { colors, mangoGradient, radius, spacing } from "@/theme/theme";
+import { colors, mangoGradient, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 const tPP = scoped("PetsPage");
 
@@ -308,7 +308,7 @@ export default function PetsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm },
+  scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
