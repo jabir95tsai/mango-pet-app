@@ -36,7 +36,7 @@
 → [`ios-app-store-listing.md`](./ios-app-store-listing.md)（2026-09-27）：描述（中+en）、關鍵字、副標題、分類建議（生活風格 主 / 社交 次）、年齡分級問卷逐項推薦答案、Support/Marketing/隱私政策 URL（沿用現有 Firebase Hosting 網域，不需等自訂網域）、App Privacy 資料標籤（已 grep 確認無 Analytics SDK，位置/照片/UGC/聯絡資訊/識別碼需申報）、審查備註英文草稿（guest 登入 + 背景定位 + UGC 審核機制）。**待你複製貼上進 ASC**——分類與年齡問卷仍要在 ASC 介面互動點選，這裡只給推薦答案。
 
 ### 送審管線
-- **eas.json `submit.production`** 設定（ascAppId / Apple ID / team）或互動式 `eas submit`
+- ✅ **eas.json `submit.production`** 設定完成（2026-09-27 — ascAppId/appleId/team 全填）
 - **EAS production build**（`eas build --profile production`，會 autoIncrement buildNumber）
 - **TestFlight internal beta**：上 App Store 前先跑一輪自己/家人測（強烈建議；也提早暴露背景定位/push 審查問題）
 
@@ -74,17 +74,13 @@ app 一開要登入 → 審查員需能進。guest 登入可解（審查備註�
 
 1. ✅ **UGC 檢舉/封鎖 — CODE DONE + 已部署（2026-09-27）**：`firebase deploy --only firestore:rules` + `functions:onReportCreated` 都成功。**剩：真人帳號端到端驗一次**（web 或 EAS build 裝置——檢舉貼文/留言 → 「已收到」提示;封鎖 → 對方內容從 feed 消失 + settings 能看到並解封鎖）。
 2. ✅ **iPad responsive QA — CODE DONE（2026-09-27），待真機/simulator 目視驗證**（見上方 ⚠️-iPad 段落；開發機無 macOS，無法自己看過畫面）。
-3. **user 手動（可與 1、2 平行進行，不擋 dev）**：
-   - App Store Connect 建 App 紀錄（name/SKU/主要語言/bundle id）
-   - 接受 Agreements, Tax, and Banking（含 Free Apps 協議）
-   - APNs Auth Key (.p8) 上傳 Firebase Console → Cloud Messaging
-   - **尚未開始**（2026-09-27 user 確認）
+3. **user 手動**：
+   - ✅ App Store Connect 建 App 紀錄（2026-09-27 — 已有 `ascAppId` 6816685055，代表 App 紀錄已建立）
+   - Agreements, Tax, and Banking（含 Free Apps 協議）— **狀態待確認**
+   - APNs Auth Key (.p8) 上傳 Firebase Console → Cloud Messaging — **狀態待確認**
 4. ✅ **PM metadata 草稿完成（2026-09-27）** → [`ios-app-store-listing.md`](./ios-app-store-listing.md)：描述/關鍵字/分類建議/年齡分級推薦答案/URL 三件套/App Privacy 標籤/審查備註全部草稿好，**待你複製貼上進 ASC**（分類 + 年齡問卷仍要在 ASC 介面互動點選）。
 5. ✅ **素材確認（2026-09-27）**：icon 1024² 乾淨非預圓角、splash 1242² 都確認存在。**尚缺**：截圖（6.7" + iPad，需要真機/simulator 產生，還沒做）。
-6. ✅ **`eas.json` `submit.production`** 已預填框架（2026-09-27）：`appleId: jabir95tsai@gmail.com` 已填；`ascAppId`/`appleTeamId` 還是 `TODO_FILL_IN_...` 佔位字串，**依賴步驟 3 先建好 ASC App 紀錄才填得出來**：
-   - **`ascAppId`**：App Store Connect → 你的 App → App Information → 「Apple ID」欄位那串數字（不是你登入用的 Apple ID email，是這個 App 專屬的數字 ID，建立 App 紀錄後才會產生）。
-   - **`appleTeamId`**：[developer.apple.com/account](https://developer.apple.com/account) → Membership → Team ID（10 碼英數，登入 Apple Developer 帳號就看得到，現在就查得到，不用等 ASC App 紀錄）。
-   - 兩個值填好後告訴我，我把 `eas.json` 的 `TODO_...` 換掉。
+6. ✅ **`eas.json` `submit.production` 已填完整（2026-09-27）**：`appleId`/`ascAppId`（`6816685055`）/`appleTeamId`（`5HGWLK54MK`）全部到位，可以 `eas submit` 了。
 7. EAS production build（`eas build --profile production`）→ `eas submit` → **TestFlight 一輪** → 正式送審。
 
 > 剩下的路徑清楚：③ ASC 帳號設定是 user 手動、擋住⑥；② iPad QA 需要開一個 iOS UI/UX code session；①的端到端驗證 + ⑤的截圖都需要一次 EAS build 或真機一起做。
