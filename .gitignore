@@ -86,3 +86,7 @@ ds-bundle/
 .design-sync/node_modules
 apps/web/.design-sync.css
 apps/web/.design-sync-types/
+
+# Local Expo/Metro dev-server logs written by the harness when it starts the
+# iOS dev server. Pure local noise — never belongs in the repo.
+/outputs/

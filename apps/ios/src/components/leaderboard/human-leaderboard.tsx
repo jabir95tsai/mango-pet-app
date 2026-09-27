@@ -121,7 +121,7 @@ export function HumanLeaderboard({ onCreateFamily }: { onCreateFamily: () => voi
         value={scope}
         onChange={changeScope}
       />
-      <Segmented options={PERIODS} value={period} onChange={setPeriod} compact />
+      <Segmented options={PERIODS} value={period} onChange={setPeriod} />
 
       {loading ? (
         <ActivityIndicator color={colors.brand} style={styles.loader} />
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: "800", color: colors.ink },
   subtitle: { fontSize: 11, color: colors.ink3, marginTop: 2 },
   loader: { marginVertical: spacing.xl },
-  list: { gap: spacing.xs },
+  list: { gap: spacing.sm },
   empty: { alignItems: "center", gap: spacing.sm, padding: spacing.xl },
   emptyTitle: { fontSize: 16, fontWeight: "800", color: colors.ink, textAlign: "center" },
   emptyBody: { fontSize: 13, color: colors.ink2, textAlign: "center", lineHeight: 19 },

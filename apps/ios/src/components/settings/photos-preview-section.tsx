@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { Images } from "lucide-react-native";
 import type { GalleryPhotoAsset } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
@@ -51,7 +52,7 @@ export function PhotosPreviewSection() {
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <View style={styles.iconDisc}>
-            <Text style={styles.iconText}>🖼️</Text>
+            <Images size={16} color={colors.brandDeep} />
           </View>
           <Text style={styles.title}>{tS("photosLink")}</Text>
         </View>
@@ -115,7 +116,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconText: { fontSize: 16 },
   title: { fontSize: 15, fontWeight: "800", color: colors.ink },
   viewAll: { fontSize: 12, fontWeight: "700", color: colors.brandDeep },
   dim: { opacity: 0.6 },

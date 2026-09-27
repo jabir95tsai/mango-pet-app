@@ -1,6 +1,7 @@
 # iOS Apple Glass 設計系統（mango liquid glass）
 
 狀態：**DEFERRED — 上架後再做**（iOS PM 2026-08-26，user 拍板：先衝 App Store 上架，Glass redesign 排 v1.1）。spec 本身仍 READY-FOR-DEV，未來要撿回直接照下面走；目前 `expo-blur` 未裝、0 surface 套用，維持「1:1 對齊 web」的既有 fidelity 視覺送審。
+> **2026-09-27 拆分合併**：P-glass-0/1 原型（`expo-blur` dep + 8 個 `Glass*` primitives + theme `glass*` tokens + `useReduceTransparency`）**停在 branch `ios-glass-blur`，未進 main**（v1.1 撿回從那裡接）。同 branch 上的 PWA 1:1 對齊工作（tab bar / 開始遛狗 CTA / leaderboard / settings）已經由 branch `ios-pwa-align` 單獨合進 main。
 規格作者：iOS PM session
 角色執行：**iOS Backend**（expo-blur dep + gate）+ **iOS UI/UX**（glass 系統 + 套各 surface）
 配合：[`ios-uiux-polish-pass.md`](./ios-uiux-polish-pass.md)、[`ios-uiux-fidelity-gaps.md`](./ios-uiux-fidelity-gaps.md)、[`visual-redesign-mango.md`](./visual-redesign-mango.md)

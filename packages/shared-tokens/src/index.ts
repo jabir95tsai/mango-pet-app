@@ -23,6 +23,12 @@ export const mangoColors = {
   leafTint: "#e7f2dc",
   success: "#7dd699",
   successTint: "#d8f2de",
+  // Destructive / danger semantics (delete account, danger zone). Mango is the
+  // brand palette, but status colors stay conventional so a destructive action
+  // never reads as "just another mango button". 1:1 with the web danger zone,
+  // which uses Tailwind red-600 (fill + icon) and red-700 (title).
+  danger: "#dc2626",
+  dangerDeep: "#b91c1c",
   bellTint: "#ffe9a8",
   cookie: "#d77b3f",
   cookieTint: "#ffe0cc",

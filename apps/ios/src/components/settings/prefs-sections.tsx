@@ -1,15 +1,20 @@
 /**
  * Walk auto-photo + leaderboard visibility sections (P5a) — direct merge writes,
- * optimistic. Mirror web walk-auto-photo-section + leaderboard-visibility-section.
+ * optimistic. 1:1 with web walk-auto-photo-section + leaderboard-visibility-section:
+ * icon disc + i18n title/body, lucide option icons + Check on the selected row.
  */
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { Camera, Check, Globe, Lock, Trophy, Users } from "lucide-react-native";
 import type { LeaderboardVisibility } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
 import { getUserPrefs, setLeaderboardVisibility, setWalkAutoPhoto } from "@/lib/user-prefs";
-import { t } from "@/lib/i18n";
+import { scoped } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
+
+const tWap = scoped("Settings.walkAutoPhoto");
+const tLv = scoped("Settings.leaderboardVisibility");
 
 export function WalkAutoPhotoSection() {
   const { user } = useAuth();
@@ -34,9 +39,12 @@ export function WalkAutoPhotoSection() {
   return (
     <View style={styles.card}>
       <View style={styles.row}>
+        <View style={styles.iconDisc}>
+          <Camera size={16} color={colors.brandDeep} />
+        </View>
         <View style={styles.text}>
-          <Text style={styles.title}>遛狗自動拍照分享</Text>
-          <Text style={styles.hint}>開始 / 結束遛狗時，提示拍照並分享動態。</Text>
+          <Text style={styles.title}>{tWap("title")}</Text>
+          <Text style={styles.hint}>{tWap("body")}</Text>
         </View>
         <Switch
           value={on}
@@ -49,10 +57,10 @@ export function WalkAutoPhotoSection() {
   );
 }
 
-const VIS_OPTIONS: { value: LeaderboardVisibility; label: string; sub: string }[] = [
-  { value: "public", label: "🌍 公開", sub: "全 App + 好友排行榜都看得到" },
-  { value: "friends", label: "👥 好友", sub: "只有好友排行榜看得到" },
-  { value: "off", label: "🔒 隱藏", sub: "不出現在任何排行榜（自己仍看得到自己的狗）" },
+const VIS_OPTIONS: { value: LeaderboardVisibility; Icon: typeof Globe }[] = [
+  { value: "public", Icon: Globe },
+  { value: "friends", Icon: Users },
+  { value: "off", Icon: Lock },
 ];
 
 export function LeaderboardVisibilitySection() {
@@ -77,24 +85,31 @@ export function LeaderboardVisibilitySection() {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>排行榜可見度</Text>
-      {VIS_OPTIONS.map((o) => {
-        const on = o.value === value;
+      <View style={styles.headerRow}>
+        <View style={styles.iconDisc}>
+          <Trophy size={16} color={colors.brandDeep} />
+        </View>
+        <View style={styles.text}>
+          <Text style={styles.title}>{tLv("title")}</Text>
+          <Text style={styles.hint}>{tLv("subtitle")}</Text>
+        </View>
+      </View>
+      {VIS_OPTIONS.map(({ value: v, Icon }) => {
+        const on = v === value;
         return (
           <Pressable
-            key={o.value}
+            key={v}
             accessibilityRole="radio"
             accessibilityState={{ selected: on }}
-            onPress={() => pick(o.value)}
+            onPress={() => pick(v)}
             style={[styles.option, on && styles.optionOn]}
           >
-            <View style={styles.text}>
-              <Text style={[styles.optionLabel, on && styles.optionLabelOn]}>{o.label}</Text>
-              <Text style={styles.hint}>{o.sub}</Text>
+            <Icon size={16} color={on ? colors.brandDeep : colors.ink3} style={styles.optIcon} />
+            <View style={styles.optText}>
+              <Text style={[styles.optionLabel, on && styles.optionLabelOn]}>{tLv(`${v}.label`)}</Text>
+              <Text style={styles.hint}>{tLv(`${v}.hint`)}</Text>
             </View>
-            <View style={[styles.radio, on && styles.radioOn]}>
-              {on ? <View style={styles.radioDot} /> : null}
-            </View>
+            {on ? <Check size={16} color={colors.brandDeep} style={styles.optIcon} /> : null}
           </Pressable>
         );
       })}
@@ -112,12 +127,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.xs },
+  iconDisc: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.brandTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   text: { flex: 1 },
   title: { fontSize: 15, fontWeight: "800", color: colors.ink },
-  hint: { fontSize: 11, color: colors.ink3, marginTop: 1 },
+  hint: { fontSize: 11, color: colors.ink3, marginTop: 1, lineHeight: 15 },
   option: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -126,17 +150,8 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
   },
   optionOn: { backgroundColor: colors.brandTint, borderColor: colors.brand },
+  optIcon: { marginTop: 2 },
+  optText: { flex: 1 },
   optionLabel: { fontSize: 14, fontWeight: "700", color: colors.ink },
   optionLabelOn: { color: colors.brandDeep },
-  radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: colors.hairline,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioOn: { borderColor: colors.brand },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.brand },
 });

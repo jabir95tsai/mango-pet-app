@@ -64,9 +64,6 @@ export function LeaderboardRow({
     Animated.timing(glow, { toValue: 0, duration: 1500, useNativeDriver: false }).start();
   }, [isGlowing, reduceMotion, glow]);
 
-  const delta =
-    previousRank != null && previousRank > 0 ? previousRank - rank : 0;
-
   // Meta order mirrors web: walks · distance · 🔥streak · 飼主owner.
   const meta: string[] = [
     t("Leaderboard.unitWalks", { count: walkCount }),
@@ -88,11 +85,6 @@ export function LeaderboardRow({
         ) : (
           <Text style={styles.rankNum}>{rank}</Text>
         )}
-        {delta !== 0 ? (
-          <Text style={[styles.delta, delta > 0 ? styles.up : styles.down]}>
-            {delta > 0 ? `▲${delta}` : `▼${-delta}`}
-          </Text>
-        ) : null}
       </View>
 
       {isDog ? (
@@ -140,7 +132,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     overflow: "hidden",
     backgroundColor: colors.card,
     borderWidth: StyleSheet.hairlineWidth,
@@ -159,9 +151,6 @@ const styles = StyleSheet.create({
   rankCol: { width: 32, alignItems: "center" },
   medal: { fontSize: 18 },
   rankNum: { fontSize: 18, fontWeight: "700", color: colors.ink3 },
-  delta: { fontSize: 10, fontWeight: "800", marginTop: 1 },
-  up: { color: colors.leaf },
-  down: { color: colors.cookie },
   body: { flex: 1 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   name: { flexShrink: 1, fontSize: 14, fontWeight: "600", color: colors.ink },

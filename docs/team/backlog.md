@@ -234,3 +234,12 @@ _目前沒有 active 條目。已 SHIPPED 的見「已處理（audit trail）」
 - **建議交付給**：UI/UX（逐 surface 對齊，可一頁一 commit）— **feed + leaderboard 仍待**
 - **優先級提示**：P2（不影響功能；視覺一致性 + 技術債。可在各 surface 下次有改動時順手對齊）
 - **PM 排序提示**：不必一次做完；每次有人動到 feed/leaderboard/settings 就順手 mango 化 + 換 radius。
+
+### app.json ATS 例外（exp.direct 允許 HTTP）被 revert — 需 iOS Backend 裁決是否該有長期做法
+- **發現於**：2026-08-26、iOS UI/UX session（收 settings 未 commit 改動時發現）
+- **類型**：build / config 決策
+- **觀察**：working tree 裡混進了 `apps/ios/app.json` 的 `NSAppTransportSecurity` → `NSExceptionDomains.exp.direct.NSExceptionAllowsInsecureHTTPLoads = true`。這是 Expo dev tunnel 用的，但寫在 `app.json` 會**跟著 native build 一起進正式 app**（送審可見）。UI/UX session 判斷這超出角色範圍且不該混進 UI commit，已 `git checkout` 還原。
+- **同批一起還原的**：`apps/ios/.gitignore` + `expo-env.d.ts` 被 expo-cli 自動改寫，**推翻了 repo 原本的明確決定**（原註解寫 `expo-env.d.ts` "should not be edited and should be committed"，被 expo-cli 改成 "should be in your git ignore" 並加進 ignore）。跑 expo-cli 會再犯，要留意。
+- **開放問題**：dev tunnel 若確實需要 ATS 例外，正解是放在 dev-only config（如 `app.config.js` 依 `process.env` 分支）還是根本不需要（Expo Go 走 tunnel 不吃 app.json ATS，只有 dev client / native build 才吃）？
+- **建議交付給**：iOS Backend
+- **優先級提示**：P3（目前不阻擋任何事；但若哪天有人為了修 dev 連線又把它加回去並 commit，會悄悄進送審 build）

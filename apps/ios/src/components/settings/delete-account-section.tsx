@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Trash2 } from "lucide-react-native";
 import type { DeleteAccountImpact } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
@@ -63,7 +64,8 @@ export function DeleteAccountSection() {
   return (
     <>
       <Pressable onPress={() => setOpen(true)} style={styles.dangerBtn}>
-        <Text style={styles.dangerText}>{t("DeleteAccount.warning")}</Text>
+        <Trash2 size={16} color="#ffffff" />
+        <Text style={styles.dangerText}>{t("Settings.dangerZone.deleteAction")}</Text>
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -131,14 +133,17 @@ export function DeleteAccountSection() {
 
 const styles = StyleSheet.create({
   dangerBtn: {
-    height: 48,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.cookie,
+    alignSelf: "flex-start",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: spacing.sm,
+    height: 44,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.danger,
   },
-  dangerText: { fontSize: 14, fontWeight: "800", color: colors.cookie },
+  dangerText: { fontSize: 14, fontWeight: "700", color: "#ffffff" },
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
   sheet: {
     backgroundColor: colors.card,

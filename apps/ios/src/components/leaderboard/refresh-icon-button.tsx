@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef } from "react";
 import { Animated, Easing, Pressable, StyleSheet } from "react-native";
+import { RefreshCw } from "lucide-react-native";
 
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { t } from "@/lib/i18n";
@@ -50,7 +51,9 @@ export function RefreshIconButton({
       accessibilityLabel={t("Leaderboard.refreshButton")}
       style={({ pressed }) => [styles.btn, (pressed || refreshing) && styles.dim]}
     >
-      <Animated.Text style={[styles.icon, { transform: [{ rotate }] }]}>↻</Animated.Text>
+      <Animated.View style={{ transform: [{ rotate }] }}>
+        <RefreshCw size={20} color={colors.brandDeep} strokeWidth={2} />
+      </Animated.View>
     </Pressable>
   );
 }

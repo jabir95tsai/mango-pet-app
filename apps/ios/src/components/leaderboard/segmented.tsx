@@ -1,23 +1,21 @@
 /**
- * Pill segmented control — 1:1 with web `ui/tabs.tsx` (a simple colour-toggle,
- * NOT a sliding indicator): bg-alt track (rounded-lg, p-1), active segment =
- * card bg + brand-deep text + soft shadow, inactive = ink-2. Generic over the
- * option value. `compact` trims the height for the secondary period row.
+ * Segmented tabs — 1:1 with web ui/tabs.tsx: an INLINE pill group (hugs its
+ * content, left-aligned — NOT full-width), bg-alt track (rounded-lg, p-1), h-8
+ * segments (rounded-md, px-4, text-sm/medium). Active = card bg + brand-deep
+ * text + soft shadow; inactive = ink-2. Generic over the option value.
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius } from "@/theme/theme";
 
 export function Segmented<T extends string>({
   options,
   value,
   onChange,
-  compact,
 }: {
   options: { value: T; label: string }[];
   value: T;
   onChange: (next: T) => void;
-  compact?: boolean;
 }) {
   return (
     <View style={styles.track}>
@@ -29,7 +27,8 @@ export function Segmented<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
             onPress={() => onChange(o.value)}
-            style={[styles.seg, compact && styles.segCompact, on && styles.segOn]}
+            hitSlop={6}
+            style={[styles.seg, on && styles.segOn]}
           >
             <Text style={[styles.text, on && styles.textOn]}>{o.label}</Text>
           </Pressable>
@@ -40,22 +39,21 @@ export function Segmented<T extends string>({
 }
 
 const styles = StyleSheet.create({
+  // inline-flex: hug content, left-aligned (not stretched full-width).
   track: {
+    alignSelf: "flex-start",
     flexDirection: "row",
     backgroundColor: colors.bgAlt,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     padding: 4,
-    gap: 4,
   },
   seg: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: radius.sm,
+    height: 32,
+    borderRadius: radius.md - 6, // rounded-md ≈ 6
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 16,
   },
-  segCompact: { minHeight: 36 },
   segOn: {
     backgroundColor: colors.card,
     shadowColor: "#50320a",
@@ -64,6 +62,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
-  text: { fontSize: 13, fontWeight: "600", color: colors.ink2 },
-  textOn: { color: colors.brandDeep, fontWeight: "700" },
+  text: { fontSize: 14, fontWeight: "500", color: colors.ink2 },
+  textOn: { color: colors.brandDeep },
 });
