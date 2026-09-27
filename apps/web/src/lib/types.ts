@@ -25,6 +25,10 @@ import type {
   Reminder,
   ReminderInput,
   ReminderRepeat,
+  Report,
+  ReportReason,
+  ReportStatus,
+  ReportTargetType,
   Species,
   VaccineData,
   VetData,
@@ -40,6 +44,7 @@ import {
   EXPENSE_CATEGORIES,
   NOTIFY_BEFORE_MINUTES,
   REACTION_EMOJIS,
+  REPORT_REASONS,
 } from "@mango/shared-types";
 
 // These domain types now live in @mango/shared-types (cross-platform single
@@ -72,6 +77,10 @@ export type {
   Reminder,
   ReminderInput,
   ReminderRepeat,
+  Report,
+  ReportReason,
+  ReportStatus,
+  ReportTargetType,
   Species,
   VaccineData,
   VetData,
@@ -87,6 +96,7 @@ export {
   EXPENSE_CATEGORIES,
   NOTIFY_BEFORE_MINUTES,
   REACTION_EMOJIS,
+  REPORT_REASONS,
 };
 
 export type AuthProviderKind = "google" | "apple" | "facebook";
@@ -168,6 +178,13 @@ export type AppUser = {
    *  the `syncDogEntryVisibility` function. Spec
    *  docs/features/leaderboard-v2-dog-centric.md ③. */
   leaderboardVisibility?: LeaderboardVisibility;
+  /** Uids this user has blocked. Blocked authors' posts/comments disappear
+   *  from this user's feed (client filter, see @mango/shared-business
+   *  `filterVisible`) and they can't comment/react on this user's posts
+   *  (firestore.rules `authorBlockedMe`). Self-managed via arrayUnion/
+   *  arrayRemove — no admin approval needed. Spec
+   *  docs/features/ugc-moderation.md. */
+  blockedUids?: string[];
 };
 
 /** Dog-leaderboard visibility (leaderboard v2). `'public'` = all-app +

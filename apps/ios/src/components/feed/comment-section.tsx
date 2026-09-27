@@ -23,21 +23,28 @@ import {
   deleteComment,
   listComments,
 } from "@/lib/posts";
+import { getBlockedUids } from "@/lib/user-prefs";
 import { useAuth } from "@/state/auth-context";
 import { relativeTime } from "@/lib/format";
 import { colors, radius, spacing } from "@/theme/theme";
 import { UserAvatar } from "./user-avatar";
+import { PostMenu } from "./post-menu";
 
 type Cursor = FirebaseFirestoreTypes.QueryDocumentSnapshot | null;
 
 export function CommentSection({
   postId,
   postAuthorUid,
+  currentUid,
   onCountChange,
+  onBlocked,
 }: {
   postId: string;
   postAuthorUid: string;
+  /** Needed for the per-comment report/block menu (ugc-moderation.md). */
+  currentUid: string;
   onCountChange?: (delta: number) => void;
+  onBlocked?: (blockedUid: string) => void;
 }) {
   const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -47,11 +54,14 @@ export function CommentSection({
   const [submitting, setSubmitting] = useState(false);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [blockedUids, setBlockedUids] = useState<string[]>([]);
 
   const loadFirst = useCallback(async () => {
     setLoading(true);
     try {
-      const page = await listComments(postId, 20, null);
+      const blocked = await getBlockedUids(currentUid).catch(() => [] as string[]);
+      setBlockedUids(blocked);
+      const page = await listComments(postId, 20, null, blocked);
       setComments(page.comments);
       setCursor(page.cursor);
     } catch {
@@ -59,7 +69,7 @@ export function CommentSection({
     } finally {
       setLoading(false);
     }
-  }, [postId]);
+  }, [postId, currentUid]);
 
   useEffect(() => {
     void loadFirst();
@@ -69,7 +79,7 @@ export function CommentSection({
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await listComments(postId, 20, cursor);
+      const page = await listComments(postId, 20, cursor, blockedUids);
       setComments((prev) => [...prev, ...page.comments]);
       setCursor(page.cursor);
     } catch {
@@ -178,6 +188,16 @@ export function CommentSection({
                     >
                       <Trash2 size={13} color={colors.ink3} strokeWidth={2} />
                     </Pressable>
+                  ) : c.authorUid !== currentUid ? (
+                    <PostMenu
+                      currentUid={currentUid}
+                      targetType="comment"
+                      postId={postId}
+                      targetId={c.commentId}
+                      targetAuthorUid={c.authorUid}
+                      targetAuthorName={c.authorName}
+                      onBlocked={onBlocked}
+                    />
                   ) : null}
                 </View>
               );

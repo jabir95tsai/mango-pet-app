@@ -1,4 +1,6 @@
 import {
+  arrayRemove,
+  arrayUnion,
   collection,
   deleteField,
   doc,
@@ -217,6 +219,35 @@ export async function updateLeaderboardVisibility(
     { leaderboardVisibility: value },
     { merge: true },
   );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// UGC moderation: block / unblock (App Store Guideline 1.2)
+// Spec docs/features/ugc-moderation.md. Self-managed on `users/{uid}
+// .blockedUids` — no approval needed. Blocking hides the target's
+// content client-side (@mango/shared-business `filterVisible`, used by
+// listFeedPosts/listComments) and stops them commenting/reacting on the
+// blocker's posts (firestore.rules `authorBlockedMe`).
+// ────────────────────────────────────────────────────────────────────
+
+export async function blockUser(myUid: string, targetUid: string): Promise<void> {
+  if (myUid === targetUid) return;
+  await updateDoc(doc(getDb(), "users", myUid), {
+    blockedUids: arrayUnion(targetUid),
+  });
+}
+
+export async function unblockUser(myUid: string, targetUid: string): Promise<void> {
+  await updateDoc(doc(getDb(), "users", myUid), {
+    blockedUids: arrayRemove(targetUid),
+  });
+}
+
+/** Read just the viewer's own block list — cheap single-doc read used by
+ *  feed/comment loaders to filter content before render. */
+export async function getBlockedUids(uid: string): Promise<string[]> {
+  const snap = await getDoc(doc(getDb(), "users", uid));
+  return (snap.data()?.blockedUids as string[] | undefined) ?? [];
 }
 
 // ────────────────────────────────────────────────────────────────────

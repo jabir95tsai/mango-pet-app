@@ -31,7 +31,10 @@ import {
   type Post,
   type PostInput,
   type ReactionEmoji,
+  type ReportReason,
+  type ReportTargetType,
 } from "@/lib/types";
+import { filterVisible } from "@mango/shared-business";
 
 const POSTS = "posts";
 
@@ -178,10 +181,15 @@ export async function listFriendsPosts(
   return results.flat();
 }
 
+/** `blockedUids`: the viewer's own block list (users/{uid}.blockedUids) —
+ *  posts from blocked authors, and posts already auto-hidden by
+ *  onReportCreated, are filtered out here so callers never render them.
+ *  Spec docs/features/ugc-moderation.md. */
 export async function listFeedPosts(
   uid: string,
   friendUids: string[] = [],
   max = 30,
+  blockedUids: string[] = [],
 ): Promise<Post[]> {
   const [mine, publicPosts, friendsPosts] = await Promise.all([
     listMyPosts(uid, max),
@@ -192,11 +200,12 @@ export async function listFeedPosts(
   for (const p of [...mine, ...publicPosts, ...friendsPosts]) {
     dedup.set(p.postId, p);
   }
-  return Array.from(dedup.values()).sort((a, b) => {
+  const sorted = Array.from(dedup.values()).sort((a, b) => {
     const ta = (a.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
     const tb = (b.createdAt as Timestamp | undefined)?.toMillis() ?? 0;
     return tb - ta;
   });
+  return filterVisible(sorted, blockedUids);
 }
 
 function reactionDoc(postId: string, uid: string) {
@@ -306,11 +315,17 @@ export type CommentPage = {
 /** Load one page of a post's comments, oldest-first (chronological reading
  *  order). v1 is paginated getDocs, NOT onSnapshot — per spec cost note
  *  ("點開才讀，不用即時"). Pass the previous page's `cursor` as `after` to
- *  page forward. Default page size 20 (open question #2 PM default). */
+ *  page forward. Default page size 20 (open question #2 PM default).
+ *  `blockedUids` filters out the viewer's blocked authors + auto-hidden
+ *  comments — see `listFeedPosts` for the same pattern; a page can come
+ *  back with fewer than `pageSize` visible rows when some are filtered,
+ *  which is an acceptable v1 tradeoff (spec docs/features/
+ *  ugc-moderation.md — no admin dashboard, keep it simple). */
 export async function listComments(
   postId: string,
   pageSize = 20,
   after: QueryDocumentSnapshot | null = null,
+  blockedUids: string[] = [],
 ): Promise<CommentPage> {
   const base = [
     orderBy("createdAt", "asc"),
@@ -320,12 +335,45 @@ export async function listComments(
     ? query(commentsCol(postId), orderBy("createdAt", "asc"), startAfter(after), limit(pageSize))
     : query(commentsCol(postId), ...base);
   const snap = await getDocs(q);
-  const comments = snap.docs.map((d) => ({
+  const rawComments = snap.docs.map((d) => ({
     ...(d.data() as Omit<Comment, "commentId">),
     commentId: d.id,
   }));
+  const comments = filterVisible(rawComments, blockedUids);
   const cursor = snap.docs.length === pageSize
     ? snap.docs[snap.docs.length - 1]
     : null;
   return { comments, cursor };
+}
+
+// ── UGC moderation: reports (App Store Guideline 1.2) ────────────────
+// Spec docs/features/ugc-moderation.md. Write-only from the client —
+// firestore.rules forbid read/update; `onReportCreated` (Admin SDK) does
+// the reportCount/hidden bookkeeping. Blocking (users/{uid}.blockedUids)
+// lives in lib/firebase/users.ts alongside the rest of the profile writes.
+
+export type CreateReportArgs = {
+  reporterUid: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  targetAuthorUid: string;
+  /** Required (and equal to targetId) when targetType === "comment" — the
+   *  trigger needs the parent post path. */
+  postId?: string;
+  reason: ReportReason;
+  note?: string;
+};
+
+export async function createReport(args: CreateReportArgs): Promise<void> {
+  await addDoc(collection(getDb(), "reports"), {
+    reporterUid: args.reporterUid,
+    targetType: args.targetType,
+    targetId: args.targetId,
+    targetAuthorUid: args.targetAuthorUid,
+    ...(args.postId ? { postId: args.postId } : {}),
+    reason: args.reason,
+    ...(args.note ? { note: args.note } : {}),
+    status: "open",
+    createdAt: serverTimestamp(),
+  });
 }

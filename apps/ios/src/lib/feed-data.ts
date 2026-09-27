@@ -20,6 +20,7 @@ import {
 } from "@/lib/walk-data";
 import { listFeedPosts } from "@/lib/posts";
 import { listFriendUids } from "@/lib/friends-read";
+import { getBlockedUids } from "@/lib/user-prefs";
 
 const HOME_FEED_LIMIT = 10;
 const FEED_FETCH_MAX = 30;
@@ -55,9 +56,10 @@ export function useFeedData({ home }: { home: boolean }) {
         const fam = await resolveCurrentFamilyId(user.uid);
         setFamilyId(fam);
         const friendUids = await listFriendUids(user.uid);
+        const blockedUids = await getBlockedUids(user.uid).catch(() => [] as string[]);
         const [petList, postList, walkList, famName] = await Promise.all([
           listPetsForScope(fam, user.uid).catch(() => [] as Pet[]),
-          listFeedPosts(user.uid, friendUids, FEED_FETCH_MAX).catch(
+          listFeedPosts(user.uid, friendUids, FEED_FETCH_MAX, blockedUids).catch(
             () => [] as Post[],
           ),
           listWalksForScope(fam, user.uid, 50).catch(() => [] as Walk[]),
@@ -99,5 +101,11 @@ export function useFeedData({ home }: { home: boolean }) {
     // local optimistic removal after deletePost (avoids a full refetch)
     removePost: (postId: string) =>
       setPosts((prev) => prev.filter((p) => p.postId !== postId)),
+    // local optimistic removal after blockUser (ugc-moderation.md) — drops
+    // the blocked author's other posts from the current view without a
+    // full refetch (comments filter server-side on next comment-section
+    // mount since listComments takes blockedUids too).
+    removeBlockedAuthor: (blockedUid: string) =>
+      setPosts((prev) => prev.filter((p) => p.authorUid !== blockedUid)),
   };
 }

@@ -313,6 +313,19 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(authorUid)/friends/$(viewerUid));
     }
 
+    // UGC moderation (docs/features/ugc-moderation.md): has `authorUid`
+    // blocked the caller? Used to stop a blocked-by author's target from
+    // commenting/reacting on that author's content — the "can't interact
+    // with me" half of blocking (the "disappears from my feed" half is
+    // client-side filtering over `blockedUids`, since rules can't filter
+    // query results).
+    function authorBlockedMe(authorUid) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(authorUid))
+        && request.auth.uid in
+             get(/databases/$(database)/documents/users/$(authorUid)).data.get("blockedUids", []);
+    }
+
     // Can the signed-in caller READ a post with this data? Mirrors the
     // posts/{postId} read rule so the comments subcollection can reuse the
     // exact same visibility logic via a get() on the parent post.
@@ -335,7 +348,12 @@ service cloud.firestore {
         && request.resource.data.visibility in ["private", "friends", "public"];
 
       allow update: if request.auth != null && (
-        resource.data.authorUid == request.auth.uid
+        (resource.data.authorUid == request.auth.uid
+          // `hidden`/`reportCount` are moderation state — Admin SDK only
+          // (onReportCreated), never client-writable, not even by the
+          // post's own author. Spec docs/features/ugc-moderation.md.
+          && !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(["hidden", "reportCount"]))
         // Reactors bump reactionCounts (their only legitimate write to
         // someone else's post) — but reacting is a community action, so
         // guests are excluded. commentCount is deliberately NOT client-
@@ -349,9 +367,11 @@ service cloud.firestore {
       allow delete: if request.auth.uid == resource.data.authorUid;
 
       // Reactions are a community action — guests can read but not write.
+      // Blocked-by-the-author callers are rejected too (ugc-moderation.md).
       match /reactions/{uid} {
         allow read: if request.auth != null;
-        allow write: if request.auth.uid == uid && isRealUser();
+        allow write: if request.auth.uid == uid && isRealUser()
+          && !authorBlockedMe(get(/databases/$(database)/documents/posts/$(postId)).data.authorUid);
       }
 
       // ── Comments (feed interaction v2) ──
@@ -377,9 +397,13 @@ service cloud.firestore {
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 500
-          && request.resource.data.createdAt == request.time;
+          && request.resource.data.createdAt == request.time
+          // Blocked-by-the-post-author callers can't comment either
+          // (ugc-moderation.md — the "can't interact with me" half).
+          && !authorBlockedMe(parentPost().authorUid);
 
         // No edits in v1 (open question #1 — PM default: not editable).
+        // `hidden`/`reportCount` are Admin-SDK-only regardless (see above).
         allow update: if false;
 
         // Comment author deletes their own; post author moderates any
@@ -389,6 +413,33 @@ service cloud.firestore {
           || request.auth.uid == parentPost().authorUid
         );
       }
+    }
+
+    // ── UGC moderation: reports + audit trail (App Store Guideline 1.2) ──
+    // Spec docs/features/ugc-moderation.md. Write-only from the client —
+    // there's no admin dashboard; the developer reviews via the Firestore
+    // console, and `onReportCreated` (Admin SDK, bypasses these rules)
+    // bumps reportCount/hidden and writes the audit doc.
+    match /reports/{reportId} {
+      allow read, update, delete: if false;
+      allow create: if isRealUser()
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.targetType in ["post", "comment", "user"]
+        && request.resource.data.targetId is string
+        && request.resource.data.targetId.size() > 0
+        && request.resource.data.targetAuthorUid is string
+        && request.resource.data.reason in ["spam", "harassment", "inappropriate", "other"]
+        && request.resource.data.status == "open"
+        && request.resource.data.createdAt == request.time
+        // Reporting a comment must carry the parent postId (the trigger
+        // needs it to reach posts/{postId}/comments/{commentId}).
+        && (request.resource.data.targetType != "comment"
+            || (request.resource.data.postId is string
+                && request.resource.data.postId.size() > 0));
+    }
+
+    match /moderationAudit/{auditId} {
+      allow read, write: if false; // Admin SDK only (onReportCreated).
     }
 
     // ── Restaurants & reviews ──

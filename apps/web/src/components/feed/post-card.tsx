@@ -13,12 +13,16 @@ import { Avatar } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { EmojiReactions } from "./emoji-reactions";
 import { CommentSection } from "./comment-section";
+import { PostMenu } from "./post-menu";
 import { cn } from "@/lib/utils";
 
 type Props = {
   post: Post;
   currentUid: string;
   onDelete?: () => void;
+  /** Bubbles up so the feed can drop the blocked author's other posts
+   *  from the current view without a full refetch (ugc-moderation.md). */
+  onBlocked?: (blockedUid: string) => void;
 };
 
 const VISIBILITY_ICON: Record<Visibility, typeof Globe> = {
@@ -27,7 +31,7 @@ const VISIBILITY_ICON: Record<Visibility, typeof Globe> = {
   private: Lock,
 };
 
-export function PostCard({ post, currentUid, onDelete }: Props) {
+export function PostCard({ post, currentUid, onDelete, onBlocked }: Props) {
   const locale = useLocale();
   const tC = useTranslations("Common");
   const tPL = useTranslations("PhotoLightbox");
@@ -80,6 +84,17 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
           >
             <Trash2 className="size-4" />
           </button>
+        )}
+        {!isMine && !isGuest && (
+          <PostMenu
+            currentUid={currentUid}
+            targetType="post"
+            postId={post.postId}
+            targetId={post.postId}
+            targetAuthorUid={post.authorUid}
+            targetAuthorName={post.authorName}
+            onBlocked={onBlocked}
+          />
         )}
       </header>
 
@@ -156,7 +171,9 @@ export function PostCard({ post, currentUid, onDelete }: Props) {
               id={commentsId}
               postId={post.postId}
               postAuthorUid={post.authorUid}
+              currentUid={currentUid}
               onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
+              onBlocked={onBlocked}
             />
           )}
         </>

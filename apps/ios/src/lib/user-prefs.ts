@@ -19,6 +19,7 @@ export type UserPrefs = {
   leaderboardVisibility?: LeaderboardVisibility;
   isGuest?: boolean;
   displayName?: string;
+  blockedUids?: string[];
 };
 
 function userRef(uid: string) {
@@ -59,4 +60,45 @@ export async function setLeaderboardVisibility(
   value: LeaderboardVisibility,
 ): Promise<void> {
   await userRef(uid).set({ leaderboardVisibility: value }, { merge: true });
+}
+
+// ── UGC moderation: block / unblock (App Store Guideline 1.2) ────────
+// Spec docs/features/ugc-moderation.md. Self-managed on `users/{uid}
+// .blockedUids` — web parity (apps/web/src/lib/firebase/users.ts).
+
+export async function blockUser(myUid: string, targetUid: string): Promise<void> {
+  if (myUid === targetUid) return;
+  await userRef(myUid).set(
+    { blockedUids: firestore.FieldValue.arrayUnion(targetUid) },
+    { merge: true },
+  );
+}
+
+export async function unblockUser(myUid: string, targetUid: string): Promise<void> {
+  await userRef(myUid).set(
+    { blockedUids: firestore.FieldValue.arrayRemove(targetUid) },
+    { merge: true },
+  );
+}
+
+/** Cheap single-doc read used by feed/comment loaders to filter content
+ *  before render. */
+export async function getBlockedUids(uid: string): Promise<string[]> {
+  const snap = await userRef(uid).get();
+  return (snap.data()?.blockedUids as string[] | undefined) ?? [];
+}
+
+export type UserProfileLite = { displayName: string; photoURL: string | null };
+
+/** Resolve a uid's public displayName/photoURL — used by the blocked-users
+ *  settings list (Firestore has no reverse "who is this uid" other than a
+ *  doc read). */
+export async function getUserProfileLite(uid: string): Promise<UserProfileLite | null> {
+  const snap = await userRef(uid).get();
+  const d = snap.data();
+  if (!d) return null;
+  return {
+    displayName: (d.displayName as string | undefined) ?? uid,
+    photoURL: (d.photoURL as string | null | undefined) ?? null,
+  };
 }

@@ -14,7 +14,9 @@ import {
   deleteComment,
   listComments,
 } from "@/lib/firebase/posts";
+import { getBlockedUids } from "@/lib/firebase/users";
 import { COMMENT_MAX_LEN, type Comment } from "@/lib/types";
+import { PostMenu } from "./post-menu";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -22,12 +24,17 @@ type Props = {
   /** Post author — allowed to delete any comment on their own post
    *  (matches the firestore.rules delete guard). */
   postAuthorUid: string;
+  /** Needed for the per-comment report/block menu (ugc-moderation.md). */
+  currentUid: string;
   /** DOM id so the PostCard toggle can `aria-controls` this region. */
   id?: string;
   /** Bubble count deltas up so the card's comment badge stays in sync
    *  without a re-fetch (denormalised post.commentCount is maintained
    *  server-side; this is the optimistic local mirror). */
   onCountChange?: (delta: number) => void;
+  /** Bubbles up to the feed so it can drop the blocked author's content
+   *  from the current view without a full refetch. */
+  onBlocked?: (blockedUid: string) => void;
 };
 
 const PAGE_SIZE = 20;
@@ -39,7 +46,14 @@ const PAGE_SIZE = 20;
  * oldest-first via the paginated `listComments` cursor; the input sits at
  * the bottom and new comments optimistically append there.
  */
-export function CommentSection({ postId, postAuthorUid, id, onCountChange }: Props) {
+export function CommentSection({
+  postId,
+  postAuthorUid,
+  currentUid,
+  id,
+  onCountChange,
+  onBlocked,
+}: Props) {
   const t = useTranslations("Comments");
   const tC = useTranslations("Common");
   const locale = useLocale();
@@ -54,14 +68,19 @@ export function CommentSection({ postId, postAuthorUid, id, onCountChange }: Pro
   const [submitting, setSubmitting] = useState(false);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [blockedUids, setBlockedUids] = useState<string[]>([]);
 
   // Initial page — runs once on mount (component only mounts when the
-  // thread is opened).
+  // thread is opened). Reads the viewer's own block list once so both the
+  // first page and loadMore filter consistently (ugc-moderation.md).
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const page = await listComments(postId, PAGE_SIZE, null);
+        const blocked = await getBlockedUids(currentUid).catch(() => []);
+        if (cancelled) return;
+        setBlockedUids(blocked);
+        const page = await listComments(postId, PAGE_SIZE, null, blocked);
         if (!cancelled) {
           setComments(page.comments);
           setCursor(page.cursor);
@@ -75,13 +94,13 @@ export function CommentSection({ postId, postAuthorUid, id, onCountChange }: Pro
     return () => {
       cancelled = true;
     };
-  }, [postId, t]);
+  }, [postId, currentUid, t]);
 
   const loadMore = useCallback(async () => {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await listComments(postId, PAGE_SIZE, cursor);
+      const page = await listComments(postId, PAGE_SIZE, cursor, blockedUids);
       setComments((prev) => [...prev, ...page.comments]);
       setCursor(page.cursor);
     } catch {
@@ -89,7 +108,7 @@ export function CommentSection({ postId, postAuthorUid, id, onCountChange }: Pro
     } finally {
       setLoadingMore(false);
     }
-  }, [cursor, loadingMore, postId, t]);
+  }, [cursor, loadingMore, postId, blockedUids, t]);
 
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
@@ -218,6 +237,17 @@ export function CommentSection({ postId, postAuthorUid, id, onCountChange }: Pro
                         <Trash2 className="size-3" aria-hidden="true" />
                         {t("delete")}
                       </button>
+                    )}
+                    {c.authorUid !== currentUid && (
+                      <PostMenu
+                        currentUid={currentUid}
+                        targetType="comment"
+                        postId={postId}
+                        targetId={c.commentId}
+                        targetAuthorUid={c.authorUid}
+                        targetAuthorName={c.authorName}
+                        onBlocked={onBlocked}
+                      />
                     )}
                   </div>
                 </div>

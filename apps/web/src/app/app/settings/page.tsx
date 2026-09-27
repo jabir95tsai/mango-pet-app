@@ -20,6 +20,7 @@ import { PushToggle } from "@/components/settings/push-toggle";
 import { EngagementPushSection } from "@/components/settings/engagement-push-section";
 import { WalkAutoPhotoSection } from "@/components/settings/walk-auto-photo-section";
 import { LeaderboardVisibilitySection } from "@/components/settings/leaderboard-visibility-section";
+import { BlockedUsersSection } from "@/components/settings/blocked-users-section";
 import { PhotosPreviewSection } from "@/components/settings/photos-preview-section";
 import { FamilySection } from "@/components/family/family-section";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
@@ -196,6 +197,15 @@ export default function SettingsPage() {
         {user && !isGuest && (
           <section className="rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
             <LeaderboardVisibilitySection />
+          </section>
+        )}
+
+        {/* Blocked users — undo path for the feed "封鎖" action, otherwise
+            it would be a one-way door. Guests can't block (no community
+            access to begin with). Spec docs/features/ugc-moderation.md. */}
+        {user && !isGuest && (
+          <section className="rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
+            <BlockedUsersSection />
           </section>
         )}
 

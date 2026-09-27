@@ -30,9 +30,8 @@ import { colors, radius, spacing } from "@/theme/theme";
 export default function FeedScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { loading, refreshing, pets, posts, refresh, removePost } = useFeedData({
-    home: false,
-  });
+  const { loading, refreshing, pets, posts, refresh, removePost, removeBlockedAuthor } =
+    useFeedData({ home: false });
   const [composerOpen, setComposerOpen] = useState(false);
   const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
 
@@ -88,6 +87,7 @@ export default function FeedScreen() {
               petNameById={petNameById}
               onOpenPhotos={(photos, index) => setLightbox({ photos, index })}
               onDeleted={() => removePost(p.postId)}
+              onBlocked={removeBlockedAuthor}
             />
           ))}
         </ScrollView>

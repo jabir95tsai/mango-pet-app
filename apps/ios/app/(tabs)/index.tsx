@@ -46,6 +46,7 @@ export default function HomeScreen() {
     familyName,
     refresh,
     removePost,
+    removeBlockedAuthor,
   } = useFeedData({ home: true });
   const [composerOpen, setComposerOpen] = useState(false);
   const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
@@ -122,6 +123,7 @@ export default function HomeScreen() {
                 petNameById={petNameById}
                 onOpenPhotos={(photos, index) => setLightbox({ photos, index })}
                 onDeleted={() => removePost(p.postId)}
+                onBlocked={removeBlockedAuthor}
               />
             ))}
           </View>

@@ -20,8 +20,11 @@ import {
   type Comment,
   type Post,
   type ReactionEmoji,
+  type ReportReason,
+  type ReportTargetType,
   type Visibility,
 } from "@mango/shared-types";
+import { filterVisible } from "@mango/shared-business";
 import { uploadPostPhoto } from "./photos";
 
 function emptyReactionCounts(): Record<ReactionEmoji, number> {
@@ -177,11 +180,14 @@ export async function listFriendsPosts(
 }
 
 /** Mixed feed = own + public + friends-visible, deduped, newest-first.
- *  Identical aggregation to web listFeedPosts. */
+ *  Identical aggregation to web listFeedPosts. `blockedUids` (the viewer's
+ *  own block list) filters out blocked authors + auto-hidden posts — see
+ *  docs/features/ugc-moderation.md. */
 export async function listFeedPosts(
   uid: string,
   friendUids: string[] = [],
   max = 30,
+  blockedUids: string[] = [],
 ): Promise<Post[]> {
   const [mine, publicPosts, friendsPosts] = await Promise.all([
     listMyPosts(uid, max),
@@ -192,11 +198,12 @@ export async function listFeedPosts(
   for (const p of [...mine, ...publicPosts, ...friendsPosts]) {
     dedup.set(p.postId, p);
   }
-  return Array.from(dedup.values()).sort((a, b) => {
+  const sorted = Array.from(dedup.values()).sort((a, b) => {
     const ta = (a.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
     const tb = (b.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
     return tb - ta;
   });
+  return filterVisible(sorted, blockedUids);
 }
 
 // ── Reactions: posts/{postId}/reactions/{uid}. The CLIENT maintains
@@ -290,11 +297,14 @@ export type CommentPage = {
 };
 
 /** One page of comments, oldest-first. Pass the previous page's `cursor` as
- *  `after` to page forward. Default page size 20 (web parity). */
+ *  `after` to page forward. Default page size 20 (web parity).
+ *  `blockedUids` filters blocked authors + auto-hidden comments (web
+ *  parity — see listFeedPosts / docs/features/ugc-moderation.md). */
 export async function listComments(
   postId: string,
   pageSize = 20,
   after: FirebaseFirestoreTypes.QueryDocumentSnapshot | null = null,
+  blockedUids: string[] = [],
 ): Promise<CommentPage> {
   let q = postsCol()
     .doc(postId)
@@ -302,11 +312,42 @@ export async function listComments(
     .orderBy("createdAt", "asc");
   if (after) q = q.startAfter(after);
   const snap = await q.limit(pageSize).get();
-  const comments = snap.docs.map((d) => ({
+  const rawComments = snap.docs.map((d) => ({
     ...(d.data() as Omit<Comment, "commentId">),
     commentId: d.id,
   }));
+  const comments = filterVisible(rawComments, blockedUids);
   const cursor =
     snap.docs.length === pageSize ? snap.docs[snap.docs.length - 1] : null;
   return { comments, cursor };
+}
+
+// ── UGC moderation: reports (App Store Guideline 1.2) ────────────────
+// Spec docs/features/ugc-moderation.md. Write-only — firestore.rules
+// forbid client read/update; `onReportCreated` (Admin SDK) does the
+// reportCount/hidden bookkeeping. Block/unblock lives in ./users.ts.
+
+export type CreateReportArgs = {
+  reporterUid: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  targetAuthorUid: string;
+  /** Required (and equal to targetId) when targetType === "comment". */
+  postId?: string;
+  reason: ReportReason;
+};
+
+export async function createReport(args: CreateReportArgs): Promise<void> {
+  await firestore()
+    .collection("reports")
+    .add({
+      reporterUid: args.reporterUid,
+      targetType: args.targetType,
+      targetId: args.targetId,
+      targetAuthorUid: args.targetAuthorUid,
+      ...(args.postId ? { postId: args.postId } : {}),
+      reason: args.reason,
+      status: "open",
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    });
 }

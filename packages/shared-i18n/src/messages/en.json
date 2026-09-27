@@ -1096,5 +1096,30 @@
     "invalidCode": "Invalid invite code (needs 6 digits)",
     "error": "Could not join. Please try again.",
     "back": "Back to leaderboard"
+  },
+  "Moderation": {
+    "menu": "More options",
+    "report": "Report",
+    "reportPost": "Report post",
+    "reportComment": "Report comment",
+    "block": "Block {name}",
+    "blockConfirmTitle": "Block {name}?",
+    "blockConfirmMessage": "You won't see their posts or comments anymore, and they won't be able to comment or react on your posts.",
+    "blockConfirmAction": "Block",
+    "blocked": "Blocked",
+    "blockFailed": "Couldn't block — try again",
+    "unblock": "Unblock",
+    "unblockFailed": "Couldn't unblock — try again",
+    "reportTitle": "Reason for reporting",
+    "reportReasonSpam": "Spam",
+    "reportReasonHarassment": "Harassment or bullying",
+    "reportReasonInappropriate": "Inappropriate content",
+    "reportReasonOther": "Other",
+    "reportNotePlaceholder": "Add details (optional)",
+    "reportSubmit": "Submit report",
+    "reportSubmitted": "Report received — thanks for letting us know",
+    "reportFailed": "Couldn't submit — try again",
+    "blockedUsersTitle": "Blocked users",
+    "blockedUsersEmpty": "You haven't blocked anyone"
   }
 }

@@ -120,6 +120,14 @@ export type Post = {
    *  before the walk is saved) — readers must tolerate a missing/cancelled
    *  referenced doc. */
   walkId?: string;
+  /** Set true by `onReportCreated` (Admin SDK only — rules forbid client
+   *  writes) once `reportCount` hits `REPORT_HIDE_THRESHOLD`. Readers must
+   *  client-filter `hidden === true` out of every feed/list render.
+   *  Spec docs/features/ugc-moderation.md. */
+  hidden?: boolean;
+  /** Denormalised count of `reports/*` targeting this post. Admin-SDK-only
+   *  write (same trigger as `hidden`). */
+  reportCount?: number;
 };
 
 // ── Comments (feed interaction v2) ──
@@ -136,12 +144,52 @@ export type Comment = {
   /** Trimmed, non-empty, ≤ COMMENT_MAX_LEN chars (enforced in rules + client). */
   text: string;
   createdAt: Timestamp;
+  /** Same admin-SDK-only moderation fields as `Post.hidden`/`reportCount` —
+   *  see docs/features/ugc-moderation.md. */
+  hidden?: boolean;
+  reportCount?: number;
 };
 
 /** Hard cap on comment `text` length (post-trim). Mirrored in
  *  firestore.rules `create` guard so the server rejects over-length writes
  *  even if a client skips validation. */
 export const COMMENT_MAX_LEN = 500;
+
+// ── UGC moderation (report / block — App Store Guideline 1.2) ──
+// Spec docs/features/ugc-moderation.md. Reports are write-only from the
+// client (rules forbid client read/update — an admin reviews via the
+// Firestore console or `moderationAudit`); Cloud Functions use the Admin
+// SDK to bump `reportCount` and flip `hidden` at threshold.
+export const REPORT_REASONS = [
+  "spam",
+  "harassment",
+  "inappropriate",
+  "other",
+] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+export type ReportTargetType = "post" | "comment" | "user";
+export type ReportStatus = "open" | "actioned" | "dismissed";
+
+/** One row of `reports/{reportId}`. `postId` is required (and equals
+ *  `targetId`) when `targetType === "comment"` — comments are nested under
+ *  `posts/{postId}/comments/{commentId}`, so the trigger needs the parent
+ *  path to update the right doc. */
+export type Report = {
+  reportId: string;
+  reporterUid: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  targetAuthorUid: string;
+  postId?: string;
+  reason: ReportReason;
+  note?: string;
+  status: ReportStatus;
+  createdAt: Timestamp;
+};
+
+/** `reportCount >= this` on a post/comment → Cloud Function sets
+ *  `hidden = true` automatically, pending manual review. */
+export const REPORT_HIDE_THRESHOLD = 3;
 
 // ─────────────────────────────────────────────────────────────────────────
 // P2 Pets batch (2026-06-02) — pet edit / reminders / expenses / health.

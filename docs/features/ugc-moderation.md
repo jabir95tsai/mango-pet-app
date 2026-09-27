@@ -1,9 +1,16 @@
 # UGC Moderation — 檢舉 / 封鎖 / 處置（App Store Guideline 1.2 合規）
 
-狀態：**READY-FOR-DEV**（iOS PM 2026-06-03）— 上架硬 blocker
+狀態：**CODE DONE，待部署驗證**（2026-09-27 一次 session 走完 Backend+iOS+Web，user 拍板跨角色）
 規格作者：iOS PM session
-角色執行：**Backend**（shared functions/rules + 資料模型）+ **iOS Feature Builder**（iOS UI）+ **Web Feature Builder**（web UI parity）
+角色執行：**Backend**（shared functions/rules + 資料模型）+ **iOS Feature Builder**（iOS UI）+ **Web Feature Builder**（web UI parity）— 本次三者在同一 session 完成
 配合：[`ios-app-store-submission.md`](./ios-app-store-submission.md) §UGC
+
+## ✅ 2026-09-27 實作紀錄
+- **Backend**：`firestore.rules`（`reports`/`moderationAudit` collections + `authorBlockedMe()` 擋封鎖者留言/反應 + `posts.hidden`/`reportCount` 禁止 client 寫）+ `functions/src/moderation-helpers.ts` + `onReportCreated` trigger（達 3 報 → hidden=true + 寫 `moderationAudit` audit doc，無 admin dashboard，開發者用 Firestore console 看）。`@mango/shared-types`（Report/ReportReason + Post/Comment 的 hidden/reportCount）+ `@mango/shared-business`（`filterVisible`/`isAuthorBlocked`）。
+- **Web**：`post-menu.tsx`（⋯選單：檢舉 reason Dialog + 封鎖 confirm）接進 `post-card.tsx` + `comment-section.tsx`；`listFeedPosts`/`listComments` 加 `blockedUids` 過濾；`users.ts` 加 `blockUser`/`unblockUser`/`getBlockedUids`；settings 新增 `blocked-users-section.tsx`（解封鎖列表）；`/terms` 加零容忍條款段落。
+- **iOS**：對應 RN 版本 —`post-menu.tsx` 用 `ActionSheetIOS`/`Alert`（iOS-only app，不需自建 dropdown）；`feed-data.ts`/`posts.ts`/`user-prefs.ts` 加對應過濾與 block/unblock；settings 新增 `blocked-users-section.tsx`。
+- **驗證**：`functions`/`apps/web`/`apps/ios` 三個 `tsc --noEmit` 全過；firestore.rules 大括號/括號配對檢查平衡。**尚未部署**（rules + functions 需 `firebase deploy` 才生效，未跑；也未做 emulator/實機端到端驗證）。
+- **未做（刻意，非 blocker）**：EULA 顯式「同意」checkbox 流程（沿用既有被動連結模式，Settings + terms 頁零容忍條款已可滿足 Apple 最低要求）；report reason 附註欄位僅 web 有（iOS 為求簡潔，v1 只送 reason 不含 note）；admin dashboard（spec 本就排除）。
 
 > Apple **Guideline 1.2**：有使用者產生內容（UGC）的 app 必須提供 (a) 檢舉內容 (b) 封鎖使用者 (c) 過濾 + 對檢舉採取行動（24h 內）(d) EULA。Mango 有社群 feed（貼文/留言/反應/好友）但**目前 0 機制**（grep 確認）→ 不補必被拒。
 > ⚠️ **後端共用**：functions / rules 改動 **web + iOS 同時生效**。先在 branch 過 App Hosting + 規則部署驗證再上。

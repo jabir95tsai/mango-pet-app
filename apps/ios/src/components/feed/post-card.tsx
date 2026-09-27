@@ -24,6 +24,7 @@ import { colors, radius, shadows, spacing } from "@/theme/theme";
 import { UserAvatar } from "./user-avatar";
 import { EmojiReactions } from "./emoji-reactions";
 import { CommentSection } from "./comment-section";
+import { PostMenu } from "./post-menu";
 
 const VISIBILITY_ICON: Record<Visibility, string> = {
   public: "🌍",
@@ -37,12 +38,16 @@ export function PostCard({
   petNameById,
   onOpenPhotos,
   onDeleted,
+  onBlocked,
 }: {
   post: Post;
   currentUid: string;
   petNameById?: Record<string, string>;
   onOpenPhotos?: (urls: string[], index: number) => void;
   onDeleted?: () => void;
+  /** Bubbles up so the feed can drop the blocked author's other posts from
+   *  the current view without a full refetch (ugc-moderation.md). */
+  onBlocked?: (blockedUid: string) => void;
 }) {
   const { width } = useWindowDimensions();
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -98,7 +103,17 @@ export function PostCard({
           >
             <Trash2 size={16} color={colors.ink3} strokeWidth={2} />
           </Pressable>
-        ) : null}
+        ) : (
+          <PostMenu
+            currentUid={currentUid}
+            targetType="post"
+            postId={post.postId}
+            targetId={post.postId}
+            targetAuthorUid={post.authorUid}
+            targetAuthorName={post.authorName}
+            onBlocked={onBlocked}
+          />
+        )}
       </View>
 
       {post.text ? <Text style={styles.body}>{post.text}</Text> : null}
@@ -146,7 +161,9 @@ export function PostCard({
         <CommentSection
           postId={post.postId}
           postAuthorUid={post.authorUid}
+          currentUid={currentUid}
           onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
+          onBlocked={onBlocked}
         />
       ) : null}
     </View>

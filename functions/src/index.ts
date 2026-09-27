@@ -45,6 +45,7 @@ import {
   type AchievementDef,
   type AchievementMetrics,
 } from "./achievements";
+import { actOnReport, type ReportDoc } from "./moderation-helpers";
 
 initializeApp();
 
@@ -1445,6 +1446,36 @@ export const onReactionCreated = onDocumentCreated(
     logger.info(
       `onReactionCreated: post=${postId} reactor=${reactorUid} others=${others} sent`,
     );
+  },
+);
+
+/**
+ * onCreate(reports/{reportId}) — UGC moderation (Guideline 1.2).
+ * Spec docs/features/ugc-moderation.md. Bumps the target's reportCount,
+ * auto-hides at REPORT_HIDE_THRESHOLD, writes a moderationAudit doc.
+ * Client can only CREATE report docs (firestore.rules) — this is the only
+ * code path that reads/acts on them.
+ */
+export const onReportCreated = onDocumentCreated(
+  {
+    document: "reports/{reportId}",
+    region: FUNCTION_REGION,
+    retry: false,
+    memory: "256MiB",
+  },
+  async (event) => {
+    const report = event.data?.data() as ReportDoc | undefined;
+    if (!report) return;
+    const reportId = event.params.reportId;
+    try {
+      const result = await actOnReport(db, reportId, report);
+      logger.info(
+        `onReportCreated: report=${reportId} target=${report.targetType}/${report.targetId} ` +
+          `action=${result.action} reportCount=${result.reportCount}`,
+      );
+    } catch (err) {
+      logger.error(`onReportCreated: failed report=${reportId}`, err);
+    }
   },
 );
 

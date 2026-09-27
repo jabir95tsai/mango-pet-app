@@ -1096,5 +1096,30 @@
     "invalidCode": "邀請碼格式錯誤（需 6 位數字）",
     "error": "加入失敗，請稍後再試",
     "back": "返回排行榜"
+  },
+  "Moderation": {
+    "menu": "更多選項",
+    "report": "檢舉",
+    "reportPost": "檢舉貼文",
+    "reportComment": "檢舉留言",
+    "block": "封鎖 {name}",
+    "blockConfirmTitle": "封鎖 {name}？",
+    "blockConfirmMessage": "封鎖後你不會再看到對方的貼文和留言，對方也無法在你的貼文留言或回應。",
+    "blockConfirmAction": "封鎖",
+    "blocked": "已封鎖",
+    "blockFailed": "封鎖失敗，請再試一次",
+    "unblock": "取消封鎖",
+    "unblockFailed": "取消封鎖失敗，請再試一次",
+    "reportTitle": "檢舉原因",
+    "reportReasonSpam": "垃圾訊息",
+    "reportReasonHarassment": "騷擾或霸凌",
+    "reportReasonInappropriate": "不當內容",
+    "reportReasonOther": "其他",
+    "reportNotePlaceholder": "想補充說明嗎？（選填）",
+    "reportSubmit": "送出檢舉",
+    "reportSubmitted": "已收到你的檢舉，謝謝回報",
+    "reportFailed": "檢舉失敗，請再試一次",
+    "blockedUsersTitle": "已封鎖的使用者",
+    "blockedUsersEmpty": "目前沒有封鎖任何人"
   }
 }

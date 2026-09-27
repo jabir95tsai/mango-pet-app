@@ -18,6 +18,7 @@ import { NoPostsHint } from "@/components/home/no-posts-hint";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { deletePost, listFeedPosts } from "@/lib/firebase/posts";
 import { listFriends } from "@/lib/firebase/friends";
+import { getBlockedUids } from "@/lib/firebase/users";
 import type { Pet, Post } from "@/lib/types";
 
 /**
@@ -49,12 +50,14 @@ export default function AppHome() {
   const refresh = useCallback(async () => {
     if (!user) return;
     try {
-      const [petR, friendsR] = await Promise.allSettled([
+      const [petR, friendsR, blockedR] = await Promise.allSettled([
         family ? listPets(family.familyId) : listPersonalPets(user.uid),
         listFriends(user.uid),
+        getBlockedUids(user.uid),
       ]);
       setPets(petR.status === "fulfilled" ? petR.value : []);
       const friends = friendsR.status === "fulfilled" ? friendsR.value : [];
+      const blocked = blockedR.status === "fulfilled" ? blockedR.value : [];
       try {
         // Spec reminders-to-pets-page.md D2: home surfaces the latest
         // 10 posts (family + friends + public mixed), with a "查看更多"
@@ -63,6 +66,7 @@ export default function AppHome() {
           user.uid,
           friends.map((f) => f.uid),
           10,
+          blocked,
         );
         setFeedPosts(feed.slice(0, 10));
       } catch {
@@ -72,6 +76,11 @@ export default function AppHome() {
       setLoading(false);
     }
   }, [user, family]);
+
+  /** Instant local drop on block — don't wait for a full refetch. */
+  function handleBlocked(blockedUid: string) {
+    setFeedPosts((prev) => prev.filter((p) => p.authorUid !== blockedUid));
+  }
 
   useEffect(() => {
     if (familyLoading) return;
@@ -152,6 +161,7 @@ export default function AppHome() {
                   post={post}
                   currentUid={user.uid}
                   onDelete={() => handleDeletePost(post)}
+                  onBlocked={handleBlocked}
                 />
               ))}
           </div>

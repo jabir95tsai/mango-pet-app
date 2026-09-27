@@ -17,6 +17,7 @@ import { UserAvatar } from "@/components/feed/user-avatar";
 import { PushToggle } from "@/components/settings/push-toggle";
 import { EngagementPushSection } from "@/components/settings/engagement-push-section";
 import { WalkAutoPhotoSection, LeaderboardVisibilitySection } from "@/components/settings/prefs-sections";
+import { BlockedUsersSection } from "@/components/settings/blocked-users-section";
 import { GuestUpgradeSection } from "@/components/settings/guest-upgrade-section";
 import { PhotosPreviewSection } from "@/components/settings/photos-preview-section";
 import { FamilySection } from "@/components/settings/family-section";
@@ -82,6 +83,7 @@ export default function SettingsScreen() {
         {!isGuest ? <EngagementPushSection /> : null}
         {!isGuest ? <WalkAutoPhotoSection /> : null}
         {!isGuest ? <LeaderboardVisibilitySection /> : null}
+        {!isGuest ? <BlockedUsersSection /> : null}
 
         {!isGuest ? <ExportDataSection /> : null}
 

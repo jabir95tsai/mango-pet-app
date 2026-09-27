@@ -47,20 +47,15 @@
 
 ## ⚠️ 風險（非顯而易見，可能被拒）
 
-### 🔴 UGC 審查（Guideline 1.2）— 最大非顯而易見風險
+### 🔴 UGC 審查（Guideline 1.2）— ✅ 2026-09-27 CODE DONE，待部署+實機驗
 app 有**社群 feed**（貼文 / 留言 / 反應 / 好友）= 使用者產生內容（UGC）。Apple 1.2 要求 UGC app 必須有：
 1. **檢舉內容**（report post/comment）
 2. **封鎖使用者**（block abusive user）
 3. **過濾機制** + 對檢舉**採取行動**（24h 內移除 + 移除違規者）
 4. **EULA**（可用 Apple 標準 EULA）
 
-→ **已實查確認：目前 web + iOS + functions 都沒有 reportPost / reportComment / blockUser 任何機制（grep 全空）= UGC 檢舉/封鎖不存在。**
-→ **這是確定的上架 blocker（Guideline 1.2），且需寫 code（Feature Builder + Backend，非 PM）。** 最小可過審範圍：
-  1. 貼文/留言「檢舉」（report → 寫 reports collection + 通知 / 自動隱藏門檻）
-  2. 「封鎖使用者」（block → 被封鎖者內容不顯示 + 不能互動）
-  3. 檢舉後的處置流程（24h 內移除違規 + 移除違規者）+ 標準 EULA 連結
-→ **這同時影響 web（PWA 也是 UGC，但 web 不過 Apple 審查；不過為了一致 + 真實安全，建議 web/iOS 共用同一套 report/block backend）。優先做，會卡上架。**
-→ ✅ **已 spec（2026-06-03）** → [`ugc-moderation.md`](./ugc-moderation.md)（檢舉 + 封鎖 + 處置 + EULA；shared backend + iOS/web UI）。
+→ ✅ **已實作**（見 [`ugc-moderation.md`](./ugc-moderation.md) §2026-09-27 實作紀錄）：`reports`/`moderationAudit` rules + `onReportCreated` trigger（達 3 報自動 hidden）+ web/iOS 檢舉/封鎖 UI + client 過濾 + rules 層擋封鎖者互動 + `/terms` 零容忍條款。三個 `tsc --noEmit` 全過。
+→ **⚠️ 還沒做**：`firebase deploy --only firestore:rules,functions:onReportCreated` 部署（rules/functions 在 repo 裡但還沒推上 production）+ EAS build 實機驗證檢舉/封鎖流程一次跑通。**部署前確認不影響現有 feed/comments（rules 改動影響 web+iOS 共用後端）**。
 
 ### ⚠️ iPad 範圍 — ✅ user 拍板 **支援 iPad**（2026-06-03）
 `supportsTablet: true` 保留。代價：(a) **要交 iPad 截圖**（12.9"/13"）；(b) **iPad 上 layout 要能看**（RN 畫面原為 phone 設計 → 需一輪 **iPad responsive QA**，避免大螢幕拉伸/留白破版 → 交 iOS UI/UX）。列入上架前工項。
@@ -75,7 +70,7 @@ app 一開要登入 → 審查員需能進。guest 登入可解（審查備註�
 
 **決策**：Apple Glass redesign **defer 到上架後**（見 [`ios-apple-glass-design-system.md`](./ios-apple-glass-design-system.md)）；UGC 檢舉/封鎖 **下一個 dev session 立即開工**（唯一硬性 code blocker）。
 
-1. **UGC 檢舉/封鎖 — 下一個 dev session**（`ugc-moderation.md` 已 READY-FOR-DEV）：Backend（rules+functions+資料模型，branch + App Hosting/rules gate）→ iOS Feature Builder（檢舉/封鎖 UI + EULA 同意）→ Web Feature Builder（web parity UI，同後端）。這條做完才算解掉 Guideline 1.2 blocker。
+1. ✅ **UGC 檢舉/封鎖 — CODE DONE（2026-09-27）**，剩：`firebase deploy --only firestore:rules` + functions 部署 → 部署後 web/iOS 各跑一次檢舉+封鎖端到端驗證（`ugc-moderation.md` §✅ 驗收清單）。這條部署+驗完才算真正解掉 Guideline 1.2 blocker。
 2. **iPad responsive QA**（`supportsTablet:true` 已拍板保留）→ iOS UI/UX 一輪，避免大螢幕拉伸/留白破版（截圖也要交 iPad 版）。
 3. **user 手動（可與 1、2 平行進行，不擋 dev）**：
    - App Store Connect 建 App 紀錄（name/SKU/主要語言/bundle id）

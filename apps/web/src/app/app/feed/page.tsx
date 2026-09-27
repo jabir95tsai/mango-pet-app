@@ -15,6 +15,7 @@ import { PostCard } from "@/components/feed/post-card";
 import { deletePost, listFeedPosts } from "@/lib/firebase/posts";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { listFriends } from "@/lib/firebase/friends";
+import { getBlockedUids } from "@/lib/firebase/users";
 import type { Pet, Post } from "@/lib/types";
 
 export default function FeedPage() {
@@ -29,21 +30,27 @@ export default function FeedPage() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [blockedUids, setBlockedUids] = useState<string[]>([]);
 
   const refresh = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const [petR, friendsR] = await Promise.allSettled([
+      const [petR, friendsR, blockedR] = await Promise.allSettled([
         family ? listPets(family.familyId) : listPersonalPets(user.uid),
         listFriends(user.uid),
+        getBlockedUids(user.uid),
       ]);
       const friends = friendsR.status === "fulfilled" ? friendsR.value : [];
+      const blocked = blockedR.status === "fulfilled" ? blockedR.value : [];
       setPets(petR.status === "fulfilled" ? petR.value : []);
+      setBlockedUids(blocked);
       try {
         const feed = await listFeedPosts(
           user.uid,
           friends.map((f) => f.uid),
+          30,
+          blocked,
         );
         setPosts(feed);
       } catch {
@@ -53,6 +60,12 @@ export default function FeedPage() {
       setLoading(false);
     }
   }, [user, family]);
+
+  /** Instant local drop on block — don't wait for a full refetch. */
+  function handleBlocked(blockedUid: string) {
+    setBlockedUids((prev) => [...prev, blockedUid]);
+    setPosts((prev) => prev.filter((p) => p.authorUid !== blockedUid));
+  }
 
   useEffect(() => {
     if (familyLoading) return;
@@ -121,6 +134,7 @@ export default function FeedPage() {
                 post={post}
                 currentUid={user.uid}
                 onDelete={() => handleDelete(post)}
+                onBlocked={handleBlocked}
               />
             ))}
         </div>
