@@ -39,7 +39,7 @@ P3 = 也許永遠不做的「想法」。
 - **依賴 / 邊界**：先用 Emulator/受控資料驗證安全修法，再依相容順序部署。現有正式規則版本、APNs/App Check 設定、EAS build及實機結果未live確認。不得把 typecheck 通過當成已修復或已部署。
 - **與既有條目關係**：沿用既有 App Check、shared stats、design-system 漸進遷移；本條以新報告補充最新證據，不重做已完成實作。
 - **2026-10-05 Backend 進度**：R01、R02、邀請碼限流及同根因刪帳家庭清理已合併 main／push／部署正式環境，**9 組正式 smoke 通過**。原安全 emulator 22/22 pass；詳見[修補與驗證紀錄](../research/backend-security-fixes-2026-10-05.md)。
-- **接續批次**：R04 檢舉去重、R06 Web 停止保存、R10 Web/iOS >15 位好友 feed 已完成實作與回歸，發布證據見[發布驗證紀錄](../research/release-validation-2026-10-05.md)。R10 iOS 程式碼需隨下一次 App build 才能送達裝置。R03 私人推播資料、R05 其餘刪帳生命週期、R07/R09 iOS 登入與推播、R19 CI 仍待處理；六位邀請碼的多帳號分散猜碼仍待後續設計。
+- **接續批次已發布**：R04 檢舉去重、R06 Web 停止保存、R10 Web >15 位好友 feed 已合併／push／正式部署；整合回歸 **60/60 pass**，正式 **6 組行為 + 清理通過**，發布證據見[發布驗證紀錄](../research/release-validation-2026-10-05.md)。R10 iOS 程式碼已合併，需隨下一次 App build 才能送達裝置。GPS／Safari／PWA 尚未實機驗收。R03 私人推播資料、R05 其餘刪帳生命週期、R07/R09 iOS 登入與推播、R19 CI 仍待處理；六位邀請碼的多帳號分散猜碼仍待後續設計。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 

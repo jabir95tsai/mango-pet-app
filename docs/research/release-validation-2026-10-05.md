@@ -33,7 +33,40 @@ Backend 36、雙端 feed 9、Web stop handler/draft 10、Web SDK walk persistenc
 散步 emulator 曾因並行管理埠衝突異常退出；改獨立埠並乾淨重跑，5/5 通過且 CLI exit 0。
 舊版對照已證明 R06 停止不保存、R10 超過 15 位好友查詢失敗。
 
-此批正式發布與 smoke 結果將在發布完成後補記。目前這一節只確認實作與本機回歸。
+### 正式發布結果
+
+- 已合併 main 並 push 至 `5be3208`，三份原有未提交文件再次確認內容雜湊未變。
+- 2026-10-05 23:09–23:10（Asia/Taipei）完成 R04 rules 與 `onReportCreated` 部署。
+  Function 為 ACTIVE／Node 22，revision `onreportcreated-00002-qaf`，
+  `RETRY_POLICY_RETRY`，最新 revision 接受全部流量。CLI 啟用 retry 需 `--force`；
+  僅針對已驗證交易冪等的這支 function，不刪除或部署其他 functions。
+- 正式 rules 與本機一致；ruleset `54313891-2ba3-4ccc-9eee-6a85ab4127cf`，
+  正規化 SHA-256 `b7b910ca0be5bba79ad07688de2e00864e4c4ce1e982d864fba2c61975e6459b`。
+- App Hosting `build-2026-10-05-002` READY、`rollout-2026-10-05-002` SUCCEEDED，
+  source hash 為 `5be3208f17f2110e18fd919dd5cf7059a61fb387`，100% 流量已切換。
+- 正式瀏覽器重載公開登入頁正常，console ERROR 為 0。23:13 查詢本批六支 functions
+  自第一批發布以來的 ERROR 日誌為 0；這不是整個專案所有服務的監控結論。
+
+### 正式 smoke：6 組行為 + 清理均通過
+
+| 檢查 | 結果 |
+|---|---|
+| 真正 Web SDK、16 位 synthetic 作者的好友查詢 | 取得全部 16 筆；現有正式 composite index 可用 |
+| 真正 Eventarc 觸發器，同人不同原因連續檢舉三次 | 1 票、1 counted + 2 duplicate，不隱藏 |
+| 第二個不同 reporter | 2 票，不隱藏 |
+| 第三個不同 reporter | 3 票、hidden=true，vote/state/audit 一致 |
+| 正式 client 存取 moderation ledger/state | 讀取與偽造寫入均 permission-denied |
+| 真正 Web SDK、固定 walkId 保存／摘要編輯／重試 | 同筆 ID 與 createdAt，保留摘要；不同 session metadata 拒絕 |
+
+只建立 disposable 匿名 Auth 帳號與 synthetic fixtures。貼文 visibility 為 friends，
+僅連結測試身份，沒有建立公開貼文／推播 token 或操作既有使用者資料。
+檢舉由 Admin 寫入以觸發真正 Eventarc，**不是正式一般帳號的檢舉 UI 驗收**。
+Feed 與 walk 以實際專案 TypeScript 資料層執行；**不是 GPS／瀏覽器完整停止流程驗收**。
+完成後移除已知原始文件、friend 子集合、reports/audits/votes/state、帳號與寵物；
+確認 primary fixture 皆不存在、Auth 帳號不存在。系統自身觸發器的操作日誌保留。
+
+第一次 smoke 的查驗腳本把 Admin snapshot 的 `exists` 屬性當函式，導致提早中止；
+該輪 fixture 已清理，修正腳本後完整重跑通過。此錯誤未涉及應用程式改動。
 
 詳細設計：[R04](../features/moderation-dedupe.md)、[R06](../features/walk-stop-save-fix.md)、
 [R10 測試](../../tests/feed/README.md)。R10 iOS 程式碼須隨後續 App build 才能送達裝置。
