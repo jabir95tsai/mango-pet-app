@@ -17,6 +17,8 @@
 - `node --test apps/web/scripts/walk-save-regression.test.cjs`：10/10 通過。執行真正 TSX handler，以小型 hook scheduler 與平台替身涵蓋取消、即時保存、null／失敗重試、連點、備註失敗阻擋離開、晚完成照片、多狗／新一輪狀態重設、自動停止、本機 draft 與 idempotent persistence。
 - 指定 `WALK_SAVE_BASELINE_REF=5eec30b` 並只跑 `confirmed stop saves immediately`：舊 TSX 確實失敗，停止後保存呼叫數為 0，期望為 1；沒有覆寫 checkout。
 - `FIRESTORE_EMULATOR_HOST=127.0.0.1:8190 node --test apps/web/scripts/walk-save-emulator.test.cjs`：5/5 通過。實際 Firebase Web SDK + 本分支 `firestore.rules`，使用 `demo-mango-walk-save`；測試後清除自己建立的 fixture。涵蓋重試保留摘要／建立時間、同 ID 不同 metadata 拒絕、其他 auth UID 拒絕、同家庭他人成員 walk 不誤認成功、並行重試及兩隻狗的獨立紀錄。
-- 尚未執行真實瀏覽器 GPS、iOS Safari／PWA 或 production 寫入流程；上列 handler／emulator 結果不代表實機驗收。
+- 實作時尚未執行真實瀏覽器 GPS、iOS Safari／PWA 或 production 寫入流程；其後已完成正式 Web SDK 保存／摘要更新／重試 smoke，詳見[發布驗證紀錄](../research/release-validation-2026-10-05.md)。GPS／瀏覽器完整停止流程與真機仍待驗收。
+
+恢復界線：核心紀錄得到確認後即移除 draft；之後新增但尚未成功寫入的備註／晚完成照片沒有獨立的跨重整恢復 draft。當頁仍以失敗提示、重試與離開警告保護；不可把本次核心紀錄恢復解讀成所有摘要編輯都已持久化。
 
 部署後交接：Web Bug Hunter 以 disposable pet 驗證「開始→停止→跳過照片→重整」僅一筆，另驗證離線停止後重新連線重試、摘要備註與拍照上傳；不操作既有真實寵物資料。此修補無 Firebase rules／functions／schema 或 dependency 變更，只需要 Web rollout。
