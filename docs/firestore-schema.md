@@ -89,7 +89,7 @@ Spec：[features/legacy-path-cleanup.md](features/legacy-path-cleanup.md)。Audi
 | `defaultPostVisibility` | upsertUser，預設 `"friends"` | 影響發貼文預設選項 |
 | `allowFriendRequests` | upsertUser，預設 `true` | 目前 lib 沒檢查；未來 friends UI 可選擇關閉 |
 | `fcmTokens?: string[]` | `enablePush` arrayUnion / `disablePush` arrayRemove / scanReminders 失敗時 arrayRemove | 失效 token 由 scanReminders + sendTestPush 自我清理 |
-| `familyIds?: string[]` | createFamily / joinFamilyByCode / leaveFamily / removeFamilyMember | 家庭成員資格清單 |
+| `familyIds?: string[]` | createFamily / joinFamilyByCode / leaveFamily / removeFamilyMember | UI 快取；不可作授權依據。成員資格以 `families.memberUids` 為準 |
 | `currentFamilyId?: string` | createFamily（auto-set）/ joinFamily（auto-set）/ setCurrentFamily（client 直寫）/ leave 時 FieldValue.delete() | 是 client 端決定看哪個 family 的「active 選擇」 |
 
 ⚠ **PII 弱點**：`firestore.rules` 目前允許**任何登入者讀任何 user doc**。`email` / `fcmTokens` / `familyIds` 都被洩漏。修法是把 PII 拆到 sub-doc（如 `users/{uid}/private/contact`）— 已在風險清單，未動工。

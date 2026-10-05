@@ -46,6 +46,7 @@ import {
   type AchievementMetrics,
 } from "./achievements";
 import { actOnReport, type ReportDoc } from "./moderation-helpers";
+import { exportContactFields, exportMemberFamilies, leaveMemberFamilies } from "./family-access";
 
 initializeApp();
 
@@ -2949,30 +2950,9 @@ export const deleteUserAccount = onCall(
     //   - if they're the owner → promote memberUids[1] (next-oldest) to owner
     //   - always: remove uid from memberUids
     {
-      const familyIds: string[] =
-        (userData.familyIds as string[] | undefined) ?? [];
-      for (const familyId of familyIds) {
-        const famRef = db.doc(`families/${familyId}`);
-        const famSnap = await famRef.get();
-        if (!famSnap.exists) continue;
-        const fam = famSnap.data() ?? {};
-        const members = (fam.memberUids as string[] | undefined) ?? [];
-        const remaining = members.filter((m) => m !== uid);
-        if (remaining.length === 0) {
-          // Sole member → dissolve.
-          await famRef.delete();
-          summary.familiesDissolved++;
-          continue;
-        }
-        const updates: Record<string, unknown> = {
-          memberUids: FieldValue.arrayRemove(uid),
-        };
-        if (fam.ownerUid === uid) {
-          updates.ownerUid = remaining[0];
-        }
-        await famRef.update(updates);
-        summary.familiesLeft++;
-      }
+      const families = await leaveMemberFamilies(db, uid);
+      summary.familiesDissolved += families.familiesDissolved;
+      summary.familiesLeft += families.familiesLeft;
     }
 
     // ─── Step 11: audit doc. Written BEFORE the user doc + auth user
@@ -3369,7 +3349,7 @@ export const exportUserData = onCall(
     // complete after PII moved off the public doc.
     const privContact =
       (await db.doc(`users/${uid}/private/contact`).get()).data() ?? {};
-    const userData = { ...(userSnap.data() ?? {}), ...privContact };
+    const userData = { ...(userSnap.data() ?? {}), ...exportContactFields(privContact) };
 
     // ── Per-user sub-collections ─────────────────────────────────────
     const [friendsSnap, incomingReqsSnap, favSnap, bmSnap] = await Promise.all([
@@ -3493,13 +3473,7 @@ export const exportUserData = onCall(
     }));
 
     // ── Families I belong to ────────────────────────────────────────
-    const familyIds = (userData.familyIds as string[] | undefined) ?? [];
-    const families: Record<string, unknown>[] = [];
-    for (const fid of familyIds) {
-      const fSnap = await db.doc(`families/${fid}`).get();
-      if (!fSnap.exists) continue;
-      families.push({ ...(fSnap.data() as Record<string, unknown>), familyId: fid });
-    }
+    const families = await exportMemberFamilies(db, uid);
 
     return {
       meta: {
@@ -3507,7 +3481,7 @@ export const exportUserData = onCall(
         schemaVersion: "v1" as const,
         uid,
       },
-      user: { ...userData, uid },
+      user: { ...userData, uid, familyIds: families.map((family) => family.familyId) },
       friends: friendsSnap.docs.map((d) => ({ ...d.data(), uid: d.id })),
       friendRequests: {
         received: incomingReqsSnap.docs.map((d) => ({
