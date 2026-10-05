@@ -1,6 +1,6 @@
 # Backend 安全修補驗證 — 2026-10-05
 
-狀態：**已實作、已在本機 Emulator 驗證、未合併 main／未部署正式環境**。
+狀態：**已合併 main、push 並部署正式環境；9 組正式 smoke 通過**（2026-10-05 22:36–22:37，Asia/Taipei）。
 角色：Backend。基準為 `61f18e7`；分支 `codex/backend-security-r01-r02`。
 原 checkout 的三份未提交文件未改動；原審查報告已保存於 commit `c32bd28`。
 
@@ -37,20 +37,30 @@ schema 與限額詳見 [Firestore schema](../firestore-schema.md)。
 
 重現步驟：[functions/tests/README.md](../../functions/tests/README.md)。測試設定必須在
 repo root：Firebase CLI 不允許設定檔引用 project directory 之外的 rules。
-測試沒有跑真實 Auth／Storage 刪帳、正式 callable HTTP/IAM/App Check、登入後瀏覽器或 iOS 真機。
+上述本機測試沒有跑真實 Auth／Storage 刪帳、正式 callable HTTP/IAM/App Check、登入後瀏覽器或 iOS 真機。
 Callable 用 `.run` 呼叫實際 handler，注入 synthetic verified-auth context；rules 則透過
 client SDK + emulator mock auth 實際執行允許／拒絕路徑。刪帳只驗本輪修改的家庭清理 helper。
 
+## 正式發布補記
+
+- `main` 已 fast-forward 到 `5eec30b` 並 push；三份原有未提交文件內容雜湊前後一致。
+- 已部署 Firestore rules 與 `exportUserData`、`deleteUserAccount`、`joinFamilyByCode`、
+  `createFamily`、`regenerateInviteCode`；五支 functions 均為 ACTIVE、Node 22，最新 revision 接受全部流量。
+- 正式 rules 來源雜湊與該 commit 一致；實際 memberUids 查詢／匯出通過，沒有遇到索引缺失。
+- 兩個臨時匿名 Auth 帳號驗證 9 組：未登入 callable 拒絕、健康紀錄授權與 CRUD/schema、
+  偽造 public/private 家庭快取匯出、真正成員匯出不含邀請碼、換碼權限、guest 與 quota 限制、
+  偽造 familyIds 刪帳不影響別人的家庭、owner 刪帳清理。測試帳號與已知 fixture 已清理。
+- 家庭 fixture 由 Admin 建立；**正式一般帳號的加入家庭成功／限流耗盡仍只有 emulator 證據**。
+  未強制 App Check、未驗 Safari／iOS 真機，也未上傳檔案驗 Storage 刪帳。
+- push 自動觸發 App Hosting：`rollout-2026-10-05-001` 已 SUCCEEDED；公開登入頁可載入。
+- 後續批次與完整驗證界線見 [發布驗證紀錄](release-validation-2026-10-05.md)。
+
 ## 尚未交付的範圍
 
-- **正式漏洞尚不能宣稱已消除**：這些 commit 尚未合併／部署。後續針對 `firestore.rules`、
-  `exportUserData`、`deleteUserAccount`、`joinFamilyByCode`、`createFamily`、`regenerateInviteCode`
-  進行選擇性發布（最後兩項共用更新後的 crypto 邀請碼產生器），再用授權測試帳號驗證。
-  本輪沒有新增 index；memberUids array-contains 使用單欄索引，正式專案是否另有豁免未驗證。
 - 六位邀請碼保留相容性；UID 限流仍不能阻擋大量帳號分散猜碼。後續再規劃較長碼、
   到期機制與雙端 App Check；未擅自強制尚未確認可用的裝置驗證。
 - R05 其他刪帳遺漏仍待修；本輪只關閉 familyIds 導致的家庭清理授權問題。
-- R04 檢舉去重／單人多次檢舉、R06 停止即保存、R10 大量好友 feed 等仍依原報告交接。
+- R04 檢舉去重／單人多次檢舉、R06 停止即保存、R10 大量好友 feed 已於下一批實作，發布狀態見上列紀錄。
 - R19 已有本輪安全回歸基礎，尚無 CI、全系統測試或正式發布 gate。
 - 舊健康資料即使不符新 schema 仍能由合法使用者讀／刪；若缺 petId 或內容超出新上限，
   update 會拒絕。現行兩端沒有 health update caller，沒有新增現行流程回歸。
