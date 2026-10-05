@@ -492,6 +492,15 @@ service cloud.firestore {
       allow read, write: if false; // Admin SDK only (onReportCreated).
     }
 
+    // One vote per reporter/canonical target plus authoritative unique count.
+    // Both are maintained atomically with moderationAudit by onReportCreated.
+    match /moderationVotes/{voteId} {
+      allow read, write: if false;
+    }
+    match /moderationTargetState/{targetKey} {
+      allow read, write: if false;
+    }
+
     // ── Restaurants & reviews ──
     match /restaurants/{rid} {
       allow read: if true;

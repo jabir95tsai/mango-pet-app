@@ -1454,7 +1454,7 @@ export const onReactionCreated = onDocumentCreated(
 
 /**
  * onCreate(reports/{reportId}) — UGC moderation (Guideline 1.2).
- * Spec docs/features/ugc-moderation.md. Bumps the target's reportCount,
+ * Spec docs/features/ugc-moderation.md. Counts distinct reporters atomically,
  * auto-hides at REPORT_HIDE_THRESHOLD, writes a moderationAudit doc.
  * Client can only CREATE report docs (firestore.rules) — this is the only
  * code path that reads/acts on them.
@@ -1463,7 +1463,7 @@ export const onReportCreated = onDocumentCreated(
   {
     document: "reports/{reportId}",
     region: FUNCTION_REGION,
-    retry: false,
+    retry: true,
     memory: "256MiB",
   },
   async (event) => {
@@ -1478,6 +1478,7 @@ export const onReportCreated = onDocumentCreated(
       );
     } catch (err) {
       logger.error(`onReportCreated: failed report=${reportId}`, err);
+      throw err; // Retry transient failures; the transactional ledger prevents duplicates.
     }
   },
 );
