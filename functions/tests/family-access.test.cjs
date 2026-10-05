@@ -62,3 +62,45 @@ test('account cleanup uses actual membership, preserves victim and nested docume
   }
   assert.deepEqual(await leaveMemberFamilies(db, uid), { familiesDissolved: 0, familiesLeft: 0 });
 });
+
+test('cleanup rechecks membership, ownership and deletion after its initial query', async () => {
+  const uid = 'cleanup-race';
+  for (const id of ['revoked', 'transferred', 'deleted']) {
+    await db.doc(`families/cleanup-race-${id}`).set({ ownerUid: uid, memberUids: [uid, 'peer', 'new-owner'] });
+  }
+  // Return the actual emulator snapshot, but apply competing writes before
+  // cleanup's transactions start. The implementation must re-read each family.
+  const interleavedDb = {
+    collection: (path) => ({ where: (...args) => ({ get: async () => {
+      const snapshot = await db.collection(path).where(...args).get();
+      await db.doc('families/cleanup-race-revoked').update({ ownerUid: 'peer', memberUids: ['peer'] });
+      await db.doc('families/cleanup-race-transferred').update({ ownerUid: 'new-owner' });
+      await db.doc('families/cleanup-race-deleted').delete();
+      return snapshot;
+    } }) }),
+    runTransaction: db.runTransaction.bind(db),
+  };
+  assert.deepEqual(await leaveMemberFamilies(interleavedDb, uid), { familiesDissolved: 0, familiesLeft: 1 });
+  assert.deepEqual((await db.doc('families/cleanup-race-revoked').get()).data(), { ownerUid: 'peer', memberUids: ['peer'] });
+  assert.deepEqual((await db.doc('families/cleanup-race-transferred').get()).data(), {
+    ownerUid: 'new-owner', memberUids: ['peer', 'new-owner'],
+  });
+  assert.equal((await db.doc('families/cleanup-race-deleted').get()).exists, false);
+});
+
+test('export preserves normal pet health/walk data while filtering malformed private contact', async () => {
+  const uid = 'export-normal';
+  await db.doc(`users/${uid}`).set({ uid, email: 'legacy@example.invalid', displayName: 'Normal' });
+  await db.doc(`users/${uid}/private/contact`).set({ email: { bad: true }, fcmTokens: ['valid', 42, null], admin: true });
+  await db.doc('pets/export-pet').set({ name: 'Mango', ownerUid: uid, familyId: null });
+  await db.doc('pets/export-pet/healthRecords/export-weight').set({ type: 'weight', data: { kg: 5 } });
+  await db.doc('walks/export-walk').set({ walkerUid: uid, petId: 'export-pet', distanceKm: 1.25 });
+  const result = await functions.exportUserData.run({ auth: auth(uid), data: {} });
+  assert.equal(result.user.email, 'legacy@example.invalid');
+  assert.deepEqual(result.user.fcmTokens, ['valid']);
+  assert.equal(result.user.admin, undefined);
+  assert.equal(result.pets[0].name, 'Mango');
+  assert.equal(result.pets[0].healthRecords[0].data.kg, 5);
+  assert.equal(result.pets[0].walks[0].distanceKm, 1.25);
+  assert.deepEqual(result.walks, []); // pet walks must not be exported twice
+});

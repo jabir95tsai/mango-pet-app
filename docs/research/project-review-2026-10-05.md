@@ -1,6 +1,8 @@
 # Mango Pet 全專案檢視與優化方向 — 2026-10-05
 
-本次角色：**Cross-platform PM / 策略**。本文件是優先序提案與角色交接；沒有修改 production code、資料庫、套件或部署狀態。
+原始審查角色：**Cross-platform PM / 策略**。下文保留 `61f18e7` 的發現與驗證基準。
+後續 Backend 已完成 R01、R02 與邀請碼限流的本機修補，詳見
+[安全修補驗證](backend-security-fixes-2026-10-05.md)；**尚未合併／部署正式環境**。
 
 **核心建議：先補資料授權、遛狗保存與跨平台資料契約，再完成可驗證的 iOS 上架流程；接著投入效能與設計系統收斂。** 現有 monorepo、Firebase 共用後端與 shared packages 可以延續，沒有證據支持整體重寫。
 
@@ -223,4 +225,3 @@ App Check 補充：Web 有 init（apps/web/src/lib/firebase/config.ts），iOS �
 **Deferred / not-do：** 本輪不修改production code、不執行部署、不建立新Firebase project、不改既定品牌、不宣稱真機或production驗收通過。
 
 **完成範圍：** 已留下具證據、優先序、角色及驗收的檢視報告；工程修復與送審操作為後續獨立交付。
-

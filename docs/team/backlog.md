@@ -38,6 +38,8 @@ P3 = 也許永遠不做的「想法」。
 - **建議交付給**：Backend 接授權與資料生命週期；Web/iOS Bug Hunter 接核心流程；UI/UX 接共用 Dialog/i18n/token；PM 整併 release evidence。細項 owner、順序及驗收見報告 §8。
 - **依賴 / 邊界**：先用 Emulator/受控資料驗證安全修法，再依相容順序部署。現有正式規則版本、APNs/App Check 設定、EAS build及實機結果未live確認。不得把 typecheck 通過當成已修復或已部署。
 - **與既有條目關係**：沿用既有 App Check、shared stats、design-system 漸進遷移；本條以新報告補充最新證據，不重做已完成實作。
+- **2026-10-05 Backend 進度**：R01、R02、邀請碼限流及同根因刪帳家庭清理已於 `codex/backend-security-r01-r02` 實作、commit；乾淨 emulator **22/22 pass**，Functions 編譯通過。**未合併 main／未部署**，不可標 SHIPPED。詳見[修補與驗證紀錄](../research/backend-security-fixes-2026-10-05.md)。
+- **下一批交接**：R04 檢舉去重（Backend 安全）、R06 停止保存（Web Bug Hunter）、R10 >15 位好友 feed（Web/資料層）。R05 其餘刪帳生命週期與 R19 CI 仍未完成；六位邀請碼的多帳號分散猜碼仍待後續設計。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 

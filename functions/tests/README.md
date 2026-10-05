@@ -7,7 +7,7 @@ isolated Firestore emulator. No production credentials or data are needed.
 ```powershell
 npm --prefix functions run build
 $env:GCLOUD_PROJECT = 'demo-mango-security'
-npx -y firebase-tools@15.32.1 emulators:exec --project demo-mango-security --config functions/tests/firebase.json --only firestore 'node --test --test-concurrency=1 functions/tests/*.test.cjs'
+npx -y firebase-tools@15.32.1 emulators:exec --project demo-mango-security --config firebase.security-tests.json --only firestore 'node --test --test-concurrency=1 functions/tests/*.test.cjs'
 ```
 
 If an emulator is already listening on 127.0.0.1:8185 with the current rules:
