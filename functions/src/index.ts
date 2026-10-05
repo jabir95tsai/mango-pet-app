@@ -10,6 +10,7 @@
  */
 
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { randomInt } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import {
   onDocumentCreated,
@@ -47,6 +48,7 @@ import {
 } from "./achievements";
 import { actOnReport, type ReportDoc } from "./moderation-helpers";
 import { exportContactFields, exportMemberFamilies, leaveMemberFamilies } from "./family-access";
+import { joinFamilyWithCode } from "./family-join";
 
 initializeApp();
 
@@ -1956,11 +1958,7 @@ const INVITE_CODE_LENGTH = 6;
 const INVITE_CODE_MAX_ATTEMPTS = 10;
 
 function generateInviteCode(): string {
-  let out = "";
-  for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
-    out += Math.floor(Math.random() * 10).toString();
-  }
-  return out;
+  return randomInt(10 ** INVITE_CODE_LENGTH).toString().padStart(INVITE_CODE_LENGTH, "0");
 }
 
 async function reserveUniqueInviteCode(): Promise<string> {
@@ -2030,48 +2028,18 @@ export const joinFamilyByCode = onCall(
     if (isGuestAuth(req)) {
       throw new HttpsError("permission-denied", "綁定帳號後才能加入家庭");
     }
-    const code = ((req.data?.inviteCode as string | undefined) ?? "").trim();
+    const code = typeof req.data?.inviteCode === "string" ? req.data.inviteCode.trim() : "";
     if (!/^\d{6}$/.test(code)) {
       throw new HttpsError("invalid-argument", "邀請碼必須是 6 位數字");
     }
 
-    const found = await db
-      .collection("families")
-      .where("inviteCode", "==", code)
-      .limit(1)
-      .get();
-    if (found.empty) {
-      throw new HttpsError("not-found", "邀請碼無效或已過期");
-    }
-    const familyDoc = found.docs[0];
-    const family = familyDoc.data();
-    const members = (family.memberUids as string[] | undefined) ?? [];
-
-    if (members.includes(uid)) {
-      return { familyId: familyDoc.id, alreadyMember: true };
-    }
-
-    const batch = db.batch();
-    batch.update(familyDoc.ref, {
-      memberUids: FieldValue.arrayUnion(uid),
-    });
-    batch.set(
-      db.doc(`users/${uid}`),
-      {
-        familyIds: FieldValue.arrayUnion(familyDoc.id),
-        // Switching context to the just-joined family is the obvious
-        // default — user typed the code, they want to use it now.
-        currentFamilyId: familyDoc.id,
-      },
-      { merge: true },
-    );
-    await batch.commit();
+    const result = await joinFamilyWithCode(db, uid, code);
 
     // family-join achievement. Guests can't reach here (isGuestAuth gate
     // above), so isGuest is false — but runAchievementEval re-checks anyway.
-    await runAchievementEval(uid, { familyJoined: true });
+    if (!result.alreadyMember) await runAchievementEval(uid, { familyJoined: true });
 
-    return { familyId: familyDoc.id, alreadyMember: false };
+    return result;
   },
 );
 

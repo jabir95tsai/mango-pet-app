@@ -107,6 +107,26 @@ Spec：[features/legacy-path-cleanup.md](features/legacy-path-cleanup.md)。Audi
 
 **寫入路徑**：100% 經 Cloud Function callable（createFamily / joinFamilyByCode / leaveFamily / regenerateInviteCode / removeFamilyMember）。client 不可直寫，rule 禁。
 
+2026-10-05：邀請碼使用 Node crypto 隨機數，保留 6 位數字格式。join 先扣除下列
+server-only 額度，再查碼；交易內重讀家庭並核對邀請碼，避免查詢後換碼／刪除的競爭。
+家庭成員與 user 快取一起提交；成就副作用在 transaction commit 後執行。
+
+### `familyJoinAttempts/{uid}` — 加入家庭的伺服器限流
+
+| 欄位 | 寫入者 | 用途 |
+|---|---|---|
+| `attemptsMs: number[]` | `joinFamilyByCode` 的獨立 transaction | 最多 20 筆伺服器毫秒時間；每次懶惰移除 24 小時前的紀錄 |
+| `updatedAt: Timestamp` | 同上 | 最後一次扣額時間 |
+
+client read/create/update/delete 全拒絕（包含本人）；以 UID 直接讀取，不需額外 composite index。
+每個正式帳號每滾動 15 分鐘最多 5 次、24 小時最多 20 次。有效格式的猜錯、成功、
+已加入皆扣額，超限回 `resource-exhausted` 與 `details.retryAfterSeconds`；未登入、guest
+與格式錯誤會在查碼前拒絕，不消耗額度。帳號 profile/private 的修改不會清除此紀錄。
+不存邀請碼、IP、email，未設定 TTL；每 UID 留一個有界文件，避免提早清理放大額度。
+
+此措施限制單帳號猜碼；多帳號分散攻擊仍需後續長碼／有效期、App Check 等產品與雙端
+整合決策。保留六位格式不代表已消除所有暴力猜碼風險。
+
 ### `pets/{petId}` — [Pet](../src/lib/types.ts#L50)
 
 | 欄位 | 寫入時機 | 備註 |

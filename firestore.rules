@@ -641,6 +641,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // A separate server-only bucket prevents profile edits from resetting quota.
+    match /familyJoinAttempts/{document=**} {
+      allow read, write: if false;
+    }
+
     // ── userDailyStats — per-user per-day flags (server writes only) ──
     // Currently holds the `goalHitNotifiedAt` field used by the B2
     // family-milestone push to dedupe (one push per achiever per day).
