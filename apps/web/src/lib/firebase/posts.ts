@@ -34,7 +34,11 @@ import {
   type ReportReason,
   type ReportTargetType,
 } from "@/lib/types";
-import { filterVisible } from "@mango/shared-business";
+import {
+  filterVisible,
+  friendPostAuthorChunks,
+  FRIEND_POST_VISIBILITIES,
+} from "@mango/shared-business";
 
 const POSTS = "posts";
 
@@ -158,19 +162,16 @@ export async function listFriendsPosts(
   friendUids: string[],
   max = 30,
 ): Promise<Post[]> {
-  if (friendUids.length === 0) return [];
-  // Firestore "in" supports up to 30 values; chunk if more.
-  const chunks: string[][] = [];
-  for (let i = 0; i < friendUids.length; i += 30) {
-    chunks.push(friendUids.slice(i, i + 30));
-  }
+  const chunks = friendPostAuthorChunks(friendUids);
+  // `max` remains the per-query fetch cap. The mixed feed deduplicates and
+  // sorts all sources; keep failures visible instead of returning partial data.
   const results = await Promise.all(
     chunks.map(async (chunk) => {
       const snap = await getDocs(
         query(
           postsCol(),
           where("authorUid", "in", chunk),
-          where("visibility", "in", ["friends", "public"]),
+          where("visibility", "in", [...FRIEND_POST_VISIBILITIES]),
           orderBy("createdAt", "desc"),
           limit(max),
         ),
