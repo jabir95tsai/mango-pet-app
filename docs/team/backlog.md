@@ -30,6 +30,15 @@ P3 = 也許永遠不做的「想法」。
 
 ## Inbox（未分類）
 
+### 2026-10-05 全專案檢視：授權、核心遛狗與上架品質
+- **發現於**：2026-10-05、Cross-platform PM 唯讀 review；基準 61f18e7。
+- **類型**：安全 / bug / 跨平台契約 / 交付與技術債。
+- **證據與完整驗收**：[全專案檢視報告](../research/project-review-2026-10-05.md)。共 R01–R21；静態 finding、受控重播與未驗 production/真機項目已區分。
+- **優先級提示**：P0 先處理 R01 匯出家庭授權、R02 健康紀錄 create；P1 接 R03 私人推播資料、R04 檢舉去重、R05 刪帳完整性、R06 停止保存、R07–R11 iOS/家庭/好友/每狗指標；交付與送審 R12–R14、R19 並行規劃。
+- **建議交付給**：Backend 接授權與資料生命週期；Web/iOS Bug Hunter 接核心流程；UI/UX 接共用 Dialog/i18n/token；PM 整併 release evidence。細項 owner、順序及驗收見報告 §8。
+- **依賴 / 邊界**：先用 Emulator/受控資料驗證安全修法，再依相容順序部署。現有正式規則版本、APNs/App Check 設定、EAS build及實機結果未live確認。不得把 typecheck 通過當成已修復或已部署。
+- **與既有條目關係**：沿用既有 App Check、shared stats、design-system 漸進遷移；本條以新報告補充最新證據，不重做已完成實作。
+
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 
 _2026-05-29 PWA PM session 已清空一輪：原 Inbox 10 條全 triage 完 — 4 條 SHIPPED/RESOLVED 收進「已處理（audit trail）」、1 條 doc-accuracy 當場修掉、2 條升到對應角色待接、3 條(QR scanner / B4 dormant / settings onboarding link)歸 Deferred。下一個角色 session 新發現的事丟這裡。_
