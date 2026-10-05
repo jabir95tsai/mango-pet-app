@@ -25,7 +25,9 @@ import {
   listPersonalWalks,
   listWalks,
   mintWalkId,
+  updateWalkDetails,
 } from "@/lib/firebase/walks";
+import { listWalkDrafts, removeWalkDraft, storeWalkDraft, type WalkDraft } from "@/lib/walk-drafts";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { getAppUser } from "@/lib/firebase/users";
 import { computeStreak } from "@/lib/scoring";
@@ -123,6 +125,10 @@ export default function WalksPage() {
   const [loading, setLoading] = useState(true);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [pendingDrafts, setPendingDrafts] = useState<WalkDraft[]>([]);
+  const [recovering, setRecovering] = useState(false);
+  const [recoveryError, setRecoveryError] = useState(false);
+  const recoveryInFlight = useRef(false);
   const [showAllWalks, setShowAllWalks] = useState(false);
   // Confetti decor — fires a brief celebration then auto-hides so it
   // doesn't camp at the top of the page forever (user feedback
@@ -196,6 +202,38 @@ export default function WalksPage() {
     if (familyLoading) return;
     refresh();
   }, [familyLoading, refresh]);
+
+  useEffect(() => {
+    if (!user || sessionOpen) return;
+    try {
+      setPendingDrafts(listWalkDrafts(user.uid));
+    } catch {
+      // Storage can be unavailable in private mode. Current-session saves
+      // still work, but recovery after closing the browser is unavailable.
+      setPendingDrafts([]);
+    }
+  }, [user, sessionOpen]);
+
+  async function recoverWalks() {
+    if (!user || recoveryInFlight.current) return;
+    recoveryInFlight.current = true;
+    setRecovering(true);
+    setRecoveryError(false);
+    try {
+      for (const draft of pendingDrafts) {
+        if (draft.walkerUid !== user.uid) continue;
+        await createWalk(draft);
+        removeWalkDraft(user.uid, draft.walkId);
+      }
+      await refresh();
+    } catch {
+      setRecoveryError(true);
+    } finally {
+      try { setPendingDrafts(listWalkDrafts(user.uid)); } catch { /* keep current recovery list */ }
+      recoveryInFlight.current = false;
+      setRecovering(false);
+    }
+  }
 
   // Primary pet = earliest createdAt. Anchored fallback for activePet
   // resolution AND for the cloud-functions push (which also uses
@@ -273,10 +311,10 @@ export default function WalksPage() {
     return () => clearTimeout(t);
   }, [goalHitEarly]);
 
-  async function handleCreate(input: WalkInput & { score: number }) {
+  async function handleCreate(input: WalkInput & { score: number }, trackedWalkId?: string) {
     if (!user) return null;
     const { score, ...rest } = input;
-    const walk = await createWalk({
+    const args = {
       ...rest,
       // family === null → personal walk (not on leaderboard, anti-farm).
       familyId: family?.familyId ?? null,
@@ -284,14 +322,20 @@ export default function WalksPage() {
       walkerName: user.displayName ?? undefined,
       walkerPhotoURL: user.photoURL,
       score,
-      // If a start-photo flow pre-minted an id (so the start post
-      // could cross-link), use the same id here so the resulting
-      // walk doc lands at that path and the START post's walkId is
-      // valid. `pendingWalkId` is consumed exactly once per walk
-      // and cleared in the WalkTrackingView onClose handler below.
-      walkId: pendingWalkId ?? undefined,
-    });
-    await refresh();
+      // Tracked sessions retain their pre-minted START-post id across
+      // retries. Manual entries get their own id, independent of tracking.
+      walkId: trackedWalkId ?? mintWalkId(),
+    };
+    if (trackedWalkId) {
+      try { storeWalkDraft(args); } catch { /* server save remains available without local storage */ }
+    }
+    const walk = await createWalk(args);
+    if (trackedWalkId) {
+      try { removeWalkDraft(user.uid, trackedWalkId); } catch { /* same id makes recovery safe */ }
+    }
+    // A list refresh is not part of the write acknowledgement. In particular,
+    // do not replace the active pet with an empty list while recap is open.
+    if (!trackedWalkId) await refresh();
     // Return the id so WalkTrackingView's end-photo flow can use it
     // for the END post's walkId cross-link.
     return { walkId: walk.walkId };
@@ -366,11 +410,22 @@ export default function WalksPage() {
     await refresh();
   }
 
+  const recoveryNotice = pendingDrafts.length > 0 && (
+    <div role="status" className="mb-4 rounded-[var(--radius-lg)] border border-mango-hairline bg-mango-card-soft p-4 text-sm text-mango-ink">
+      <p>{tW("pendingRecovery", { count: pendingDrafts.length })}</p>
+      {recoveryError && <p role="alert">{tW("saveFailed")}</p>}
+      <Button onClick={recoverWalks} disabled={recovering} className="mt-2 rounded-[var(--radius-pill)]">
+        {recovering ? tW("savingWalk") : tC("retry")}
+      </Button>
+    </div>
+  );
+
   // No-pets short circuit — same as before, just re-styled into the
   // mango CTA family.
   if (!loading && pets.length === 0) {
     return (
       <>
+        {recoveryNotice}
         <EmptyState
           icon={Footprints}
           title={tW("needPetTitle")}
@@ -420,6 +475,7 @@ export default function WalksPage() {
 
   return (
     <>
+      {recoveryNotice}
       {/* Confetti decor — brief celebration that auto-hides after 4s
           (user feedback). `showConfetti` is driven by the useEffect
           above which watches goalHit and runs the timer. */}
@@ -682,12 +738,14 @@ export default function WalksPage() {
 
       <WalkTrackingView
         open={sessionOpen}
+        walkId={pendingWalkId}
         onClose={() => {
           setSessionOpen(false);
           // Walk session ended (saved or abandoned) — pendingWalkId
           // is single-use, clear it so the next walk attempt mints a
           // fresh one.
           setPendingWalkId(null);
+          void refresh();
         }}
         pet={activePet}
         streakDays={streakDays}
@@ -695,6 +753,7 @@ export default function WalksPage() {
         goalMin={goalMin}
         weeklyAvgMin={weeklyAvgMin}
         onComplete={handleCreate}
+        onUpdate={updateWalkDetails}
       />
       <ManualWalkDialog
         open={manualOpen}

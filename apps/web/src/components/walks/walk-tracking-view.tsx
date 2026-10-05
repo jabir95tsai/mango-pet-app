@@ -68,6 +68,7 @@ type PhotoSlot = {
 
 type Props = {
   open: boolean;
+  walkId: string | null;
   onClose: () => void;
   /** Pet chosen on the Hero. The view does NOT show a pet picker — the
    *  Hero is the only place that decision lives. */
@@ -81,15 +82,12 @@ type Props = {
    *  session). Used by the completion recap "vs weekly avg" tile; <= 0
    *  collapses that line. */
   weeklyAvgMin?: number;
-  /** Caller saves the walk + may pre-mint a walkId for cross-link
-   *  use cases (auto-photo-share start post). Returns `{ walkId }` on
-   *  success so the in-view end-photo flow can include the same id
-   *  in its post, or `null` on failure (caller logged it). The
-   *  walk-tracking-view tolerates either shape — only the new
-   *  end-photo flow reads the walkId. */
+  /** Must acknowledge a persisted walk. A missing result is a failed save. */
   onComplete: (
     input: WalkInput & { score: number },
-  ) => Promise<{ walkId: string } | null | void>;
+    walkId: string,
+  ) => Promise<{ walkId: string } | null>;
+  onUpdate: (walkId: string, details: { notes: string; photoURLs: string[] }) => Promise<void>;
 };
 
 // Map the session's structured error kind to a short, localized hint. The
@@ -128,11 +126,11 @@ function fmtMmSs(durationMin: number): { mm: string; ss: string } {
  *
  * Phases:
  *   - "tracking" — auto-started on open, ticks until user taps stop
- *   - "done" — currently a save form (notes + save). Phase 4 will replace
- *     this with the in-page complete view (auto-save + two secondary CTAs).
+ *   - "done" — immediate save, then recap; failed writes remain retryable.
  */
 export function WalkTrackingView({
   open,
+  walkId,
   onClose,
   pet,
   streakDays,
@@ -140,6 +138,7 @@ export function WalkTrackingView({
   goalMin,
   weeklyAvgMin = 0,
   onComplete,
+  onUpdate,
 }: Props) {
   const tW = useTranslations("Walks.core");
   const tP = useTranslations("Walks.photo");
@@ -163,6 +162,13 @@ export function WalkTrackingView({
   // saveWalkOnce succeeds (or save is skipped entirely).
   const savedWalkIdRef = useRef<string | null>(null);
   const saveWalkPromiseRef = useRef<Promise<boolean> | null>(null);
+  const stoppedInputRef = useRef<(WalkInput & { score: number }) | null>(null);
+  const savedDetailsRef = useRef<string | null>(null);
+  const stopConfirmRef = useRef(false);
+  const sessionContextRef = useRef<{
+    pet: Pet; walkId: string; streakDays: number; storedTodayMin: number;
+    goalMin: number; onComplete: Props["onComplete"]; onUpdate: Props["onUpdate"];
+  } | null>(null);
 
   // ── Auto-photo-share flow B (walk end) ────────────────────────────
   // Spec docs/features/walks-auto-photo-share.md flow B. State pulled
@@ -203,7 +209,8 @@ export function WalkTrackingView({
   // active session.
   useEffect(() => {
     if (!open) return;
-    if (!activePetIdRef.current) return;
+    if (!activePetIdRef.current || !pet || !walkId) return;
+    sessionContextRef.current = { pet, walkId, streakDays, storedTodayMin, goalMin, onComplete, onUpdate };
     const session = new WalkSession();
     sessionRef.current = session;
     const unsub = session.on(setState);
@@ -212,6 +219,15 @@ export function WalkTrackingView({
     setNotesOpen(false);
     setSaveError(null);
     setSaved(false);
+    setSaving(false);
+    savedWalkIdRef.current = null;
+    saveWalkPromiseRef.current = null;
+    stoppedInputRef.current = null;
+    savedDetailsRef.current = null;
+    stopConfirmRef.current = false;
+    setEndPromptOpen(false);
+    setEndComposerOpen(false);
+    setEndPhoto(null);
     // Reset photos + mint a fresh session id so a re-opened tracking
     // view doesn't leak the previous walk's photos into the new walk.
     setPhotos([]);
@@ -287,7 +303,7 @@ export function WalkTrackingView({
   // the existing confetti / emerald celebration land first so the
   // sheet doesn't visually interrupt the goal-hit moment.
   useEffect(() => {
-    if (phase !== "done") {
+    if (!open || phase !== "done" || !saved) {
       setEndPromptOpen(false);
       return;
     }
@@ -296,7 +312,7 @@ export function WalkTrackingView({
     if (!autoPhotoEnabled || isGuest) return;
     const t = window.setTimeout(() => setEndPromptOpen(true), 1000);
     return () => window.clearTimeout(t);
-  }, [phase, autoPhotoEnabled, isGuest]);
+  }, [open, phase, saved, autoPhotoEnabled, isGuest]);
 
   function handleEndPromptTake() {
     setEndPromptOpen(false);
@@ -410,6 +426,24 @@ export function WalkTrackingView({
         .map((p) => p.uploadedUrl as string),
     [photos],
   );
+  const detailsRef = useRef({ notes: "", photoURLs: [] as string[] });
+  detailsRef.current = { notes: notes.trim(), photoURLs: persistedPhotoURLs };
+  const uploadingPhotos = photos.some((photo) => photo.status === "uploading");
+
+  // Photos may finish uploading after the core walk was saved. Patch only
+  // recap details on the same id; never write the core walk a second time.
+  useEffect(() => {
+    if (open && saved) void ensureWalkSavedOnce();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, saved, persistedPhotoURLs]);
+
+  useEffect(() => {
+    if (!open || phase !== "done" || (saved && !saving && !uploadingPhotos
+      && savedDetailsRef.current === JSON.stringify(detailsRef.current))) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [open, phase, saved, saving, uploadingPhotos, notes, persistedPhotoURLs]);
 
   // Body scroll lock while the view is open (mirrors the previous Dialog).
   useEffect(() => {
@@ -424,6 +458,8 @@ export function WalkTrackingView({
   // §A1: the stop button sits on a full-screen `fixed inset-0` layout and is
   // easy to mis-tap, so confirm before ending. Confirm → stop + done screen.
   async function handleStop() {
+    if (stopConfirmRef.current || stoppedInputRef.current) return;
+    stopConfirmRef.current = true;
     const ok = await askConfirm({
       title: tW("stopConfirmTitle"),
       message: tW("stopConfirmBody"),
@@ -431,9 +467,10 @@ export function WalkTrackingView({
       cancelText: tCommon("cancel"),
       danger: true,
     });
+    stopConfirmRef.current = false;
     if (!ok) return;
-    sessionRef.current?.stop();
-    setPhase("done");
+    const stopped = sessionRef.current?.stop();
+    if (stopped) finishWalk(stopped);
   }
 
   // §A2: manual pause / resume — freezes both time + distance.
@@ -447,52 +484,59 @@ export function WalkTrackingView({
   // §B: runaway safeguard — when the session auto-stops at the 3h cap, move to
   // the done screen (the notice there explains why it ended).
   useEffect(() => {
-    if (state?.autoStopped && phase === "tracking") setPhase("done");
+    if (state?.autoStopped && phase === "tracking") finishWalk(state);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.autoStopped, phase]);
 
-  /**
-   * Save the walk exactly once. Notes are taken from current state so the
-   * user can add them after stopping but before tapping a CTA. The spec
-   * says "停止 = 儲存成功" — from the user's POV the walk is captured at
-   * stop; the actual Firestore write is deferred ~one click later to the
-   * CTA so notes can ride along without a separate updateWalk path (UI/UX
-   * role doesn't add Firebase functions).
-   */
-  async function saveWalkOnce(): Promise<boolean> {
-    if (saved) return true;
-    if (!sessionRef.current || !state || !state.startedAt || !pet) {
-      return false;
+  function finishWalk(stopped: WalkSessionState) {
+    const context = sessionContextRef.current;
+    if (stoppedInputRef.current || !context) return;
+    setPhase("done");
+    if (!stopped.startedAt) {
+      setSaveError(tW("saveFailed"));
+      return;
     }
+    // Freeze the final sample, owner/pet context and end time before any
+    // asynchronous work. A retry must not extend or reassign the walk.
+    stoppedInputRef.current = {
+      petId: context.pet.petId,
+      petName: context.pet.name,
+      startedAt: stopped.startedAt,
+      endedAt: new Date(),
+      distanceKm: stopped.totalDistanceKm,
+      durationMin: stopped.durationMin,
+      path: stopped.path,
+      isManual: false,
+      ...detailsRef.current,
+      score: computeWalkScore({ distanceKm: stopped.totalDistanceKm,
+        durationMin: stopped.durationMin, pet: context.pet, streakDays: context.streakDays }),
+    };
+    void ensureWalkSavedOnce();
+  }
+
+  /** Core save and recap patches share one in-flight operation. */
+  async function saveWalkOnce(): Promise<boolean> {
+    const input = stoppedInputRef.current;
+    const context = sessionContextRef.current;
+    if (!input || !context) return false;
     setSaving(true);
     setSaveError(null);
     try {
-      const score = computeWalkScore({
-        distanceKm: state.totalDistanceKm,
-        durationMin: state.durationMin,
-        pet,
-        streakDays,
-      });
-      const result = await onComplete({
-        petId: pet.petId,
-        petName: pet.name,
-        startedAt: state.startedAt,
-        endedAt: new Date(),
-        distanceKm: state.totalDistanceKm,
-        durationMin: state.durationMin,
-        path: state.path,
-        isManual: false,
-        notes: notes.trim() || undefined,
-        photoURLs:
-          persistedPhotoURLs.length > 0 ? persistedPhotoURLs : undefined,
-        score,
-      });
-      // onComplete can return void (legacy callers), `null` (caller
-      // didn't get an id back), or `{ walkId }` (walks page handler).
-      // Stash the id for the end-photo flow to cross-link the post.
-      if (result && typeof result === "object" && "walkId" in result) {
+      if (!savedWalkIdRef.current) {
+        const result = await context.onComplete(input, context.walkId);
+        if (!result?.walkId || result.walkId !== context.walkId) throw new Error(tW("saveFailed"));
         savedWalkIdRef.current = result.walkId;
+        savedDetailsRef.current = JSON.stringify({ notes: input.notes ?? "", photoURLs: input.photoURLs ?? [] });
+        setSaved(true);
       }
-      setSaved(true);
+      // An upload/keystroke can settle during a write. Drain the newest
+      // snapshot before allowing navigation; overlapping CTAs join this task.
+      while (savedDetailsRef.current !== JSON.stringify(detailsRef.current)) {
+        const details = detailsRef.current;
+        const signature = JSON.stringify(details);
+        await context.onUpdate(savedWalkIdRef.current, details);
+        savedDetailsRef.current = signature;
+      }
       return true;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : tW("saveFailed"));
@@ -503,7 +547,6 @@ export function WalkTrackingView({
   }
 
   function ensureWalkSavedOnce(): Promise<boolean> {
-    if (saved) return Promise.resolve(true);
     if (!saveWalkPromiseRef.current) {
       saveWalkPromiseRef.current = saveWalkOnce().finally(() => {
         saveWalkPromiseRef.current = null;
@@ -525,11 +568,14 @@ export function WalkTrackingView({
     }
   }
 
-  if (!open || !pet || typeof document === "undefined") return null;
+  const sessionPet = sessionContextRef.current?.pet ?? pet;
+  const sessionStoredMin = sessionContextRef.current?.storedTodayMin ?? storedTodayMin;
+  const sessionGoalMin = sessionContextRef.current?.goalMin ?? goalMin;
+  if (!open || !sessionPet || typeof document === "undefined") return null;
 
   // Live blend of stored today + current session minutes for the bar.
   const blended = state
-    ? WalkSession.blendTodayProgress(storedTodayMin, state.durationMin, goalMin)
+    ? WalkSession.blendTodayProgress(sessionStoredMin, state.durationMin, sessionGoalMin)
     : {
         minutes: storedTodayMin,
         goalMin,
@@ -572,7 +618,7 @@ export function WalkTrackingView({
             />
             {state.isPaused ? tW("paused") : tW("tracking")}
             <span className="text-mango-ink-2 dark:text-zinc-400">
-              · 🐾 {pet.name}
+              · 🐾 {sessionPet.name}
             </span>
           </div>
 
@@ -747,7 +793,7 @@ export function WalkTrackingView({
             // Spec D3: always celebration backdrop — emerald wash for
             // goal-hit, calmer zinc wash otherwise. CSS only; uses
             // existing colour ramps for parity in dark mode.
-            finalGoalHit
+            saved && finalGoalHit
               ? "bg-gradient-to-b from-emerald-50 to-white dark:from-emerald-500/10 dark:to-zinc-950"
               : "bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950",
           )}
@@ -756,7 +802,11 @@ export function WalkTrackingView({
               today (stored + this session ≥ goalMin), amber percent line
               otherwise. Both copy variants stay short and warm — no
               "scoring" detail (spec: 分數 not in main visual). */}
-          {finalGoalHit ? (
+          {!saved ? (
+            <p role="status" className="text-center text-lg font-semibold text-mango-ink">
+              {saving ? tW("savingWalk") : tW("walkNotSaved")}
+            </p>
+          ) : finalGoalHit ? (
             <div className="relative flex flex-col items-center gap-2">
               {/* Pure-CSS confetti — only fires on the goal-hit branch.
                   20 slivers; each gets a random left + delay + colour.
@@ -832,7 +882,7 @@ export function WalkTrackingView({
             const showAvg = weeklyAvgMin > 0;
             const kcal = estimatePetCalories(
               state.totalDistanceKm,
-              pet?.weightKg ?? null,
+              sessionPet.weightKg ?? null,
             );
             return (
               <div className="flex w-full max-w-xs flex-col gap-3">
@@ -865,8 +915,8 @@ export function WalkTrackingView({
                             : tCel("vsAvgSame")}
                       </li>
                     )}
-                    {kcal > 0 && pet && (
-                      <li>{tCel("calories", { name: pet.name, kcal })}</li>
+                    {kcal > 0 && (
+                      <li>{tCel("calories", { name: sessionPet.name, kcal })}</li>
                     )}
                   </ul>
                 )}
@@ -910,9 +960,7 @@ export function WalkTrackingView({
             </div>
           )}
 
-          {/* Notes — secondary, collapsed by default. Expanding it doesn't
-              hold up the save: notes ride along on whichever CTA the user
-              taps next (saveWalkOnce reads `notes` state at click time). */}
+          {/* Notes update the saved walk on blur or before leaving recap. */}
           <details
             open={notesOpen}
             onToggle={(e) =>
@@ -932,34 +980,40 @@ export function WalkTrackingView({
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              onBlur={() => { void ensureWalkSavedOnce(); }}
               className="mt-2"
               aria-label={tW("noteOptional")}
             />
           </details>
 
           {saveError && (
-            <p className="text-center text-sm text-red-600 dark:text-red-400">
+            <p role="alert" className="text-center text-sm text-red-600 dark:text-red-400">
               {saveError}
             </p>
           )}
 
-          {/* Two secondary CTAs. Both trigger save (saveWalkOnce is
-              idempotent). 回到遛狗 = stay on Mango, 查看排行榜 = celebrate
-              the streak / family compare. */}
           <div className="flex w-full max-w-xs flex-col gap-2">
+            {saveError && (
+              <Button onClick={() => { void ensureWalkSavedOnce(); }} disabled={saving} className="rounded-[var(--radius-pill)]">
+                {tCommon("retry")}
+              </Button>
+            )}
+            <p role="status" className="text-center text-xs text-mango-ink-2">
+              {uploadingPhotos ? tP("uploading") : saving ? tW("savingWalk") : saved && !saveError ? tW("walkSaved") : ""}
+            </p>
             <Button
               onClick={handleBackToWalking}
               size="lg"
-              disabled={saving}
+              disabled={saving || uploadingPhotos || !saved}
               className="w-full"
             >
-              {saving && !saved ? "..." : tW("backToWalking")}
+              {tW("backToWalking")}
             </Button>
             <Button
               variant="secondary"
               onClick={handleViewLeaderboard}
               size="lg"
-              disabled={saving}
+              disabled={saving || uploadingPhotos || !saved}
               className="w-full"
             >
               {tW("viewLeaderboard")}
@@ -993,13 +1047,13 @@ export function WalkTrackingView({
         onChange={handleEndPhotoPicked}
         aria-hidden="true"
       />
-      {pet && (
+      {sessionPet && (
         <>
           <PhotoPromptSheet
             open={endPromptOpen}
             onSkip={handleEndPromptSkip}
             onTake={handleEndPromptTake}
-            petName={pet.name}
+            petName={sessionPet.name}
             phase="end"
             walkMinutes={Math.round(state?.durationMin ?? 0)}
           />
@@ -1011,7 +1065,7 @@ export function WalkTrackingView({
             initialCaption={
               endPhoto
                 ? tPP("captionEndDefault", {
-                    pet: pet.name,
+                    pet: sessionPet.name,
                     min: Math.round(state?.durationMin ?? 0),
                   })
                 : undefined

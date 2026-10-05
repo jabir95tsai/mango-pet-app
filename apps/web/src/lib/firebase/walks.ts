@@ -9,7 +9,8 @@ import {
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
+  runTransaction,
+  updateDoc,
   Timestamp,
   type QueryConstraint,
   where,
@@ -98,13 +99,25 @@ export async function createWalk(args: CreateWalkArgs): Promise<Walk> {
       createdAt: serverTimestamp(),
     }),
   };
-  let docRef;
+  let docRef: ReturnType<typeof walkDoc>;
   if (args.walkId) {
-    // Pre-minted id from the auto-photo-share flow — use setDoc so the
-    // resulting walk lands at the same id the START post already
-    // cross-links to.
+    // Retrying after an uncertain acknowledgement (including a recovered
+    // draft) must not overwrite createdAt or later recap edits.
     docRef = walkDoc(args.walkId);
-    await setDoc(docRef, data);
+    await runTransaction(getDb(), async (transaction) => {
+      const existing = await transaction.get(docRef);
+      if (!existing.exists()) {
+        transaction.set(docRef, data);
+        return;
+      }
+      const saved = existing.data();
+      if (saved.walkerUid !== args.walkerUid || saved.petId !== args.petId
+        || saved.familyId !== args.familyId
+        || saved.startedAt?.toMillis() !== args.startedAt.getTime()
+        || saved.endedAt?.toMillis() !== args.endedAt.getTime()) {
+        throw new Error("Walk ID is already used by another session.");
+      }
+    });
   } else {
     docRef = await addDoc(walksCol(), data);
   }
@@ -155,6 +168,14 @@ export async function listPersonalWalks(
 
 export async function deleteWalk(walkId: string): Promise<void> {
   await deleteDoc(walkDoc(walkId));
+}
+
+/** Recap edits must not re-create the walk or change its score/timestamps. */
+export async function updateWalkDetails(
+  walkId: string,
+  details: { notes: string; photoURLs: string[] },
+): Promise<void> {
+  await updateDoc(walkDoc(walkId), details);
 }
 
 // Legacy `users/{uid}/walks/*` migration helper was removed 2026-05-23
