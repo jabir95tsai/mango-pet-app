@@ -236,13 +236,63 @@ service cloud.firestore {
       // Both reads and writes gated by the parent pet's family — or by
       // the parent pet's ownerUid in personal mode.
       match /healthRecords/{recordId} {
-        allow read, write: if resource == null
-          || isPersonalPetOwner(
-               get(/databases/$(database)/documents/pets/$(petId)).data
-             )
-          || isFamilyMember(
-               get(/databases/$(database)/documents/pets/$(petId)).data.familyId
-             );
+        function canAccessParent() {
+          let parent = /databases/$(database)/documents/pets/$(petId);
+          return request.auth != null && exists(parent)
+            && (isPersonalPetOwner(get(parent).data)
+                || isFamilyMember(get(parent).data.familyId));
+        }
+        function requiredText(d, key, maxLength) {
+          return key in d && d[key] is string
+            && d[key].size() > 0 && d[key].size() <= maxLength;
+        }
+        function optionalText(d, key, maxLength) {
+          return !(key in d) || (d[key] is string && d[key].size() <= maxLength);
+        }
+        function optionalDate(d, key) {
+          return !(key in d) || d[key] is timestamp;
+        }
+        function validData(type, d) {
+          return d is map && (
+            (type == 'weight' && d.keys().hasOnly(['kg'])
+              && d.kg is number && d.kg > 0 && d.kg <= 10000)
+            || (type == 'feeding' && d.keys().hasOnly(['brand', 'amountG', 'foodType'])
+              && optionalText(d, 'brand', 500) && optionalText(d, 'foodType', 500)
+              && (!('amountG' in d)
+                || (d.amountG is number && d.amountG >= 0 && d.amountG <= 1000000)))
+            || (type == 'vaccine' && d.keys().hasOnly(['name', 'nextDueAt'])
+              && requiredText(d, 'name', 500) && optionalDate(d, 'nextDueAt'))
+            || (type == 'vet' && d.keys().hasOnly(['clinic', 'doctor', 'diagnosis', 'prescription'])
+              && requiredText(d, 'clinic', 500) && requiredText(d, 'diagnosis', 10000)
+              && optionalText(d, 'doctor', 500) && optionalText(d, 'prescription', 10000))
+            || (type == 'medication' && d.keys().hasOnly(['name', 'frequency', 'startsAt', 'endsAt'])
+              && requiredText(d, 'name', 500) && optionalText(d, 'frequency', 500)
+              && optionalDate(d, 'startsAt') && optionalDate(d, 'endsAt'))
+          );
+        }
+        function validContent(d) {
+          return d.petId == petId && d.recordedAt is timestamp
+            && (!('notes' in d) || d.notes == null
+              || (d.notes is string && d.notes.size() <= 10000))
+            && validData(d.type, d.data);
+        }
+        // Legacy records remain readable/deletable using only parent authority.
+        allow read, delete: if canAccessParent();
+        allow create: if canAccessParent()
+          && request.resource.data.keys().hasAll([
+            'petId', 'recordedByUid', 'type', 'data', 'recordedAt', 'createdAt'
+          ])
+          && request.resource.data.keys().hasOnly([
+            'petId', 'recordedByUid', 'type', 'data', 'recordedAt', 'notes', 'createdAt'
+          ])
+          && request.resource.data.recordedByUid == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && validContent(request.resource.data);
+        // Preserve legacy metadata and attribution when a family member edits content.
+        allow update: if canAccessParent()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['type', 'data', 'recordedAt', 'notes'])
+          && validContent(request.resource.data);
       }
     }
 

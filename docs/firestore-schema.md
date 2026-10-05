@@ -129,7 +129,20 @@ Spec：[features/legacy-path-cleanup.md](features/legacy-path-cleanup.md)。Audi
 | `data` | createRecord | 依 type discriminated union（見 types.ts） |
 | `notes?`, `createdAt` | createRecord | serverTimestamp |
 
-rule 透過 parent pet 的 `familyId` 判定權限：`get(/databases/.../pets/{petId}).data.familyId`。
+2026-10-05 安全修補：所有操作先確認已登入與 parent pet 存在，再依個人寵物
+`ownerUid` 或家庭 `memberUids` 授權。anonymous-auth 訪客仍可管理自己的個人寵物；
+未登入者無權建立紀錄，`resource == null` 不適用此子集合。
+
+新建僅允許 `petId, recordedByUid, type, data, recordedAt, notes?, createdAt`；
+`petId` 須與路徑一致、`recordedByUid` 須為 caller、`createdAt` 須為 serverTimestamp。
+`recordedAt` 為 timestamp。`data` 依五種 type 限制欄位及型別；feeding 允許空 map。
+新增防濫用上限：短文字 500 字、notes／診斷／處方 10,000 字；kg 必須 >0 且 ≤10,000，
+amountG 必須 ≥0 且 ≤1,000,000（兩者均拒絕 NaN/Infinity；這是資料限制，非醫療建議）。
+optional dates 為 timestamp；notes 可省略或 null。
+
+更新僅可修改 `type, data, recordedAt, notes`，且結果通過同一內容驗證；petId、
+recordedByUid、createdAt 與舊 metadata 不可變更。舊資料的 read/delete 不套新 schema，
+缺 attribution 或帶舊 familyId 的紀錄仍能由有 parent 權限者讀取／刪除。
 
 ### `reminders/{reminderId}` — [Reminder](../src/lib/types.ts#L161)
 
