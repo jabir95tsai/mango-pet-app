@@ -50,6 +50,7 @@ import { actOnReport, type ReportDoc } from "./moderation-helpers";
 import { exportContactFields, exportMemberFamilies, leaveMemberFamilies } from "./family-access";
 import { joinFamilyWithCode } from "./family-join";
 import { readContactTokens, removeContactTokens } from "./user-contact";
+import { assertAccountsActive, withActiveAccounts } from "./account-mutation";
 
 initializeApp();
 
@@ -794,9 +795,9 @@ export const purgeMyOrphanWalks = onCall(
       const BATCH = 400;
       for (let i = 0; i < orphans.length; i += BATCH) {
         const slice = orphans.slice(i, i + BATCH);
-        const batch = db.batch();
-        for (const o of slice) batch.delete(db.doc(`walks/${o.walkId}`));
-        await batch.commit();
+        await withActiveAccounts(db, [uid], async (tx) => {
+          for (const o of slice) tx.delete(db.doc(`walks/${o.walkId}`));
+        });
       }
     }
 
@@ -804,14 +805,16 @@ export const purgeMyOrphanWalks = onCall(
     // together by walker. Persists the orphan list even on dryRun so
     // we have a record of "what would've been deleted at this moment".
     const isoNow = new Date().toISOString();
-    await db.doc(`orphanWalkPurges/${uid}_${isoNow}`).set({
-      uid,
-      ranAt: Timestamp.now(),
-      dryRun,
-      familyIds: Array.from(familyIds),
-      keptPersonal,
-      keptCurrentFamily,
-      orphans,
+    await withActiveAccounts(db, [uid], async (tx) => {
+      tx.set(db.doc(`orphanWalkPurges/${uid}_${isoNow}`), {
+        uid,
+        ranAt: Timestamp.now(),
+        dryRun,
+        familyIds: Array.from(familyIds),
+        keptPersonal,
+        keptCurrentFamily,
+        orphans,
+      });
     });
 
     logger.info(
@@ -1802,37 +1805,37 @@ export const acceptFriendRequest = onCall(
     if (!fromUid) throw new HttpsError("invalid-argument", "fromUid required");
 
     const reqRef = db.doc(`users/${myUid}/friendRequests/${fromUid}`);
-    const reqSnap = await reqRef.get();
-    if (!reqSnap.exists) {
-      throw new HttpsError("not-found", "Request not found");
-    }
+    await withActiveAccounts(db, [myUid, fromUid], async (tx) => {
+      const reqSnap = await tx.get(reqRef);
+      if (!reqSnap.exists) {
+        throw new HttpsError("not-found", "Request not found");
+      }
 
-    const [meSnap, themSnap] = await Promise.all([
-      db.doc(`users/${myUid}`).get(),
-      db.doc(`users/${fromUid}`).get(),
-    ]);
-    const me = meSnap.data();
-    const them = themSnap.data();
-    if (!me || !them) {
-      throw new HttpsError("failed-precondition", "Profiles missing");
-    }
+      const [meSnap, themSnap] = await Promise.all([
+        tx.get(db.doc(`users/${myUid}`)),
+        tx.get(db.doc(`users/${fromUid}`)),
+      ]);
+      const me = meSnap.data();
+      const them = themSnap.data();
+      if (!me || !them) {
+        throw new HttpsError("failed-precondition", "Profiles missing");
+      }
 
-    const now = Timestamp.now();
-    const batch = db.batch();
-    batch.set(db.doc(`users/${myUid}/friends/${fromUid}`), {
-      uid: fromUid,
-      displayName: them.displayName ?? "Friend",
-      photoURL: them.photoURL ?? null,
-      addedAt: now,
+      const now = Timestamp.now();
+      tx.set(db.doc(`users/${myUid}/friends/${fromUid}`), {
+        uid: fromUid,
+        displayName: them.displayName ?? "Friend",
+        photoURL: them.photoURL ?? null,
+        addedAt: now,
+      });
+      tx.set(db.doc(`users/${fromUid}/friends/${myUid}`), {
+        uid: myUid,
+        displayName: me.displayName ?? "Friend",
+        photoURL: me.photoURL ?? null,
+        addedAt: now,
+      });
+      tx.delete(reqRef);
     });
-    batch.set(db.doc(`users/${fromUid}/friends/${myUid}`), {
-      uid: myUid,
-      displayName: me.displayName ?? "Friend",
-      photoURL: me.photoURL ?? null,
-      addedAt: now,
-    });
-    batch.delete(reqRef);
-    await batch.commit();
 
     return { ok: true };
   },
@@ -1846,10 +1849,10 @@ export const removeFriend = onCall(
     const friendUid = (req.data?.friendUid as string | undefined)?.trim();
     if (!friendUid) throw new HttpsError("invalid-argument", "friendUid required");
 
-    const batch = db.batch();
-    batch.delete(db.doc(`users/${myUid}/friends/${friendUid}`));
-    batch.delete(db.doc(`users/${friendUid}/friends/${myUid}`));
-    await batch.commit();
+    await withActiveAccounts(db, [myUid, friendUid], async (tx) => {
+      tx.delete(db.doc(`users/${myUid}/friends/${friendUid}`));
+      tx.delete(db.doc(`users/${friendUid}/friends/${myUid}`));
+    });
 
     return { ok: true };
   },
@@ -1867,6 +1870,10 @@ export const sendTestPush = onCall(
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
 
+    // Reject already-frozen callers before doing the push lookup. FCM cannot
+    // share a Firestore transaction; token cleanup has its own write fence.
+    await withActiveAccounts(db, [uid], async () => {});
+
     const userSnap = await db.doc(`users/${uid}`).get();
     if (!userSnap.exists) {
       throw new HttpsError("not-found", "User doc not found");
@@ -1880,6 +1887,9 @@ export const sendTestPush = onCall(
       );
     }
 
+    // Recheck after token lookup. A deletion starting after this final check
+    // can still overlap the external send, but cannot recreate account data.
+    await withActiveAccounts(db, [uid], async () => {});
     const response = await messaging.sendEachForMulticast({
       tokens,
       notification: {
@@ -1974,25 +1984,25 @@ export const createFamily = onCall(
     const familyRef = db.collection("families").doc();
     const now = Timestamp.now();
 
-    const batch = db.batch();
-    batch.set(familyRef, {
-      name,
-      ownerUid: uid,
-      memberUids: [uid],
-      inviteCode,
-      createdAt: now,
+    await withActiveAccounts(db, [uid], async (tx) => {
+      tx.set(familyRef, {
+        name,
+        ownerUid: uid,
+        memberUids: [uid],
+        inviteCode,
+        createdAt: now,
+      });
+      // Append to user.familyIds; set currentFamilyId so subsequent reads scope
+      // to this family without an explicit switch.
+      tx.set(
+        db.doc(`users/${uid}`),
+        {
+          familyIds: FieldValue.arrayUnion(familyRef.id),
+          currentFamilyId: familyRef.id,
+        },
+        { merge: true },
+      );
     });
-    // Append to user.familyIds; set currentFamilyId so subsequent reads scope
-    // to this family without an explicit switch.
-    batch.set(
-      db.doc(`users/${uid}`),
-      {
-        familyIds: FieldValue.arrayUnion(familyRef.id),
-        currentFamilyId: familyRef.id,
-      },
-      { merge: true },
-    );
-    await batch.commit();
 
     return { familyId: familyRef.id, inviteCode };
   },
@@ -2030,51 +2040,49 @@ export const leaveFamily = onCall(
     if (!familyId) throw new HttpsError("invalid-argument", "familyId required");
 
     const familyRef = db.doc(`families/${familyId}`);
-    const snap = await familyRef.get();
-    if (!snap.exists) throw new HttpsError("not-found", "Family not found");
-    const family = snap.data() ?? {};
-    const members = (family.memberUids as string[] | undefined) ?? [];
-    if (!members.includes(uid)) {
-      throw new HttpsError("failed-precondition", "Not a member");
-    }
-
-    const isOwner = family.ownerUid === uid;
-    const isLast = members.length === 1;
-
-    const batch = db.batch();
-
-    if (isLast) {
-      // Last member out — delete the family doc entirely. The owned pets /
-      // walks / etc. remain (orphaned) for safety; the user can re-link
-      // them by creating a new family. We don't cascade-delete user data.
-      batch.delete(familyRef);
-    } else {
-      // Remove from memberUids; if the owner is leaving, promote the
-      // earliest-listed remaining member to owner.
-      const remaining = members.filter((m) => m !== uid);
-      const update: Record<string, unknown> = {
-        memberUids: FieldValue.arrayRemove(uid),
-      };
-      if (isOwner && remaining.length > 0) {
-        update.ownerUid = remaining[0];
+    await withActiveAccounts(db, [uid], async (tx) => {
+      const userRef = db.doc(`users/${uid}`);
+      const [snap, userSnap] = await Promise.all([tx.get(familyRef), tx.get(userRef)]);
+      if (!snap.exists) throw new HttpsError("not-found", "Family not found");
+      const family = snap.data() ?? {};
+      const members = (family.memberUids as string[] | undefined) ?? [];
+      if (!members.includes(uid)) {
+        throw new HttpsError("failed-precondition", "Not a member");
       }
-      batch.update(familyRef, update);
-    }
 
-    // Detach from this user's familyIds. If currentFamilyId points here,
-    // unset it; client will pick another family (if any) on next refresh.
-    const userRef = db.doc(`users/${uid}`);
-    const userSnap = await userRef.get();
-    const userData = userSnap.data() ?? {};
-    const update: Record<string, unknown> = {
-      familyIds: FieldValue.arrayRemove(familyId),
-    };
-    if (userData.currentFamilyId === familyId) {
-      update.currentFamilyId = FieldValue.delete();
-    }
-    batch.update(userRef, update);
+      const isOwner = family.ownerUid === uid;
+      const isLast = members.length === 1;
 
-    await batch.commit();
+      if (isLast) {
+        // Last member out — delete the family doc entirely. The owned pets /
+        // walks / etc. remain (orphaned) for safety; the user can re-link
+        // them by creating a new family. We don't cascade-delete user data.
+        tx.delete(familyRef);
+      } else {
+        // Remove from memberUids; if the owner is leaving, promote the
+        // earliest-listed remaining member to owner.
+        const remaining = members.filter((m) => m !== uid);
+        const update: Record<string, unknown> = {
+          memberUids: FieldValue.arrayRemove(uid),
+        };
+        if (isOwner && remaining.length > 0) {
+          await assertAccountsActive(tx, db, [remaining[0]]);
+          update.ownerUid = remaining[0];
+        }
+        tx.update(familyRef, update);
+      }
+
+      // Detach from this user's familyIds. If currentFamilyId points here,
+      // unset it; client will pick another family (if any) on next refresh.
+      const userData = userSnap.data() ?? {};
+      const update: Record<string, unknown> = {
+        familyIds: FieldValue.arrayRemove(familyId),
+      };
+      if (userData.currentFamilyId === familyId) {
+        update.currentFamilyId = FieldValue.delete();
+      }
+      tx.update(userRef, update);
+    });
     return { ok: true };
   },
 );
@@ -2088,16 +2096,18 @@ export const regenerateInviteCode = onCall(
     if (!familyId) throw new HttpsError("invalid-argument", "familyId required");
 
     const familyRef = db.doc(`families/${familyId}`);
-    const snap = await familyRef.get();
-    if (!snap.exists) throw new HttpsError("not-found", "Family not found");
-    const family = snap.data() ?? {};
-    const members = (family.memberUids as string[] | undefined) ?? [];
-    if (!members.includes(uid)) {
-      throw new HttpsError("permission-denied", "Not a member of this family");
-    }
-
     const inviteCode = await reserveUniqueInviteCode();
-    await familyRef.update({ inviteCode });
+    await withActiveAccounts(db, [uid], async (tx) => {
+      const snap = await tx.get(familyRef);
+      if (!snap.exists) throw new HttpsError("not-found", "Family not found");
+      const family = snap.data() ?? {};
+      const members = (family.memberUids as string[] | undefined) ?? [];
+      if (!members.includes(uid)) {
+        throw new HttpsError("permission-denied", "Not a member of this family");
+      }
+
+      tx.update(familyRef, { inviteCode });
+    });
     return { inviteCode };
   },
 );
@@ -2114,31 +2124,30 @@ export const removeFamilyMember = onCall(
     }
 
     const familyRef = db.doc(`families/${familyId}`);
-    const snap = await familyRef.get();
-    if (!snap.exists) throw new HttpsError("not-found", "Family not found");
-    const family = snap.data() ?? {};
+    await withActiveAccounts(db, [uid, memberUid], async (tx) => {
+      const memberRef = db.doc(`users/${memberUid}`);
+      const [snap, memberSnap] = await Promise.all([tx.get(familyRef), tx.get(memberRef)]);
+      if (!snap.exists) throw new HttpsError("not-found", "Family not found");
+      const family = snap.data() ?? {};
 
-    // Only the owner can remove others; anyone can remove themselves (use
-    // leaveFamily for that, but allow self-removal here too as a fallback).
-    if (family.ownerUid !== uid && memberUid !== uid) {
-      throw new HttpsError("permission-denied", "Only the family owner can remove members");
-    }
+      // Only the owner can remove others; anyone can remove themselves (use
+      // leaveFamily for that, but allow self-removal here too as a fallback).
+      if (family.ownerUid !== uid && memberUid !== uid) {
+        throw new HttpsError("permission-denied", "Only the family owner can remove members");
+      }
 
-    const batch = db.batch();
-    batch.update(familyRef, {
-      memberUids: FieldValue.arrayRemove(memberUid),
+      tx.update(familyRef, {
+        memberUids: FieldValue.arrayRemove(memberUid),
+      });
+      const memberData = memberSnap.data() ?? {};
+      const memberUpdate: Record<string, unknown> = {
+        familyIds: FieldValue.arrayRemove(familyId),
+      };
+      if (memberData.currentFamilyId === familyId) {
+        memberUpdate.currentFamilyId = FieldValue.delete();
+      }
+      tx.update(memberRef, memberUpdate);
     });
-    const memberRef = db.doc(`users/${memberUid}`);
-    const memberSnap = await memberRef.get();
-    const memberData = memberSnap.data() ?? {};
-    const memberUpdate: Record<string, unknown> = {
-      familyIds: FieldValue.arrayRemove(familyId),
-    };
-    if (memberData.currentFamilyId === familyId) {
-      memberUpdate.currentFamilyId = FieldValue.delete();
-    }
-    batch.update(memberRef, memberUpdate);
-    await batch.commit();
 
     return { ok: true };
   },
@@ -2168,6 +2177,22 @@ const IMPORT_TARGETS = [
 
 type ImportType = (typeof IMPORT_TARGETS)[number]["type"];
 type ImportCounts = Record<ImportType, number>;
+
+/** Recheck live membership for each chunk; a family can be removed or the
+ * caller can leave while the import's earlier queries are still in flight. */
+async function withActiveFamily<T>(
+  uid: string, familyRef: FirebaseFirestore.DocumentReference,
+  write: (tx: FirebaseFirestore.Transaction) => Promise<T>,
+): Promise<T> {
+  return withActiveAccounts(db, [uid], async (tx) => {
+    const family = await tx.get(familyRef);
+    if (!family.exists) throw new HttpsError("not-found", "Family not found");
+    if (!Array.isArray(family.data()?.memberUids) || !family.data()!.memberUids.includes(uid)) {
+      throw new HttpsError("permission-denied", "Caller is not a member of the target family");
+    }
+    return write(tx);
+  });
+}
 
 export const importPersonalToFamily = onCall(
   { region: FUNCTION_REGION, cors: true, memory: "256MiB" },
@@ -2225,12 +2250,12 @@ export const importPersonalToFamily = onCall(
       const docs = snap.docs;
       for (let i = 0; i < docs.length; i += 400) {
         const slice = docs.slice(i, i + 400);
-        const batch = db.batch();
-        for (const d of slice) {
-          batch.update(d.ref, { familyId: targetFamilyId });
-        }
-        await batch.commit();
-        counts[target.type] += slice.length;
+        counts[target.type] += await withActiveFamily(uid, familyRef, async (tx) => {
+          const current = await Promise.all(slice.map((d) => tx.get(d.ref)));
+          const eligible = current.filter((d) => d.exists && d.data()?.[target.ownerField] === uid && d.data()?.familyId === null);
+          for (const d of eligible) tx.update(d.ref, { familyId: targetFamilyId });
+          return eligible.length;
+        });
       }
 
       logger.info(
@@ -2243,16 +2268,18 @@ export const importPersonalToFamily = onCall(
     const finishedAt = Timestamp.now();
     const isoNow = new Date(finishedAt.toMillis()).toISOString();
     const auditId = `import-from-${uid}-${isoNow}`;
-    await familyRef.collection("migrations").doc(auditId).set({
-      type: "import-personal",
-      fromUid: uid,
-      targetFamilyId,
-      startedAt,
-      finishedAt,
-      counts,
-      // Record the type filter so a re-run debate can see whether unchecked
-      // categories were truly empty or just skipped by the caller.
-      requestedTypes: requestedTypes ?? null,
+    await withActiveFamily(uid, familyRef, async (tx) => {
+      tx.set(familyRef.collection("migrations").doc(auditId), {
+        type: "import-personal",
+        fromUid: uid,
+        targetFamilyId,
+        startedAt,
+        finishedAt,
+        counts,
+        // Record the type filter so a re-run debate can see whether unchecked
+        // categories were truly empty or just skipped by the caller.
+        requestedTypes: requestedTypes ?? null,
+      });
     });
 
     return { counts };
@@ -2281,6 +2308,22 @@ export const importPersonalToFamily = onCall(
 // ─────────────────────────────────────────────────────────────────────
 
 type MergePair = { personalPetId: string; familyPetId: string };
+
+async function assertMergeParents(
+  tx: FirebaseFirestore.Transaction, uid: string, targetFamilyId: string,
+  personalRef: FirebaseFirestore.DocumentReference, familyPetRef: FirebaseFirestore.DocumentReference,
+): Promise<void> {
+  const [personal, destination] = await Promise.all([tx.get(personalRef), tx.get(familyPetRef)]);
+  if (!personal.exists || personal.data()?.ownerUid !== uid || personal.data()?.familyId !== null
+      || !destination.exists || destination.data()?.familyId !== targetFamilyId) {
+    throw new HttpsError("failed-precondition", "Pet ownership changed during merge; retry required");
+  }
+  const destinationOwner = destination.data()?.ownerUid;
+  if (typeof destinationOwner !== "string" || !destinationOwner) {
+    throw new HttpsError("failed-precondition", "Target pet owner is missing");
+  }
+  await assertAccountsActive(tx, db, [destinationOwner]);
+}
 
 export const mergeAndImportToFamily = onCall(
   { region: FUNCTION_REGION, cors: true, memory: "256MiB" },
@@ -2354,16 +2397,16 @@ export const mergeAndImportToFamily = onCall(
         const docs = hrSnap.docs;
         for (let i = 0; i < docs.length; i += 200) {
           const slice = docs.slice(i, i + 200);
-          const writeBatch = db.batch();
-          for (const d of slice) {
-            const newRef = familyPetRef
-              .collection("healthRecords")
-              .doc(d.id);
-            writeBatch.set(newRef, { ...d.data(), petId: pair.familyPetId });
-            writeBatch.delete(d.ref);
-          }
-          await writeBatch.commit();
-          movedHealthRecords += slice.length;
+          movedHealthRecords += await withActiveFamily(uid, familyRef, async (tx) => {
+            await assertMergeParents(tx, uid, targetFamilyId, personalRef, familyPetRef);
+            const current = await Promise.all(slice.map((d) => tx.get(d.ref)));
+            const existing = current.filter((d) => d.exists);
+            for (const d of existing) {
+              tx.set(familyPetRef.collection("healthRecords").doc(d.id), { ...d.data(), petId: pair.familyPetId });
+              tx.delete(d.ref);
+            }
+            return existing.length;
+          });
         }
       }
 
@@ -2391,18 +2434,16 @@ export const mergeAndImportToFamily = onCall(
         const docs = qSnap.docs;
         for (let i = 0; i < docs.length; i += 400) {
           const slice = docs.slice(i, i + 400);
-          const wb = db.batch();
-          for (const d of slice) {
-            // Reassign to the family pet AND switch into the family in
-            // one write so the doc transitions atomically from personal
-            // to family-scoped.
-            wb.update(d.ref, {
-              petId: pair.familyPetId,
-              familyId: targetFamilyId,
-            });
-          }
-          await wb.commit();
-          reassigned[col] += slice.length;
+          reassigned[col] += await withActiveFamily(uid, familyRef, async (tx) => {
+            await assertMergeParents(tx, uid, targetFamilyId, personalRef, familyPetRef);
+            const current = await Promise.all(slice.map((d) => tx.get(d.ref)));
+            const eligible = current.filter((d) => d.exists && d.data()?.[owner] === uid
+              && d.data()?.familyId === null && d.data()?.petId === pair.personalPetId);
+            for (const d of eligible) {
+              tx.update(d.ref, { petId: pair.familyPetId, familyId: targetFamilyId });
+            }
+            return eligible.length;
+          });
         }
       }
 
@@ -2419,7 +2460,10 @@ export const mergeAndImportToFamily = onCall(
       // above fails, a retry replays the moves idempotently (set/update
       // by id), but a half-done state still has the personal pet doc
       // present, which is the right signal that the merge isn't done.
-      await personalRef.delete();
+      await withActiveFamily(uid, familyRef, async (tx) => {
+        await assertMergeParents(tx, uid, targetFamilyId, personalRef, familyPetRef);
+        tx.delete(personalRef);
+      });
 
       mergedPets.push({
         personalPetId: pair.personalPetId,
@@ -2461,12 +2505,12 @@ export const mergeAndImportToFamily = onCall(
       const docs = snap.docs;
       for (let i = 0; i < docs.length; i += 400) {
         const slice = docs.slice(i, i + 400);
-        const wb = db.batch();
-        for (const d of slice) {
-          wb.update(d.ref, { familyId: targetFamilyId });
-        }
-        await wb.commit();
-        importCounts[target.type] += slice.length;
+        importCounts[target.type] += await withActiveFamily(uid, familyRef, async (tx) => {
+          const current = await Promise.all(slice.map((d) => tx.get(d.ref)));
+          const eligible = current.filter((d) => d.exists && d.data()?.[target.ownerField] === uid && d.data()?.familyId === null);
+          for (const d of eligible) tx.update(d.ref, { familyId: targetFamilyId });
+          return eligible.length;
+        });
       }
     }
 
@@ -2474,15 +2518,17 @@ export const mergeAndImportToFamily = onCall(
     const finishedAt = Timestamp.now();
     const isoNow = new Date(finishedAt.toMillis()).toISOString();
     const auditId = `merge-import-from-${uid}-${isoNow}`;
-    await familyRef.collection("migrations").doc(auditId).set({
-      type: "merge-and-import",
-      fromUid: uid,
-      targetFamilyId,
-      startedAt,
-      finishedAt,
-      mergedPets,
-      importCounts,
-      requestedTypes: requestedTypes ?? null,
+    await withActiveFamily(uid, familyRef, async (tx) => {
+      tx.set(familyRef.collection("migrations").doc(auditId), {
+        type: "merge-and-import",
+        fromUid: uid,
+        targetFamilyId,
+        startedAt,
+        finishedAt,
+        mergedPets,
+        importCounts,
+        requestedTypes: requestedTypes ?? null,
+      });
     });
 
     logger.info(
@@ -3100,6 +3146,9 @@ export const cleanupLegacyPaths = onCall(
     let uidsFailed = 0;
     for (const uid of uids) {
       try {
+        // This admin migration is a legacy delete-only operation. Skip an
+        // account already owned by the deletion cascade; it cannot revive it.
+        if ((await db.doc(`deletedAccounts/${uid}`).get()).exists) continue;
         counts.push(await cleanupLegacyForUid(uid, dryRun));
       } catch (err) {
         uidsFailed++;
@@ -4152,7 +4201,7 @@ export const autoFriendFamilyMembers = onDocumentWritten(
     for (const [id, [a, b]] of pairsToTry) {
       let result: CreateFriendshipResult;
       try {
-        result = await createMutualFriendship(a, b, db);
+        result = await createMutualFriendship(a, b, db, familyId);
       } catch (err) {
         failed++;
         logger.error(`autoFriendFamilyMembers: pair ${id} failed`, err);

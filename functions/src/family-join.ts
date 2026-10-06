@@ -1,5 +1,6 @@
 import { FieldValue, Timestamp, type DocumentReference, type Firestore } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
+import { withActiveAccounts } from "./account-mutation";
 
 const SHORT_WINDOW_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -10,7 +11,7 @@ export async function consumeFamilyJoinAttempt(db: Firestore, uid: string, nowMs
   // Outside the client-writable profile, so clearing profile/private data cannot
   // clear the quota. No invite codes or caller-supplied IP addresses are stored.
   const ref = db.doc(`familyJoinAttempts/${uid}`);
-  await db.runTransaction(async (tx) => {
+  await withActiveAccounts(db, [uid], async (tx) => {
     const snapshot = await tx.get(ref);
     const stored: unknown = snapshot.exists ? snapshot.data()?.attemptsMs : [];
     if (!Array.isArray(stored) || stored.length > DAY_LIMIT
@@ -33,7 +34,7 @@ export async function consumeFamilyJoinAttempt(db: Firestore, uid: string, nowMs
 }
 
 export async function joinSelectedFamily(db: Firestore, ref: DocumentReference, uid: string, code: string) {
-  return db.runTransaction(async (tx) => {
+  return withActiveAccounts(db, [uid], async (tx) => {
     // The query result may be stale after code rotation, family deletion or a
     // concurrent join. All checks and both membership writes share one transaction.
     const current = await tx.get(ref);
