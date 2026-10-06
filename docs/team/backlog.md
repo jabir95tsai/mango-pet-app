@@ -43,6 +43,8 @@ P3 = 也許永遠不做的「想法」。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 
+- **2026-10-06 接續批次**：R03 私人 contact、R05 刪帳／貼文／Storage 生命週期與匯出、R07/R09 iOS 登入／推播、R06 草稿捨棄／重新連線恢復已完成實作；整合 emulator **116/116**、平台 handler **52/52** 通過。正式發布／驗證狀態以[本次發布紀錄](../research/release-validation-2026-10-06.md)為準；iOS 仍須下一次 App build，APNs 與真實 GPS／Safari／PWA 未實機驗收。
+
 _2026-05-29 PWA PM session 已清空一輪：原 Inbox 10 條全 triage 完 — 4 條 SHIPPED/RESOLVED 收進「已處理（audit trail）」、1 條 doc-accuracy 當場修掉、2 條升到對應角色待接、3 條(QR scanner / B4 dormant / settings onboarding link)歸 Deferred。下一個角色 session 新發現的事丟這裡。_
 
 ### 📋 全專案健檢 audit-2026-06 — 發現清單待 PM triage（索引條目）

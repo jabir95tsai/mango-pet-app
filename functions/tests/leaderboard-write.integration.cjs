@@ -1,12 +1,13 @@
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
-assert.equal(process.env.GCLOUD_PROJECT, 'demo-mango-leaderboard');
-assert.equal(process.env.FIRESTORE_EMULATOR_HOST, '127.0.0.1:8197');
+const projectId = process.env.GCLOUD_PROJECT;
+assert.ok(['demo-mango-security', 'demo-mango-leaderboard'].includes(projectId));
+assert.match(process.env.FIRESTORE_EMULATOR_HOST ?? '', /^127\.0\.0\.1:\d+$/);
 const { initializeApp, deleteApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp } = require('firebase-admin/firestore');
 const { writeActiveLeaderboardEntries, syncExistingDogEntryVisibility } = require('../lib/leaderboard-write.js');
 const { computeWalkerPeriodScore, computeDogPeriodScore } = require('../lib/leaderboard-helpers.js');
-const app = initializeApp({ projectId: 'demo-mango-leaderboard' }, 'leaderboard-write-regression');
+const app = initializeApp({ projectId }, 'leaderboard-write-regression');
 const db = getFirestore(app);
 after(() => deleteApp(app));
 const entry = (board, id) => db.doc(`${board}/test/entries/${id}`);

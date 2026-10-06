@@ -5,19 +5,21 @@ const assert=require('node:assert/strict');
 const {createRequire}=require('node:module');
 const path=require('node:path');
 const {harness,load,root}=require('./auth-push-harness.cjs');
-assert.equal(process.env.GCLOUD_PROJECT,'demo-mango-ios-auth');
-assert.equal(process.env.FIRESTORE_EMULATOR_HOST,'127.0.0.1:8193');
+const projectId=process.env.GCLOUD_PROJECT;
+assert.ok(['demo-mango-security','demo-mango-ios-auth'].includes(projectId));
+assert.match(process.env.FIRESTORE_EMULATOR_HOST??'',/^127\.0\.0\.1:\d+$/);
+const emulatorPort=Number(process.env.FIRESTORE_EMULATOR_HOST.split(':')[1]);
 const sdk=require('firebase/firestore');
 const {initializeApp,deleteApp}=require('firebase/app');
 const adminRequire=createRequire(path.join(root,'functions/package.json'));
 const {initializeApp:adminInit,deleteApp:adminDelete}=adminRequire('firebase-admin/app');
 const {getFirestore}=adminRequire('firebase-admin/firestore');
-const adminApp=adminInit({projectId:'demo-mango-ios-auth'},'ios-auth-fixtures');
+const adminApp=adminInit({projectId},'ios-auth-fixtures');
 const admin=getFirestore(adminApp);const apps=[];
 function client(uid,guest=false) {
  const h=harness();h.authState.currentUser=h.user(uid,{isAnonymous:guest,email:guest?null:`${uid}@example.test`,providerData:guest?[]:[{providerId:'google.com',uid}]});
- const app=initializeApp({projectId:'demo-mango-ios-auth',apiKey:'emulator-only'},uid);apps.push(app);
- const db=sdk.getFirestore(app);sdk.connectFirestoreEmulator(db,'127.0.0.1',8193,{mockUserToken:{sub:uid,firebase:{sign_in_provider:guest?'anonymous':'password'}}});
+ const app=initializeApp({projectId,apiKey:'emulator-only'},uid);apps.push(app);
+ const db=sdk.getFirestore(app);sdk.connectFirestoreEmulator(db,'127.0.0.1',emulatorPort,{mockUserToken:{sub:uid,firebase:{sign_in_provider:guest?'anonymous':'password'}}});
  function snap(value){return{exists:value.exists(),data:()=>value.data()};}
  function ref(raw){return{raw,path:raw.path,collection:name=>({doc:id=>ref(sdk.doc(raw,name,id))}),get:async()=>snap(await sdk.getDoc(raw)),set:(data,options)=>sdk.setDoc(raw,data,options)};}
  const native=()=>({collection:name=>({doc:id=>ref(sdk.doc(db,name,id))}),

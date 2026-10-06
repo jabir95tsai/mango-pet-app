@@ -48,3 +48,20 @@ credentials in these tests. The Storage emulator does not enforce GCS generation
 preconditions; the replacement regression exercises the additional metadata
 refresh guard. See `docs/features/account-data-lifecycle.md` for race, scale and
 production-verification boundaries.
+
+## Combined release regression (2026-10-06)
+
+Run the native Firebase adapter and Web save adapter against the same loaded
+rules and isolated services as the backend tests:
+
+```powershell
+npm --prefix functions run build
+$env:GCLOUD_PROJECT = 'demo-mango-security'
+$env:TEST_DELETION_MARKER = '1'
+npx -y firebase-tools@15.32.1 emulators:exec --project demo-mango-security --config firebase.lifecycle-tests.json --only firestore,auth,storage 'node --test --test-concurrency=1 functions/tests/*.test.cjs functions/tests/*.integration.cjs apps/web/scripts/walk-save-emulator.test.cjs apps/ios/scripts/auth-push-emulator.test.cjs'
+node --test --test-concurrency=1 apps/ios/scripts/auth-push.test.cjs apps/web/scripts/walk-save-regression.test.cjs
+```
+
+Verified: 116 emulator cases plus 52 module/handler cases (28 iOS, 24 Web).
+Native providers/APNs and React Native runtime remain mocked in these tests;
+this is not a device build or GPS/Safari/PWA acceptance result.

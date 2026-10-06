@@ -11,7 +11,8 @@ const sdk = require('firebase/firestore');
 
 const host = process.env.FIRESTORE_EMULATOR_HOST;
 if (!host || !/^127\.0\.0\.1:\d+$/.test(host)) throw new Error('Set an explicit loopback FIRESTORE_EMULATOR_HOST');
-const projectId = 'demo-mango-walk-save';
+const projectId = process.env.GCLOUD_PROJECT ?? 'demo-mango-walk-save';
+assert.ok(['demo-mango-security', 'demo-mango-walk-save'].includes(projectId));
 const prefix = `walk-save-${Date.now()}`;
 const documents = new Set();
 const apps = [];
