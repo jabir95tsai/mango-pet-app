@@ -51,6 +51,13 @@ import { exportContactFields, exportMemberFamilies, leaveMemberFamilies } from "
 import { joinFamilyWithCode } from "./family-join";
 import { readContactTokens, removeContactTokens } from "./user-contact";
 import { assertAccountsActive, withActiveAccounts } from "./account-mutation";
+import {
+  beginAccountDeletion, claimAccountDeletion, checkAccountDeletionLease,
+  markAccountDeletionFinalizing, releaseAccountDeletionLease, cleanupDeletedPost,
+  deleteAccountPosts, deleteOwnComments, deleteOwnReactions, deleteOwnReviews, deleteUserSubcollections,
+  deleteUnsharedAccountStorage, exportOwnComments, exportUserCollections,
+  finalizeAccountDeletion,
+} from "./account-lifecycle";
 
 initializeApp();
 
@@ -1206,9 +1213,18 @@ async function resolveAuthorPushTarget(
   return { tokens, locale: a.locale as string | undefined };
 }
 
-/** onCreate(posts/{postId}/comments/{commentId}) — bump commentCount and
- *  push the post author. commentCount is clamped via increment (starts at
- *  undefined → 1 on the first comment). */
+async function refreshCommentCount(postId: string) {
+  const postRef = db.doc(`posts/${postId}`);
+  await db.runTransaction(async (tx) => {
+    const post = await tx.get(postRef);
+    if (!post.exists) return;
+    const comments = await tx.get(postRef.collection("comments"));
+    tx.update(postRef, { commentCount: comments.size });
+  });
+}
+
+/** Recompute from current comments, so delayed or repeated create/delete
+ * events cannot resurrect a removed count. Push behavior remains unchanged. */
 export const onCommentCreated = onDocumentCreated(
   {
     document: "posts/{postId}/comments/{commentId}",
@@ -1225,9 +1241,7 @@ export const onCommentCreated = onDocumentCreated(
     if (!postSnap.exists) return; // post deleted between write + trigger
     const post = postSnap.data() ?? {};
 
-    // Denormalised count — Admin SDK bypasses rules. increment handles the
-    // absent-field case (treated as 0 → 1).
-    await postRef.update({ commentCount: FieldValue.increment(1) });
+    await refreshCommentCount(postId);
 
     const target = await resolveAuthorPushTarget(
       post.authorUid as string,
@@ -1269,29 +1283,17 @@ export const onCommentCreated = onDocumentCreated(
   },
 );
 
-/** onDelete(posts/{postId}/comments/{commentId}) — decrement commentCount,
- *  clamped at 0 (a comment created before this function shipped never
- *  incremented, so a naive increment(-1) could go negative). */
+/** Repeated account/post cascades and redelivered events are idempotent. */
 export const onCommentDeleted = onDocumentDeleted(
   {
     document: "posts/{postId}/comments/{commentId}",
     region: FUNCTION_REGION,
-    retry: false,
+    retry: true,
     memory: "256MiB",
   },
   async (event) => {
     const postId = event.params.postId;
-    const postRef = db.doc(`posts/${postId}`);
-    await db
-      .runTransaction(async (tx) => {
-        const snap = await tx.get(postRef);
-        if (!snap.exists) return; // post gone (e.g. cascade delete) — no-op
-        const current = Number(snap.data()?.commentCount) || 0;
-        tx.update(postRef, { commentCount: Math.max(0, current - 1) });
-      })
-      .catch((err) =>
-        logger.error(`onCommentDeleted: decrement failed post=${postId}`, err),
-      );
+    await refreshCommentCount(postId);
     logger.info(
       `onCommentDeleted: post=${postId} comment=${event.params.commentId}`,
     );
@@ -2558,12 +2560,14 @@ type DeleteSummary = {
   familyRemindersDoneByCleared: number;
   familyExpensesHardDeleted: number;
   postsHardDeleted: number;
+  commentsHardDeleted: number;
   reactionsHardDeleted: number;
   reviewsHardDeleted: number;
   restaurantsSubmittedByCleared: number;
   familiesLeft: number;
   familiesDissolved: number;
   storagePhotosDeleted: number;
+  storagePhotosRetained: number;
 };
 
 const BATCH_SIZE = 400; // stay safely under Firestore's 500-write cap
@@ -2595,23 +2599,33 @@ export const deleteUserAccount = onCall(
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
 
-    const confirmDisplayName =
-      ((req.data?.confirmDisplayName as string | undefined) ?? "").trim();
-
-    // ─── Step 0: verify displayName matches before anything destructive
-    const userRef = db.doc(`users/${uid}`);
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) {
-      throw new HttpsError("not-found", "User profile not found");
+    // Step 0 freezes client mutations only after server-verified confirmation.
+    // Missing legacy iOS profiles use the Auth display name; a failed cascade
+    // can resume from its server-only checkpoint, even after profile cleanup.
+    const deletion = await beginAccountDeletion(db, uid, req.data?.confirmDisplayName);
+    if (deletion.state === "complete") return { summary: deletion.summary };
+    if (deletion.state === "finalizing") {
+      await finalizeAccountDeletion(db, uid);
+      return { summary: deletion.summary };
     }
-    const userData = userSnap.data() ?? {};
-    if (userData.displayName !== confirmDisplayName) {
-      throw new HttpsError(
-        "failed-precondition",
-        "displayName confirmation does not match",
-      );
-    }
+    return runAccountDeletion(uid, deletion.leaseId);
+  },
+);
 
+/** Only a server-created confirmed marker authorizes this resumable worker. */
+async function runAccountDeletion(uid: string, leaseId: string) {
+  const userRef = db.doc(`users/${uid}`);
+  const checkLease = () => checkAccountDeletionLease(db, uid, leaseId);
+  const deleteAccountBatch = async <T>(items: T[], mutator: (tx: FirebaseFirestore.Transaction, item: T) => void) => {
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+      await db.runTransaction(async (tx) => {
+        await checkAccountDeletionLease(db, uid, leaseId, tx);
+        for (const item of items.slice(i, i + BATCH_SIZE)) mutator(tx, item);
+      });
+    }
+  };
+  try {
+    await checkLease();
     const summary: DeleteSummary = {
       personalPetsHardDeleted: 0,
       personalWalksHardDeleted: 0,
@@ -2624,12 +2638,14 @@ export const deleteUserAccount = onCall(
       familyRemindersDoneByCleared: 0,
       familyExpensesHardDeleted: 0,
       postsHardDeleted: 0,
+      commentsHardDeleted: 0,
       reactionsHardDeleted: 0,
       reviewsHardDeleted: 0,
       restaurantsSubmittedByCleared: 0,
       familiesLeft: 0,
       familiesDissolved: 0,
       storagePhotosDeleted: 0,
+      storagePhotosRetained: 0,
     };
 
     // ─── Step 1: collect pets where this user is the creator (ownerUid).
@@ -2655,6 +2671,7 @@ export const deleteUserAccount = onCall(
     // ─── Step 2: per-pet subcollection cleanup (healthRecords + the
     // top-level walks/reminders/expenses that target each petId).
     for (const petId of myPetIds) {
+      await checkLease();
       const isPersonal = personalPetIds.has(petId);
 
       // 2a. healthRecords subcollection.
@@ -2663,7 +2680,7 @@ export const deleteUserAccount = onCall(
         .doc(petId)
         .collection("healthRecords")
         .get();
-      await deleteIdsInBatches(hrSnap.docs, (b, d) => b.delete(d.ref));
+      await deleteAccountBatch(hrSnap.docs, (b, d) => b.delete(d.ref));
       if (isPersonal) {
         // healthRecords don't have a dedicated personal counter — the
         // spec rolls them into personalPetsHardDeleted's implied cascade;
@@ -2677,7 +2694,7 @@ export const deleteUserAccount = onCall(
         .collection("walks")
         .where("petId", "==", petId)
         .get();
-      await deleteIdsInBatches(walksSnap.docs, (b, d) => b.delete(d.ref));
+      await deleteAccountBatch(walksSnap.docs, (b, d) => b.delete(d.ref));
       if (isPersonal) summary.personalWalksHardDeleted += walksSnap.size;
       else summary.familyPetSubcollectionsCascaded += walksSnap.size;
 
@@ -2686,7 +2703,7 @@ export const deleteUserAccount = onCall(
         .collection("reminders")
         .where("petId", "==", petId)
         .get();
-      await deleteIdsInBatches(remSnap.docs, (b, d) => b.delete(d.ref));
+      await deleteAccountBatch(remSnap.docs, (b, d) => b.delete(d.ref));
       if (isPersonal) summary.personalRemindersHardDeleted += remSnap.size;
       else summary.familyPetSubcollectionsCascaded += remSnap.size;
 
@@ -2695,13 +2712,13 @@ export const deleteUserAccount = onCall(
         .collection("expenses")
         .where("petId", "==", petId)
         .get();
-      await deleteIdsInBatches(expSnap.docs, (b, d) => b.delete(d.ref));
+      await deleteAccountBatch(expSnap.docs, (b, d) => b.delete(d.ref));
       if (isPersonal) summary.personalExpensesHardDeleted += expSnap.size;
       else summary.familyPetSubcollectionsCascaded += expSnap.size;
     }
 
     // ─── Step 3: delete the pet docs themselves.
-    await deleteIdsInBatches(myPetsSnap.docs, (b, d) => b.delete(d.ref));
+    await deleteAccountBatch(myPetsSnap.docs, (b, d) => b.delete(d.ref));
 
     // ─── Step 4: walks/reminders/expenses owned by the user under OTHER
     // people's pets. We query by the per-collection owner field and
@@ -2714,13 +2731,9 @@ export const deleteUserAccount = onCall(
       const docs = snap.docs.filter(
         (d) => !myPetIds.has(d.data().petId as string),
       );
-      // Only family-mode walks fall here; personal-mode walks have
-      // walkerUid === uid AND petId in personalPetIds → already cascaded.
-      // Defensive: also exclude familyId === null just in case (shouldn't
-      // happen because personal walks ALWAYS reference a personal pet).
-      const familyDocs = docs.filter((d) => d.data().familyId !== null);
-      await deleteIdsInBatches(familyDocs, (b, d) => b.delete(d.ref));
-      summary.familyWalksHardDeleted += familyDocs.length;
+      await deleteAccountBatch(docs, (b, d) => b.delete(d.ref));
+      summary.personalWalksHardDeleted += docs.filter((d) => d.data().familyId === null).length;
+      summary.familyWalksHardDeleted += docs.filter((d) => d.data().familyId !== null).length;
     }
     {
       const snap = await db
@@ -2730,9 +2743,9 @@ export const deleteUserAccount = onCall(
       const docs = snap.docs.filter(
         (d) => !myPetIds.has(d.data().petId as string),
       );
-      const familyDocs = docs.filter((d) => d.data().familyId !== null);
-      await deleteIdsInBatches(familyDocs, (b, d) => b.delete(d.ref));
-      summary.familyRemindersHardDeleted += familyDocs.length;
+      await deleteAccountBatch(docs, (b, d) => b.delete(d.ref));
+      summary.personalRemindersHardDeleted += docs.filter((d) => d.data().familyId === null).length;
+      summary.familyRemindersHardDeleted += docs.filter((d) => d.data().familyId !== null).length;
     }
     {
       const snap = await db
@@ -2742,9 +2755,9 @@ export const deleteUserAccount = onCall(
       const docs = snap.docs.filter(
         (d) => !myPetIds.has(d.data().petId as string),
       );
-      const familyDocs = docs.filter((d) => d.data().familyId !== null);
-      await deleteIdsInBatches(familyDocs, (b, d) => b.delete(d.ref));
-      summary.familyExpensesHardDeleted += familyDocs.length;
+      await deleteAccountBatch(docs, (b, d) => b.delete(d.ref));
+      summary.personalExpensesHardDeleted += docs.filter((d) => d.data().familyId === null).length;
+      summary.familyExpensesHardDeleted += docs.filter((d) => d.data().familyId !== null).length;
     }
 
     // ─── Step 5: clear doneByUid/doneAt on reminders this user marked
@@ -2758,7 +2771,7 @@ export const deleteUserAccount = onCall(
       const docs = snap.docs.filter(
         (d) => d.data().createdByUid !== uid && !myPetIds.has(d.data().petId as string),
       );
-      await deleteIdsInBatches(docs, (b, d) =>
+      await deleteAccountBatch(docs, (b, d) =>
         b.update(d.ref, {
           doneByUid: FieldValue.delete(),
           doneAt: FieldValue.delete(),
@@ -2774,121 +2787,22 @@ export const deleteUserAccount = onCall(
         .collection("restaurants")
         .where("submittedByUid", "==", uid)
         .get();
-      await deleteIdsInBatches(snap.docs, (b, d) =>
+      await deleteAccountBatch(snap.docs, (b, d) =>
         b.update(d.ref, { submittedByUid: FieldValue.delete() }),
       );
       summary.restaurantsSubmittedByCleared += snap.size;
     }
 
-    // ─── Step 6b: posts authored by this user. Each post has a reactions
-    // subcollection; nuke that first, then the post.
-    {
-      const postsSnap = await db
-        .collection("posts")
-        .where("authorUid", "==", uid)
-        .get();
-      for (const post of postsSnap.docs) {
-        const rxSnap = await post.ref.collection("reactions").get();
-        await deleteIdsInBatches(rxSnap.docs, (b, d) => b.delete(d.ref));
-      }
-      await deleteIdsInBatches(postsSnap.docs, (b, d) => b.delete(d.ref));
-      summary.postsHardDeleted += postsSnap.size;
-    }
+    // Include my comments on other users' posts. Post cleanup is queued
+    // before parent deletion, so failures can resume after parents disappear.
+    await checkLease();
+    summary.commentsHardDeleted += await deleteOwnComments(db, uid);
+    summary.postsHardDeleted += await deleteAccountPosts(db, getStorage().bucket(), uid, checkLease);
 
-    // ─── Step 6c: this user's reactions on OTHER people's posts.
-    // Decrement each post's reactionCounts[emoji] before deleting the
-    // reaction doc. Skip reactions on the user's own posts (already
-    // killed by 6b) — grouped by parent post so we batch one update
-    // per post.
-    {
-      const rxSnap = await db
-        .collectionGroup("reactions")
-        .where("uid", "==", uid)
-        .get();
-      // Group reactions by parent post id, accumulating per-emoji counts.
-      // Skip reactions whose parent post we already deleted in 6b — same
-      // condition: post.authorUid === uid → the post is gone and any
-      // increment update against it would 404.
-      const perPost = new Map<
-        string,
-        {
-          ref: FirebaseFirestore.DocumentReference;
-          emojiCounts: Record<string, number>;
-          reactionRefs: FirebaseFirestore.DocumentReference[];
-        }
-      >();
-      for (const r of rxSnap.docs) {
-        const postRef = r.ref.parent.parent;
-        if (!postRef) continue;
-        const postSnap = await postRef.get();
-        if (!postSnap.exists) continue;
-        if (postSnap.data()?.authorUid === uid) continue;
-        const emoji = (r.data().emoji as string) || "❤️";
-        let entry = perPost.get(postRef.id);
-        if (!entry) {
-          entry = { ref: postRef, emojiCounts: {}, reactionRefs: [] };
-          perPost.set(postRef.id, entry);
-        }
-        entry.emojiCounts[emoji] = (entry.emojiCounts[emoji] ?? 0) + 1;
-        entry.reactionRefs.push(r.ref);
-      }
-      // Apply per-post: decrement counts then delete reaction doc.
-      for (const entry of perPost.values()) {
-        const updates: Record<string, FirebaseFirestore.FieldValue> = {};
-        for (const [emoji, n] of Object.entries(entry.emojiCounts)) {
-          updates[`reactionCounts.${emoji}`] = FieldValue.increment(-n);
-        }
-        const batch = db.batch();
-        batch.update(entry.ref, updates);
-        for (const refToDelete of entry.reactionRefs) batch.delete(refToDelete);
-        await batch.commit();
-        summary.reactionsHardDeleted += entry.reactionRefs.length;
-      }
-    }
-
-    // ─── Step 6d: restaurant reviews authored by this user. Per spec,
-    // recompute averageRating + reviewCount on each affected restaurant.
-    {
-      const reviewsSnap = await db
-        .collectionGroup("reviews")
-        .where("authorUid", "==", uid)
-        .get();
-      // Group by parent restaurant to do one rating recompute per
-      // restaurant instead of per review.
-      const perRestaurant = new Map<
-        string,
-        {
-          ref: FirebaseFirestore.DocumentReference;
-          reviewRefs: FirebaseFirestore.DocumentReference[];
-        }
-      >();
-      for (const rv of reviewsSnap.docs) {
-        const restRef = rv.ref.parent.parent;
-        if (!restRef) continue;
-        let entry = perRestaurant.get(restRef.id);
-        if (!entry) {
-          entry = { ref: restRef, reviewRefs: [] };
-          perRestaurant.set(restRef.id, entry);
-        }
-        entry.reviewRefs.push(rv.ref);
-      }
-      for (const entry of perRestaurant.values()) {
-        // Delete the reviews first.
-        await deleteIdsInBatches(entry.reviewRefs, (b, ref) => b.delete(ref));
-        // Recompute from the surviving review set.
-        const remaining = await entry.ref.collection("reviews").get();
-        let sum = 0;
-        for (const rv of remaining.docs)
-          sum += Number(rv.data().rating) || 0;
-        const newCount = remaining.size;
-        const newAvg = newCount > 0 ? sum / newCount : 0;
-        await entry.ref.update({
-          averageRating: newAvg,
-          reviewCount: newCount,
-        });
-        summary.reviewsHardDeleted += entry.reviewRefs.length;
-      }
-    }
+    // Counter updates and document deletion commit together; concurrent calls
+    // or retries cannot subtract a reaction or restaurant review twice.
+    summary.reactionsHardDeleted += await deleteOwnReactions(db, uid);
+    summary.reviewsHardDeleted += await deleteOwnReviews(db, uid);
 
     // ─── Step 7: friends + friendRequests (both directions).
     {
@@ -2896,15 +2810,16 @@ export const deleteUserAccount = onCall(
       // doc at users/{friendUid}/friends/{myUid}.
       const friendsSnap = await userRef.collection("friends").get();
       const friendUids = friendsSnap.docs.map((d) => d.id);
-      await deleteIdsInBatches(friendsSnap.docs, (b, d) => b.delete(d.ref));
-      // Reverse side.
-      await deleteIdsInBatches(friendUids, (b, friendUid) =>
+      // Delete the reverse side first. A retry can still discover all friends
+      // until those writes succeed, including after a partial batch failure.
+      await deleteAccountBatch(friendUids, (b, friendUid) =>
         b.delete(db.doc(`users/${friendUid}/friends/${uid}`)),
       );
+      await deleteAccountBatch(friendsSnap.docs, (b, d) => b.delete(d.ref));
 
       // friendRequests TO me: just nuke the subcollection.
       const incomingReqs = await userRef.collection("friendRequests").get();
-      await deleteIdsInBatches(incomingReqs.docs, (b, d) => b.delete(d.ref));
+      await deleteAccountBatch(incomingReqs.docs, (b, d) => b.delete(d.ref));
 
       // friendRequests FROM me to others: collectionGroup lookup since the
       // docs live under different users.
@@ -2912,29 +2827,20 @@ export const deleteUserAccount = onCall(
         .collectionGroup("friendRequests")
         .where("fromUid", "==", uid)
         .get();
-      await deleteIdsInBatches(outgoingReqs.docs, (b, d) => b.delete(d.ref));
+      await deleteAccountBatch(outgoingReqs.docs, (b, d) => b.delete(d.ref));
     }
 
-    // ─── Step 8: small per-user subcollections (favorites + bookmarks +
-    // private contact PII). The private subcollection (security-hardening #2)
-    // holds email + fcmTokens; deleting the user doc alone wouldn't remove a
-    // subcollection, so nuke it explicitly.
-    {
-      const favSnap = await userRef.collection("favoriteRestaurants").get();
-      await deleteIdsInBatches(favSnap.docs, (b, d) => b.delete(d.ref));
-      const bmSnap = await userRef.collection("knowledgeBookmarks").get();
-      await deleteIdsInBatches(bmSnap.docs, (b, d) => b.delete(d.ref));
-      const privSnap = await userRef.collection("private").get();
-      await deleteIdsInBatches(privSnap.docs, (b, d) => b.delete(d.ref));
-    }
+    // Includes achievements, stats, photoDownloadState and legacy descendants.
+    await checkLease();
+    await deleteUserSubcollections(db, userRef);
 
     // ─── Step 9: leaderboard entries (one per period).
     {
-      const lbSnap = await db
-        .collectionGroup("entries")
-        .where("uid", "==", uid)
-        .get();
-      await deleteIdsInBatches(lbSnap.docs, (b, d) => b.delete(d.ref));
+      for (const field of ["uid", "ownerUid"]) {
+        const lbSnap = await db.collectionGroup("entries").where(field, "==", uid).get();
+        const ownEntries = lbSnap.docs.filter((d) => /^(leaderboards|dogLeaderboards)\/[^/]+\/entries\/[^/]+$/.test(d.ref.path));
+        await deleteAccountBatch(ownEntries, (b, d) => b.delete(d.ref));
+      }
     }
 
     // ─── Step 10: families. For each family the user belongs to:
@@ -2942,66 +2848,55 @@ export const deleteUserAccount = onCall(
     //   - if they're the owner → promote memberUids[1] (next-oldest) to owner
     //   - always: remove uid from memberUids
     {
+      await checkLease();
       const families = await leaveMemberFamilies(db, uid);
       summary.familiesDissolved += families.familiesDissolved;
       summary.familiesLeft += families.familiesLeft;
     }
 
-    // ─── Step 11: audit doc. Written BEFORE the user doc + auth user
-    // delete so we always have a record even if step 13/14 fail.
-    const isoNow = new Date().toISOString();
-    const auditRef = db.doc(`deletedAccounts/${uid}-${isoNow}`);
-    await auditRef.set({
-      deletedAt: Timestamp.now(),
-      reason: "user-initiated",
-      summary,
-    });
-
-    // ─── Step 12: storage cleanup. Both pet avatars and post photos live
-    // under users/{uid}/ — one prefix-delete covers everything this user
-    // uploaded. Best-effort: failures here don't roll back Firestore (the
-    // orphan files are cheap and not user-visible). We list first for an
-    // accurate count, then delete — `deleteFiles` itself returns void
-    // in the current SDK.
-    try {
-      const bucket = getStorage().bucket();
-      const [files] = await bucket.getFiles({ prefix: `users/${uid}/` });
-      const fileCount = files.length;
-      if (fileCount > 0) {
-        await bucket.deleteFiles({ prefix: `users/${uid}/` });
-      }
-      summary.storagePhotosDeleted = fileCount;
-      await auditRef.update({ "summary.storagePhotosDeleted": fileCount });
-    } catch (err) {
-      logger.warn(`deleteUserAccount: storage cleanup failed for uid=${uid}`, err);
-    }
-
-    // ─── Step 13: delete the user profile doc. (Subcollections already
-    // emptied above — Firestore deletes the doc itself; subcoll docs
-    // would survive but they're already gone.)
-    await userRef.delete();
-
-    // ─── Step 14: nuke the Firebase Auth user. Done last so a failure
-    // here leaves the data already deleted (user could just sign in
-    // again to a clean state) instead of the opposite.
-    try {
-      await getAuth().deleteUser(uid);
-    } catch (err) {
-      logger.error(
-        `deleteUserAccount: auth.deleteUser failed for uid=${uid} ` +
-          `— Firestore already wiped; user may retry sign-in to clean up`,
-        err,
-      );
-      // Don't rethrow — the user's data is gone, they're effectively
-      // deleted from the app's perspective even if the auth record
-      // lingers (it'll re-create an empty user doc on next sign-in).
-    }
+    // Keep assets referenced by surviving shared data (for example another
+    // member's pet avatar). Unknown namespaces are retained for reviewed GC.
+    // Errors propagate: the account remains frozen and the caller can retry.
+    const storage = await deleteUnsharedAccountStorage(db, getStorage().bucket(), uid, checkLease);
+    summary.storagePhotosDeleted += storage.deleted;
+    summary.storagePhotosRetained = storage.retained;
+    await markAccountDeletionFinalizing(db, uid, leaseId, summary);
+    await finalizeAccountDeletion(db, uid);
 
     logger.info(
       `deleteUserAccount: completed uid=${uid} summary=${JSON.stringify(summary)}`,
     );
 
     return { summary };
+  } finally {
+    await releaseAccountDeletionLease(db, uid, leaseId);
+  }
+}
+
+/** Client deletePost deletes only the parent. The event's author is trusted
+ * solely for its canonical Storage prefix; live parents block stale cleanup. */
+export const onPostDeletedCleanup = onDocumentDeleted(
+  { document: "posts/{postId}", region: FUNCTION_REGION, retry: true, timeoutSeconds: 300, memory: "512MiB" },
+  async (event) => {
+    if (!event.data) return;
+    const result = await cleanupDeletedPost(db, getStorage().bucket(), event.params.postId, event.data.data().authorUid);
+    logger.info("onPostDeletedCleanup", { postId: event.params.postId, ...result });
+  },
+);
+
+/** Auth/network failures remain retryable even once the caller loses Auth. */
+export const onAccountDeletionProgress = onDocumentWritten(
+  { document: "deletedAccounts/{uid}", region: FUNCTION_REGION, retry: true, timeoutSeconds: 300, memory: "512MiB" },
+  async (event) => {
+    const uid = event.params.uid;
+    // Read current state: the delivered event may predate a completed retry.
+    const current = (await db.doc(`deletedAccounts/${uid}`).get()).data();
+    if (current?.state === "finalizing") {
+      await finalizeAccountDeletion(db, uid);
+      return;
+    }
+    const leaseId = await claimAccountDeletion(db, uid);
+    if (leaseId) await runAccountDeletion(uid, leaseId);
   },
 );
 
@@ -3469,6 +3364,9 @@ export const exportUserData = onCall(
 
     // ── Families I belong to ────────────────────────────────────────
     const families = await exportMemberFamilies(db, uid);
+    const [comments, userCollections] = await Promise.all([
+      exportOwnComments(db, uid), exportUserCollections(db, uid),
+    ]);
 
     return {
       meta: {
@@ -3503,6 +3401,8 @@ export const exportUserData = onCall(
       expenses: freeExpenses,
       posts,
       postReactionsOnOthers,
+      comments,
+      ...userCollections,
       restaurantReviews,
       families,
     };
@@ -4499,7 +4399,9 @@ async function rebuildLifetimeStats(
   }
 
   if (write) {
-    await db.doc(`users/${uid}/stats/lifetime`).set(
+    await db.runTransaction(async (tx) => {
+      if ((await tx.get(db.doc(`deletedAccounts/${uid}`))).exists) return;
+      tx.set(db.doc(`users/${uid}/stats/lifetime`),
       {
         walkCount,
         totalDistanceKm,
@@ -4510,7 +4412,8 @@ async function rebuildLifetimeStats(
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },
-    );
+      );
+    });
   }
   return { walkCount, totalDistanceKm, totalDurationMin, currentStreak, longestStreak };
 }

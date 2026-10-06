@@ -210,6 +210,7 @@ export async function evaluateAchievements(
     const ref = db.doc(`users/${uid}/achievements/${def.id}`);
     try {
       const didCreate = await db.runTransaction(async (tx) => {
+        if ((await tx.get(db.doc(`deletedAccounts/${uid}`))).exists) return false;
         const snap = await tx.get(ref);
         if (snap.exists) return false;
         const snapshot = metricValue(def, metrics);
@@ -265,6 +266,9 @@ export async function applyWalkToLifetimeStats(
   const dayIdx = taipeiDayIndex(walk.startedAtMs);
 
   return db.runTransaction(async (tx) => {
+    if ((await tx.get(db.doc(`deletedAccounts/${uid}`))).exists) {
+      return { walkCount: 0, totalDistanceKm: 0, totalDurationMin: 0, currentStreak: 0, longestStreak: 0 };
+    }
     const snap = await tx.get(ref);
     const prev = snap.data() ?? {};
     const prevCount = Number(prev.walkCount) || 0;

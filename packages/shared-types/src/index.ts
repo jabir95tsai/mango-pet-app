@@ -714,6 +714,10 @@ export type UserDataExport = {
   expenses: Record<string, unknown>[];
   posts: Record<string, unknown>[];
   postReactionsOnOthers: Record<string, unknown>[];
+  comments: Record<string, unknown>[];
+  achievements: Record<string, unknown>[];
+  stats: Record<string, unknown>[];
+  photoDownloadState: Record<string, unknown>[];
   restaurantReviews: Record<string, unknown>[];
   families: Record<string, unknown>[];
 };
@@ -739,10 +743,12 @@ export type DeleteAccountSummary = {
   familyRemindersDoneByCleared: number;
   familyExpensesHardDeleted: number;
   postsHardDeleted: number;
+  commentsHardDeleted: number;
   reactionsHardDeleted: number;
   reviewsHardDeleted: number;
   restaurantsSubmittedByCleared: number;
   familiesLeft: number;
   familiesDissolved: number;
   storagePhotosDeleted: number;
+  storagePhotosRetained: number;
 };

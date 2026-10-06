@@ -29,3 +29,22 @@ mock auth. They cover application logic and actual Firestore rules, but do not
 validate deployed callable HTTP/IAM/App Check, real Firebase Auth or real devices.
 The account-cleanup test exercises its family cleanup helper only; it does not
 call Auth or Storage deletion services.
+
+## Account / post / Storage lifecycle integration
+
+The additional `*.integration.cjs` tests need fresh Firestore, Auth and Storage
+emulators. They run actual exported callable/trigger handlers and actual local
+Admin Auth / Storage operations, plus client Storage rules tests:
+
+```powershell
+npm --prefix functions run build
+$env:GCLOUD_PROJECT = 'demo-mango-security'
+npx -y firebase-tools@15.32.1 emulators:exec --project demo-mango-security --config firebase.lifecycle-tests.json --only firestore,auth,storage 'node --test --test-concurrency=1 functions/tests/*.test.cjs functions/tests/*.integration.cjs'
+```
+
+This config uses isolated ports 8188 / 9098 / 9198. Start without imported data
+for each complete run; test IDs and Auth UIDs are fixed. There are no production
+credentials in these tests. The Storage emulator does not enforce GCS generation
+preconditions; the replacement regression exercises the additional metadata
+refresh guard. See `docs/features/account-data-lifecycle.md` for race, scale and
+production-verification boundaries.
