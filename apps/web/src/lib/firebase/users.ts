@@ -7,6 +7,7 @@ import {
   getDoc,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -62,28 +63,29 @@ function guestDisplayName(locale: "zh-TW" | "en"): string {
 
 export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<void> {
   const ref = doc(getDb(), "users", user.uid);
-  const snap = await getDoc(ref);
-  const isGuest = user.isAnonymous;
+  await runTransaction(getDb(), async (transaction) => {
+    const contactRef = privateContactRef(user.uid);
+    const [snap, contact] = await Promise.all([transaction.get(ref), transaction.get(contactRef)]);
+    const isGuest = user.isAnonymous;
 
-  // Resolve from providerData when the top-level Auth fields are null
-  // (multi-provider accounts, e.g. Google + Apple linked). Without this
-  // the profile doc — which the leaderboard / friends / etc. read — gets
-  // a null photo and an email-prefix name fallback. Guests have no
-  // providerData → fall back to the localised "訪客"/"Guest" label.
-  const desiredName = isGuest
-    ? guestDisplayName(locale)
-    : resolveUserDisplayName(user) ?? user.email?.split("@")[0] ?? "Friend";
-  const desiredPhoto = resolveUserPhotoURL(user);
+    // Resolve from providerData when the top-level Auth fields are null
+    // (multi-provider accounts, e.g. Google + Apple linked). Without this
+    // the profile doc — which the leaderboard / friends / etc. read — gets
+    // a null photo and an email-prefix name fallback. Guests have no
+    // providerData → fall back to the localised "訪客"/"Guest" label.
+    const desiredName = isGuest
+      ? guestDisplayName(locale)
+      : resolveUserDisplayName(user) ?? user.email?.split("@")[0] ?? "Friend";
+    const desiredPhoto = resolveUserPhotoURL(user);
 
-  if (!snap.exists()) {
-    // Guest profile: minimal, flagged, and DELIBERATELY no displayNameLower
-    // (keeps guests out of friend prefix-search — they can't be friended).
-    // PII split (security-hardening #2): email + fcmTokens go to the
-    // owner-only users/{uid}/private/contact subdoc, NOT the world-readable
-    // public profile doc. The public doc keeps only displayName / photoURL /
-    // displayNameLower / authProvider / isGuest (+ prefs the app needs).
-    await Promise.all([
-      setDoc(ref, {
+    if (!snap.exists()) {
+      // Guest profile: minimal, flagged, and DELIBERATELY no displayNameLower
+      // (keeps guests out of friend prefix-search — they can't be friended).
+      // PII split (security-hardening #2): email + fcmTokens go to the
+      // owner-only users/{uid}/private/contact subdoc, NOT the world-readable
+      // public profile doc. The public doc keeps only displayName / photoURL /
+      // displayNameLower / authProvider / isGuest (+ prefs the app needs).
+      transaction.set(ref, {
         uid: user.uid,
         displayName: desiredName,
         ...(isGuest ? {} : { displayNameLower: toDisplayNameLower(desiredName) }),
@@ -95,66 +97,71 @@ export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<vo
         lastSeenAt: serverTimestamp(),
         defaultPostVisibility: "friends",
         allowFriendRequests: true,
-      }),
-      setDoc(privateContactRef(user.uid), {
-        email: user.email ?? null,
-        fcmTokens: [],
-      }),
-    ]);
-    return;
-  }
+      });
+      transaction.set(contactRef, {
+        email: user.email ?? contact.data()?.email ?? null,
+      }, { merge: true });
+      return;
+    }
 
-  const existing = snap.data() as AppUser;
-  const patch: Record<string, unknown> = {};
+    const existing = snap.data() as AppUser;
+    const patch: Record<string, unknown> = {};
 
-  // ── Upgrade de-flag (linkWithCredential): same uid, was guest, now has a
-  // real provider (isAnonymous === false). Clear the guest flag, fix the
-  // authProvider, and backfill the real name/photo + search field so the
-  // upgraded account becomes a full citizen (community + leaderboards
-  // unlock). Spec guest-login.md §E. Idempotent: only fires while the doc
-  // still carries isGuest. The client link flow doesn't need to write the
-  // profile itself — this runs on the post-link auth-state callback.
-  const upgrading = existing.isGuest === true && !isGuest;
-  if (upgrading) {
-    patch.isGuest = deleteField();
-    patch.authProvider = inferProvider(user);
-  }
+    // ── Upgrade de-flag (linkWithCredential): same uid, was guest, now has a
+    // real provider (isAnonymous === false). Clear the guest flag, fix the
+    // authProvider, and backfill the real name/photo + search field so the
+    // upgraded account becomes a full citizen (community + leaderboards
+    // unlock). Spec guest-login.md §E. Idempotent: only fires while the doc
+    // still carries isGuest. The client link flow doesn't need to write the
+    // profile itself — this runs on the post-link auth-state callback.
+    const upgrading = existing.isGuest === true && !isGuest;
+    if (upgrading) {
+      patch.isGuest = deleteField();
+      patch.authProvider = inferProvider(user);
+    }
 
-  if (existing.displayName !== desiredName) {
-    patch.displayName = desiredName;
-    patch.displayNameLower = toDisplayNameLower(desiredName);
-  } else if (existing.displayNameLower === undefined && !isGuest) {
-    // Defensive backfill on the login path: existing users who haven't
-    // logged in since Phase 1 deploy but before the migration runs would
-    // otherwise stay invisible to displayName search. One-shot write at
-    // next login fixes them even without the migration ever firing.
-    // Skipped for guests — they intentionally have no search field.
-    patch.displayNameLower = toDisplayNameLower(existing.displayName);
-  }
-  if (existing.photoURL !== desiredPhoto) patch.photoURL = desiredPhoto;
+    if (existing.displayName !== desiredName) {
+      patch.displayName = desiredName;
+      patch.displayNameLower = toDisplayNameLower(desiredName);
+    } else if (existing.displayNameLower === undefined && !isGuest) {
+      // Defensive backfill on the login path: existing users who haven't
+      // logged in since Phase 1 deploy but before the migration runs would
+      // otherwise stay invisible to displayName search. One-shot write at
+      // next login fixes them even without the migration ever firing.
+      // Skipped for guests — they intentionally have no search field.
+      patch.displayNameLower = toDisplayNameLower(existing.displayName);
+    }
+    if (existing.photoURL !== desiredPhoto) patch.photoURL = desiredPhoto;
 
-  const lastSeenMs = (existing.lastSeenAt as Timestamp | undefined)?.toMillis?.() ?? 0;
-  if (Date.now() - lastSeenMs > LAST_SEEN_THROTTLE_MS) {
-    patch.lastSeenAt = serverTimestamp();
-  }
+    const lastSeenMs = (existing.lastSeenAt as Timestamp | undefined)?.toMillis?.() ?? 0;
+    if (Date.now() - lastSeenMs > LAST_SEEN_THROTTLE_MS) {
+      patch.lastSeenAt = serverTimestamp();
+    }
 
-  // Strip any legacy PII still sitting on the public doc (pre-migration
-  // accounts wrote email/fcmTokens here). Mirror email into the private
-  // subdoc so it isn't lost. fcmTokens are managed by messaging.ts (private),
-  // so we only need to delete the stale public copy here.
-  if ("email" in existing || "fcmTokens" in existing) {
-    patch.email = deleteField();
-    patch.fcmTokens = deleteField();
-    await setDoc(
-      privateContactRef(user.uid),
-      { email: user.email ?? (existing as { email?: string | null }).email ?? null },
-      { merge: true },
-    );
-  }
+    // Merge every device before stripping legacy contact fields. Read/write
+    // both documents in this transaction so another tab's registration survives.
+    if ("email" in existing || "fcmTokens" in existing) {
+      patch.email = deleteField();
+      patch.fcmTokens = deleteField();
+      const privateData = contact.data() ?? {};
+      const legacy = existing as AppUser & { email?: unknown; fcmTokens?: unknown };
+      const tokens = [...new Set([privateData.fcmTokens, legacy.fcmTokens].flatMap((value) =>
+        Array.isArray(value) ? value.filter((token): token is string => typeof token === "string" && token.trim().length > 0) : []))];
+      transaction.set(
+        contactRef,
+        { email: user.email ?? privateData.email ?? (typeof legacy.email === "string" ? legacy.email : null),
+          ...("fcmTokens" in existing ? { fcmTokens: tokens } : {}) },
+        { merge: true },
+      );
+    } else if (user.email && contact.data()?.email !== user.email) {
+      // Linking a guest to a provider also adds its private contact address.
+      transaction.set(contactRef, { email: user.email }, { merge: true });
+    }
 
-  if (Object.keys(patch).length > 0) {
-    await updateDoc(ref, patch);
-  }
+    if (Object.keys(patch).length > 0) {
+      transaction.update(ref, patch);
+    }
+  });
 }
 
 export async function getAppUser(uid: string): Promise<AppUser | null> {

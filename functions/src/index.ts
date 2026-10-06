@@ -49,6 +49,7 @@ import {
 import { actOnReport, type ReportDoc } from "./moderation-helpers";
 import { exportContactFields, exportMemberFamilies, leaveMemberFamilies } from "./family-access";
 import { joinFamilyWithCode } from "./family-join";
+import { readContactTokens, removeContactTokens } from "./user-contact";
 
 initializeApp();
 
@@ -74,48 +75,24 @@ const FUNCTION_REGION = "asia-east1";
 // ── PII split (security-hardening #2) ──────────────────────────────────
 // email + fcmTokens moved out of the world-readable users/{uid} doc into
 // the owner-only users/{uid}/private/contact subdoc. These helpers are the
-// single read/write path for tokens from the server. They DUAL-READ
-// (private first, fall back to the legacy public-doc field) so push never
-// gaps while the one-time migration runs and old clients still write the
-// old field for a beat. Once the strip-migration has run and clients ship
-// the private write, the public fallback is simply never hit.
-const USER_PRIVATE_DOC = "private/contact";
+// single read/write path for tokens from the server. The migration window
+// unions both stores so private Web tokens cannot hide legacy iOS tokens.
+// Rules prevent public PII from returning after the atomic strip migration.
 
-/** Read a user's FCM tokens: private subdoc first, public-doc field as
- *  fallback. `publicData` (optional) lets callers that already fetched the
- *  user doc skip a read for the fallback. */
+/** Read distinct, valid tokens across the migration boundary. */
 async function readUserFcmTokens(
   uid: string,
   publicData?: FirebaseFirestore.DocumentData,
 ): Promise<string[]> {
-  const priv = await db.doc(`users/${uid}/${USER_PRIVATE_DOC}`).get();
-  const fromPriv = priv.exists
-    ? ((priv.data()?.fcmTokens ?? []) as string[])
-    : [];
-  if (fromPriv.length > 0) return fromPriv.filter(Boolean);
-  // Fallback to the legacy public field (pre-migration / old client).
-  const pub = publicData ?? (await db.doc(`users/${uid}`).get()).data() ?? {};
-  return ((pub.fcmTokens ?? []) as string[]).filter(Boolean);
+  return readContactTokens(db, uid, publicData);
 }
 
-/** Remove invalid tokens from BOTH the private subdoc and the legacy public
- *  field (best-effort) so a stale token can't linger in whichever location
- *  still holds it during the migration window. */
+/** Invalid-token cleanup must not recreate public PII or a deleted profile. */
 async function removeInvalidFcmTokens(
   uid: string,
   invalid: string[],
 ): Promise<void> {
-  if (invalid.length === 0) return;
-  await Promise.all([
-    db
-      .doc(`users/${uid}/${USER_PRIVATE_DOC}`)
-      .set({ fcmTokens: FieldValue.arrayRemove(...invalid) }, { merge: true })
-      .catch(() => {}),
-    db
-      .doc(`users/${uid}`)
-      .update({ fcmTokens: FieldValue.arrayRemove(...invalid) })
-      .catch(() => {}),
-  ]);
+  await removeContactTokens(db, uid, invalid);
 }
 
 /** True when the callable's auth token is an anonymous (guest) sign-in.

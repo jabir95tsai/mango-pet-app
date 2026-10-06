@@ -31,6 +31,10 @@ service cloud.firestore {
     }
 
     // ── Users & owned sub-collections ──
+    function hasNoPublicContact(data) {
+      return !data.keys().hasAny(["email", "fcmTokens"]);
+    }
+
     match /users/{uid} {
       // The public profile doc holds ONLY non-sensitive fields needed by
       // leaderboard / friends / feed to render other users: displayName,
@@ -43,8 +47,10 @@ service cloud.firestore {
       // wouldn't be — the raw SDK read returns every field).
       allow read: if request.auth != null;
       allow create: if request.auth.uid == uid
-        && request.resource.data.uid == uid;
-      allow update: if request.auth.uid == uid;
+        && request.resource.data.uid == uid
+        && hasNoPublicContact(request.resource.data);
+      allow update: if request.auth.uid == uid
+        && hasNoPublicContact(request.resource.data);
       allow delete: if false;
 
       // ── Private contact PII (security-hardening #2) ──
