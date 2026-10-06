@@ -41,6 +41,7 @@ import {
   walkPhotoPath,
 } from "@/lib/firebase/storage";
 import { cn } from "@/lib/utils";
+import { onWalkReconnect } from "@/lib/walk-drafts";
 import type { Pet, WalkInput } from "@/lib/types";
 
 /** Spec D2: hard cap photos per walk. */
@@ -88,6 +89,7 @@ type Props = {
     walkId: string,
   ) => Promise<{ walkId: string } | null>;
   onUpdate: (walkId: string, details: { notes: string; photoURLs: string[] }) => Promise<void>;
+  onDiscard: (walkId: string) => void;
 };
 
 // Map the session's structured error kind to a short, localized hint. The
@@ -139,6 +141,7 @@ export function WalkTrackingView({
   weeklyAvgMin = 0,
   onComplete,
   onUpdate,
+  onDiscard,
 }: Props) {
   const tW = useTranslations("Walks.core");
   const tP = useTranslations("Walks.photo");
@@ -157,6 +160,13 @@ export function WalkTrackingView({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  const discardConfirmationRef = useRef(false);
+  const discardedRef = useRef(false);
+  const currentUidRef = useRef(user?.uid ?? null);
+  const viewOpenRef = useRef(open);
+  currentUidRef.current = user?.uid ?? null;
+  viewOpenRef.current = open;
   // Captured walkId from onComplete — used by the end-photo flow to
   // cross-link the resulting post via `post.walkId`. Stays null until
   // saveWalkOnce succeeds (or save is skipped entirely).
@@ -166,8 +176,9 @@ export function WalkTrackingView({
   const savedDetailsRef = useRef<string | null>(null);
   const stopConfirmRef = useRef(false);
   const sessionContextRef = useRef<{
-    pet: Pet; walkId: string; streakDays: number; storedTodayMin: number;
+    uid: string; pet: Pet; walkId: string; streakDays: number; storedTodayMin: number;
     goalMin: number; onComplete: Props["onComplete"]; onUpdate: Props["onUpdate"];
+    onDiscard: Props["onDiscard"];
   } | null>(null);
 
   // ── Auto-photo-share flow B (walk end) ────────────────────────────
@@ -209,8 +220,9 @@ export function WalkTrackingView({
   // active session.
   useEffect(() => {
     if (!open) return;
-    if (!activePetIdRef.current || !pet || !walkId) return;
-    sessionContextRef.current = { pet, walkId, streakDays, storedTodayMin, goalMin, onComplete, onUpdate };
+    if (!activePetIdRef.current || !pet || !walkId || !user) return;
+    const context = { uid: user.uid, pet, walkId, streakDays, storedTodayMin, goalMin, onComplete, onUpdate, onDiscard };
+    sessionContextRef.current = context;
     const session = new WalkSession();
     sessionRef.current = session;
     const unsub = session.on(setState);
@@ -220,6 +232,9 @@ export function WalkTrackingView({
     setSaveError(null);
     setSaved(false);
     setSaving(false);
+    setDiscarding(false);
+    discardConfirmationRef.current = false;
+    discardedRef.current = false;
     savedWalkIdRef.current = null;
     saveWalkPromiseRef.current = null;
     stoppedInputRef.current = null;
@@ -241,9 +256,19 @@ export function WalkTrackingView({
       unsub();
       session.stop();
       sessionRef.current = null;
+      if (sessionContextRef.current === context) sessionContextRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (open && sessionContextRef.current && sessionContextRef.current.uid !== user?.uid) {
+      sessionRef.current?.stop();
+      onClose();
+    }
+    // A different account cannot continue the old account's walk.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user?.uid]);
 
   // Free object URLs the moment a thumbnail goes away. Without this we'd
   // hold the original (potentially many-MB) bitmaps in memory for the
@@ -330,13 +355,14 @@ export function WalkTrackingView({
   }
 
   async function handleEndPhotoPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const context = sessionContextRef.current;
     const file = e.target.files?.[0] ?? null;
     e.target.value = "";
     if (!file) return; // OS dismissed; no composer
     // Save after the native picker returns. The end photo must never publish
     // without its walk doc, or we recreate the orphan-post data loss path.
     const ok = await ensureWalkSavedOnce();
-    if (!ok) return;
+    if (!ok || !isCurrentSession(context)) return;
     setEndPhoto(file);
     setEndComposerOpen(true);
   }
@@ -347,9 +373,10 @@ export function WalkTrackingView({
   }
 
   async function handlePhotoPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const context = sessionContextRef.current;
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-picking the same file later
-    if (!file || !user) return;
+    if (!file || !user || !isCurrentSession(context)) return;
     if (photos.length >= PHOTO_LIMIT) return;
 
     const idx = photos.length;
@@ -365,6 +392,7 @@ export function WalkTrackingView({
 
     try {
       const processed = await processImage(file, IMAGE_PRESETS.post);
+      if (!isCurrentSession(context)) return;
       const ext = fileExt(processed) || "jpg";
       const path = walkPhotoPath(
         user.uid,
@@ -374,6 +402,7 @@ export function WalkTrackingView({
         ext,
       );
       const { url } = await uploadImage(path, processed);
+      if (!isCurrentSession(context)) return;
       setPhotos((prev) =>
         prev.map((p) =>
           p.idx === idx && p.ts === ts
@@ -391,6 +420,7 @@ export function WalkTrackingView({
         ),
       );
     } catch (err) {
+      if (!isCurrentSession(context)) return;
       console.error("[walk-photo] upload failed", err);
       setPhotos((prev) =>
         prev.map((p) =>
@@ -438,6 +468,27 @@ export function WalkTrackingView({
   }, [open, saved, persistedPhotoURLs]);
 
   useEffect(() => {
+    if (!open || phase !== "done") return;
+    const context = sessionContextRef.current;
+    let queued = false;
+    return onWalkReconnect(() => {
+      if (!isCurrentSession(context) || discardConfirmationRef.current || queued) return;
+      const running = saveWalkPromiseRef.current;
+      if (running) {
+        queued = true;
+        void running.then((ok) => {
+          queued = false;
+          if (!ok && isCurrentSession(context) && !discardConfirmationRef.current) void ensureWalkSavedOnce();
+        });
+      } else {
+        void ensureWalkSavedOnce();
+      }
+    });
+    // Never retry just because an error state changed; wait for reconnect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, phase, user?.uid]);
+
+  useEffect(() => {
     if (!open || phase !== "done" || (saved && !saving && !uploadingPhotos
       && savedDetailsRef.current === JSON.stringify(detailsRef.current))) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -458,7 +509,8 @@ export function WalkTrackingView({
   // §A1: the stop button sits on a full-screen `fixed inset-0` layout and is
   // easy to mis-tap, so confirm before ending. Confirm → stop + done screen.
   async function handleStop() {
-    if (stopConfirmRef.current || stoppedInputRef.current) return;
+    const context = sessionContextRef.current;
+    if (!isCurrentSession(context) || stopConfirmRef.current || stoppedInputRef.current) return;
     stopConfirmRef.current = true;
     const ok = await askConfirm({
       title: tW("stopConfirmTitle"),
@@ -467,8 +519,8 @@ export function WalkTrackingView({
       cancelText: tCommon("cancel"),
       danger: true,
     });
-    stopConfirmRef.current = false;
-    if (!ok) return;
+    if (sessionContextRef.current === context) stopConfirmRef.current = false;
+    if (!ok || !isCurrentSession(context)) return;
     const stopped = sessionRef.current?.stop();
     if (stopped) finishWalk(stopped);
   }
@@ -490,7 +542,7 @@ export function WalkTrackingView({
 
   function finishWalk(stopped: WalkSessionState) {
     const context = sessionContextRef.current;
-    if (stoppedInputRef.current || !context) return;
+    if (stoppedInputRef.current || !isCurrentSession(context)) return;
     setPhase("done");
     if (!stopped.startedAt) {
       setSaveError(tW("saveFailed"));
@@ -514,16 +566,46 @@ export function WalkTrackingView({
     void ensureWalkSavedOnce();
   }
 
+  function isCurrentSession(context: typeof sessionContextRef.current): context is NonNullable<typeof context> {
+    return context !== null && sessionContextRef.current === context && viewOpenRef.current
+      && currentUidRef.current === context.uid && !discardedRef.current;
+  }
+
+  async function handleDiscard() {
+    const context = sessionContextRef.current;
+    if (!isCurrentSession(context) || saveWalkPromiseRef.current || savedWalkIdRef.current
+      || discardConfirmationRef.current) return;
+    discardConfirmationRef.current = true;
+    setDiscarding(true);
+    try {
+      const confirmed = await askConfirm({ title: tW("discardDraftTitle"), message: tW("discardDraftBody"),
+        confirmText: tW("discardDraft"), cancelText: tCommon("cancel"), danger: true });
+      if (!confirmed || !isCurrentSession(context)) return;
+      context.onDiscard(context.walkId);
+      discardedRef.current = true;
+      stoppedInputRef.current = null;
+      onClose();
+    } catch {
+      if (isCurrentSession(context)) setSaveError(tW("discardDraftFailed"));
+    } finally {
+      if (sessionContextRef.current === context) {
+        discardConfirmationRef.current = false;
+        setDiscarding(false);
+      }
+    }
+  }
+
   /** Core save and recap patches share one in-flight operation. */
   async function saveWalkOnce(): Promise<boolean> {
     const input = stoppedInputRef.current;
     const context = sessionContextRef.current;
-    if (!input || !context) return false;
+    if (!input || !isCurrentSession(context) || discardConfirmationRef.current) return false;
     setSaving(true);
     setSaveError(null);
     try {
       if (!savedWalkIdRef.current) {
         const result = await context.onComplete(input, context.walkId);
+        if (!isCurrentSession(context)) return false;
         if (!result?.walkId || result.walkId !== context.walkId) throw new Error(tW("saveFailed"));
         savedWalkIdRef.current = result.walkId;
         savedDetailsRef.current = JSON.stringify({ notes: input.notes ?? "", photoURLs: input.photoURLs ?? [] });
@@ -535,34 +617,39 @@ export function WalkTrackingView({
         const details = detailsRef.current;
         const signature = JSON.stringify(details);
         await context.onUpdate(savedWalkIdRef.current, details);
+        if (!isCurrentSession(context)) return false;
         savedDetailsRef.current = signature;
       }
       return true;
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : tW("saveFailed"));
+      if (isCurrentSession(context)) setSaveError(err instanceof Error ? err.message : tW("saveFailed"));
       return false;
     } finally {
-      setSaving(false);
+      if (isCurrentSession(context)) setSaving(false);
     }
   }
 
   function ensureWalkSavedOnce(): Promise<boolean> {
+    if (!isCurrentSession(sessionContextRef.current) || discardConfirmationRef.current) return Promise.resolve(false);
     if (!saveWalkPromiseRef.current) {
-      saveWalkPromiseRef.current = saveWalkOnce().finally(() => {
-        saveWalkPromiseRef.current = null;
+      const promise = saveWalkOnce().finally(() => {
+        if (saveWalkPromiseRef.current === promise) saveWalkPromiseRef.current = null;
       });
+      saveWalkPromiseRef.current = promise;
     }
     return saveWalkPromiseRef.current;
   }
 
   async function handleBackToWalking() {
+    const context = sessionContextRef.current;
     const ok = await ensureWalkSavedOnce();
-    if (ok) onClose();
+    if (ok && isCurrentSession(context)) onClose();
   }
 
   async function handleViewLeaderboard() {
+    const context = sessionContextRef.current;
     const ok = await ensureWalkSavedOnce();
-    if (ok) {
+    if (ok && isCurrentSession(context)) {
       onClose();
       router.push("/app/leaderboard");
     }
@@ -571,7 +658,8 @@ export function WalkTrackingView({
   const sessionPet = sessionContextRef.current?.pet ?? pet;
   const sessionStoredMin = sessionContextRef.current?.storedTodayMin ?? storedTodayMin;
   const sessionGoalMin = sessionContextRef.current?.goalMin ?? goalMin;
-  if (!open || !sessionPet || typeof document === "undefined") return null;
+  if (!open || !sessionPet || (sessionContextRef.current && sessionContextRef.current.uid !== user?.uid)
+    || typeof document === "undefined") return null;
 
   // Live blend of stored today + current session minutes for the bar.
   const blended = state
@@ -994,8 +1082,13 @@ export function WalkTrackingView({
 
           <div className="flex w-full max-w-xs flex-col gap-2">
             {saveError && (
-              <Button onClick={() => { void ensureWalkSavedOnce(); }} disabled={saving} className="rounded-[var(--radius-pill)]">
+              <Button onClick={() => { void ensureWalkSavedOnce(); }} disabled={saving || discarding} className="rounded-[var(--radius-pill)]">
                 {tCommon("retry")}
+              </Button>
+            )}
+            {saveError && !saved && (
+              <Button variant="secondary" onClick={handleDiscard} disabled={saving || discarding} className="rounded-[var(--radius-pill)]">
+                {tW("discardDraft")}
               </Button>
             )}
             <p role="status" className="text-center text-xs text-mango-ink-2">

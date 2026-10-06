@@ -27,7 +27,7 @@ import {
   mintWalkId,
   updateWalkDetails,
 } from "@/lib/firebase/walks";
-import { listWalkDrafts, removeWalkDraft, storeWalkDraft, type WalkDraft } from "@/lib/walk-drafts";
+import { discardWalkDraft, listWalkDrafts, onWalkReconnect, removeWalkDraft, storeWalkDraft, wasWalkDraftDiscarded, type WalkDraft } from "@/lib/walk-drafts";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
 import { getAppUser } from "@/lib/firebase/users";
 import { computeStreak } from "@/lib/scoring";
@@ -127,8 +127,13 @@ export default function WalksPage() {
   const [manualOpen, setManualOpen] = useState(false);
   const [pendingDrafts, setPendingDrafts] = useState<WalkDraft[]>([]);
   const [recovering, setRecovering] = useState(false);
-  const [recoveryError, setRecoveryError] = useState(false);
-  const recoveryInFlight = useRef(false);
+  const [recoveryError, setRecoveryError] = useState<"saveFailed" | "discardDraftFailed" | null>(null);
+  const [discardingDraft, setDiscardingDraft] = useState<string | null>(null);
+  const recoveryScope = useMemo(() => ({ uid: user?.uid ?? null, sessionOpen }), [user?.uid, sessionOpen]);
+  const scopeRef = useRef<typeof recoveryScope | null>(recoveryScope);
+  scopeRef.current = recoveryScope;
+  const recoveryInFlight = useRef<{ scope: typeof recoveryScope; promise: Promise<boolean> } | null>(null);
+  const discardInFlight = useRef<{ scope: typeof recoveryScope; walkId: string } | null>(null);
   const [showAllWalks, setShowAllWalks] = useState(false);
   // Confetti decor — fires a brief celebration then auto-hides so it
   // doesn't camp at the top of the page forever (user feedback
@@ -191,10 +196,11 @@ export default function WalksPage() {
           ? listWalks(family.familyId, null)
           : listPersonalWalks(user.uid, null),
       ]);
+      if (scopeRef.current?.uid !== user.uid) return;
       setPets(petR.status === "fulfilled" ? petR.value : []);
       setWalks(walkR.status === "fulfilled" ? walkR.value : []);
     } finally {
-      setLoading(false);
+      if (scopeRef.current?.uid === user.uid) setLoading(false);
     }
   }, [user, family]);
 
@@ -204,34 +210,104 @@ export default function WalksPage() {
   }, [familyLoading, refresh]);
 
   useEffect(() => {
-    if (!user || sessionOpen) return;
+    scopeRef.current = recoveryScope;
+    setPendingDrafts([]);
+    setRecovering(false);
+    setRecoveryError(null);
+    setDiscardingDraft(null);
+    discardInFlight.current = null;
+    const scope = recoveryScope;
+    const invalidate = () => { if (scopeRef.current === scope) scopeRef.current = null; };
+    if (!scope.uid || scope.sessionOpen) return invalidate;
     try {
-      setPendingDrafts(listWalkDrafts(user.uid));
+      setPendingDrafts(listWalkDrafts(scope.uid));
     } catch {
       // Storage can be unavailable in private mode. Current-session saves
       // still work, but recovery after closing the browser is unavailable.
       setPendingDrafts([]);
     }
-  }, [user, sessionOpen]);
-
-  async function recoverWalks() {
-    if (!user || recoveryInFlight.current) return;
-    recoveryInFlight.current = true;
-    setRecovering(true);
-    setRecoveryError(false);
-    try {
-      for (const draft of pendingDrafts) {
-        if (draft.walkerUid !== user.uid) continue;
-        await createWalk(draft);
-        removeWalkDraft(user.uid, draft.walkId);
+    let queued = false;
+    const unsubscribe = onWalkReconnect(() => {
+      if (scopeRef.current !== scope || discardInFlight.current || queued) return;
+      const running = recoveryInFlight.current;
+      if (running?.scope === scope) {
+        queued = true;
+        // A reconnect during an unsuccessful request buys one follow-up,
+        // not parallel writes or an unbounded retry loop.
+        void running.promise.then((ok) => {
+          queued = false;
+          if (!ok && scopeRef.current === scope && !discardInFlight.current) void recoverWalks();
+        });
+      } else {
+        void recoverWalks();
       }
-      await refresh();
+    }, true);
+    return () => { unsubscribe(); invalidate(); };
+    // Scope identity deliberately excludes refreshed user/family objects.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recoveryScope]);
+
+  function recoverWalks(): Promise<boolean> {
+    const scope = recoveryScope;
+    if (!scope.uid || scope.sessionOpen || scopeRef.current !== scope || discardInFlight.current) return Promise.resolve(false);
+    if (recoveryInFlight.current?.scope === scope) return recoveryInFlight.current.promise;
+    const uid = scope.uid;
+    setRecovering(true);
+    setRecoveryError(null);
+    const promise: Promise<boolean> = Promise.resolve().then(async () => {
+      let failed = false;
+      try {
+        const drafts = listWalkDrafts(uid);
+        if (drafts.length === 0) {
+          if (scopeRef.current === scope) setPendingDrafts([]);
+          return true;
+        }
+        for (const draft of drafts) {
+          if (scopeRef.current !== scope || discardInFlight.current) return false;
+          if (wasWalkDraftDiscarded(uid, draft.walkId)) continue;
+          try {
+            await createWalk(draft);
+            removeWalkDraft(uid, draft.walkId);
+          } catch {
+            failed = true; // An unrecoverable draft must not block later ones.
+          }
+        }
+        if (scopeRef.current === scope) await refresh();
+      } catch {
+        failed = true;
+      }
+      if (scopeRef.current === scope) {
+        setRecoveryError(failed ? "saveFailed" : null);
+        try { setPendingDrafts(listWalkDrafts(uid)); } catch { /* retain visible drafts */ }
+      }
+      return !failed;
+    }).finally(() => {
+      if (recoveryInFlight.current?.promise === promise) recoveryInFlight.current = null;
+      if (scopeRef.current === scope) setRecovering(false);
+    });
+    recoveryInFlight.current = { scope, promise };
+    return promise;
+  }
+
+  async function discardRecoveredWalk(draft: WalkDraft) {
+    const scope = recoveryScope;
+    if (scopeRef.current !== scope || scope.uid !== draft.walkerUid
+      || recoveryInFlight.current?.scope === scope || discardInFlight.current) return;
+    const operation = { scope, walkId: draft.walkId };
+    discardInFlight.current = operation;
+    setDiscardingDraft(draft.walkId);
+    try {
+      const confirmed = await askConfirm({ title: tW("discardDraftTitle"), message: tW("discardDraftBody"),
+        confirmText: tW("discardDraft"), cancelText: tC("cancel"), danger: true });
+      if (!confirmed || scopeRef.current !== scope) return;
+      discardWalkDraft(draft.walkerUid, draft.walkId);
+      setPendingDrafts(listWalkDrafts(draft.walkerUid));
+      setRecoveryError(null);
     } catch {
-      setRecoveryError(true);
+      if (scopeRef.current === scope) setRecoveryError("discardDraftFailed");
     } finally {
-      try { setPendingDrafts(listWalkDrafts(user.uid)); } catch { /* keep current recovery list */ }
-      recoveryInFlight.current = false;
-      setRecovering(false);
+      if (discardInFlight.current === operation) discardInFlight.current = null;
+      if (scopeRef.current === scope) setDiscardingDraft(null);
     }
   }
 
@@ -312,7 +388,7 @@ export default function WalksPage() {
   }, [goalHitEarly]);
 
   async function handleCreate(input: WalkInput & { score: number }, trackedWalkId?: string) {
-    if (!user) return null;
+    if (!user || scopeRef.current?.uid !== user.uid) return null;
     const { score, ...rest } = input;
     const args = {
       ...rest,
@@ -327,6 +403,10 @@ export default function WalksPage() {
       walkId: trackedWalkId ?? mintWalkId(),
     };
     if (trackedWalkId) {
+      // A discard marker is intentional, unlike unavailable local storage.
+      let discarded = false;
+      try { discarded = wasWalkDraftDiscarded(user.uid, trackedWalkId); } catch { /* storage unavailable */ }
+      if (discarded) throw new Error(tW("draftDiscarded"));
       try { storeWalkDraft(args); } catch { /* server save remains available without local storage */ }
     }
     const walk = await createWalk(args);
@@ -410,13 +490,30 @@ export default function WalksPage() {
     await refresh();
   }
 
-  const recoveryNotice = pendingDrafts.length > 0 && (
+  function discardCurrentWalk(walkId: string) {
+    if (!user || scopeRef.current?.uid !== user.uid) throw new Error(tW("saveFailed"));
+    discardWalkDraft(user.uid, walkId);
+  }
+
+  const visibleDrafts = pendingDrafts.filter(draft => draft.walkerUid === user?.uid);
+  const recoveryNotice = visibleDrafts.length > 0 && (
     <div role="status" className="mb-4 rounded-[var(--radius-lg)] border border-mango-hairline bg-mango-card-soft p-4 text-sm text-mango-ink">
-      <p>{tW("pendingRecovery", { count: pendingDrafts.length })}</p>
-      {recoveryError && <p role="alert">{tW("saveFailed")}</p>}
-      <Button onClick={recoverWalks} disabled={recovering} className="mt-2 rounded-[var(--radius-pill)]">
+      <p>{tW("pendingRecovery", { count: visibleDrafts.length })}</p>
+      {recoveryError && <p role="alert">{tW(recoveryError)}</p>}
+      <Button onClick={() => { void recoverWalks(); }} disabled={recovering || discardingDraft !== null} className="mt-2 rounded-[var(--radius-pill)]">
         {recovering ? tW("savingWalk") : tC("retry")}
       </Button>
+      <ul className="mt-2 space-y-2">
+        {visibleDrafts.map(draft => (
+          <li key={draft.walkId} className="flex flex-wrap items-center justify-between gap-2">
+            <span>{draft.petName ?? draft.petId} · {draft.startedAt.toLocaleString()}</span>
+            <Button variant="secondary" onClick={() => { void discardRecoveredWalk(draft); }}
+              disabled={recovering || discardingDraft !== null} className="rounded-[var(--radius-pill)]">
+              {tW("discardDraft")}
+            </Button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 
@@ -754,6 +851,7 @@ export default function WalksPage() {
         weeklyAvgMin={weeklyAvgMin}
         onComplete={handleCreate}
         onUpdate={updateWalkDetails}
+        onDiscard={discardCurrentWalk}
       />
       <ManualWalkDialog
         open={manualOpen}
