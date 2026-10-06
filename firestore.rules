@@ -202,6 +202,10 @@ service cloud.firestore {
       return d.familyId == null && request.auth != null
         && d.ownerUid == request.auth.uid;
     }
+    function petOwnerActive(d) {
+      return d.ownerUid is string
+        && !exists(/databases/$(database)/documents/deletedAccounts/$(d.ownerUid));
+    }
     function isPersonalWalkOwner(d) {
       return d.familyId == null && request.auth != null
         && d.walkerUid == request.auth.uid;
@@ -236,7 +240,8 @@ service cloud.firestore {
           request.resource.data.familyId == null
           || isFamilyMember(request.resource.data.familyId)
         ));
-      allow update: if activeAccount() && ((
+      allow update: if activeAccount() && petOwnerActive(resource.data)
+        && petOwnerActive(request.resource.data) && ((
           isPersonalPetOwner(resource.data)
           || isFamilyMember(resource.data.familyId)
         )
@@ -246,7 +251,7 @@ service cloud.firestore {
           isPersonalPetOwner(request.resource.data)
           || isFamilyMember(request.resource.data.familyId)
         ));
-      allow delete: if activeAccount() && (isPersonalPetOwner(resource.data)
+      allow delete: if activeAccount() && petOwnerActive(resource.data) && (isPersonalPetOwner(resource.data)
         || isFamilyMember(resource.data.familyId));
 
       // Health records flattened to a subcollection of pet at top-level.
@@ -258,6 +263,12 @@ service cloud.firestore {
           return request.auth != null && exists(parent)
             && (isPersonalPetOwner(get(parent).data)
                 || isFamilyMember(get(parent).data.familyId));
+        }
+        // A surviving family member must not refill a deleting owner's pet
+        // between the server's child cleanup and parent deletion.
+        function canWriteParent() {
+          return canAccessParent()
+            && petOwnerActive(get(/databases/$(database)/documents/pets/$(petId)).data);
         }
         function requiredText(d, key, maxLength) {
           return key in d && d[key] is string
@@ -295,8 +306,8 @@ service cloud.firestore {
         }
         // Legacy records remain readable/deletable using only parent authority.
         allow read: if canAccessParent();
-        allow delete: if activeAccount() && (canAccessParent());
-        allow create: if activeAccount() && (canAccessParent()
+        allow delete: if activeAccount() && (canWriteParent());
+        allow create: if activeAccount() && (canWriteParent()
           && request.resource.data.keys().hasAll([
             'petId', 'recordedByUid', 'type', 'data', 'recordedAt', 'createdAt'
           ])
@@ -307,7 +318,7 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time
           && validContent(request.resource.data));
         // Preserve legacy metadata and attribution when a family member edits content.
-        allow update: if activeAccount() && (canAccessParent()
+        allow update: if activeAccount() && (canWriteParent()
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['type', 'data', 'recordedAt', 'notes'])
           && validContent(request.resource.data));

@@ -7,15 +7,18 @@
     "All 34 previously allowed mutation clauses require activeAccount().",
     "Mixed read/write and read/delete clauses split; all 86 expanded get/list conditions remain unchanged.",
     "Friend request creation also rejects a recipient with a deletion checkpoint.",
+    "Pet mutation and health record mutation also reject a pet owner checkpoint, preventing surviving family members from refilling a cascading pet.",
     "Checkpoint and nested pending work remain client-inaccessible by default deny."
   ],
   "verification": {
     "fullFirestoreEmulatorSuite": "61/61 passed",
-    "newDeletionFreezeCases": "15 cases; each applicable operation first succeeds for the same account, then fails with a deleting/finalizing/complete checkpoint",
+    "newDeletionFreezeCases": "16 cases; each applicable operation first succeeds for the same account, then fails with a deleting/finalizing/complete checkpoint",
+    "parentOwnerFollowup": "22/22 deletion freeze and health authorization cases passed after the owner guard",
     "independentStaticReview": "No missing mutation guard or changed read condition found"
   },
   "limits": [
     "Admin SDK bypasses these rules; corresponding callable/trigger transaction guards are required.",
+    "R15 parent-pet validation for top-level walk/reminder/expense references remains outside this fix; these collections do not gain a full referential-integrity guarantee.",
     "Storage needs its own rules and the documented cross-service Firebase Storage service-agent role.",
     "This is not a full-project authorization or schema audit and does not close unrelated backlog findings.",
     "Local emulator evidence; production release verification recorded separately."

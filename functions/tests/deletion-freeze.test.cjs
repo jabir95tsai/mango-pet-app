@@ -88,3 +88,21 @@ test('checkpoint cannot be read/removed by clients and blocks requests to a dele
  await assert.rejects(f.setDoc(f.doc(peer,`users/${uid}/private/contact`),{fcmTokens:['attacker']}),{code:'permission-denied'});
  await f.setDoc(f.doc(peer,'users/'+other),{uid:other,displayName:'Still active'});
 });
+
+test('active family members cannot refill or transfer a deleting owner pet during cascade',async()=>{
+ const uid=prefix+'-surviving-member',owner=prefix+'-departing-owner',sdk=client(uid),family=uid+'-family',pet=uid+'-pet';
+ await db.doc('families/'+family).set({memberUids:[uid,owner]});
+ await db.doc('pets/'+pet).set({ownerUid:owner,familyId:family,name:'Family pet'});
+ const ref=f.doc(sdk,`pets/${pet}/healthRecords/weight`);
+ const data={petId:pet,recordedByUid:uid,type:'weight',data:{kg:4},recordedAt:f.Timestamp.now(),createdAt:f.serverTimestamp()};
+ await f.setDoc(ref,data);await f.updateDoc(ref,{data:{kg:5}});
+ await f.updateDoc(f.doc(sdk,'pets/'+pet),{name:'Renamed by family'});
+ await db.doc('deletedAccounts/'+owner).set({state:'deleting'});
+ await f.getDocFromServer(ref);
+ await assert.rejects(f.updateDoc(ref,{data:{kg:6}}),{code:'permission-denied'});
+ await assert.rejects(f.deleteDoc(ref),{code:'permission-denied'});
+ await assert.rejects(f.updateDoc(f.doc(sdk,'pets/'+pet),{ownerUid:uid}),{code:'permission-denied'});
+ await assert.rejects(f.deleteDoc(f.doc(sdk,'pets/'+pet)),{code:'permission-denied'});
+ await db.doc(ref.path).delete();
+ await assert.rejects(f.setDoc(ref,data),{code:'permission-denied'});
+});
