@@ -1,36 +1,29 @@
 /**
- * Global push toggle (P5a) — probes APNs permission + pushPrefs.globalDisabled on
- * mount, then enables (request permission + register token) or disables (clear
- * tokens + set globalDisabled). Mirrors web push-toggle.tsx state machine.
+ * Global push toggle — AuthProvider owns session-wide reconciliation; this view
+ * requests permission, shows acknowledged registration state, and offers retry
+ * or the iOS Settings route when permission has already been denied.
  */
-import { useEffect, useState } from "react";
-import { StyleSheet, Switch, Text, View } from "react-native";
+import { useState } from "react";
+import { Linking, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 
 import { useAuth } from "@/state/auth-context";
-import { disablePush, enablePush, probePushStatus, type PushStatus } from "@/lib/push";
-import { t } from "@/lib/i18n";
+import { disablePush, enablePush, probePushStatus } from "@/lib/push";
+import { t, activeLocale } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 
 export function PushToggle() {
-  const { user } = useAuth();
-  const [status, setStatus] = useState<PushStatus>("checking");
+  const { user, pushStatus: status } = useAuth();
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    probePushStatus(user.uid).then(setStatus).catch(() => setStatus("disabled"));
-  }, [user]);
+  const [settingsError, setSettingsError] = useState(false);
 
   async function toggle(next: boolean) {
     if (!user || busy) return;
     setBusy(true);
-    const prev = status;
-    setStatus(next ? "enabled" : "disabled");
     try {
-      const result = next ? await enablePush(user.uid) : (await disablePush(user.uid), "disabled" as const);
-      setStatus(result);
+      if (next) await enablePush(user.uid);
+      else await disablePush(user.uid);
     } catch {
-      setStatus(prev);
+      // Push service publishes "error". Never show enabled before server ack.
     } finally {
       setBusy(false);
     }
@@ -45,6 +38,8 @@ export function PushToggle() {
           <Text style={styles.hint}>
             {status === "checking"
               ? t("Push.status.checking")
+              : status === "error"
+                ? (activeLocale === "en" ? "Registration failed. Check your connection and try again." : "推播註冊失敗，請確認連線後重試。")
               : denied
                 ? t("Push.status.deniedIos")
                 : status === "enabled"
@@ -60,6 +55,19 @@ export function PushToggle() {
           thumbColor={colors.card}
         />
       </View>
+      {denied ? <Pressable accessibilityRole="button" onPress={() => {
+        setSettingsError(false);
+        void Linking.openSettings().catch(() => setSettingsError(true));
+      }} style={styles.action}>
+        <Text style={styles.link}>{activeLocale === "en" ? "Open iOS Settings" : "開啟 iOS 設定"}</Text>
+      </Pressable> : null}
+      {status === "error" ? <Pressable accessibilityRole="button" disabled={busy} onPress={async () => {
+        if (!user || busy) return;
+        setBusy(true);
+        try { await probePushStatus(user.uid); } catch { /* error remains visible */ }
+        finally { setBusy(false); }
+      }} style={styles.action}><Text style={styles.link}>{t("Common.retry")}</Text></Pressable> : null}
+      {settingsError ? <Text style={styles.hint}>{activeLocale === "en" ? "Open Settings manually and select Notifications." : "請手動開啟系統設定，選擇通知。"}</Text> : null}
     </View>
   );
 }
@@ -76,4 +84,6 @@ const styles = StyleSheet.create({
   text: { flex: 1 },
   title: { fontSize: 15, fontWeight: "800", color: colors.ink },
   hint: { fontSize: 12, color: colors.ink3, marginTop: 2 },
+  action: { paddingVertical: spacing.sm },
+  link: { color: colors.brandDeep, fontWeight: "600" },
 });

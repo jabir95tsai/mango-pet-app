@@ -12,12 +12,14 @@ import type { FirebaseAuthTypes } from "@react-native-firebase/auth";
 
 import { auth } from "@/lib/firebase";
 import { ensureUserProfile } from "@/lib/auth-profile";
+import { startPushSession, type PushStatus } from "@/lib/push";
 
 type AuthState = {
   user: FirebaseAuthTypes.User | null;
   initializing: boolean;
   profileError: boolean;
   retryProfile: () => void;
+  pushStatus: PushStatus;
 };
 
 const AuthContext = createContext<AuthState>({
@@ -25,6 +27,7 @@ const AuthContext = createContext<AuthState>({
   initializing: true,
   profileError: false,
   retryProfile: () => {},
+  pushStatus: "checking",
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -32,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initializing, setInitializing] = useState(true);
   const [profileError, setProfileError] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [pushStatus, setPushStatus] = useState<PushStatus>("checking");
   const retryProfile = useCallback(() => setRetry((value) => value + 1), []);
 
   useEffect(() => {
@@ -62,8 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { generation++; unsubscribe(); };
   }, [retry]);
 
+  useEffect(() => {
+    setPushStatus("checking");
+    if (!user) return;
+    return startPushSession(user.uid, setPushStatus);
+  }, [user]);
 
-  const value = useMemo(() => ({ user, initializing, profileError, retryProfile }), [user, initializing, profileError, retryProfile]);
+  const value = useMemo(() => ({ user, initializing, profileError, retryProfile, pushStatus }), [user, initializing, profileError, retryProfile, pushStatus]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
