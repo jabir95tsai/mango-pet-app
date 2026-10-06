@@ -10,7 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { auth } from "@/lib/firebase";
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "@/lib/config";
-import { detachPushToken, resumePushSession } from "@/lib/push";
+import { detachPushToken, resumePushSession, revokePushForUnreadySession } from "@/lib/push";
 
 let configured = false;
 
@@ -166,4 +166,14 @@ async function signInCredential(credential: FirebaseAuthCredential) {
   if (uid) await detachPushToken(uid);
   try { return await auth().signInWithCredential(credential); }
   catch (error) { if (uid) resumePushSession(uid); throw error; }
+}
+
+/** Escape failed bootstrap without assuming that the account was deleted. */
+export async function signOutUnreadySession(): Promise<void> {
+  const uid = auth().currentUser?.uid;
+  if (uid) await revokePushForUnreadySession(uid);
+  try { await auth().signOut(); }
+  catch (error) { if (uid) resumePushSession(uid); throw error; }
+  try { await GoogleSignin.signOut(); }
+  catch { /* No Google session is expected for Apple/guest accounts. */ }
 }

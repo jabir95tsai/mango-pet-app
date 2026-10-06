@@ -8,6 +8,7 @@ import { auth } from "@/lib/firebase";
 export type PushStatus = "enabled" | "disabled" | "notDetermined" | "denied" | "checking" | "error";
 type Registration = { uid: string; token: string; previousToken?: string };
 const REGISTRATION_KEY = "mango.push.registration.v1";
+const PENDING_REVOCATION_KEY = "mango.push.pending-revocation.v1";
 let pending: Promise<unknown> = Promise.resolve();
 let suspendedUid: string | null = null;
 const listeners = new Set<(uid: string, status: PushStatus) => void>();
@@ -41,6 +42,13 @@ function permissionState(value: number): PushStatus {
 }
 export async function hasPushPermission(): Promise<boolean> {
   return permissionState(await messaging().hasPermission()) === "enabled";
+}
+async function finishPendingRevocation(): Promise<void> {
+  if (!(await AsyncStorage.getItem(PENDING_REVOCATION_KEY))) return;
+  // This also covers old builds which never persisted a registration locally.
+  await messaging().deleteToken();
+  await AsyncStorage.removeItem(REGISTRATION_KEY);
+  await AsyncStorage.removeItem(PENDING_REVOCATION_KEY);
 }
 async function register(uid: string, enable = false): Promise<PushStatus> {
   assertCurrent(uid);
@@ -94,6 +102,8 @@ function operation(uid: string, action: () => Promise<PushStatus>): Promise<Push
 export function probePushStatus(uid: string): Promise<PushStatus> {
   return operation(uid, async () => {
     assertCurrent(uid);
+    await finishPendingRevocation();
+    assertCurrent(uid);
     const permission = permissionState(await messaging().hasPermission());
     assertCurrent(uid);
     if (permission !== "enabled") return publish(uid, permission);
@@ -102,6 +112,8 @@ export function probePushStatus(uid: string): Promise<PushStatus> {
 }
 export function enablePush(uid: string): Promise<PushStatus> {
   return operation(uid, async () => {
+    assertCurrent(uid);
+    await finishPendingRevocation();
     assertCurrent(uid);
     const permission = permissionState(await messaging().requestPermission());
     assertCurrent(uid);
@@ -151,6 +163,24 @@ export async function detachPushToken(uid: string, accountDeleted = false): Prom
 }
 export function resumePushSession(uid: string): void {
   if (suspendedUid === uid) suspendedUid = null;
+}
+/** Profile may be missing or frozen, so Firestore cleanup is unavailable.
+ * Revoke the installation itself before leaving Auth; failures remain visible
+ * and the persisted marker blocks subsequent registration until retry succeeds. */
+export async function revokePushForUnreadySession(uid: string): Promise<void> {
+  suspendedUid = uid;
+  try {
+    await serialized(async () => {
+      assertCurrent(uid, true);
+      await AsyncStorage.setItem(PENDING_REVOCATION_KEY, uid);
+      await finishPendingRevocation();
+      assertCurrent(uid, true);
+    });
+  } catch (error) {
+    suspendedUid = null;
+    publish(uid, "error");
+    throw error;
+  }
 }
 /** AuthProvider owns this listener, including while Settings is not mounted. */
 export function startPushSession(uid: string, onStatus: (status: PushStatus) => void): () => void {

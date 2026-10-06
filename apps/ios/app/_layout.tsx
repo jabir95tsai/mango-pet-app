@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -12,9 +12,12 @@ import { resolveCurrentFamilyId } from "@/lib/walk-data";
 import { ONBOARDED_KEY } from "@/lib/onboarding";
 import { colors } from "@/theme/theme";
 import { t, activeLocale } from "@/lib/i18n";
+import { signOutUnreadySession } from "@/lib/auth";
 
 function RootNavigator() {
   const { user, initializing, profileError, retryProfile } = useAuth();
+  const [exiting, setExiting] = useState(false);
+  const [exitError, setExitError] = useState(false);
   const segments = useSegments();
   const router = useRouter();
   // Guards the once-per-sign-in landing decision so we don't loop while the
@@ -48,9 +51,22 @@ function RootNavigator() {
   if (profileError) {
     return <View style={styles.splash}>
       <Text style={{ color: colors.ink }}>{activeLocale === "en" ? "Could not prepare your profile. Check your connection and try again." : "無法準備帳號資料，請確認連線後重試。"}</Text>
-      <Pressable accessibilityRole="button" onPress={retryProfile} style={{ padding: 20 }}>
+      <Pressable accessibilityRole="button" disabled={exiting} onPress={() => { setExitError(false); retryProfile(); }} style={{ padding: 20 }}>
         <Text style={{ color: colors.brandDeep }}>{t("Common.retry")}</Text>
       </Pressable>
+      <Pressable accessibilityRole="button" disabled={exiting} onPress={async () => {
+        if (exiting) return;
+        setExiting(true);
+        setExitError(false);
+        try { await signOutUnreadySession(); }
+        catch { setExitError(true); }
+        finally { setExiting(false); }
+      }} style={{ padding: 20 }}>
+        <Text style={{ color: colors.brandDeep }}>{exiting ? t("Push.status.checking") : t("Auth.signOut")}</Text>
+      </Pressable>
+      {exitError ? <Text style={{ color: colors.ink }}>
+        {activeLocale === "en" ? "Could not revoke this device's notifications. Check your connection and try signing out again." : "尚未撤銷此裝置的通知，請確認連線後再次登出。"}
+      </Text> : null}
     </View>;
   }
 

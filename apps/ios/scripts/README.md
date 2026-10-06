@@ -8,7 +8,7 @@ npm run typecheck -w apps/ios
 npm run typecheck -w apps/web
 ```
 
-These 25 tests transpile and execute the actual `auth.ts`, `auth-profile.ts`,
+These 28 tests transpile and execute the actual `auth.ts`, `auth-profile.ts`,
 `push.ts`, and `AuthProvider` modules. Native Google/Apple, messaging/APNs,
 AsyncStorage and Firestore transport are mocked. The small hook scheduler is
 not a React Native renderer or a device test.

@@ -125,3 +125,14 @@ test('legacy email migration retains existing private contact when auth has no e
 test('malformed legacy token field does not prevent registration of a valid device',async()=>{
  const h=await ready();h.state.permission=1;h.docs.get(privatePath).fcmTokens='not-an-array';assert.equal(await h.push.enablePush('alice'),'enabled');assert.deepEqual(h.docs.get(privatePath).fcmTokens,['device-token']);
 });
+test('unready-profile sign-out revokes the installation without any Firestore cleanup',async()=>{
+ const h=harness();h.authState.currentUser=h.user('alice');h.state.failWrite=true;await h.authApi.signOutUnreadySession();assert.equal(h.authState.currentUser,null);assert.equal(h.docs.size,0);assert.ok(h.events.indexOf('deleteToken')<h.events.indexOf('signOut'));assert.equal(h.storage.has('mango.push.pending-revocation.v1'),false);
+});
+test('unready-profile revocation failure retains auth and retry metadata until explicit retry',async()=>{
+ const h=harness();h.authState.currentUser=h.user('alice');h.state.failDeleteToken=true;await assert.rejects(h.authApi.signOutUnreadySession(),/offline/);assert.equal(h.authState.currentUser.uid,'alice');assert.equal(h.storage.get('mango.push.pending-revocation.v1'),'alice');assert.equal(h.events.includes('signOut'),false);
+ h.state.failDeleteToken=false;await h.authApi.signOutUnreadySession();assert.equal(h.authState.currentUser,null);assert.equal(h.storage.has('mango.push.pending-revocation.v1'),false);
+});
+test('pending revocation after native auth expiry blocks another account registration until revoked',async()=>{
+ const h=await ready();h.state.failDeleteToken=true;await assert.rejects(h.authApi.signOutUnreadySession());h.authState.currentUser=h.user('bob');await h.profile.ensureUserProfile(h.authState.currentUser);h.state.permission=1;await assert.rejects(h.push.enablePush('bob'),/offline/);assert.equal(h.docs.get('users/bob/private/contact').fcmTokens,undefined);assert.equal(h.events.includes('getToken'),false);
+ h.state.failDeleteToken=false;h.state.token='bob-new-token';assert.equal(await h.push.enablePush('bob'),'enabled');assert.ok(h.events.indexOf('deleteToken')<h.events.indexOf('getToken'));assert.deepEqual(h.docs.get('users/bob/private/contact').fcmTokens,['bob-new-token']);
+});

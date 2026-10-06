@@ -13,9 +13,11 @@
 
 登出／切帳號先暫停註冊、清除私人 token 並撤銷 installation token，失敗保留登入讓使用者重試。外部帳號切換若已失去原 UID 的寫入權限，會先撤銷舊 installation token，再註冊新的 UID。伺服器已成功刪帳時，不再寫回 profile/private；若原生 revoke 離線，仍可清除 Auth session，保留本機 metadata 供下次登入再撤銷，並留下不含 token 的警告。
 
+profile 失敗頁另有安全登出出口，使用獨立 `signOutUnreadySession`，不假設帳號已刪除，也不要求 Firestore 清理成功。先持久化 pending-revocation marker，再撤銷 installation token；成功才清除 Auth，失敗維持目前 session 並顯示可重試錯誤。如果重啟時 native Auth 已失效，下一個 session 的 probe／enable 仍必須完成 pending revoke，才能註冊新帳號，避免舊 token 跨帳號重用。
+
 ## 驗證
 
-- `apps/ios/scripts/auth-push.test.cjs`：**25/25**。實際 TS 模組＋小型 React hook scheduler；native API 與儲存 transport 邊界為 mock。
+- `apps/ios/scripts/auth-push.test.cjs`：**28/28**。實際 TS 模組＋小型 React hook scheduler；native API 與儲存 transport 邊界為 mock。包含失敗 profile 的安全登出、撤銷失敗重試及跨 session 未完成撤銷。
 - `apps/ios/scripts/auth-push-emulator.test.cjs`：**6/6、0 skipped**。Java 21、Firebase CLI 15.32.1、demo-only 8193；native Firestore API 轉接真 Web SDK，使用整合 R03 public-PII guard 與 R05 marker freeze 的 rules。包括合法初次登入、legacy 原子搬移、token lifecycle、外人 private 讀寫拒絕、舊 client public token 寫入拒絕、刪帳中不得重建 profile。
 - Web 與 iOS TypeScript 檢查通過。
 - 原 `248686f` 的 push 模組跑同一 NOT_DETERMINED 測試如預期 **1 fail**：回傳 denied；修補後通過。
