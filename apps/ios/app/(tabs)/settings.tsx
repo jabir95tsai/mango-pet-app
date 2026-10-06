@@ -5,7 +5,8 @@
  * opt-outs, walk auto-photo, leaderboard visibility, data export, delete
  * account, legal links. Guest gating matches web.
  */
-import { Linking, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import { useState } from "react";
+import { Alert, Linking, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Users, AlertTriangle } from "lucide-react-native";
@@ -23,11 +24,12 @@ import { PhotosPreviewSection } from "@/components/settings/photos-preview-secti
 import { FamilySection } from "@/components/settings/family-section";
 import { ExportDataSection } from "@/components/settings/export-data-section";
 import { DeleteAccountSection } from "@/components/settings/delete-account-section";
-import { t } from "@/lib/i18n";
+import { t, activeLocale } from "@/lib/i18n";
 import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 export default function SettingsScreen() {
   const { user } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
   const isGuest = !!user?.isAnonymous;
   const name = user?.displayName ?? (isGuest ? "訪客" : user?.email?.split("@")[0] ?? "");
@@ -62,7 +64,14 @@ export default function SettingsScreen() {
           </View>
           {user ? (
             <Pressable
-              onPress={() => void signOut()}
+              disabled={signingOut}
+              onPress={async () => {
+                if (signingOut) return;
+                setSigningOut(true);
+                try { await signOut(); }
+                catch { Alert.alert(activeLocale === "en" ? "Could not sign out" : "暫時無法登出", activeLocale === "en" ? "Could not unregister this device. Check your connection and try again." : "尚未解除此裝置的通知綁定，請確認連線後重試。"); }
+                finally { setSigningOut(false); }
+              }}
               style={({ pressed }) => [styles.signOut, pressed && styles.dim]}
             >
               <Text style={styles.signOutText}>{t("Auth.signOut")}</Text>

@@ -1,98 +1,168 @@
-/**
- * iOS push registration (P5a) — native APNs via @react-native-firebase/messaging
- * (the iOS upgrade over web's残缺 PWA web-push). Mirrors the token lifecycle of
- * apps/web/src/lib/firebase/messaging.ts: get a token, arrayUnion it into
- * users/{uid}.fcmTokens, and respect pushPrefs.globalDisabled so a disabled user
- * doesn't get re-minted on every settings open.
- *
- * ⚠️ ENABLING PUSH (DevOps, NOT code) — three steps, none doable from a
- * non-interactive build, so the aps-environment entitlement was REMOVED from
- * app.json to keep EAS builds green. This code stays dormant until:
- *   1. Apple Developer: enable the Push Notifications capability on App ID
- *      com.mangopet.app, then regenerate the provisioning profile. The easiest
- *      path is `eas credentials` (or an interactive `eas build`) while signed
- *      into Apple — EAS adds the capability + new profile automatically.
- *   2. app.json: re-add  ios.entitlements = { "aps-environment": "development" }
- *      (use "production" for TestFlight/App Store) + UIBackgroundModes
- *      "remote-notification".
- *   3. Firebase Console → Cloud Messaging: register the APNs auth key/cert for
- *      the iOS app.
- * Until all three are done getToken() throws on device (probe → "denied"), which
- * the settings toggle handles gracefully.
- */
+/** Native push identity is stored only in the owner-only private/contact doc. */
 import messaging from "@react-native-firebase/messaging";
 import firestore from "@react-native-firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
+import { auth } from "@/lib/firebase";
 
-export type PushStatus = "enabled" | "disabled" | "denied" | "checking";
-
-function userRef(uid: string) {
-  return firestore().collection("users").doc(uid);
+export type PushStatus = "enabled" | "disabled" | "notDetermined" | "denied" | "checking" | "error";
+type Registration = { uid: string; token: string; previousToken?: string };
+const REGISTRATION_KEY = "mango.push.registration.v1";
+let pending: Promise<unknown> = Promise.resolve();
+let suspendedUid: string | null = null;
+const listeners = new Set<(uid: string, status: PushStatus) => void>();
+function publish(uid: string, status: PushStatus) {
+  for (const listener of listeners) listener(uid, status);
+  return status;
 }
-
-/** OS-level permission granted (AUTHORIZED or PROVISIONAL)? */
-export async function hasPushPermission(): Promise<boolean> {
-  const status = await messaging().hasPermission();
-  return (
-    status === messaging.AuthorizationStatus.AUTHORIZED ||
-    status === messaging.AuthorizationStatus.PROVISIONAL
-  );
+function serialized<T>(action: () => Promise<T>): Promise<T> {
+  const result = pending.then(action);
+  pending = result.catch(() => undefined);
+  return result;
 }
-
-/** Probe the current state for the settings toggle, without minting a token
- *  if the user has explicitly disabled push. */
-export async function probePushStatus(uid: string): Promise<PushStatus> {
-  if (!(await hasPushPermission())) return "denied";
-  const snap = await userRef(uid).get();
-  const disabled = (snap.data() as { pushPrefs?: { globalDisabled?: boolean } } | undefined)
-    ?.pushPrefs?.globalDisabled;
-  if (disabled) return "disabled";
-  // Permission granted + not disabled → reconcile the token so this device is
-  // registered (idempotent arrayUnion).
-  await reconcilePushToken(uid);
-  return "enabled";
-}
-
-/** Request permission (if needed), mint the APNs/FCM token, and register it.
- *  Returns the new status. */
-export async function enablePush(uid: string): Promise<PushStatus> {
-  const authStatus = await messaging().requestPermission();
-  const granted =
-    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-  if (!granted) return "denied";
-  await messaging().registerDeviceForRemoteMessages();
-  const token = await messaging().getToken();
-  await userRef(uid).set(
-    {
-      fcmTokens: firestore.FieldValue.arrayUnion(token),
-      pushPrefs: { globalDisabled: false },
-    },
-    { merge: true },
-  );
-  return "enabled";
-}
-
-/** Idempotently add this device's token to the user's fcmTokens (no permission
- *  prompt). No-op if permission isn't granted. */
-export async function reconcilePushToken(uid: string): Promise<void> {
-  if (!(await hasPushPermission())) return;
-  try {
-    await messaging().registerDeviceForRemoteMessages();
-    const token = await messaging().getToken();
-    await userRef(uid).set(
-      { fcmTokens: firestore.FieldValue.arrayUnion(token) },
-      { merge: true },
-    );
-  } catch {
-    // best-effort
+function assertCurrent(uid: string, allowSuspended = false) {
+  if (auth().currentUser?.uid !== uid || (!allowSuspended && suspendedUid === uid)) {
+    throw new Error("Push session changed");
   }
 }
-
-/** Turn push off: clear tokens + set the explicit disable flag so the probe
- *  won't re-mint while the OS permission stays granted (mirrors web disablePush). */
-export async function disablePush(uid: string): Promise<void> {
-  await userRef(uid).set(
-    { fcmTokens: [], pushPrefs: { globalDisabled: true } },
-    { merge: true },
-  );
+function userRef(uid: string) { return firestore().collection("users").doc(uid); }
+function contactRef(uid: string) { return userRef(uid).collection("private").doc("contact"); }
+async function storedRegistration(): Promise<Registration | null> {
+  const raw = await AsyncStorage.getItem(REGISTRATION_KEY);
+  if (!raw) return null;
+  const data = JSON.parse(raw) as Registration;
+  if (typeof data.uid !== "string" || typeof data.token !== "string") throw new Error("Invalid push registration");
+  return data;
+}
+function permissionState(value: number): PushStatus {
+  if (value === messaging.AuthorizationStatus.NOT_DETERMINED) return "notDetermined";
+  if (value === messaging.AuthorizationStatus.AUTHORIZED || value === messaging.AuthorizationStatus.PROVISIONAL) return "enabled";
+  return "denied";
+}
+export async function hasPushPermission(): Promise<boolean> {
+  return permissionState(await messaging().hasPermission()) === "enabled";
+}
+async function register(uid: string, enable = false): Promise<PushStatus> {
+  assertCurrent(uid);
+  const profile = await userRef(uid).get();
+  assertCurrent(uid);
+  if (!profile.exists) throw new Error("Profile is not ready");
+  if (!enable && profile.data()?.pushPrefs?.globalDisabled) return publish(uid, "disabled");
+  let previous = await storedRegistration();
+  if (previous && previous.uid !== uid) {
+    // An external auth change cannot edit the former owner's private document.
+    // Revoke that installation token before assigning a fresh token to this UID.
+    await messaging().deleteToken();
+    await AsyncStorage.removeItem(REGISTRATION_KEY);
+    previous = null;
+  }
+  assertCurrent(uid);
+  await messaging().registerDeviceForRemoteMessages();
+  const token = await messaging().getToken();
+  if (!token) throw new Error("FCM returned no token");
+  assertCurrent(uid);
+  // Persist before the write, so a failed/ambiguous acknowledgement is still
+  // removable on logout or retry after a process restart.
+  const previousToken = previous?.previousToken ?? previous?.token;
+  await AsyncStorage.setItem(REGISTRATION_KEY, JSON.stringify({ uid, token, ...(previousToken && previousToken !== token ? { previousToken } : {}) }));
+  assertCurrent(uid);
+  const registered = await firestore().runTransaction(async (tx) => {
+    const currentProfile = await tx.get(userRef(uid));
+    const snapshot = await tx.get(contactRef(uid));
+    assertCurrent(uid);
+    if (!currentProfile.exists) throw new Error("Profile is not ready");
+    // Another device may have switched the global preference off since getToken.
+    if (!enable && currentProfile.data()?.pushPrefs?.globalDisabled) return false;
+    const tokens: string[] = (snapshot.data()?.fcmTokens ?? []).filter((item: unknown) => typeof item === "string");
+    const current = tokens.filter((item) => !previous || previous.uid !== uid || (item !== previous.token && item !== previous.previousToken));
+    tx.set(contactRef(uid), { fcmTokens: [...new Set([...current, token])] }, { merge: true });
+    if (enable) tx.update(userRef(uid), { "pushPrefs.globalDisabled": false });
+    return true;
+  });
+  await AsyncStorage.setItem(REGISTRATION_KEY, JSON.stringify({ uid, token }));
+  assertCurrent(uid);
+  return publish(uid, registered ? "enabled" : "disabled");
+}
+function operation(uid: string, action: () => Promise<PushStatus>): Promise<PushStatus> {
+  return serialized(action).catch((error) => {
+    if (auth().currentUser?.uid === uid && suspendedUid !== uid) publish(uid, "error");
+    throw error;
+  });
+}
+export function probePushStatus(uid: string): Promise<PushStatus> {
+  return operation(uid, async () => {
+    assertCurrent(uid);
+    const permission = permissionState(await messaging().hasPermission());
+    assertCurrent(uid);
+    if (permission !== "enabled") return publish(uid, permission);
+    return register(uid);
+  });
+}
+export function enablePush(uid: string): Promise<PushStatus> {
+  return operation(uid, async () => {
+    assertCurrent(uid);
+    const permission = permissionState(await messaging().requestPermission());
+    assertCurrent(uid);
+    if (permission !== "enabled") return publish(uid, permission);
+    return register(uid, true);
+  });
+}
+export async function reconcilePushToken(uid: string): Promise<void> { await probePushStatus(uid); }
+export function disablePush(uid: string): Promise<PushStatus> {
+  return operation(uid, async () => {
+    assertCurrent(uid);
+    const batch = firestore().batch();
+    batch.update(userRef(uid), { "pushPrefs.globalDisabled": true });
+    // This is the existing account-wide off preference, unlike logout.
+    batch.set(contactRef(uid), { fcmTokens: [] }, { merge: true });
+    await batch.commit();
+    assertCurrent(uid);
+    return publish(uid, "disabled");
+  });
+}
+/** Stop refresh registration synchronously, then remove only this installation. */
+export async function detachPushToken(uid: string, accountDeleted = false): Promise<void> {
+  suspendedUid = uid;
+  try {
+    await serialized(async () => {
+      assertCurrent(uid, true);
+      const previous = await storedRegistration();
+      let token = previous?.uid === uid ? previous.token : null;
+      // Covers installations registered by an older build before local tracking.
+      if (!token && !accountDeleted && await hasPushPermission()) {
+        await messaging().registerDeviceForRemoteMessages();
+        token = await messaging().getToken();
+      }
+      assertCurrent(uid, true);
+      if (token && !accountDeleted) {
+        await contactRef(uid).set({ fcmTokens: firestore.FieldValue.arrayRemove(token, ...(previous?.previousToken ? [previous.previousToken] : [])) }, { merge: true });
+      }
+      // Revocation also makes a leftover token under a previous UID unusable.
+      if (token || previous) await messaging().deleteToken();
+      await AsyncStorage.removeItem(REGISTRATION_KEY);
+    });
+  } catch (error) {
+    suspendedUid = null;
+    publish(uid, "error");
+    throw error;
+  }
+}
+export function resumePushSession(uid: string): void {
+  if (suspendedUid === uid) suspendedUid = null;
+}
+/** AuthProvider owns this listener, including while Settings is not mounted. */
+export function startPushSession(uid: string, onStatus: (status: PushStatus) => void): () => void {
+  resumePushSession(uid);
+  let active = true;
+  const listener = (owner: string, status: PushStatus) => { if (active && owner === uid) onStatus(status); };
+  listeners.add(listener);
+  const reconcile = () => {
+    if (!active) return;
+    // operation() publishes an explicit error state; foreground/retry retries it.
+    void probePushStatus(uid).catch(() => undefined);
+  };
+  const unsubscribe = messaging().onTokenRefresh(reconcile);
+  const appState = AppState.addEventListener("change", (state) => { if (state === "active") reconcile(); });
+  reconcile();
+  return () => { active = false; listeners.delete(listener); unsubscribe(); appState.remove(); };
 }

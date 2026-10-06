@@ -10,6 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { auth } from "@/lib/firebase";
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "@/lib/config";
+import { detachPushToken, resumePushSession } from "@/lib/push";
 
 let configured = false;
 
@@ -32,7 +33,7 @@ export async function signInWithGoogle(): Promise<string> {
   const { idToken } = await GoogleSignin.getTokens();
   if (!idToken) throw new Error("Google sign-in returned no idToken");
   const credential = auth.GoogleAuthProvider.credential(idToken);
-  const result = await auth().signInWithCredential(credential);
+  const result = await signInCredential(credential);
   return result.user.uid;
 }
 
@@ -45,17 +46,33 @@ export async function isAppleSignInAvailable(): Promise<boolean> {
 /** Apple → Firebase credential sign-in with a hashed nonce (replay defense). */
 export async function signInWithApple(): Promise<string> {
   const credential = await buildAppleCredential();
-  const result = await auth().signInWithCredential(credential);
+  const result = await signInCredential(credential);
   return result.user.uid;
 }
 
-export async function signOut(): Promise<void> {
+export async function signOut(options: { accountDeleted?: boolean } = {}): Promise<void> {
+  const uid = auth().currentUser?.uid;
+  if (uid) {
+    try { await detachPushToken(uid, options.accountDeleted); }
+    catch (error) {
+      if (!options.accountDeleted) throw error;
+      // The server already removed this account and private tokens. Do not
+      // trap the user in a deleted session if native token revocation is offline.
+      // Keep the local registration so the next login retries revocation.
+      console.warn("[push] Device token revocation will retry on next sign-in after account deletion");
+    }
+  }
+  try {
+    await auth().signOut();
+  } catch (error) {
+    if (uid) resumePushSession(uid);
+    throw error;
+  }
   try {
     await GoogleSignin.signOut();
   } catch {
     // Not signed in with Google — ignore.
   }
-  await auth().signOut();
 }
 
 // ── Guest login + upgrade (P5) ───────────────────────────────────────
@@ -121,8 +138,14 @@ async function linkOrSwitch(
       code === "auth/email-already-in-use"
     ) {
       // Pre-existing account — sign into it (no merge; guest data orphaned).
-      const res = await auth().signInWithCredential(credential);
-      return { status: "switched", uid: res.user.uid };
+      await detachPushToken(current.uid);
+      try {
+        const res = await auth().signInWithCredential(credential);
+        return { status: "switched", uid: res.user.uid };
+      } catch (error) {
+        resumePushSession(current.uid);
+        throw error;
+      }
     }
     throw e;
   }
@@ -137,3 +160,10 @@ export function upgradeGuestWithApple(): Promise<GuestUpgradeResult> {
 }
 
 type FirebaseAuthCredential = ReturnType<typeof auth.GoogleAuthProvider.credential>;
+
+async function signInCredential(credential: FirebaseAuthCredential) {
+  const uid = auth().currentUser?.uid;
+  if (uid) await detachPushToken(uid);
+  try { return await auth().signInWithCredential(credential); }
+  catch (error) { if (uid) resumePushSession(uid); throw error; }
+}

@@ -53,7 +53,7 @@ export function DeleteAccountSection() {
     setError(null);
     try {
       await deleteUserAccount(confirmName.trim());
-      await signOut();
+      await signOut({ accountDeleted: true });
       // root navigator redirects to sign-in once auth clears
     } catch (e) {
       setDeleting(false);
