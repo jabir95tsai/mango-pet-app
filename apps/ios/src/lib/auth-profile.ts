@@ -18,9 +18,10 @@ export async function ensureUserProfile(user: FirebaseAuthTypes.User): Promise<v
   const appleName = appleId ? await AsyncStorage.getItem(`apple-name:${appleId}`) : null;
   const name = user.displayName?.trim() || provider?.displayName?.trim() || appleName || "";
   const photoURL = user.photoURL || provider?.photoURL || null;
-  const desiredName = isGuest ? (activeLocale === "en" ? "Guest" : "訪客") : name;
+  const desiredName = isGuest ? (activeLocale === "en" ? "Guest" : "訪客") : (name || (activeLocale === "en" ? "Friend" : "朋友"));
   await firestore().runTransaction(async (tx) => {
     const snapshot = await tx.get(profile);
+    const privateSnapshot = await tx.get(contact);
     assertCurrent();
     const previous = snapshot.data() ?? {};
     const upgrading = previous.isGuest === true && !isGuest;
@@ -46,7 +47,10 @@ export async function ensureUserProfile(user: FirebaseAuthTypes.User): Promise<v
     tx.set(profile, data, { merge: true });
     // Never reset tokens when authenticating another device or linking a guest.
     const privatePatch: Record<string, unknown> = {};
-    if (user.email || typeof previous.email === "string") privatePatch.email = user.email || previous.email;
+    const privateEmail = privateSnapshot.data()?.email;
+    const email = [user.email, privateEmail, previous.email]
+      .find((value) => typeof value === "string" && value.trim().length > 0);
+    if (email) privatePatch.email = email;
     const legacyTokens = Array.isArray(previous.fcmTokens)
       ? previous.fcmTokens.filter((token: unknown) => typeof token === "string" && token.length > 0) : [];
     if (legacyTokens.length) privatePatch.fcmTokens = firestore.FieldValue.arrayUnion(...legacyTokens);
