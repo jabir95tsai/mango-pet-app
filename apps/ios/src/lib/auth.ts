@@ -6,6 +6,7 @@ import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { auth } from "@/lib/firebase";
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "@/lib/config";
@@ -43,26 +44,7 @@ export async function isAppleSignInAvailable(): Promise<boolean> {
 
 /** Apple → Firebase credential sign-in with a hashed nonce (replay defense). */
 export async function signInWithApple(): Promise<string> {
-  // Firebase requires the SHA-256 hash of the nonce in the Apple request and
-  // the raw nonce in the credential it builds.
-  const rawNonce = Crypto.randomUUID();
-  const hashedNonce = await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    rawNonce,
-  );
-
-  const appleCredential = await AppleAuthentication.signInAsync({
-    requestedScopes: [
-      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-      AppleAuthentication.AppleAuthenticationScope.EMAIL,
-    ],
-    nonce: hashedNonce,
-  });
-
-  const { identityToken } = appleCredential;
-  if (!identityToken) throw new Error("Apple sign-in returned no identityToken");
-
-  const credential = auth.AppleAuthProvider.credential(identityToken, rawNonce);
+  const credential = await buildAppleCredential();
   const result = await auth().signInWithCredential(credential);
   return result.user.uid;
 }
@@ -117,6 +99,10 @@ async function buildAppleCredential() {
   });
   const { identityToken } = appleCredential;
   if (!identityToken) throw new Error("Apple sign-in returned no identityToken");
+  const fullName = [appleCredential.fullName?.givenName, appleCredential.fullName?.familyName]
+    .filter(Boolean).join(" ").trim();
+  // Apple supplies this once. Retain it across a failed Firebase/profile write.
+  if (fullName) await AsyncStorage.setItem(`apple-name:${appleCredential.user}`, fullName);
   return auth.AppleAuthProvider.credential(identityToken, rawNonce);
 }
 

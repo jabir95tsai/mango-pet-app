@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -11,9 +11,10 @@ import { FamilyProvider } from "@/state/family-context";
 import { resolveCurrentFamilyId } from "@/lib/walk-data";
 import { ONBOARDED_KEY } from "@/lib/onboarding";
 import { colors } from "@/theme/theme";
+import { t, activeLocale } from "@/lib/i18n";
 
 function RootNavigator() {
-  const { user, initializing } = useAuth();
+  const { user, initializing, profileError, retryProfile } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   // Guards the once-per-sign-in landing decision so we don't loop while the
@@ -21,7 +22,7 @@ function RootNavigator() {
   const decidedRef = useRef(false);
 
   useEffect(() => {
-    if (initializing) return;
+    if (initializing || profileError) return;
     const inAuthGroup = segments[0] === "(auth)";
     if (!user) {
       decidedRef.current = false;
@@ -42,7 +43,16 @@ function RootNavigator() {
         router.replace(!flag && !fam ? "/onboarding" : "/(tabs)/walks");
       })();
     }
-  }, [user, initializing, segments, router]);
+  }, [user, initializing, profileError, segments, router]);
+
+  if (profileError) {
+    return <View style={styles.splash}>
+      <Text style={{ color: colors.ink }}>{activeLocale === "en" ? "Could not prepare your profile. Check your connection and try again." : "無法準備帳號資料，請確認連線後重試。"}</Text>
+      <Pressable accessibilityRole="button" onPress={retryProfile} style={{ padding: 20 }}>
+        <Text style={{ color: colors.brandDeep }}>{t("Common.retry")}</Text>
+      </Pressable>
+    </View>;
+  }
 
   if (initializing) {
     return (
