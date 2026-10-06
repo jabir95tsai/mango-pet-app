@@ -73,7 +73,9 @@ async function register(uid: string, enable = false): Promise<PushStatus> {
     if (!currentProfile.exists) throw new Error("Profile is not ready");
     // Another device may have switched the global preference off since getToken.
     if (!enable && currentProfile.data()?.pushPrefs?.globalDisabled) return false;
-    const tokens: string[] = (snapshot.data()?.fcmTokens ?? []).filter((item: unknown) => typeof item === "string");
+    const storedTokens: unknown = snapshot.data()?.fcmTokens;
+    const tokens: string[] = Array.isArray(storedTokens)
+      ? storedTokens.filter((item: unknown): item is string => typeof item === "string" && item.length > 0) : [];
     const current = tokens.filter((item) => !previous || previous.uid !== uid || (item !== previous.token && item !== previous.previousToken));
     tx.set(contactRef(uid), { fcmTokens: [...new Set([...current, token])] }, { merge: true });
     if (enable) tx.update(userRef(uid), { "pushPrefs.globalDisabled": false });
