@@ -195,13 +195,17 @@ export async function deleteUnsharedAccountStorage(db: Firestore, bucket: Bucket
 
 /** Parent absence is rechecked in each deletion transaction. A delayed event
  * must not delete a recreated post's new children or its new photo prefix. */
-export async function cleanupDeletedPost(db: Firestore, bucket: Bucket, postId: string, authorUid: unknown, deletePhotos = true) {
+export async function cleanupDeletedPost(
+  db: Firestore, bucket: Bucket, postId: string, authorUid: unknown, deletePhotos = true,
+  checkLease?: (tx?: FirebaseFirestore.Transaction) => Promise<void>,
+) {
   if (!validSegment(postId)) throw new Error("Invalid post ID");
   const postRef = db.doc(`posts/${postId}`);
   const result = { commentsDeleted: 0, reactionsDeleted: 0, storagePhotosDeleted: 0, skippedRecreated: false };
   for (const name of ["comments", "reactions"] as const) {
     while (true) {
       const count = await db.runTransaction(async (tx) => {
+        await checkLease?.(tx);
         if ((await tx.get(postRef)).exists) return -1;
         const children = await tx.get(postRef.collection(name).limit(350));
         for (const child of children.docs) tx.delete(child.ref);
@@ -218,6 +222,7 @@ export async function cleanupDeletedPost(db: Firestore, bucket: Bucket, postId: 
     result.storagePhotosDeleted = await deleteStoragePrefix(db, bucket, `users/${authorUid}/posts/${postId}/`, absent);
   }
   await db.runTransaction(async (tx) => {
+    await checkLease?.(tx);
     if (!(await tx.get(postRef)).exists) tx.delete(db.doc(`postInteractionThrottle/${postId}`));
   });
   result.skippedRecreated = !(await absent());
@@ -332,12 +337,16 @@ export async function finalizeAccountDeletion(
 
 /** Persist post cleanup work before deleting parents, so account retries can
  * finish even when a parent has already disappeared from the author query. */
-export async function deleteAccountPosts(db: Firestore, bucket: Bucket, uid: string, checkLease?: () => Promise<void>) {
+export async function deleteAccountPosts(
+  db: Firestore, bucket: Bucket, uid: string,
+  checkLease?: (tx?: FirebaseFirestore.Transaction) => Promise<void>,
+) {
   const queue = db.collection(`deletedAccounts/${uid}/posts`);
   const posts = await db.collection("posts").where("authorUid", "==", uid).get();
   for (const post of posts.docs) {
     await checkLease?.();
     await db.runTransaction(async (tx) => {
+      await checkLease?.(tx);
       const current = await tx.get(post.ref);
       if (!current.exists || current.data()?.authorUid !== uid) return;
       tx.set(queue.doc(post.id), { postId: post.id, authorUid: uid });
@@ -351,9 +360,10 @@ export async function deleteAccountPosts(db: Firestore, bucket: Bucket, uid: str
     // IDs/owner come from the verified server query, never a client profile.
     // Account cleanup performs one protected Storage sweep after all Firestore
     // records are removed, instead of rescanning every shared reference per post.
-    const result = await cleanupDeletedPost(db, bucket, item.id, uid, false);
+    const result = await cleanupDeletedPost(db, bucket, item.id, uid, false, checkLease);
     if (result.skippedRecreated) {
       const retained = await db.runTransaction(async (tx) => {
+        await checkLease?.(tx);
         const replacement = await tx.get(db.doc(`posts/${item.id}`));
         if (!replacement.exists || replacement.data()?.authorUid === uid) return false;
         tx.delete(item.ref);
@@ -362,7 +372,10 @@ export async function deleteAccountPosts(db: Firestore, bucket: Bucket, uid: str
       if (retained) continue; // Another owner's recreated ID is outside this cascade.
       throw new Error("Post recreated during account deletion; retry required");
     }
-    await item.ref.delete();
+    await db.runTransaction(async (tx) => {
+      await checkLease?.(tx);
+      tx.delete(item.ref);
+    });
     deleted++;
   }
   return deleted;

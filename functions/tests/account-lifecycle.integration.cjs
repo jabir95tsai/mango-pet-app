@@ -321,3 +321,54 @@ test('account storage excludes only its deleting public profile from the live-re
   assert.equal(await fileExists(own), false);
   assert.equal(await fileExists(shared), true);
 });
+
+test('post enqueue checks lease inside its mutation transaction after an outside-check race', async () => {
+  const uid = 'life-enqueue-fence', postId = 'life-enqueue-fence-post';
+  await db.doc(`users/${uid}`).set({ displayName: 'Fence' });
+  const lease = await lifecycle.beginAccountDeletion(db, uid, 'Fence');
+  await db.doc(`posts/${postId}`).set({ authorUid: uid });
+  let interleaved = false;
+  const racedDb = {
+    collection: db.collection.bind(db), doc: db.doc.bind(db),
+    runTransaction: async (...args) => {
+      if (!interleaved) {
+        interleaved = true;
+        // The old worker passed its non-transaction check; a successor has
+        // now completed before this delayed enqueue transaction starts.
+        await db.doc(`deletedAccounts/${uid}`).update({ state: 'complete', leaseId: 'successor' });
+      }
+      return db.runTransaction(...args);
+    },
+  };
+  const checkLease = (tx) => lifecycle.checkAccountDeletionLease(db, uid, lease.leaseId, tx);
+  await assert.rejects(lifecycle.deleteAccountPosts(racedDb, bucket, uid, checkLease), { code: 'aborted' });
+  assert.equal(interleaved, true);
+  assert.equal(await exists(`posts/${postId}`), true);
+  assert.equal(await exists(`deletedAccounts/${uid}/posts/${postId}`), false);
+});
+
+test('post child cleanup and queue completion reject lease takeover in their own transactions', async () => {
+  for (const [suffix, raceTransaction] of [['child', 1], ['queue', 4], ['foreign', 2]]) {
+    const uid = `life-queue-fence-${suffix}`, postId = `${uid}-post`;
+    await db.doc(`users/${uid}`).set({ displayName: 'Fence' });
+    const lease = await lifecycle.beginAccountDeletion(db, uid, 'Fence');
+    await db.doc(`deletedAccounts/${uid}/posts/${postId}`).set({ authorUid: uid, postId });
+    await db.doc(`posts/${postId}/comments/old`).set({ authorUid: uid });
+    if (suffix === 'foreign') await db.doc(`posts/${postId}`).set({ authorUid: 'peer' });
+    let transactions = 0;
+    const racedDb = {
+      collection: db.collection.bind(db), doc: db.doc.bind(db),
+      runTransaction: async (...args) => {
+        if (++transactions === raceTransaction) {
+          await db.doc(`deletedAccounts/${uid}`).update({ leaseId: 'successor' });
+        }
+        return db.runTransaction(...args);
+      },
+    };
+    const checkLease = (tx) => lifecycle.checkAccountDeletionLease(db, uid, lease.leaseId, tx);
+    await assert.rejects(lifecycle.deleteAccountPosts(racedDb, bucket, uid, checkLease), { code: 'aborted' });
+    assert.equal(transactions, raceTransaction);
+    assert.equal(await exists(`deletedAccounts/${uid}/posts/${postId}`), true);
+    assert.equal(await exists(`posts/${postId}/comments/old`), suffix !== 'queue');
+  }
+});

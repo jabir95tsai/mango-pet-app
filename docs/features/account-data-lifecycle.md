@@ -38,6 +38,8 @@
 
 `onPostDeletedCleanup` 接既有 Web／iOS 的 parent delete，保留既有 client API。重送時逐批交易確認父文件不存在才清 comments／reactions；檔案清理前也確認 parent 不存在。若同 ID 已被重建，保留新 parent、children、photos。帳號 queue 遇到其他 owner 重建的同 ID，交易確認後移除舊待清項，不會永久卡住刪帳；檔案仍保守保留。
 
+帳號路徑的 queue 建立／移除、post parent 刪除、children 與 throttle 清理，全部在各自的 mutation transaction 讀同一 checkpoint lease。交易外的 check 只用來提早中止，不能當寫入授權；過期 worker 在新 worker 接手／完成後不得補寫 queue。
+
 留言 create／delete handler 都以存活留言集合交易重算 `commentCount`，防止重送雙扣與先 delete 後收到 create 的回加。推播段未變。delete handler 開 retry；create handler 維持原 retry 設定，推播去重不屬本次。
 
 ## Storage：保護共用資料
@@ -67,6 +69,8 @@ Storage rules 拆 create/update 與 delete：上傳保留 `<10 MiB` 及 `image/*
 測試涵蓋：授權及確認拒絕、並行 lease、缺 profile／空姓名、完整 cascade 與 shared 保留、Auth／Storage 故障、server 自動續跑、post queue 中斷與他人重建、重送／晚到留言、反應／評論並行、late achievements、物件覆寫、新 parent、解碼引用／未知路徑、Storage 實際正負 rules。Storage emulator 不實作 GCS `ifGenerationMatch`，因此本地覆寫測試驗到額外 metadata refresh guard；正式 GCS 的原子 precondition 未在 production 做破壞性驗證。
 
 本分支驗證：Functions build／noEmit、Web typecheck、iOS noEmit 全通過；Firebase CLI 15.32.1、Firestore emulator 1.22.0 的乾淨完整回歸 **58/58 PASS**（36 個既有安全測試＋22 個 lifecycle／Storage 測試）。各角色尚未整合的 marker rules／Admin producer gates 要由 root 再跑合併後回歸。
+
+追加 post queue lease 交易防護後，Functions build 通過；乾淨三服務 emulator 的 account lifecycle 組 **20/20 PASS**，包含 enqueue、children、一般 queue 移除及 foreign-recreated queue 移除前的 lease takeover。此追加驗證未重跑其他未變更的安全／Storage rules 組。
 
 與 root 的 marker rules／Admin producer gates 一起整合，先準備最小 IAM、rules 與新增 comments index（確認 READY），再部署 worker 與 producers，最後開啟新刪帳 callable。沒有 push、deploy 或正式資料 mutation 於此提交執行。
 

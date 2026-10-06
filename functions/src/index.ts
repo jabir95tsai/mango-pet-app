@@ -2595,7 +2595,7 @@ export const deleteUserAccount = onCall(
 /** Only a server-created confirmed marker authorizes this resumable worker. */
 async function runAccountDeletion(uid: string, leaseId: string) {
   const userRef = db.doc(`users/${uid}`);
-  const checkLease = () => checkAccountDeletionLease(db, uid, leaseId);
+  const checkLease = (tx?: FirebaseFirestore.Transaction) => checkAccountDeletionLease(db, uid, leaseId, tx);
   const deleteAccountBatch = async <T>(items: T[], mutator: (tx: FirebaseFirestore.Transaction, item: T) => void) => {
     for (let i = 0; i < items.length; i += BATCH_SIZE) {
       await db.runTransaction(async (tx) => {
