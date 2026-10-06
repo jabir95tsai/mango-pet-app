@@ -33,6 +33,7 @@ import {
   type UserAccum,
   type DogAccum,
 } from "./leaderboard-helpers";
+import { writeActiveLeaderboardEntries, syncExistingDogEntryVisibility, type LeaderboardWrite } from "./leaderboard-write";
 import {
   createMutualFriendship,
   pairId,
@@ -341,13 +342,11 @@ async function writeLeaderboardWithRanks(
   // 3. Same write pattern as before, plus the `previousRank` field
   //    (this run's rank — next run reads it back as "previous").
   const currentUids = new Set(accums.keys());
-  const batch = db.batch();
-  for (const doc of existing.docs) {
-    if (!currentUids.has(doc.id)) batch.delete(doc.ref);
-  }
+  const removals = existing.docs.filter((doc) => !currentUids.has(doc.id)).map((doc) => doc.ref);
+  const writes: LeaderboardWrite[] = [];
   for (const a of accums.values()) {
     const rank = newRanks.get(a.uid) ?? 0;
-    batch.set(collection.doc(a.uid), {
+    writes.push({ ref: collection.doc(a.uid), ownerUid: a.uid, data: {
       uid: a.uid,
       displayName: a.displayName,
       photoURL: a.photoURL,
@@ -363,9 +362,9 @@ async function writeLeaderboardWithRanks(
       // compares this across snapshots to detect a fresh write.
       lastUpdatedAt: now,
       previousRank: rank,
-    });
+    } });
   }
-  await batch.commit();
+  await writeActiveLeaderboardEntries(db, writes, removals);
 
   return { oldPreviousRanks, newRanks };
 }
@@ -865,10 +864,11 @@ async function writeSingleLeaderboardEntry(
   a: UserAccum,
 ): Promise<void> {
   const now = Timestamp.now();
-  await db
-    .doc(`leaderboards/${periodKey}/entries/${a.uid}`)
-    .set(
-      {
+  await writeActiveLeaderboardEntries(db, [{
+    ref: db.doc(`leaderboards/${periodKey}/entries/${a.uid}`),
+    ownerUid: a.uid,
+    merge: true,
+    data: {
         uid: a.uid,
         displayName: a.displayName,
         photoURL: a.photoURL,
@@ -881,8 +881,7 @@ async function writeSingleLeaderboardEntry(
         updatedAt: now,
         lastUpdatedAt: now,
       },
-      { merge: true },
-    );
+  }]);
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -942,17 +941,12 @@ async function writeDogLeaderboard(
   sortedPetIds.forEach((id, i) => newRanks.set(id, i + 1));
 
   const currentIds = new Set(accums.keys());
-  const batch = db.batch();
-  for (const doc of existing.docs) {
-    if (!currentIds.has(doc.id)) batch.delete(doc.ref);
-  }
-  for (const a of accums.values()) {
-    batch.set(
-      collection.doc(a.petId),
-      dogEntryData(a, now, newRanks.get(a.petId) ?? 0),
-    );
-  }
-  await batch.commit();
+  const removals = existing.docs.filter((doc) => !currentIds.has(doc.id)).map((doc) => doc.ref);
+  const writes = [...accums.values()].map((a) => ({
+    ref: collection.doc(a.petId), ownerUid: a.ownerUid,
+    data: dogEntryData(a, now, newRanks.get(a.petId) ?? 0),
+  }));
+  await writeActiveLeaderboardEntries(db, writes, removals);
 }
 
 /** Single-entry dog writer for the realtime triggers — `merge:true` so a
@@ -961,9 +955,10 @@ async function writeSingleDogLeaderboardEntry(
   periodKey: string,
   a: DogAccum,
 ): Promise<void> {
-  await db
-    .doc(`dogLeaderboards/${periodKey}/entries/${a.petId}`)
-    .set(dogEntryData(a, Timestamp.now()), { merge: true });
+  await writeActiveLeaderboardEntries(db, [{
+    ref: db.doc(`dogLeaderboards/${periodKey}/entries/${a.petId}`), ownerUid: a.ownerUid,
+    data: dogEntryData(a, Timestamp.now()), merge: true,
+  }]);
 }
 
 async function deleteDogLeaderboardEntryIfPresent(
@@ -1137,24 +1132,9 @@ export const syncDogEntryVisibility = onDocumentWritten(
     if (snap.empty) return;
 
     const now = Timestamp.now();
-    // Batch in chunks of 450 (< 500 write cap) for users with many dogs
-    // across many periods.
-    let batch = db.batch();
-    let n = 0;
-    for (const doc of snap.docs) {
-      batch.set(
-        doc.ref,
-        { ownerVisibility: afterV, lastUpdatedAt: now },
-        { merge: true },
-      );
-      if (++n % 450 === 0) {
-        await batch.commit();
-        batch = db.batch();
-      }
-    }
-    if (n % 450 !== 0) await batch.commit();
+    const updated = await syncExistingDogEntryVisibility(db, uid, snap.docs.map((doc) => doc.ref), afterV, now);
     logger.info(
-      `syncDogEntryVisibility: uid=${uid} ${beforeV}→${afterV} entries=${snap.size}`,
+      `syncDogEntryVisibility: uid=${uid} ${beforeV}→${afterV} entries=${updated}`,
     );
   },
 );
