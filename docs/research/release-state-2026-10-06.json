@@ -1,0 +1,404 @@
+{
+  "checkedAt": "2026-10-06T02:22:34.048Z",
+  "project": "mango-pet-app",
+  "deployedFrom": "f166d6b13678c1ed1741ecb1c7618e6df6a2c66d",
+  "rules": [
+    {
+      "name": "projects/mango-pet-app/releases/firebase.storage/mango-pet-app.firebasestorage.app",
+      "updatedAt": "2026-10-06T02:12:45.785591Z",
+      "ruleset": "projects/mango-pet-app/rulesets/96cbe881-35ce-43be-a0d4-be08c0501592",
+      "sha256": "1300adebcda0fafcc349ad62d5d9d3ebbcceb1bdc7eb6a8456fde3b4a5696737",
+      "matchesLocal": true
+    },
+    {
+      "name": "projects/mango-pet-app/releases/cloud.firestore",
+      "updatedAt": "2026-10-06T02:12:47.202814Z",
+      "ruleset": "projects/mango-pet-app/rulesets/81d9ec84-a65f-4679-a55d-208f219e0e1a",
+      "sha256": "ce1bfe59f7d6605190af96423b657a2d8eaec8b1a326dddd6352ee8013ff2efa",
+      "matchesLocal": true
+    }
+  ],
+  "functions": [
+    {
+      "name": "acceptFriendRequest",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:11.914102665Z",
+      "runtime": "nodejs22",
+      "revision": "acceptfriendrequest-00003-rov",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "aggregateLeaderboards",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:30.422290092Z",
+      "runtime": "nodejs22",
+      "revision": "aggregateleaderboards-00013-baq",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "autoFriendFamilyMembers",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:32.543204900Z",
+      "runtime": "nodejs22",
+      "revision": "autofriendfamilymembers-00002-fug",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "backfillAchievements",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:30.784886899Z",
+      "runtime": "nodejs22",
+      "revision": "backfillachievements-00002-zex",
+      "timeoutSeconds": 540,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "cleanupLegacyPaths",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:32.464889194Z",
+      "runtime": "nodejs22",
+      "revision": "cleanuplegacypaths-00002-xas",
+      "timeoutSeconds": 540,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "createFamily",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:12.296491577Z",
+      "runtime": "nodejs22",
+      "revision": "createfamily-00004-xem",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "deleteUserAccount",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:20:30.117285501Z",
+      "runtime": "nodejs22",
+      "revision": "deleteuseraccount-00004-pav",
+      "timeoutSeconds": 300,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "eveningWalkReminder",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:37.089204972Z",
+      "runtime": "nodejs22",
+      "revision": "eveningwalkreminder-00004-sus",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "exportUserData",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:32.068538905Z",
+      "runtime": "nodejs22",
+      "revision": "exportuserdata-00004-zaw",
+      "timeoutSeconds": 120,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "familyGoalMilestone",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:33.072393020Z",
+      "runtime": "nodejs22",
+      "revision": "familygoalmilestone-00004-hok",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "importPersonalToFamily",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:21.312180959Z",
+      "runtime": "nodejs22",
+      "revision": "importpersonaltofamily-00002-fos",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "joinFamilyByCode",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:13.600612644Z",
+      "runtime": "nodejs22",
+      "revision": "joinfamilybycode-00005-cex",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "leaveFamily",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:12.774434646Z",
+      "runtime": "nodejs22",
+      "revision": "leavefamily-00002-neh",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "mergeAndImportToFamily",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:36.917501957Z",
+      "runtime": "nodejs22",
+      "revision": "mergeandimporttofamily-00002-zor",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "onAccountDeletionProgress",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:52.537804274Z",
+      "runtime": "nodejs22",
+      "revision": "onaccountdeletionprogress-00001-leg",
+      "timeoutSeconds": 300,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_RETRY"
+    },
+    {
+      "name": "onCommentCreated",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:38.818596683Z",
+      "runtime": "nodejs22",
+      "revision": "oncommentcreated-00003-loq",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "onCommentDeleted",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:38.217576007Z",
+      "runtime": "nodejs22",
+      "revision": "oncommentdeleted-00002-roh",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_RETRY"
+    },
+    {
+      "name": "onPetCreatedAchievements",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:38.021363975Z",
+      "runtime": "nodejs22",
+      "revision": "onpetcreatedachievements-00002-loy",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "onPostCreatedAchievements",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:29.485374264Z",
+      "runtime": "nodejs22",
+      "revision": "onpostcreatedachievements-00002-ces",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "onPostDeletedCleanup",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:46.175127189Z",
+      "runtime": "nodejs22",
+      "revision": "onpostdeletedcleanup-00001-log",
+      "timeoutSeconds": 300,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_RETRY"
+    },
+    {
+      "name": "onReactionCreated",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:27.219280846Z",
+      "runtime": "nodejs22",
+      "revision": "onreactioncreated-00004-wov",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "onWalkCreatedAchievements",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:24.816611584Z",
+      "runtime": "nodejs22",
+      "revision": "onwalkcreatedachievements-00002-num",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "purgeMyOrphanWalks",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:12.139617499Z",
+      "runtime": "nodejs22",
+      "revision": "purgemyorphanwalks-00002-qus",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "recomputeDogLeaderboards",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:33.066110386Z",
+      "runtime": "nodejs22",
+      "revision": "recomputedogleaderboards-00004-tof",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "recomputeDogLeaderboardsOnDelete",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:23.769205922Z",
+      "runtime": "nodejs22",
+      "revision": "recomputedogleaderboardsondelete-00004-zar",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "recomputeWalkerLeaderboards",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:25.491578245Z",
+      "runtime": "nodejs22",
+      "revision": "recomputewalkerleaderboards-00005-bov",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "recomputeWalkerLeaderboardsOnDelete",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:25.589996658Z",
+      "runtime": "nodejs22",
+      "revision": "recomputewalkerleaderboardsondelete-00005-zah",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "regenerateInviteCode",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:13.007024347Z",
+      "runtime": "nodejs22",
+      "revision": "regenerateinvitecode-00003-ses",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "removeFamilyMember",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:10.955513782Z",
+      "runtime": "nodejs22",
+      "revision": "removefamilymember-00002-kol",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "removeFriend",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:11.743247515Z",
+      "runtime": "nodejs22",
+      "revision": "removefriend-00002-wup",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "scanReminders",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:14.412627559Z",
+      "runtime": "nodejs22",
+      "revision": "scanreminders-00004-bap",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "sendTestPush",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:11.582922735Z",
+      "runtime": "nodejs22",
+      "revision": "sendtestpush-00003-xog",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "streakBreakWarning",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:38.655918038Z",
+      "runtime": "nodejs22",
+      "revision": "streakbreakwarning-00003-sej",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "syncDogEntryVisibility",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-06T02:18:29.099766647Z",
+      "runtime": "nodejs22",
+      "revision": "syncdogentryvisibility-00002-qar",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    }
+  ],
+  "commentsAuthorIndex": {
+    "indexes": [
+      {
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "authorUid",
+            "order": "ASCENDING"
+          }
+        ],
+        "state": "READY"
+      },
+      {
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "authorUid",
+            "order": "DESCENDING"
+          }
+        ],
+        "state": "READY"
+      },
+      {
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "authorUid",
+            "arrayConfig": "CONTAINS"
+          }
+        ],
+        "state": "READY"
+      },
+      {
+        "queryScope": "COLLECTION_GROUP",
+        "fields": [
+          {
+            "fieldPath": "authorUid",
+            "order": "ASCENDING"
+          }
+        ],
+        "state": "READY"
+      }
+    ],
+    "ancestorField": "projects/mango-pet-app/databases/(default)/collectionGroups/__default__/fields/*"
+  },
+  "tests": {
+    "emulator": 116,
+    "productionCleanup": "PASS",
+    "productionBehaviorGroups": 7,
+    "completedFixtureTombstonesRetained": 3,
+    "platformHandlers": 52
+  },
+  "errorLogs": {
+    "count": 3,
+    "hasMore": false,
+    "services": [
+      "onaccountdeletionprogress"
+    ]
+  },
+  "errorClassification": "Three deletion-progress HTTP 500s matched Account deletion is already running; all fixture checkpoints completed."
+}

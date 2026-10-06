@@ -30,7 +30,9 @@ The six integration tests adapt native Firestore calls to the Web SDK and a fres
 emulator. They cover bootstrap, atomic legacy migration, token add/remove, private
 contact isolation, rejected public PII writes, and the R05 deletion marker. The
 native permission/token provider remains mocked. The tests require integrated
-R03/R05 rules and refuse a production project or a different port.
+R03/R05 rules and refuse production project IDs or non-loopback hosts. The
+standalone project below and the combined `demo-mango-security` release harness
+are accepted; see `functions/tests/README.md` for the combined run.
 
 Create a local ignored config and copy the rules under test:
 

@@ -37,6 +37,9 @@ Implementation contracts and boundaries: [contact](../features/private-contact-h
   and Firebase CLI 15.32.1, using `demo-mango-security` and
   `firebase.lifecycle-tests.json`.
 - **52/52** additional module/React-handler regressions pass: iOS 28, Web 24.
+- Main checkout fast-forwarded to `f166d6b`; `npm run build` passed including
+  TypeScript, all 22 static generation jobs and standalone output normalization.
+  The three unrelated document files were SHA-256 checked before/after merge.
 - Expected denied-write logs and synthetic retry errors are negative tests,
   not release failures. Test commands are in `functions/tests/README.md`.
 
@@ -58,8 +61,57 @@ Storage cross-service rules require the Firebase Storage service agent's minimum
 `roles/firebaserules.firestoreServiceAgent` role. Deployment order: rules and
 indices, affected producers/workers, deleteUserAccount last, then Web rollout.
 
-Deployment and production smoke are **pending** at this commit; this document
-will be updated with actual results after verification.
+## Backend production verification
+
+2026-10-06 02:12–02:22 UTC (10:12–10:22 Asia/Taipei):
+
+- Firestore ruleset `81d9ec84-a65f-4679-a55d-208f219e0e1a`; Storage ruleset
+  `96cbe881-35ce-43be-a0d4-be08c0501592`. Both downloaded sources match local
+  rules after newline normalization. Exact hashes and revisions are in
+  [the production snapshot](release-state-2026-10-06.json).
+- Explicitly added only `roles/firebaserules.firestoreServiceAgent` to the
+  Firebase Storage service agent, preserving existing IAM bindings/conditions
+  and checking the policy etag. The noninteractive CLI had skipped that grant;
+  a read-only follow-up confirmed it, and real client uploads/deletes succeeded.
+- All four declared comments.authorUid index modes reached **READY** before
+  deploying consumers. Existing composite indices were preserved.
+- **34/34 affected Functions ACTIVE**, Node 22, with all traffic on their new
+  revisions. `deleteUserAccount` was deployed last. The three retrying handlers
+  are `onAccountDeletionProgress`, `onPostDeletedCleanup`, `onCommentDeleted`.
+  Two long-running admin services had no request logs since 02:00 UTC; normal
+  producers had passed their old 60-second execution window before smoke.
+- **7 production behavior groups + exact fixture cleanup PASS** using actual
+  anonymous Auth, client SDK rules, callable HTTP and Eventarc delivery:
+
+| Behavior | Observed result |
+| --- | --- |
+| Public/private contact | Public email/token writes denied; owner private writes work; another account cannot read/write them |
+| Storage ownership | Owner image upload/delete succeeds; another owner cannot delete |
+| Post delete trigger | Descendants, throttle and unshared canonical photo removed; peer's live photo reference retained |
+| Export HTTP | Owned comments, achievements, stats and photoDownloadState present; schemaVersion remains v1 |
+| Account delete HTTP | Auth, profile descendants, quota and own comment removed; peer account and shared photo retained |
+| Cached old ID token | Profile/contact recreation, orphan-cleanup callable and upload denied |
+| Server recovery | An interrupted confirmed checkpoint completes without another client request |
+
+Fixtures were confined to three new guest identities, private posts, a pet and
+known owner Storage object names. No notifications were enabled. All fixture
+Auth identities, content, descendants and objects were removed; **three completed
+server tombstones intentionally remain** to fence late events. The production
+profile count returned to 24; public contact fields remain zero and the original
+10 private tokens remain. No real-user migration writes were necessary.
+
+One local smoke attempt stopped before creating any fixture because Admin
+Storage rejects a custom token credential. The harness switched to the Google
+Cloud Storage client with the existing CLI OAuth credentials in memory; the
+complete rerun passed. No provider or application credential setting was changed.
+
+There were **three HTTP 500 request logs** from the deletion-progress trigger
+during concurrent fixture lease ownership. The corresponding stderr entries all
+say `Account deletion is already running`; all three checkpoints reached
+`complete`. These are expected retry contention, **not a zero-error-log claim**.
+No other affected service had ERROR entries in the checked release window.
+
+Web main push / App Hosting rollout verification is pending at this checkpoint.
 
 ## Remaining boundaries
 
