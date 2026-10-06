@@ -1,0 +1,23 @@
+{
+  "scope": "R05 client mutation freeze, plus R03 public contact guard",
+  "baseline": "3c94422",
+  "result": "pass within stated scope",
+  "authorization": "Any server-owned deletedAccounts/{uid} document permanently disables that caller's previously allowed mutations.",
+  "changes": [
+    "All 34 previously allowed mutation clauses require activeAccount().",
+    "Mixed read/write and read/delete clauses split; all 86 expanded get/list conditions remain unchanged.",
+    "Friend request creation also rejects a recipient with a deletion checkpoint.",
+    "Checkpoint and nested pending work remain client-inaccessible by default deny."
+  ],
+  "verification": {
+    "fullFirestoreEmulatorSuite": "61/61 passed",
+    "newDeletionFreezeCases": "15 cases; each applicable operation first succeeds for the same account, then fails with a deleting/finalizing/complete checkpoint",
+    "independentStaticReview": "No missing mutation guard or changed read condition found"
+  },
+  "limits": [
+    "Admin SDK bypasses these rules; corresponding callable/trigger transaction guards are required.",
+    "Storage needs its own rules and the documented cross-service Firebase Storage service-agent role.",
+    "This is not a full-project authorization or schema audit and does not close unrelated backlog findings.",
+    "Local emulator evidence; production release verification recorded separately."
+  ]
+}

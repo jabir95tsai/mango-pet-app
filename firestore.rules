@@ -2,6 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // A server-only deletion checkpoint freezes mutations even while an old
+    // ID token remains valid. Keep reads unchanged for cleanup UX.
+    function activeAccount() {
+      return request.auth != null
+        && !exists(/databases/$(database)/documents/deletedAccounts/$(request.auth.uid));
+    }
+
     // Helper: is `uid` a member of `familyId`?
     function inFamily(familyId, uid) {
       return exists(/databases/$(database)/documents/families/$(familyId))
@@ -46,18 +53,19 @@ service cloud.firestore {
       // this doc is the only real protection (a client-side field filter
       // wouldn't be — the raw SDK read returns every field).
       allow read: if request.auth != null;
-      allow create: if request.auth.uid == uid
+      allow create: if activeAccount() && (request.auth.uid == uid
         && request.resource.data.uid == uid
-        && hasNoPublicContact(request.resource.data);
-      allow update: if request.auth.uid == uid
-        && hasNoPublicContact(request.resource.data);
+        && hasNoPublicContact(request.resource.data));
+      allow update: if activeAccount() && (request.auth.uid == uid
+        && hasNoPublicContact(request.resource.data));
       allow delete: if false;
 
       // ── Private contact PII (security-hardening #2) ──
       // email + fcmTokens, OWNER-ONLY. Cloud Functions read this via the
       // Admin SDK (rules bypass) to send push.
       match /private/{docId} {
-        allow read, write: if request.auth.uid == uid;
+        allow read: if request.auth.uid == uid;
+        allow write: if activeAccount() && (request.auth.uid == uid);
       }
 
       // ── Legacy paths removed 2026-05-23 ──
@@ -80,25 +88,28 @@ service cloud.firestore {
       match /friends/{friendUid} {
         allow read: if request.auth != null
           && (request.auth.uid == uid || request.auth.uid == friendUid);
-        allow write: if request.auth.uid == uid && isRealUser();
+        allow write: if activeAccount() && (request.auth.uid == uid && isRealUser());
       }
 
       match /friendRequests/{requestId} {
         allow read: if request.auth.uid == uid;
-        allow create: if isRealUser()
+        allow create: if activeAccount() && (isRealUser()
+          && !exists(/databases/$(database)/documents/deletedAccounts/$(uid))
           && request.resource.data.fromUid == request.auth.uid
-          && requestId == request.auth.uid;
-        allow delete: if request.auth.uid == uid
-          || request.auth.uid == requestId;
+          && requestId == request.auth.uid);
+        allow delete: if activeAccount() && (request.auth.uid == uid
+          || request.auth.uid == requestId);
         allow update: if false;
       }
 
       match /favoriteRestaurants/{rid} {
-        allow read, write: if request.auth.uid == uid;
+        allow read: if request.auth.uid == uid;
+        allow write: if activeAccount() && (request.auth.uid == uid);
       }
 
       match /knowledgeBookmarks/{articleId} {
-        allow read, write: if request.auth.uid == uid;
+        allow read: if request.auth.uid == uid;
+        allow write: if activeAccount() && (request.auth.uid == uid);
       }
 
       // ── Achievements / badges (gamification) ──
@@ -120,7 +131,7 @@ service cloud.firestore {
 
       match /photoDownloadState/{photoAssetId} {
         allow read: if request.auth.uid == uid;
-        allow create, update: if request.auth.uid == uid
+        allow create, update: if activeAccount() && (request.auth.uid == uid
           && request.resource.data.keys().hasOnly([
             "assetId",
             "source",
@@ -139,7 +150,7 @@ service cloud.firestore {
           && request.resource.data.sourceId is string
           && request.resource.data.urlHash is string
           && request.resource.data.downloadedAt == request.time
-          && request.resource.data.mode in ["share", "download"];
+          && request.resource.data.mode in ["share", "download"]);
         allow delete: if false;
       }
     }
@@ -219,13 +230,13 @@ service cloud.firestore {
       allow read: if resource == null
         || isPersonalPetOwner(resource.data)
         || isFamilyMember(resource.data.familyId);
-      allow create: if request.auth != null
+      allow create: if activeAccount() && (request.auth != null
         && request.resource.data.ownerUid == request.auth.uid
         && (
           request.resource.data.familyId == null
           || isFamilyMember(request.resource.data.familyId)
-        );
-      allow update: if (
+        ));
+      allow update: if activeAccount() && ((
           isPersonalPetOwner(resource.data)
           || isFamilyMember(resource.data.familyId)
         )
@@ -234,9 +245,9 @@ service cloud.firestore {
           // still personal-owned-by-self, or in a family we belong to.
           isPersonalPetOwner(request.resource.data)
           || isFamilyMember(request.resource.data.familyId)
-        );
-      allow delete: if isPersonalPetOwner(resource.data)
-        || isFamilyMember(resource.data.familyId);
+        ));
+      allow delete: if activeAccount() && (isPersonalPetOwner(resource.data)
+        || isFamilyMember(resource.data.familyId));
 
       // Health records flattened to a subcollection of pet at top-level.
       // Both reads and writes gated by the parent pet's family — or by
@@ -283,8 +294,9 @@ service cloud.firestore {
             && validData(d.type, d.data);
         }
         // Legacy records remain readable/deletable using only parent authority.
-        allow read, delete: if canAccessParent();
-        allow create: if canAccessParent()
+        allow read: if canAccessParent();
+        allow delete: if activeAccount() && (canAccessParent());
+        allow create: if activeAccount() && (canAccessParent()
           && request.resource.data.keys().hasAll([
             'petId', 'recordedByUid', 'type', 'data', 'recordedAt', 'createdAt'
           ])
@@ -293,12 +305,12 @@ service cloud.firestore {
           ])
           && request.resource.data.recordedByUid == request.auth.uid
           && request.resource.data.createdAt == request.time
-          && validContent(request.resource.data);
+          && validContent(request.resource.data));
         // Preserve legacy metadata and attribution when a family member edits content.
-        allow update: if canAccessParent()
+        allow update: if activeAccount() && (canAccessParent()
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['type', 'data', 'recordedAt', 'notes'])
-          && validContent(request.resource.data);
+          && validContent(request.resource.data));
       }
     }
 
@@ -306,34 +318,34 @@ service cloud.firestore {
       allow read: if resource == null
         || isPersonalWalkOwner(resource.data)
         || isFamilyMember(resource.data.familyId);
-      allow create: if request.auth != null
+      allow create: if activeAccount() && (request.auth != null
         && request.resource.data.walkerUid == request.auth.uid
         && (
           request.resource.data.familyId == null
           || isFamilyMember(request.resource.data.familyId)
-        );
+        ));
       // Updates allowed by the walker only (e.g., editing notes), in
       // both family and personal modes (walker == self covers both).
-      allow update: if request.auth.uid == resource.data.walkerUid;
-      allow delete: if isPersonalWalkOwner(resource.data)
-        || isFamilyMember(resource.data.familyId);
+      allow update: if activeAccount() && (request.auth.uid == resource.data.walkerUid);
+      allow delete: if activeAccount() && (isPersonalWalkOwner(resource.data)
+        || isFamilyMember(resource.data.familyId));
     }
 
     match /reminders/{reminderId} {
       allow read: if resource == null
         || isPersonalReminderOwner(resource.data)
         || isFamilyMember(resource.data.familyId);
-      allow create: if request.auth != null
+      allow create: if activeAccount() && (request.auth != null
         && request.resource.data.createdByUid == request.auth.uid
         && (
           request.resource.data.familyId == null
           || isFamilyMember(request.resource.data.familyId)
-        );
+        ));
       // Any family member can mark done / edit / delete in family mode;
       // only the owner in personal mode. The doneByUid anti-impersonation
       // guard applies in both modes — if the update touches doneByUid it
       // must be cleared or equal request.auth.uid.
-      allow update: if (
+      allow update: if activeAccount() && ((
           isPersonalReminderOwner(resource.data)
           || isFamilyMember(resource.data.familyId)
         )
@@ -341,27 +353,27 @@ service cloud.firestore {
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(["doneByUid"])
           || !("doneByUid" in request.resource.data)
           || request.resource.data.doneByUid == request.auth.uid
-        );
-      allow delete: if isPersonalReminderOwner(resource.data)
-        || isFamilyMember(resource.data.familyId);
+        ));
+      allow delete: if activeAccount() && (isPersonalReminderOwner(resource.data)
+        || isFamilyMember(resource.data.familyId));
     }
 
     match /expenses/{expenseId} {
       allow read: if resource == null
         || isPersonalExpenseOwner(resource.data)
         || isFamilyMember(resource.data.familyId);
-      allow create: if request.auth != null
+      allow create: if activeAccount() && (request.auth != null
         && request.resource.data.payerUid == request.auth.uid
         && (
           request.resource.data.familyId == null
           || isFamilyMember(request.resource.data.familyId)
-        );
+        ));
       // Payer edits their own expense in both modes. Family members
       // can delete bad entries in family mode; personal owner deletes
       // in personal mode.
-      allow update: if request.auth.uid == resource.data.payerUid;
-      allow delete: if isPersonalExpenseOwner(resource.data)
-        || isFamilyMember(resource.data.familyId);
+      allow update: if activeAccount() && (request.auth.uid == resource.data.payerUid);
+      allow delete: if activeAccount() && (isPersonalExpenseOwner(resource.data)
+        || isFamilyMember(resource.data.familyId));
     }
 
     // ── Posts (top-level, author-owned, friend/public visibility) ──
@@ -399,11 +411,11 @@ service cloud.firestore {
 
       // Guests can't post (community feature, needs a real identity).
       // Spec guest-login.md §C/§D.
-      allow create: if isRealUser()
+      allow create: if activeAccount() && (isRealUser()
         && request.resource.data.authorUid == request.auth.uid
-        && request.resource.data.visibility in ["private", "friends", "public"];
+        && request.resource.data.visibility in ["private", "friends", "public"]);
 
-      allow update: if request.auth != null && (
+      allow update: if activeAccount() && (request.auth != null && (
         (resource.data.authorUid == request.auth.uid
           // `hidden`/`reportCount` are moderation state — Admin SDK only
           // (onReportCreated), never client-writable, not even by the
@@ -418,16 +430,16 @@ service cloud.firestore {
         || (isRealUser()
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(["reactionCounts"]))
-      );
+      ));
 
-      allow delete: if request.auth.uid == resource.data.authorUid;
+      allow delete: if activeAccount() && (request.auth.uid == resource.data.authorUid);
 
       // Reactions are a community action — guests can read but not write.
       // Blocked-by-the-author callers are rejected too (ugc-moderation.md).
       match /reactions/{uid} {
         allow read: if request.auth != null;
-        allow write: if request.auth.uid == uid && isRealUser()
-          && !authorBlockedMe(get(/databases/$(database)/documents/posts/$(postId)).data.authorUid);
+        allow write: if activeAccount() && (request.auth.uid == uid && isRealUser()
+          && !authorBlockedMe(get(/databases/$(database)/documents/posts/$(postId)).data.authorUid));
       }
 
       // ── Comments (feed interaction v2) ──
@@ -447,7 +459,7 @@ service cloud.firestore {
         // (mirrors COMMENT_MAX_LEN in shared-types). createdAt must be the
         // server timestamp so ordering can't be spoofed. Guests can't
         // comment (community feature). Spec guest-login.md §C.
-        allow create: if isRealUser()
+        allow create: if activeAccount() && (isRealUser()
           && request.resource.data.authorUid == request.auth.uid
           && canReadPost(parentPost())
           && request.resource.data.text is string
@@ -456,7 +468,7 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time
           // Blocked-by-the-post-author callers can't comment either
           // (ugc-moderation.md — the "can't interact with me" half).
-          && !authorBlockedMe(parentPost().authorUid);
+          && !authorBlockedMe(parentPost().authorUid));
 
         // No edits in v1 (open question #1 — PM default: not editable).
         // `hidden`/`reportCount` are Admin-SDK-only regardless (see above).
@@ -464,10 +476,10 @@ service cloud.firestore {
 
         // Comment author deletes their own; post author moderates any
         // comment on their post.
-        allow delete: if request.auth != null && (
+        allow delete: if activeAccount() && (request.auth != null && (
           request.auth.uid == resource.data.authorUid
           || request.auth.uid == parentPost().authorUid
-        );
+        ));
       }
     }
 
@@ -478,7 +490,7 @@ service cloud.firestore {
     // bumps reportCount/hidden and writes the audit doc.
     match /reports/{reportId} {
       allow read, update, delete: if false;
-      allow create: if isRealUser()
+      allow create: if activeAccount() && (isRealUser()
         && request.resource.data.reporterUid == request.auth.uid
         && request.resource.data.targetType in ["post", "comment", "user"]
         && request.resource.data.targetId is string
@@ -491,7 +503,7 @@ service cloud.firestore {
         // needs it to reach posts/{postId}/comments/{commentId}).
         && (request.resource.data.targetType != "comment"
             || (request.resource.data.postId is string
-                && request.resource.data.postId.size() > 0));
+                && request.resource.data.postId.size() > 0)));
     }
 
     match /moderationAudit/{auditId} {
@@ -510,15 +522,15 @@ service cloud.firestore {
     // ── Restaurants & reviews ──
     match /restaurants/{rid} {
       allow read: if true;
-      allow create: if request.auth != null
-        && request.resource.data.submittedByUid == request.auth.uid;
+      allow create: if activeAccount() && (request.auth != null
+        && request.resource.data.submittedByUid == request.auth.uid);
       allow update, delete: if false;
 
       match /reviews/{reviewId} {
         allow read: if true;
-        allow create: if request.auth != null
-          && request.resource.data.authorUid == request.auth.uid;
-        allow update, delete: if request.auth.uid == resource.data.authorUid;
+        allow create: if activeAccount() && (request.auth != null
+          && request.resource.data.authorUid == request.auth.uid);
+        allow update, delete: if activeAccount() && (request.auth.uid == resource.data.authorUid);
       }
     }
 
@@ -590,10 +602,9 @@ service cloud.firestore {
     }
 
     // ── deletedAccounts audit log (admin/server-only) ──
-    // Written by the deleteUserAccount callable via Admin SDK (rules
-    // bypass). No client read/write — the deleting user is gone before
-    // the doc exists, and nobody else has a legitimate reason to inspect
-    // these records from the client (admin tooling can use the console).
+    // The per-UID checkpoint is written before deletion starts. It freezes
+    // client mutations while cleanup/finalization retries. Legacy audit IDs
+    // may coexist; neither checkpoints nor pending work are client writable.
     match /deletedAccounts/{id} {
       allow read, write: if false;
     }
