@@ -43,7 +43,8 @@ P3 = 也許永遠不做的「想法」。
 
 > 新進來的條目都放這。PM session 會搬到下方分類區。
 
-- **2026-10-06 接續批次**：R03 私人 contact、R05 刪帳／貼文／Storage 生命週期與匯出、R07/R09 iOS 登入／推播、R06 草稿捨棄／重新連線恢復已完成實作；整合 emulator **116/116**、平台 handler **52/52** 通過。正式發布／驗證狀態以[本次發布紀錄](../research/release-validation-2026-10-06.md)為準；iOS 仍須下一次 App build，APNs 與真實 GPS／Safari／PWA 未實機驗收。
+- **2026-10-06 接續批次已發布**：R03 私人 contact、R05 刪帳／貼文／Storage 生命週期與匯出、R07/R09 iOS 登入／推播、R06 草稿捨棄／重新連線恢復已合併並 push。整合 emulator **116/116**、平台 handler **52/52**，正式 **7 組行為 + 清理**全數通過；rules／索引／34 支 Functions 已部署，Web `106e898` 接收 100% 流量。證據見[本次發布紀錄](../research/release-validation-2026-10-06.md)。iOS 仍須下一次 App build；APNs 與真實 GPS／Safari／PWA 未實機驗收。共享／未知 Storage 檔案保守保留；多帳號濫用、R08/R11/R15、R19 CI 仍待後續。active lease 的預期重試日誌需按 checkpoint 是否完成判讀。
+- **2026-10-08 排程後續修補**：複查較長時間的正式日誌，發現部署前已存在的 `walks.startedAt` 群組索引缺漏與非法 petId 中斷狗榜。已補索引及計分／即時 trigger 防呆，9/9 回歸通過；部署證據與仍待觀察的正常排程結果見[後續紀錄](../research/release-validation-2026-10-08.md)。未刪除該既有異常資料，不代表 R15 完整父寵物授權已完成。
 
 _2026-05-29 PWA PM session 已清空一輪：原 Inbox 10 條全 triage 完 — 4 條 SHIPPED/RESOLVED 收進「已處理（audit trail）」、1 條 doc-accuracy 當場修掉、2 條升到對應角色待接、3 條(QR scanner / B4 dormant / settings onboarding link)歸 Deferred。下一個角色 session 新發現的事丟這裡。_
 

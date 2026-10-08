@@ -65,3 +65,7 @@ node --test --test-concurrency=1 apps/ios/scripts/auth-push.test.cjs apps/web/sc
 Verified: 116 emulator cases plus 52 module/handler cases (28 iOS, 24 Web).
 Native providers/APNs and React Native runtime remain mocked in these tests;
 this is not a device build or GPS/Safari/PWA acceptance result.
+
+October 8 follow-up: the same combined emulator command passes **120/120**
+after adding four malformed leaderboard ID regressions. The focused ID and
+leaderboard-write set passes 9/9. No live push messages are part of verification.

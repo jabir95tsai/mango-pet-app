@@ -1,0 +1,96 @@
+{
+  "checkedAt": "2026-10-08T03:30:51.861Z",
+  "deployedFrom": "a29a9dd",
+  "functions": [
+    {
+      "name": "aggregateLeaderboards",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-08T03:26:47.860054160Z",
+      "runtime": "nodejs22",
+      "revision": "aggregateleaderboards-00014-noy",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true
+    },
+    {
+      "name": "recomputeDogLeaderboards",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-08T03:26:50.874904123Z",
+      "runtime": "nodejs22",
+      "revision": "recomputedogleaderboards-00005-dis",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    },
+    {
+      "name": "recomputeDogLeaderboardsOnDelete",
+      "state": "ACTIVE",
+      "updatedAt": "2026-10-08T03:26:55.422789095Z",
+      "runtime": "nodejs22",
+      "revision": "recomputedogleaderboardsondelete-00005-tob",
+      "timeoutSeconds": 60,
+      "allTrafficOnLatestRevision": true,
+      "retryPolicy": "RETRY_POLICY_DO_NOT_RETRY"
+    }
+  ],
+  "index": {
+    "indexes": [
+      {
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "startedAt",
+            "order": "ASCENDING"
+          }
+        ],
+        "state": "READY"
+      },
+      {
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "startedAt",
+            "order": "DESCENDING"
+          }
+        ],
+        "state": "READY"
+      },
+      {
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "startedAt",
+            "arrayConfig": "CONTAINS"
+          }
+        ],
+        "state": "READY"
+      },
+      {
+        "queryScope": "COLLECTION_GROUP",
+        "fields": [
+          {
+            "fieldPath": "startedAt",
+            "order": "ASCENDING"
+          }
+        ],
+        "state": "READY"
+      }
+    ],
+    "ancestorField": "projects/mango-pet-app/databases/(default)/collectionGroups/__default__/fields/*"
+  },
+  "productionQuery": {
+    "status": "PASS",
+    "count": 7
+  },
+  "readonlyScoreCounts": {
+    "weekly": 1,
+    "monthly": 1,
+    "all_time": 3
+  },
+  "invalidPetIdsRetained": 1,
+  "errorsSince": "2026-10-08T03:25:00Z",
+  "errors": {
+    "count": 0,
+    "hasMore": false,
+    "services": []
+  }
+}

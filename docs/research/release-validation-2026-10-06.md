@@ -111,7 +111,30 @@ say `Account deletion is already running`; all three checkpoints reached
 `complete`. These are expected retry contention, **not a zero-error-log claim**.
 No other affected service had ERROR entries in the checked release window.
 
-Web main push / App Hosting rollout verification is pending at this checkpoint.
+## Web rollout and follow-up checks
+
+- Main pushed to `106e898cc10f2b85a8d223cd45a2f5eb3d5d7c40`.
+- At **02:29:02 UTC on October 6**, App Hosting `build-2026-10-06-001` was
+  READY and `rollout-2026-10-06-001` SUCCEEDED for that exact source hash,
+  serving **100%** of production traffic.
+- A real browser reload of the public login page displayed the expected
+  sign-in options and policy links, with zero captured console ERROR entries.
+  This does not claim browser OAuth or a GPS walk flow was tested.
+- Delayed fixture audit at 02:26 UTC found no resurrected fixture content,
+  empty cleanup queues and three completed tombstones. A fresh log query over
+  **02:22–02:26 UTC** found zero new ERROR entries on affected services.
+- Automatic approval review exhausted its usage allowance before the final
+  documentation update could execute. On October 8, the resumed session
+  confirmed main/origin main still at `106e898`, both rules matching source,
+  all 34 Functions ACTIVE and that same Web build still serving 100% traffic.
+- The longer October 8 observation window found pre-existing scheduled-job
+  failures that the short release smoke window did not cover. Both signatures
+  occur before the October 6 deployment. See the
+  [October 8 follow-up](release-validation-2026-10-08.md) for repairs and evidence.
+
+The original three uncommitted main-checkout documents remain excluded from
+release commits. No dependency, lockfile, App Hosting environment or native
+build configuration changed in this release.
 
 ## Remaining boundaries
 
