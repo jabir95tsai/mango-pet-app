@@ -50,7 +50,34 @@ Publish the new Web adapter first (it works under the old rules), confirm rollou
 then deploy Firestore rules. Native adapter requires the next iOS binary. Old
 Web tabs/native binaries using independent count writes will be denied by the
 new rules; refresh Web / install the new native build. No insecure fallback.
-Release state will be appended after verification.
+
+### Published and verified
+
+- Code commit `8dbef49` fast-forward merged to main and pushed. App Hosting
+  `build-2026-10-08-002` READY / `rollout-2026-10-08-002` SUCCEEDED, 100% traffic
+  confirmed at 07:11 UTC. Browser login page renders, console errors: 0.
+- Firestore rules published at 07:11:48 UTC, ruleset
+  `fadb1970-1998-4d9a-9b3c-7642c15a357b`. Remote source equals local rules;
+  unchanged Storage source also equals local. No Functions redeployment needed.
+- **4 production guest-walk behavior groups + cleanup pass:** personal create
+  and recap, foreign/missing pet denial, immutable score/pet/walker/family,
+  owner deletion / outsider denial. Real-user reaction writes remain validated
+  by the actual adapters against emulator rules, not production OAuth.
+- First smoke omitted `confirmDisplayName` when cleaning up and failed that
+  step. Those two fixture accounts were recovered through the existing confirmed
+  deletion checkpoint/worker. Corrected smoke then passed including callable
+  cleanup. This was a verification-script correction, not a product code change.
+- Final read-only audit at 07:18:26 UTC: all **4** temporary Auth users removed,
+  0 remaining fixture documents/descendants, 4 completed permanent tombstones.
+  No existing user accounts or records were deleted.
+- Do not interpret this release as zero ERROR: 07:11–07:18 UTC contained **6**
+  ERROR request entries: 1 failed initial cleanup request and 5 deletion-worker
+  HTTP 500 retries. Worker diagnostic messages include `Account deletion is
+  already running`; all four checkpoints are complete. No other service appears
+  in that error window. Tombstones are deliberately retained by the lifecycle.
+
+The later documentation-only commit may trigger another automatic Web build;
+the source code above is the version verified by this release evidence.
 
 ## Remaining work / handoff
 
