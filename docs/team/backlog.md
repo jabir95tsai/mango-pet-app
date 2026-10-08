@@ -48,6 +48,8 @@ P3 = 也許永遠不做的「想法」。
 
 _2026-05-29 PWA PM session 已清空一輪：原 Inbox 10 條全 triage 完 — 4 條 SHIPPED/RESOLVED 收進「已處理（audit trail）」、1 條 doc-accuracy 當場修掉、2 條升到對應角色待接、3 條(QR scanner / B4 dormant / settings onboarding link)歸 Deferred。下一個角色 session 新發現的事丟這裡。_
 
+- **2026-10-08 R15 部分修補**：已實作父寵物／家庭範圍授權、散步建立後身份與分數不可變，以及 Web/iOS 原子反應計數；emulator 131/131、平台 52/52、兩端 typecheck 通過。正式計數唯讀查核 87 篇／182 反應，無不一致。發布狀態與角色交接見 [R15 紀錄](../research/r15-data-integrity-2026-10-08.md)。初始散步分數仍需 Backend 改為伺服器權威，故 R15 未全面結案；R08/R11 交 Web/iOS Bug Hunter。照片引用索引、永久 moderation 錯誤隔離／重播、多帳號濫用與 iOS 共用翻譯仍待後續。
+
 ### 📋 全專案健檢 audit-2026-06 — 發現清單待 PM triage（索引條目）
 - **發現於**：2026-06-11、audit session（獨立 worktree，唯讀掃描 + 抽查驗證）
 - **類型**：技術債 / 安全 / 成本 / 設計一致性（綜合）

@@ -6,13 +6,13 @@ import {
   documentId,
   getDoc,
   getDocs,
+  runTransaction,
   increment,
   limit,
   orderBy,
   query,
   type QueryDocumentSnapshot,
   serverTimestamp,
-  setDoc,
   startAfter,
   Timestamp,
   updateDoc,
@@ -226,29 +226,21 @@ export async function setReaction(
   uid: string,
   emoji: ReactionEmoji | null,
 ): Promise<void> {
-  const current = await getMyReaction(postId, uid);
   const postRef = doc(getDb(), POSTS, postId);
-
-  if (current === emoji) return;
-
-  if (current && current !== emoji) {
-    await updateDoc(postRef, {
-      [`reactionCounts.${current}`]: increment(-1),
-    });
-  }
-
-  if (emoji) {
-    await setDoc(reactionDoc(postId, uid), {
-      uid,
-      emoji,
-      reactedAt: serverTimestamp(),
-    });
-    await updateDoc(postRef, {
-      [`reactionCounts.${emoji}`]: increment(1),
-    });
-  } else {
-    await deleteDoc(reactionDoc(postId, uid));
-  }
+  const reactionRef = reactionDoc(postId, uid);
+  await runTransaction(getDb(), async (tx) => {
+    const post = await tx.get(postRef);
+    const reaction = await tx.get(reactionRef);
+    if (!post.exists()) throw new Error("Post no longer exists.");
+    const current = reaction.exists() ? reaction.data().emoji as ReactionEmoji : null;
+    if (current === emoji) return;
+    const changes = Object.fromEntries(REACTION_EMOJIS.map((key) => [
+      `reactionCounts.${key}`, increment((emoji === key ? 1 : 0) - (current === key ? 1 : 0)),
+    ]));
+    tx.update(postRef, changes);
+    if (emoji) tx.set(reactionRef, { uid, emoji, reactedAt: serverTimestamp() });
+    else tx.delete(reactionRef);
+  });
 }
 
 // ── Comments (feed interaction v2) ───────────────────────────────────

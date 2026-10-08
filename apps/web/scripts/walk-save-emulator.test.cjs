@@ -51,6 +51,15 @@ function input(name, extra = {}) {
 }
 
 test.before(async () => {
+  for (const [petId, scope] of [['dog-A', null], ['dog-B', null], ['dog-family', familyId]]) {
+    documents.add(`pets/${petId}`);
+    const seeded = await fetch(`${rest}/pets/${petId}`, {
+      method: 'PATCH', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { ownerUid: { stringValue: aUid },
+        familyId: scope ? { stringValue: scope } : { nullValue: null } } }),
+    });
+    assert.ok(seeded.ok, await seeded.text());
+  }
   documents.add(`families/${familyId}`);
   const response = await fetch(`${rest}/families/${familyId}`, {
     method: 'PATCH', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
@@ -96,7 +105,7 @@ test('different auth uid cannot read or overwrite a personal walk', async () => 
 });
 
 test('a readable family walk still cannot be mistaken for another member session', async () => {
-  const args = input('family', { familyId, walkerUid: bUid }); await b.createWalk(args);
+  const args = input('family', { familyId, walkerUid: bUid, petId: 'dog-family' }); await b.createWalk(args);
   await assert.rejects(a.createWalk({ ...args, walkerUid: aUid }), /another session/);
   assert.equal((await sdk.getDoc(sdk.doc(a.db, 'walks', args.walkId))).data().walkerUid, bUid);
 });

@@ -8,6 +8,24 @@
 
 ## TL;DR
 
+### 2026-10-08 R15 authorization amendment
+
+- `walks/{walkId}` creates require `walkerUid == ownerUid == caller`, an
+  existing accessible `pets/{petId}`, matching `familyId` (including personal
+  `null`), and an active pet owner. Updates require the same parent access and
+  may change only `notes` / `photoURLs`; identity, score and timing are immutable.
+  Existing read queries and family deletion permissions are unchanged.
+- `posts/{postId}/reactions/{uid}` stores only `uid`, one supported `emoji`, and
+  server `reactedAt`. Parent visibility applies to reads and writes. Guest and
+  blocked writes are rejected. Reaction + exact five-emoji count delta must be
+  one atomic transaction validated with `getAfter` / `existsAfter`.
+- Posts start with zero reaction counts and no moderation/comment counters.
+  Authors cannot rewrite counters, author identity or creation time. Counters
+  are not independently client-writable, including by the author.
+- No new collections or indexes. Client adapters on Web and iOS preserve their
+  existing API signatures. This does not yet make initial walk scoring server
+  authoritative or repair historical malformed walk records.
+
 - **共享單位是 family，不是 user**。寵物的健康紀錄、遛狗、提醒、開銷都 scope 到 `familyId`，所有家庭成員都能 read/write。
 - **`familyId == null` 是合法狀態 — personal mode**（Phase B1，2026-05-23）。沒家庭時主功能仍能用，docs 寫入 `familyId: null`，權限改用「owner field 等於自己」把關：pets/`ownerUid`、walks/`walkerUid`、reminders/`createdByUid`、expenses/`payerUid`。Phase B3 的 `importPersonalToFamily` callable 之後負責把 personal docs 搬進家庭。
 - **路徑慣例**：產品資料是 **top-level + `familyId` 欄位** 的扁平 collection，**不是** `users/{uid}/...` 巢狀。

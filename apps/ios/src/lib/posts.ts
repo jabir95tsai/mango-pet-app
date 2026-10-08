@@ -208,7 +208,7 @@ export async function listFeedPosts(
 }
 
 // ── Reactions: posts/{postId}/reactions/{uid}. The CLIENT maintains
-//    post.reactionCounts via increment (mirrors web setReaction — NOT a server
+//    post.reactionCounts atomically via increment (mirrors web — NOT a server
 //    trigger). commentCount, by contrast, is server-maintained.
 
 function reactionDoc(postId: string, uid: string) {
@@ -223,34 +223,27 @@ export async function getMyReaction(
   return snap.exists ? ((snap.data()?.emoji as ReactionEmoji) ?? null) : null;
 }
 
-/** Set/clear the current user's reaction. Re-reads current first so the
- *  count increments balance (mirrors web). Pass `null` to remove. */
+/** Atomically set/clear the reaction and its counts. Pass `null` to remove. */
 export async function setReaction(
   postId: string,
   uid: string,
   emoji: ReactionEmoji | null,
 ): Promise<void> {
-  const current = await getMyReaction(postId, uid);
-  if (current === emoji) return;
   const postRef = postsCol().doc(postId);
-
-  if (current && current !== emoji) {
-    await postRef.update({
-      [`reactionCounts.${current}`]: firestore.FieldValue.increment(-1),
-    });
-  }
-  if (emoji) {
-    await reactionDoc(postId, uid).set({
-      uid,
-      emoji,
-      reactedAt: firestore.FieldValue.serverTimestamp(),
-    });
-    await postRef.update({
-      [`reactionCounts.${emoji}`]: firestore.FieldValue.increment(1),
-    });
-  } else {
-    await reactionDoc(postId, uid).delete();
-  }
+  const reactionRef = reactionDoc(postId, uid);
+  await firestore().runTransaction(async (tx) => {
+    const post = await tx.get(postRef);
+    const reaction = await tx.get(reactionRef);
+    if (!post.exists) throw new Error("Post no longer exists.");
+    const current = reaction.exists ? reaction.data()!.emoji as ReactionEmoji : null;
+    if (current === emoji) return;
+    const changes = Object.fromEntries(REACTION_EMOJIS.map((key) => [
+      `reactionCounts.${key}`, firestore.FieldValue.increment((emoji === key ? 1 : 0) - (current === key ? 1 : 0)),
+    ]));
+    tx.update(postRef, changes);
+    if (emoji) tx.set(reactionRef, { uid, emoji, reactedAt: firestore.FieldValue.serverTimestamp() });
+    else tx.delete(reactionRef);
+  });
 }
 
 // ── Comments: posts/{postId}/comments/{commentId}. Flat, oldest-first, cursor

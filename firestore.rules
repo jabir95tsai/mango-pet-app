@@ -326,18 +326,26 @@ service cloud.firestore {
     }
 
     match /walks/{walkId} {
+      // The parent pet is the authority; client familyIds are not an ACL.
+      function validWalkPet(d) {
+        let pet = get(/databases/$(database)/documents/pets/$(d.petId)).data;
+        return d.petId is string && d.petId.size() > 0
+          && petOwnerActive(pet) && d.familyId == pet.familyId
+          && (isPersonalPetOwner(pet) || isFamilyMember(pet.familyId));
+      }
       allow read: if resource == null
         || isPersonalWalkOwner(resource.data)
         || isFamilyMember(resource.data.familyId);
       allow create: if activeAccount() && (request.auth != null
         && request.resource.data.walkerUid == request.auth.uid
-        && (
-          request.resource.data.familyId == null
-          || isFamilyMember(request.resource.data.familyId)
-        ));
+        && request.resource.data.ownerUid == request.auth.uid
+        && validWalkPet(request.resource.data));
       // Updates allowed by the walker only (e.g., editing notes), in
       // both family and personal modes (walker == self covers both).
-      allow update: if activeAccount() && (request.auth.uid == resource.data.walkerUid);
+      allow update: if activeAccount() && request.auth.uid == resource.data.walkerUid
+        && validWalkPet(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['notes', 'photoURLs']);
       allow delete: if activeAccount() && (isPersonalWalkOwner(resource.data)
         || isFamilyMember(resource.data.familyId));
     }
@@ -418,13 +426,47 @@ service cloud.firestore {
     }
 
     match /posts/{postId} {
+      function validCounts(c) {
+        return c is map && c.keys().hasOnly(['❤️', '😂', '🐶', '👍', '🎉'])
+          && c['❤️'] is int && c['❤️'] >= 0
+          && c['😂'] is int && c['😂'] >= 0
+          && c['🐶'] is int && c['🐶'] >= 0
+          && c['👍'] is int && c['👍'] >= 0
+          && c['🎉'] is int && c['🎉'] >= 0;
+      }
+      function countDelta(before, after, oldEmoji, newEmoji, emoji) {
+        return after[emoji] == before.get(emoji, 0)
+          - (oldEmoji == emoji ? 1 : 0) + (newEmoji == emoji ? 1 : 0);
+      }
+      // Both the post and the reaction must agree in the same atomic write.
+      function validReactionChange() {
+        let p = /databases/$(database)/documents/posts/$(postId);
+        let r = /databases/$(database)/documents/posts/$(postId)/reactions/$(request.auth.uid);
+        let before = get(p).data;
+        let after = getAfter(p).data;
+        let oldEmoji = exists(r) ? get(r).data.emoji : null;
+        let newEmoji = existsAfter(r) ? getAfter(r).data.emoji : null;
+        let counts = before.get('reactionCounts', {});
+        return isRealUser() && canReadPost(before) && !authorBlockedMe(before.authorUid)
+          && oldEmoji != newEmoji
+          && after.diff(before).affectedKeys().hasOnly(['reactionCounts'])
+          && validCounts(after.reactionCounts)
+          && countDelta(counts, after.reactionCounts, oldEmoji, newEmoji, '❤️')
+          && countDelta(counts, after.reactionCounts, oldEmoji, newEmoji, '😂')
+          && countDelta(counts, after.reactionCounts, oldEmoji, newEmoji, '🐶')
+          && countDelta(counts, after.reactionCounts, oldEmoji, newEmoji, '👍')
+          && countDelta(counts, after.reactionCounts, oldEmoji, newEmoji, '🎉');
+      }
       allow read: if canReadPost(resource.data);
 
       // Guests can't post (community feature, needs a real identity).
       // Spec guest-login.md §C/§D.
       allow create: if activeAccount() && (isRealUser()
         && request.resource.data.authorUid == request.auth.uid
-        && request.resource.data.visibility in ["private", "friends", "public"]);
+        && request.resource.data.visibility in ["private", "friends", "public"]
+        && validCounts(request.resource.data.reactionCounts)
+        && request.resource.data.reactionCounts == {'❤️': 0, '😂': 0, '🐶': 0, '👍': 0, '🎉': 0}
+        && !request.resource.data.keys().hasAny(['hidden', 'reportCount', 'commentCount']));
 
       allow update: if activeAccount() && (request.auth != null && (
         (resource.data.authorUid == request.auth.uid
@@ -432,15 +474,10 @@ service cloud.firestore {
           // (onReportCreated), never client-writable, not even by the
           // post's own author. Spec docs/features/ugc-moderation.md.
           && !request.resource.data.diff(resource.data).affectedKeys()
-               .hasAny(["hidden", "reportCount"]))
-        // Reactors bump reactionCounts (their only legitimate write to
-        // someone else's post) — but reacting is a community action, so
-        // guests are excluded. commentCount is deliberately NOT client-
-        // writable — the onComment(Created|Deleted) Cloud Functions maintain
-        // it via Admin SDK (rules bypass), per spec "避免 client 灌數".
-        || (isRealUser()
-            && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(["reactionCounts"]))
+               .hasAny(["hidden", "reportCount", "reactionCounts", "commentCount", "authorUid", "createdAt"]))
+        // A reactor may change only the exact delta authorized by their
+        // atomic reaction transition. commentCount stays Admin-only.
+        || validReactionChange()
       ));
 
       allow delete: if activeAccount() && (request.auth.uid == resource.data.authorUid);
@@ -448,9 +485,14 @@ service cloud.firestore {
       // Reactions are a community action — guests can read but not write.
       // Blocked-by-the-author callers are rejected too (ugc-moderation.md).
       match /reactions/{uid} {
-        allow read: if request.auth != null;
-        allow write: if activeAccount() && (request.auth.uid == uid && isRealUser()
-          && !authorBlockedMe(get(/databases/$(database)/documents/posts/$(postId)).data.authorUid));
+        allow read: if canReadPost(get(/databases/$(database)/documents/posts/$(postId)).data);
+        allow create, update: if activeAccount() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['uid', 'emoji', 'reactedAt'])
+          && request.resource.data.uid == uid
+          && request.resource.data.emoji in ['❤️', '😂', '🐶', '👍', '🎉']
+          && request.resource.data.reactedAt == request.time
+          && validReactionChange();
+        allow delete: if activeAccount() && request.auth.uid == uid && validReactionChange();
       }
 
       // ── Comments (feed interaction v2) ──
