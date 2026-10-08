@@ -52,6 +52,7 @@ import { exportContactFields, exportMemberFamilies, leaveMemberFamilies } from "
 import { joinFamilyWithCode } from "./family-join";
 import { readContactTokens, removeContactTokens } from "./user-contact";
 import { assertAccountsActive, withActiveAccounts } from "./account-mutation";
+import { isFirestoreDocumentId } from "./document-id";
 import {
   beginAccountDeletion, claimAccountDeletion, checkAccountDeletionLease,
   markAccountDeletionFinalizing, releaseAccountDeletionLease, cleanupDeletedPost,
@@ -982,12 +983,14 @@ async function runDogLeaderboardAggregation(now: Date): Promise<void> {
   // All walks, no familyId filter — personal-mode dogs are on the board.
   const allWalks = await db.collection("walks").get();
   const petIds = new Set<string>();
+  let invalidPetIds = 0;
   for (const d of allWalks.docs) {
     const pid = d.data().petId as string | undefined;
-    if (pid) petIds.add(pid);
+    if (isFirestoreDocumentId(pid)) petIds.add(pid);
+    else invalidPetIds++;
   }
   logger.info(
-    `runDogLeaderboardAggregation: walks=${allWalks.size} pets=${petIds.size}`,
+    `runDogLeaderboardAggregation: walks=${allWalks.size} pets=${petIds.size} invalidPetIds=${invalidPetIds}`,
   );
 
   const weekly = new Map<string, DogAccum>();
@@ -1028,7 +1031,7 @@ export const recomputeDogLeaderboards = onDocumentCreated(
     const walk = event.data?.data();
     if (!walk) return;
     const petId = walk.petId as string | undefined;
-    if (!petId) return;
+    if (!isFirestoreDocumentId(petId)) return;
 
     const now = new Date();
     const weekKey = isoWeekLabel(now);
@@ -1065,7 +1068,7 @@ export const recomputeDogLeaderboardsOnDelete = onDocumentDeleted(
     const walk = event.data?.data();
     if (!walk) return;
     const petId = walk.petId as string | undefined;
-    if (!petId) return;
+    if (!isFirestoreDocumentId(petId)) return;
 
     const now = new Date();
     const weekKey = isoWeekLabel(now);

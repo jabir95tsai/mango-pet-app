@@ -19,6 +19,7 @@ import {
   type Firestore,
 } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
+import { isFirestoreDocumentId } from "./document-id";
 
 /** Internal aggregation shape — mirrors the cron's `UserAccum`.
  *  Re-exported so the cron + trigger can pass the result to
@@ -224,6 +225,7 @@ export async function computeDogPeriodScore(
   now: Date = new Date(),
   excludeWalkId?: string,
 ): Promise<DogAccum | null> {
+  if (!isFirestoreDocumentId(petId)) return null;
   const startMs = periodStartMs(period, now);
 
   let q = db
@@ -344,6 +346,7 @@ export async function computeDogPeriodScore(
   const petDoc = await db.doc(`pets/${petId}`).get();
   const pet = petDoc.data() ?? {};
   const ownerUid = (pet.ownerUid as string) || fallbackOwnerUid;
+  if (!isFirestoreDocumentId(ownerUid)) return null;
 
   // Owner profile — for ownerName + the visibility master switch.
   let ownerName = "Friend";
