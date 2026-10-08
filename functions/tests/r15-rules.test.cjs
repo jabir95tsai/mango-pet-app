@@ -171,3 +171,98 @@ test('post creation cannot seed counters or moderation state; author cannot reas
     await deny(s.setDoc(s.doc(owner, `posts/r15-create-bad-${++serial}`), { ...data, ...extra }));
   await deny(s.updateDoc(s.doc(owner, 'posts/r15-create-ok'), { authorUid: 'r15-member' }));
 });
+
+test('legacy REST whole-double counters support both adapters and optional normalization preserves data', async () => {
+  const { normalizePost, restTransport } = await import('../scripts/normalize-reaction-counts.mjs');
+  const request = restTransport(`http://${process.env.FIRESTORE_EMULATOR_HOST}`, async () => 'owner');
+  const root = 'projects/demo-mango-security/databases/(default)/documents';
+  for (const platform of ['web', 'ios']) {
+    const id = `r15-double-${platform}`, name = `${root}/posts/${id}`;
+    // Admin/Web JS number 4 serializes as integer; REST doubleValue is necessary
+    // to reproduce the actual on-disk type (4.0 and 4 are otherwise both JS 4).
+    await request('PATCH', name, { fields: {
+      authorUid: { stringValue: 'r15-owner' }, visibility: { stringValue: 'public' },
+      text: { stringValue: 'preserve me' },
+      reactionCounts: { mapValue: { fields: Object.fromEntries(emojis.map(e =>
+        [e, e === '❤️' ? { doubleValue: 4 } : { integerValue: '0' }])) } },
+    } });
+    for (const uid of ['r15-member', 'legacy-a', 'legacy-b', 'legacy-c']) {
+      await db.doc(`posts/${id}/reactions/${uid}`).set({ uid, emoji: '❤️', reactedAt: new Date() });
+    }
+    const old = adapter(member, platform), fresh = adapter(stranger, platform);
+    await fresh.setReaction(id, 'r15-stranger', '❤️');
+    await old.setReaction(id, 'r15-member', '🐶');
+    await old.setReaction(id, 'r15-member', null);
+    await old.setReaction(id, 'r15-member', '❤️');
+    await fresh.setReaction(id, 'r15-stranger', null);
+    const dry = await normalizePost(request, 'demo-mango-security', id);
+    assert.deepEqual(dry, { changedFields: 1, applied: false });
+    assert.equal((await request('GET', name)).fields.reactionCounts.mapValue.fields['❤️'].doubleValue, 4);
+    assert.deepEqual(await normalizePost(request, 'demo-mango-security', id, true), { changedFields: 1, applied: true });
+    const saved = await request('GET', name);
+    assert.equal(saved.fields.reactionCounts.mapValue.fields['❤️'].integerValue, '4');
+    assert.equal(saved.fields.text.stringValue, 'preserve me');
+    assert.deepEqual(await normalizePost(request, 'demo-mango-security', id, true), { changedFields: 0, applied: false });
+    await fresh.setReaction(id, 'r15-stranger', '❤️');
+    await old.setReaction(id, 'r15-member', '🐶');
+    await old.setReaction(id, 'r15-member', null);
+    await fresh.setReaction(id, 'r15-stranger', null);
+    assert.deepEqual((await db.doc(`posts/${id}`).get()).data().reactionCounts, { ...zero(), '❤️': 3 });
+  }
+});
+
+test('native double increment wire format supports add/switch/remove but cannot grant fractional or excess votes', async () => {
+  const { restTransport } = await import('../scripts/normalize-reaction-counts.mjs');
+  const { createMockUserToken } = require('@firebase/util');
+  const project = 'demo-mango-security', root = `projects/${project}/databases/(default)/documents`;
+  const request = restTransport(`http://${process.env.FIRESTORE_EMULATOR_HOST}`,
+    async () => createMockUserToken({ sub: 'r15-member', firebase: { sign_in_provider: 'password' } }, project));
+  const name = `${root}/posts/r15-native-wire`, reaction = `${name}/reactions/r15-member`;
+  await request('POST', `${root}:commit`, { writes: [{ update: { name, fields: {
+    authorUid: { stringValue: 'r15-member' }, visibility: { stringValue: 'public' },
+    reactionCounts: { mapValue: { fields: Object.fromEntries(emojis.map(key => [key, { doubleValue: 0 }])) } },
+  } } }] });
+  async function change(old, next, bonus = 0) {
+    return request('POST', `${root}:commit`, { writes: [
+      next ? { update: { name: reaction, fields: { uid: { stringValue: 'r15-member' }, emoji: { stringValue: next } } },
+        updateTransforms: [{ fieldPath: 'reactedAt', setToServerValue: 'REQUEST_TIME' }] } : { delete: reaction },
+      { transform: { document: name, fieldTransforms: emojis.map(key => ({
+        fieldPath: `reactionCounts.\`${key}\``,
+        increment: { doubleValue: (next === key ? 1 : 0) - (old === key ? 1 : 0) + (key === '❤️' ? bonus : 0) },
+      })) } },
+    ] });
+  }
+  await change(null, '❤️');
+  await change('❤️', '🐶');
+  await change('🐶', null);
+  assert.deepEqual((await db.doc('posts/r15-native-wire').get()).data().reactionCounts, zero());
+  for (const extra of [0.5, 1, -2]) await assert.rejects(change(null, '❤️', extra), { code: 'PERMISSION_DENIED' });
+  // Wire-typed legacy corruption must still fail even for otherwise exact deltas.
+  const admin = restTransport(`http://${process.env.FIRESTORE_EMULATOR_HOST}`, async () => 'owner');
+  for (const value of [-2, 0.25, 'NaN', 'Infinity', 9007199254740992]) {
+    await admin('PATCH', `${name}?updateMask.fieldPaths=reactionCounts`, { fields: {
+      reactionCounts: { mapValue: { fields: Object.fromEntries(emojis.map(key =>
+        [key, { doubleValue: key === '❤️' ? value : 0 }])) } },
+    } });
+    await assert.rejects(change(null, '❤️'), { code: 'PERMISSION_DENIED' });
+  }
+});
+
+test('normalization refuses inconsistent, fractional, unsafe and malformed counters without changing data', async () => {
+  const { normalizePost, restTransport } = await import('../scripts/normalize-reaction-counts.mjs');
+  const request = restTransport(`http://${process.env.FIRESTORE_EMULATOR_HOST}`, async () => 'owner');
+  const name = 'projects/demo-mango-security/databases/(default)/documents/posts/r15-double-invalid';
+  for (const value of [-1, 0.5, 2, Number.MAX_SAFE_INTEGER + 1]) {
+    await request('PATCH', name, { fields: {
+      reactionCounts: { mapValue: { fields: Object.fromEntries(emojis.map(e =>
+        [e, e === '❤️' ? { doubleValue: value } : { integerValue: '0' }])) } },
+    } });
+    await assert.rejects(normalizePost(request, 'demo-mango-security', 'r15-double-invalid', true), /fractional, unsafe, negative or differs/);
+    assert.equal((await request('GET', name)).fields.reactionCounts.mapValue.fields['❤️'].doubleValue, value);
+  }
+  await db.doc('posts/r15-double-invalid').set({ reactionCounts: { ...zero(), extra: 0 } });
+  await assert.rejects(normalizePost(request, 'demo-mango-security', 'r15-double-invalid', true), /Invalid counter keys/);
+  await db.doc('posts/r15-double-invalid').set({ reactionCounts: zero() });
+  await db.doc('posts/r15-double-invalid/reactions/wrong').set({ uid: 'other', emoji: '❤️' });
+  await assert.rejects(normalizePost(request, 'demo-mango-security', 'r15-double-invalid', true), /Invalid reaction document/);
+});

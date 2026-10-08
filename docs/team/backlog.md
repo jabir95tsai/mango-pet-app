@@ -30,6 +30,12 @@ P3 = 也許永遠不做的「想法」。
 
 ## Inbox（未分類）
 
+### 2026-10-08 R15 反應計數型別回歸
+- **Backend 修復**：原唯讀 audit 只比 JS 數值，漏掉 2 篇公開貼文的 double 計數。已交易式改為同值整數，重跑零變更；87 篇重新掃描 double 為 0。
+- **根因補強**：RN Firebase 21.14.0 原生 increment 固定用 double；規則改驗非負、安全範圍內的整數值，而非強制 wire int；新貼文逐項比零避免 map 型別差異。完整 emulator **134/134**，含真實 double wire 格式新增／切換／取消與拒絕灌票。發布與驗證見 [回歸修復紀錄](../research/reaction-number-compat-2026-10-08.md)。
+- **日誌更正**：前次 6 筆 ERROR 中 3 筆是 Cloud Run 無可用 instance，其餘 3 筆是刪帳 lease；不應全歸因於漏確認欄位或 lease。若正式使用者也反覆發生，交 Backend/DevOps 查 instance 設定及配額；本輪未變更容量設定。
+- **邊界**：未新增 iOS binary／實機證據；R15 初始分數權威及其餘 backlog 未因此結案。
+
 ### 2026-10-05 全專案檢視：授權、核心遛狗與上架品質
 - **發現於**：2026-10-05、Cross-platform PM 唯讀 review；基準 61f18e7。
 - **類型**：安全 / bug / 跨平台契約 / 交付與技術債。

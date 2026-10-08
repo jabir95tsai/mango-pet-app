@@ -19,6 +19,9 @@
   server `reactedAt`. Parent visibility applies to reads and writes. Guest and
   blocked writes are rejected. Reaction + exact five-emoji count delta must be
   one atomic transaction validated with `getAfter` / `existsAfter`.
+  Counter values may be integer or integral-double representations, but must be
+  nonnegative whole numbers within the JavaScript safe integer range. Native
+  Firebase sends double increment transforms; requiring wire `int` breaks it.
 - Posts start with zero reaction counts and no moderation/comment counters.
   Authors cannot rewrite counters, author identity or creation time. Counters
   are not independently client-writable, including by the author.

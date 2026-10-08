@@ -1,5 +1,12 @@
 # Backend security regression
 
+Numeric compatibility follow-up (2026-10-08): `r15-rules.test.cjs` also uses raw
+REST `doubleValue` fixtures and native-style double increment transforms. Do not
+replace these with Admin SDK `number` fixtures or the Web SDK increment shim:
+those serialize whole numbers as integers and miss the production/native bug.
+The targeted normalization tool is tested for dry-run, exact values, unrelated
+field preservation, idempotence and refusal of malformed/mismatched data.
+
 Use Node 22+, Java 21+, installed root/functions dependencies and Firebase CLI.
 From the repository root, compile the functions, then run the tests against an
 isolated Firestore emulator. No production credentials or data are needed.

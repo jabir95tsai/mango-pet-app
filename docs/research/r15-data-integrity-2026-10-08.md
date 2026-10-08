@@ -2,6 +2,11 @@
 
 Baseline: `1a1f1fd`. Role: Backend (shared data adapters; no UI changes).
 
+**Follow-up correction:** the original numeric-value audit missed two integral
+double counters, and native RN Firebase uses double increment transforms. See
+[numeric compatibility repair](reaction-number-compat-2026-10-08.md) for the
+confirmed regression, data repair, rule correction and additional protocol test.
+
 ## Verified findings and implementation
 
 - Walk create previously authorized only the caller's family, not the referenced
@@ -64,7 +69,9 @@ new rules; refresh Web / install the new native build. No insecure fallback.
   owner deletion / outsider denial. Real-user reaction writes remain validated
   by the actual adapters against emulator rules, not production OAuth.
 - First smoke omitted `confirmDisplayName` when cleaning up and failed that
-  step. Those two fixture accounts were recovered through the existing confirmed
+  step; later log inspection identified the observed HTTP 500 as Cloud Run
+  instance unavailability, not an observed argument-validation response.
+  Those two fixture accounts were recovered through the existing confirmed
   deletion checkpoint/worker. Corrected smoke then passed including callable
   cleanup. This was a verification-script correction, not a product code change.
 - Final read-only audit at 07:18:26 UTC: all **4** temporary Auth users removed,
@@ -72,8 +79,9 @@ new rules; refresh Web / install the new native build. No insecure fallback.
   No existing user accounts or records were deleted.
 - Do not interpret this release as zero ERROR: 07:11–07:18 UTC contained **6**
   ERROR request entries: 1 failed initial cleanup request and 5 deletion-worker
-  HTTP 500 retries. Worker diagnostic messages include `Account deletion is
-  already running`; all four checkpoints are complete. No other service appears
+  HTTP 500 retries. Follow-up classified 3 of the 6 as Cloud Run "no available
+  instance" (including the initial request), and the other 3 as worker lease
+  contention. All four checkpoints are complete. No other service appears
   in that error window. Tombstones are deliberately retained by the lifecycle.
 
 The later documentation-only commit may trigger another automatic Web build;

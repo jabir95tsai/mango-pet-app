@@ -426,13 +426,17 @@ service cloud.firestore {
     }
 
     match /posts/{postId} {
+      // Native RN Firebase uses double-valued increment transforms. Enforce
+      // whole counts, not a particular wire representation; reject fractions,
+      // NaN/infinity and values outside exact JavaScript integer arithmetic.
+      function validCount(value) {
+        return value is number && value >= 0 && value <= 9007199254740991
+          && value == math.floor(value);
+      }
       function validCounts(c) {
         return c is map && c.keys().hasOnly(['❤️', '😂', '🐶', '👍', '🎉'])
-          && c['❤️'] is int && c['❤️'] >= 0
-          && c['😂'] is int && c['😂'] >= 0
-          && c['🐶'] is int && c['🐶'] >= 0
-          && c['👍'] is int && c['👍'] >= 0
-          && c['🎉'] is int && c['🎉'] >= 0;
+          && validCount(c['❤️']) && validCount(c['😂'])
+          && validCount(c['🐶']) && validCount(c['👍']) && validCount(c['🎉']);
       }
       function countDelta(before, after, oldEmoji, newEmoji, emoji) {
         return after[emoji] == before.get(emoji, 0)
@@ -465,7 +469,13 @@ service cloud.firestore {
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.visibility in ["private", "friends", "public"]
         && validCounts(request.resource.data.reactionCounts)
-        && request.resource.data.reactionCounts == {'❤️': 0, '😂': 0, '🐶': 0, '👍': 0, '🎉': 0}
+        // Map equality distinguishes integer from double elements. Compare
+        // each numeric value so native zero-valued doubles can create posts.
+        && request.resource.data.reactionCounts['❤️'] == 0
+        && request.resource.data.reactionCounts['😂'] == 0
+        && request.resource.data.reactionCounts['🐶'] == 0
+        && request.resource.data.reactionCounts['👍'] == 0
+        && request.resource.data.reactionCounts['🎉'] == 0
         && !request.resource.data.keys().hasAny(['hidden', 'reportCount', 'commentCount']));
 
       allow update: if activeAccount() && (request.auth != null && (
