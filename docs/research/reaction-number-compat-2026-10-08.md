@@ -66,7 +66,21 @@ will produce integral doubles again, which the corrected rules accept.
 - Final combined Firestore/Auth/Storage + Web/iOS adapter run: **134/134 PASS**,
   zero skips. This includes native-style post creation with five double zeros.
   No platform handler/typecheck rerun is claimed: Web/iOS sources did not change.
-- Rule release evidence is recorded below after completion.
+- Rules from code commit `6b25cc5` deployed at **11:09:15 UTC** to ruleset
+  `b14e95a4-71c8-4fb4-8dcd-72dcf3827fed`. At 11:10 UTC the remote source exactly
+  matched the local file; unchanged Storage rules also matched.
+- Final raw scan: **88** posts, zero double counters (one new post appeared
+  since the initial 87-post audit). Whole doubles are now supported, so a later
+  native increment producing a whole double is valid and needs no repair.
+- Project ERROR entries for **11:00–11:10 UTC: 0**. This is only that observation
+  window; the six earlier cleanup errors remain documented below.
+- No real users' reactions were added/removed for verification. Production proof
+  is the typed-data audit, guarded repairs and deployed-rule source match;
+  add/switch/remove behavior was exercised against emulator rules using both
+  actual adapters and explicit native wire transforms. No real-device claim.
+- No Functions, indexes, Web/iOS runtime source or dependencies changed. A main
+  push can still trigger the repository's automatic App Hosting rebuild; that
+  rebuild is not required for the data/rules repair to take effect.
 
 ## Correction to the previous error-log explanation
 
