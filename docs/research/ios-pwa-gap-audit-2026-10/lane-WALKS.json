@@ -1,0 +1,371 @@
+[
+ {
+  "id": "WALKS-2",
+  "title": "Walks tab never refetches on focus: a newly added pet or walk does not show up, and no pull-to-refresh",
+  "category": "state-handling",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:207-210 (refetch on each mount/navigation; the route remounts)",
+  "ios_ref": "apps/ios/src/lib/use-walks-data.ts:63-65,106; apps/ios/app/(tabs)/walks.tsx:82-94,108-114",
+  "current_ios": "Expo Router tabs stay mounted, and useWalksData only fetches when `user` changes. A new user who creates their first pet on the Pets tab and then opens Walks still sees the 0-pet empty state until the app restarts. A walk deleted or added by another family member, or a pet's walk goal edited on the Pets tab, is also not reflected. `todayIdx` is memoised once with [] (use-walks-data.ts:106), and today/week stats only recompute when `walks` changes, so if the app stays in memory past midnight the week strip and dial show yesterday as today. Other tabs (index.tsx:89, pets.tsx:159) have RefreshControl; walks does not.",
+  "target": "Fresh data every time the tab gains focus, pull-to-refresh like the other tabs, and day-dependent stats recomputed when the day rolls over.",
+  "fix_plan": "In walks.tsx, use `useFocusEffect(useCallback(() => { void data.refresh(); }, [data.refresh]))` from expo-router. Make it a silent refresh: add a `refreshing` flag in the hook so focus and pull refreshes do not flip `loading` to true and blank the list. Add `refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brand} />}` to the ScrollView (walks.tsx:108). In use-walks-data.ts, replace the [] memo for todayIdx with a `dayKey` state that updates on AppState 'active' (`new Date().toDateString()`), and add dayKey to the deps of todayIdx, todayProgress, weekDayFlags, weekKm, weekCount and weeklyAvgMin.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/src/lib/use-walks-data.ts"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-3",
+  "title": "Recent-walk row is the old WalkCard layout: no delete, no walker line, no photo thumbnail, wrong icons and time format",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/components/walks/walk-row.tsx:58-170; page.tsx:480-491 (handleDelete confirm), 733-740",
+  "ios_ref": "apps/ios/src/components/walks/walk-row.tsx:13-83; apps/ios/app/(tabs)/walks.tsx:184-188",
+  "current_ios": "iOS WalkRow ports the retired WalkCard: radius.lg 14, padding 16, a separate 'YYYY-MM-DD HH:mm' date line, an emoji grid (📏 ⏱️ ⭐), a lucide Footprints icon, and relative time shown only as '今天' or 'M/D'. Several web features are missing: (1) the Trash2 delete button with a confirm dialog (iOS lib/walks.ts has no deleteWalk at all, so walks cannot be deleted on iOS); (2) the walker attribution line (18px avatar + Walks.page.walkedBy); (3) the 36px photo thumbnail with a count badge that opens a lightbox.",
+  "target": "Web WalkRow: an article with rounded-2xl (16px), 1px hairline border, white card, paddingH 14 / paddingV 12, near-flat shadow, gap 12. Left: a 40px disc (manual: bgAlt + lucide Hand 18 in ink2; GPS: brandTint + the inline paw SVG 18 in brandDeep). Middle: pet name 14/600 ink (truncated) and, aligned right on the same baseline, relative time 12 ink3. Below that, a 12.5px ink2 row of Route 13 ink3 + 'x.xx km', Clock 13 ink3 + 'N min', and Star 12 + score.toFixed(1) in 600 brandDeep. Then, when a walker name exists, Avatar 18 + t('Walks.page.walkedBy',{name}) in 11.5 ink3. Right: an optional 36px photo thumb (radius 8, hairline, with a count badge when there are 2+ photos) and a 32px Trash2 16 button in ink3.",
+  "fix_plan": "1) apps/ios/src/lib/walks.ts: add `export async function deleteWalk(walkId: string) { await firestore().collection('walks').doc(walkId).delete(); }`. The existing rules already allow delete by the personal owner or a family member. 2) Rewrite walk-row.tsx with props `{ walk, onDelete }`. Move the Paw SVG out of walks-week-strip.tsx into a shared `components/walks/paw-icon.tsx` and use it for GPS walks. Use lucide-react-native Hand, Route, Clock, Star and Trash2. Use `relativeTime(walk.startedAt)` from '@/lib/format' (closest helper to formatDistanceToNow). For the walker line use `<Avatar name={walkerName} photoURL={walk.walkerPhotoURL} size={18} />` and `t('Walks.page.walkedBy',{name})`. For photos, render a Pressable thumbnail with expo-image and open `PhotoLightbox` from '@/components/feed/photo-lightbox' (props photos, initialIndex 0, open, onClose); its a11y label is t('PhotoLightbox.counter',{current:1,total}). Give the delete button hitSlop to reach a 44pt target, accessibilityLabel t('Common.delete'), and onPress=onDelete. 3) walks.tsx: add handleDelete(w) using `Alert.alert(t('Common.delete'), `${w.distanceKm.toFixed(2)} km · ${w.durationMin.toFixed(0)} min`, [{text:t('Common.cancel'),style:'cancel'},{text:t('Common.delete'),style:'destructive',onPress: async()=>{ await deleteWalk(w.walkId); await data.refresh(); }}])`, with a try/catch that shows Walks.core.saveFailed or a generic alert. Pass `onDelete={() => handleDelete(w)}`.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-row.tsx",
+   "apps/ios/src/lib/walks.ts",
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/src/components/walks/walks-week-strip.tsx",
+   "apps/ios/src/components/walks/paw-icon.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.page.walkedBy",
+   "Common.delete",
+   "Common.cancel",
+   "PhotoLightbox.counter"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-4",
+  "title": "R20: walks home and its child components hard-code zh-TW copy, and several strings differ from web",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:526-541,562-567,596,654,687,720,729,756,809; streak-chip label prop; pet-picker-dropdown.tsx:103,127",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:6-8,86-89,99-102,117,149,165,174,182,195,200; walks-start-cta.tsx:69,99; walks-streak-chip.tsx:76,93; pet-pill.tsx:30,55,79; walk-row.tsx:21",
+  "current_ios": "No t() calls anywhere on this surface; the header comment still says 'shared-i18n not built yet'. Copy also drifts from web: '最近遛狗' (web Walks.page.recentTitle = '最近紀錄'); '顯示較少' (web showRecent = '收合'); '先新增一隻寵物' / '建立寵物後就能…' (web needPetTitle '還沒有寵物' / needPetDescription); '還沒有遛狗紀錄，開始第一趟吧！' (web emptyWalksTitle + emptyWalksDescription); '✍️  手動補登' (web Walks.core.manualLog); goal chip '{goal} 分' (web '{n} 分/天'); pet-pill a11y '切換寵物，目前 X' (web openLabel). English-locale devices see Chinese.",
+  "target": "Every string comes from the shared catalog with the same keys web uses.",
+  "fix_plan": "Import `{ t }` from '@/lib/i18n' and replace: '遛狗' → t('Nav.walks'); hero → goalHit ? t('Walks.page.heroComplete') : t('Walks.page.heroIncomplete',{min:remainingMin}); sub → activePet ? t('Walks.page.heroSub',{pet,done:doneMin,streak:streakDays}) : t('Walks.page.heroSubNoPet',{done,streak}); '本週' → t('Walks.page.weekLabel'); '最近遛狗' → t('Walks.page.recentTitle'); toggle → showAllWalks ? t('Walks.page.showRecent') : t('Walks.page.viewAll'); manual button and a11y → t('Walks.core.manualLog'); 0-pet state → Walks.core.needPetTitle / needPetDescription / needPetCta; walks-start-cta label and a11y → t('Walks.core.startWalking'); streak chip text → t('Walks.streak.labelShort',{days}) (add accessibilityHint t('Walks.streak.weekTooltip') on the leaf tier); pet-pill a11y → t('Walks.page.petPicker.openLabel',{pet}); goal chip → t('Walks.page.petPicker.goalChip',{n:goal}); sheet title '選擇寵物' → t('Walks.core.pickPet') (or drop it, see WALKS-6). Week-strip day labels: use a locale map keyed on `activeLocale` from '@/lib/i18n' (zh-TW: 一二三四五六日; en: M T W T F S S), mirroring web date-fns 'EEEEE'. Delete the stale header comment (walks.tsx:6-8).",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/src/components/walks/walks-start-cta.tsx",
+   "apps/ios/src/components/walks/walks-streak-chip.tsx",
+   "apps/ios/src/components/walks/pet-pill.tsx",
+   "apps/ios/src/components/walks/walks-week-strip.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.walks",
+   "Walks.page.heroComplete",
+   "Walks.page.heroIncomplete",
+   "Walks.page.heroSub",
+   "Walks.page.heroSubNoPet",
+   "Walks.page.weekLabel",
+   "Walks.page.recentTitle",
+   "Walks.page.viewAll",
+   "Walks.page.showRecent",
+   "Walks.core.manualLog",
+   "Walks.core.startWalking",
+   "Walks.core.needPetTitle",
+   "Walks.core.needPetDescription",
+   "Walks.core.needPetCta",
+   "Walks.core.pickPet",
+   "Walks.streak.labelShort",
+   "Walks.streak.weekTooltip",
+   "Walks.page.petPicker.openLabel",
+   "Walks.page.petPicker.goalChip"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-6",
+  "title": "Pet picker differs from web (content, icons, manage link) and the selection is not persisted",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:46,147-151,598-650 (pill + ChevronDown + localStorage 'mango.walks.lastPetId'); pet-picker-dropdown.tsx:67-129",
+  "ios_ref": "apps/ios/src/components/walks/pet-pill.tsx:22-144; apps/ios/src/lib/use-walks-data.ts:5-7,41,115",
+  "current_ios": "The selection is in-memory only, and the comment calling AsyncStorage a new dep is outdated (async-storage 1.23.1 is installed). The app re-opens on the primary pet every launch. Pill: chevron is a text glyph '⌄' (web lucide ChevronDown 12 in ink3, rotating 180° when open); avatar is 24px colors.amber (web 22px #f7c168); name weight 700 (web 600). Picker: a slide-up sheet whose transparent backdrop also slides, titled '選擇寵物', with a 🐶 emoji avatar for every pet and a right-aligned '{goal} 分' chip. It has no check mark on the active row and no '管理寵物' link to the Pets tab.",
+  "target": "Web dropdown content: rows with a 34px pet photo avatar, name 14/700 ink, a goal chip under the name (10px/600; active: white bg + brandDeep text, inactive: bgAlt + ink2) using Walks.page.petPicker.goalChip, lucide Check 16 in brandDeep on the active row, active row bg brandTint, row radius 12. Then a hairline divider and a 'manage pets' row (34px bgAlt rounded-12 tile with lucide Settings 18 + t('Walks.page.petPicker.manageLink')) that navigates to the Pets tab. Panel: card bg, radius 18, padding 6, hairline, shadows.elevated, width 256, anchored under the pill. The selection persists across launches.",
+  "fix_plan": "use-walks-data.ts: on mount, read AsyncStorage 'mango.walks.lastPetId' (the same key name as web) into selectedPetId; in selectPet, setSelectedPetId and AsyncStorage.setItem (wrap both in try/catch). pet-pill.tsx: use lucide ChevronDown size 12 color ink3, rotated 180° while open (static under reduced motion). Avatar 22px with bg '#f7c168'. Name fontWeight '600', maxWidth 104. Replace the sheet with a transparent fade Modal holding an absolutely positioned panel at the pill's measureInWindow position (left = x, top = y + height + 4); tapping the backdrop closes it. Rows use `<Avatar name={p.name} photoURL={p.photoURL} size={34} fallbackChar='🐾' />`, the goal chip under the name, and Check when active. Add the divider and a manage row that calls `router.push('/(tabs)/pets')` and closes. Drop the hard-coded title. Add accessibilityState {selected} on rows, and accessibilityState {expanded: open} on the pill when there are multiple pets.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/pet-pill.tsx",
+   "apps/ios/src/lib/use-walks-data.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.page.petPicker.goalChip",
+   "Walks.page.petPicker.manageLink",
+   "Walks.page.petPicker.openLabel"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-7",
+  "title": "Manual walk dialog: no start/end time pickers, different validation, hard-coded copy, flat brand Save button, no keyboard avoidance",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/manual-walk-dialog.tsx:37-75 (start defaults to now-1h, end to now, duration auto-derived), 81-90 (pet/distance/duration required, end > start), 122-201",
+  "ios_ref": "apps/ios/src/components/walks/manual-walk-dialog.tsx:7-10,49,64-79,125-227,286-294",
+  "current_ios": "No start/end inputs: startedAt is computed as now − duration, so past walks cannot be back-dated. That is the main purpose of '補登', and the comment claiming datetimepicker is a new dep is outdated (@react-native-community/datetimepicker 8.2.0 is installed). Duration defaults to '30' rather than being derived from start/end. Distance is optional and 0 is allowed (web requires > 0). All labels and errors are hard-coded zh. Save is a solid colors.brand pill, while design-system primary is the btn-mango gradient with white text. The custom Modal has no KeyboardAvoidingView, so the keyboard covers notes and the buttons. The backdrop can dismiss the dialog mid-save. There is no 'noPet' state when pets is empty.",
+  "target": "Web form order: Pet, then Start | End, then Distance (km) | Duration (min), then Notes, then error, then Cancel (ghost) / Save (primary btn-mango). Start defaults to now−1h, end to now, and duration auto-recomputes when the times change. Same validation as web.",
+  "fix_plan": "Rebuild on the shared `Sheet` primitive (components/ui/Sheet.tsx, which already includes KeyboardAvoidingView), or wrap the existing body in KeyboardAvoidingView behavior='padding'. Add startedAt/endedAt Date state, reset on open to (now−60min, now). Render two pressable fields showing local 'YYYY/MM/DD HH:mm' that open `DateTimePicker` (mode='datetime', display='spinner' or 'compact' on iOS, maximumDate=new Date()). When start or end changes and end > start, set duration = round((end−start)/60000). Validation: require petId, distance > 0 and duration > 0, else the required-fields error; require end > start, else the end-after-start error. Pass startedAt/endedAt through to createWalk. Labels: t('Walks.manual.title'|'pet'|'start'|'end'|'distance'|'duration'|'notes'), t('Walks.manual.noPet') when pets is empty, and t('Common.cancel')/t('Common.save'). Use `<Button variant='ghost'>` for Cancel and `<Button variant='primary' loading={saving}>` for Save (the gradient). Disable backdrop dismissal while saving. Keep the iOS-only score preview only behind a new i18n key, or remove it.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/manual-walk-dialog.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.manual.title",
+   "Walks.manual.pet",
+   "Walks.manual.noPet",
+   "Walks.manual.start",
+   "Walks.manual.end",
+   "Walks.manual.distance",
+   "Walks.manual.duration",
+   "Walks.manual.notes",
+   "Common.cancel",
+   "Common.save",
+   "Walks.core.saveFailed"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.manual.errRequired = 請填寫寵物、距離、時長 | Please fill in pet, distance and duration",
+   "Walks.manual.errEndBeforeStart = 結束時間需晚於開始時間 | End time must be after start time",
+   "Walks.manual.scorePreview = 預估分數 +{score} | Estimated score +{score}"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-10",
+  "title": "Empty states use emoji and plain text instead of the web EmptyState with a Footprints icon",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:522-545 (0 pets: Footprints icon + btn-mango CTA with Plus), 708-716 (no walks: EmptyState Footprints, replaces the whole recent section)",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:82-94,162-190; apps/ios/src/components/ui/EmptyState.tsx:15-23",
+  "current_ios": "0 pets: EmptyState with emoji '🐾' and an off-catalog title and body. Pets but no walks: the '最近遛狗' header still shows, followed by a single 13px ink3 line '還沒有遛狗紀錄，開始第一趟吧！', not the titled empty state. The iOS EmptyState only accepts an emoji, not a lucide icon.",
+  "target": "Both states render the shared EmptyState with the lucide Footprints icon, a title and a description. The 0-pet CTA is a btn-mango button with a Plus icon. The no-walks state replaces the recent section, header included.",
+  "fix_plan": "Add an optional `icon?: LucideIcon` prop to components/ui/EmptyState.tsx: when present, render it (size 28, color brandDeep) inside the existing disc instead of the emoji. In walks.tsx: for 0 pets, `<EmptyState icon={Footprints} title={t('Walks.core.needPetTitle')} body={t('Walks.core.needPetDescription')} ctaLabel={t('Walks.core.needPetCta')} onPressCta={...} />` with the Button `icon={<Plus size={16} color='#fff'/>}` (extend EmptyState to forward a ctaIcon). For no walks, when `!loading && walks.length === 0`, render `<EmptyState icon={Footprints} title={t('Walks.core.emptyWalksTitle')} body={t('Walks.core.emptyWalksDescription')} />` in place of the whole recent section (hide the header). Keep the ActivityIndicator for loading, but hide the header while loading too, as web does.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/src/components/ui/EmptyState.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.needPetTitle",
+   "Walks.core.needPetDescription",
+   "Walks.core.needPetCta",
+   "Walks.core.emptyWalksTitle",
+   "Walks.core.emptyWalksDescription"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-11",
+  "title": "Walks tab has no iPad content-width cap",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "Accepted platform pattern: iPad uses a centred CONTENT_MAX_WIDTH column (used by index/pets/leaderboard/settings/family)",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:108-114,206-208,253,283",
+  "current_ios": "styles.scroll has no maxWidth and the sticky CTA dock spans left:0/right:0, so on iPad the hero, week strip, rows and a ~1000pt-wide CTA pill stretch edge to edge. Every other tab caps the width.",
+  "target": "Content and the CTA are capped at CONTENT_MAX_WIDTH (480) and centred.",
+  "fix_plan": "Import CONTENT_MAX_WIDTH from '@/theme/theme'. Add `width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center'` to styles.scroll. Give the ctaDock an inner View with the same maxWidth/alignSelf/width so the floating pill stays phone-width.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-13",
+  "title": "Manual-log button uses an emoji instead of the lucide Hand ghost button",
+  "category": "icon",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:747-758 (Button ghost sm, Hand size-4, ink-2, mt-6)",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:193-201,276-282",
+  "current_ios": "A Pressable with the text '✍️  手動補登' (emoji + hard-coded copy), 14/600 ink2.",
+  "target": "A ghost small button with lucide Hand 16 in ink2 and the text t('Walks.core.manualLog'), centred, 24pt top margin.",
+  "fix_plan": "Replace it with `<Button variant='ghost' size='sm' icon={<Hand size={16} color={colors.ink2} />} label={t('Walks.core.manualLog')} onPress={() => setManualOpen(true)} disabled={pets.length===0} style={{alignSelf:'center', marginTop: spacing.xl}} />`.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.manualLog"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-14",
+  "title": "Start CTA is smaller than the web v2 pill (54 vs 62 tall)",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:781-811 (h-[62px], rounded-[31px], badge size-10, label 19px/800 tracking 0.5, shadow 0 12px 26px -8px rgba(243,152,0,.6))",
+  "ios_ref": "apps/ios/src/components/walks/walks-start-cta.tsx:105-137",
+  "current_ios": "Pill height 54, radius 27, badge 36, label 18, gap 10, shadow radius 18 / offset 10 / opacity 0.5.",
+  "target": "Height 62, radius 31, Play badge 40, label 19 / 800 / letterSpacing 0.5, gap 12, shadow offset 12 / radius 13 / opacity 0.6 in brand.",
+  "fix_plan": "In walks-start-cta.tsx styles: pill.height 62, borderRadius 31, gap 12; shadow.borderRadius 31, shadowOffset {0,12}, shadowRadius 13, shadowOpacity 0.6; badge 40×40, radius 20; label fontSize 19. Keep the sweep and reduced-motion handling as they are.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walks-start-cta.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-15",
+  "title": "Week-strip details: 22 radius (web 16), dashed today border (web solid), halo drawn inside the circle",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/walks/walks-week-strip.tsx:81 (rounded-2xl = Tailwind 16px; radius tokens are not in @theme), 115 (today: border-solid brand), 118-122 (halo = box-shadow 3px outside the 34px circle)",
+  "ios_ref": "apps/ios/src/components/walks/walks-week-strip.tsx:76,95-100,106-112",
+  "current_ios": "Card borderRadius radius.xl2 (22) and hairline border width. The today cell uses borderStyle 'dashed'. The done-today halo is borderWidth 3 inside the 34px circle, which shrinks the leaf fill to 28px.",
+  "target": "Card radius 16, 1px hairline. Today cell: 1.5px SOLID brand border on brandTint. Done-today: a 34px leaf circle with a 3px leafTint ring outside it.",
+  "fix_plan": "Set card borderRadius to 16 and borderWidth to 1. Remove borderStyle:'dashed' from dotToday (keep it on dotEmpty). For the halo, wrap the dot in a 40×40 View with borderRadius 20 and backgroundColor colors.leafTint, centred, and drop the borderWidth from the dot itself.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walks-week-strip.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-16",
+  "title": "No goal-hit confetti on the walks home",
+  "category": "missing-feature",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:376-388 (showConfetti for 4s when goalHit), 579-583; walks-confetti-decor.tsx (paper ConfettiCanvas, static under reduced motion)",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx (absent); apps/ios/src/components/walks/walk-confetti.tsx (only used in walk-tracking-view)",
+  "current_ios": "Reaching the goal changes the dial and hero on iOS but plays no celebration. WalkConfetti exists, but its palette is amber/emerald (#f59e0b, #10b981…) and it is only mounted on the tracking done screen.",
+  "target": "A brief confetti burst over the top of the walks home when today's goal is hit, auto-hidden after 4s; under reduced motion, a static scatter or nothing.",
+  "fix_plan": "In walks.tsx: `const [showConfetti,setShowConfetti]=useState(false); useEffect(()=>{ if(!goalHit){setShowConfetti(false);return;} setShowConfetti(true); const id=setTimeout(()=>setShowConfetti(false),4000); return ()=>clearTimeout(id); },[goalHit]);` Place this hook above the 0-pet early return, as web does to avoid a hook-order crash. Render `{showConfetti ? <View pointerEvents='none' style={StyleSheet.absoluteFill}><WalkConfetti width={windowWidth} /></View> : null}` inside SafeAreaView. Optionally switch the WalkConfetti PALETTE to mango tokens (brand, amber, leaf, brandTint) to match the design system.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/src/components/walks/walk-confetti.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "WALKS-17",
+  "title": "Dial and hero polish: flat glow, check badge ring drawn inside, hero weight 800 vs 700, dial bottom spacing",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/walks/walks-dial.tsx:47-56 (radial glow rgba(95,168,88,.18)→0), 121-131 (38px leaf + 4px white ring OUTSIDE, Check 20); page.tsx:660-681 (hero h2 26/700 tracking-tight; dial wrapper pt-2 pb-6 mb-6)",
+  "ios_ref": "apps/ios/src/components/walks/walks-dial.tsx:91,118-126,137-154; apps/ios/app/(tabs)/walks.tsx:258,260",
+  "current_ios": "The glow is a flat 0.10 green disc. The check badge's white ring is a 4px border inside the 38px circle, so the leaf area is 30px, and the Check is 18. Hero title fontWeight '800' with letterSpacing -0.5. dialWrap paddingVertical 8, so the bottom padding is 8 against web's 24 and the week strip sits closer to the overlapping numeric pill.",
+  "target": "Same as web: a radial glow, a 38px leaf badge with a 4px white ring outside (46px overall), Check 20, hero 26/700, dial wrapper padding top 8 / bottom 24 / margin-bottom 24.",
+  "fix_plan": "Glow: replace the View with an Svg using a RadialGradient from react-native-svg (stops 0% rgba(95,168,88,0.18), 65% rgba(95,168,88,0)), sized SIZE+20, absolute at −10. Badge: an outer 46px white circle at right 14 / bottom 14 holding the inner 38px leaf circle; Check size 20, strokeWidth 3. In walks.tsx set heroTitle fontWeight '700', letterSpacing -0.65, and dialWrap { paddingTop: 8, paddingBottom: 24, marginBottom: 24 }.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walks-dial.tsx",
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-24",
+  "title": "Walks-home goal-hit 'paper' confetti (ConfettiCanvas, 4s auto-hide) has no iOS counterpart",
+  "category": "missing-feature",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:376-388, 579-583; apps/web/src/components/walks/walks-confetti-decor.tsx:17-19; apps/web/src/components/ui/confetti-canvas.tsx (mango PARTY palette, reduced-motion = single static scatter)",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:96-144",
+  "current_ios": "Hitting today's goal shows no celebration on the walks home.",
+  "target": "Brief (4s) overlay burst when todayProgress.percent crosses 100, in the mango palette, pointerEvents none.",
+  "fix_plan": "Reuse WalkConfetti with a `palette` prop (mango PARTY colors from confetti-canvas.tsx: brand #f39800 → use colors.brand/amber/leaf/success/peach/brandDeep tokens) rendered absolutely over the walks ScrollView when `goalHit` becomes true, unmounted after 4000ms via setTimeout in a useEffect placed above the 0-pet early return (web React #300 lesson). Skip under reduced motion. (Probably also flagged by the walks-home surface audit.)",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/src/components/walks/walk-confetti.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "XCUT-6",
+  "title": "R20: Walks tab + walk components hard-code zh-TW instead of the web's Walks.* keys",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:113-118 (tP/tW/tS/tC/tPP), components/walks/pet-picker-dropdown.tsx:42, manual-walk-dialog.tsx:35-36, photo-prompt-sheet.tsx:52",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:87-200; src/components/walks/walks-streak-chip.tsx:76,93; walks-start-cta.tsx:69,99; pet-pill.tsx:30,55,79; manual-walk-dialog.tsx:68,72,104,134-220; photo-prompt-sheet.tsx:27-56; photo-share-flow.tsx:55-56; camera-capture-modal.tsx:50-97; walks-week-strip.tsx:14; walk-row.tsx:21",
+  "current_ios": "All visible copy is inline zh-TW (file header still says shared-i18n not built); English devices see Chinese; several strings also diverge from web copy (e.g. '先新增一隻寵物' vs web '還沒有寵物', '最近遛狗' vs '最近紀錄', '出發前拍一張？' vs '拍張開始照？', '略過' vs '跳過').",
+  "target": "Same keys as web so copy matches and en works.",
+  "fix_plan": "walks.tsx: 87→t('Walks.core.needPetTitle'); 88→t('Walks.core.needPetDescription'); 89→t('Walks.core.needPetCta'); 99→goalHit ? t('Walks.page.heroComplete') : t('Walks.page.heroIncomplete',{min:remainingMin}); 101→t('Walks.page.heroSub',{pet:activePet.name,done:doneMin,streak:streakDays}); 102→t('Walks.page.heroSubNoPet',{done:doneMin,streak:streakDays}); 117→t('Nav.walks'); 149→t('Walks.page.weekLabel'); 165→t('Walks.page.recentTitle'); 174→showAllWalks ? t('Walks.page.showRecent') : t('Walks.page.viewAll'); 182→title t('Walks.core.emptyWalksTitle') + body t('Walks.core.emptyWalksDescription'); 195→t('Walks.manual.title'); 200→'✍️  '+t('Walks.core.manualLog'). walks-streak-chip 76/93→t('Walks.streak.labelShort',{days:streakDays}). walks-start-cta 69/99→t('Walks.core.startWalking'). pet-pill 30→t('Walks.page.petPicker.openLabel',{pet:activePet.name}); 55→t('Walks.core.pickPet'); 79→t('Walks.page.petPicker.goalChip',{n:goal}). manual-walk-dialog 134→Walks.manual.title; 136→Walks.manual.pet; 160→Walks.manual.duration; 171→Walks.manual.distance; 183→Walks.manual.notes; 205→Common.cancel; 220→Common.save; 104 fallback→Walks.core.saveFailed; 68/72/188/195→new keys. photo-prompt-sheet 27→WalksPhotoPrompt.start.title / end.title; 30→WalksPhotoPrompt.start.body {pet}; 31→WalksPhotoPrompt.end.body {pet,min}; 53→'📷  '+WalksPhotoPrompt.take; 56→WalksPhotoPrompt.skip. photo-share-flow 55→WalksPhotoPrompt.captionStartDefault {pet}; 56→WalksPhotoPrompt.captionEndDefault {pet,min}. camera-capture-modal 60→WalksPhotoPrompt.skip; 87→Common.close; 97→WalksPhotoPrompt.take; 50/52/56→new keys. walks-week-strip 14 and walk-row 21→new weekday/relative-time keys (see XCUT-10). Update the stale header comments.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/src/components/walks/walks-streak-chip.tsx",
+   "apps/ios/src/components/walks/walks-start-cta.tsx",
+   "apps/ios/src/components/walks/pet-pill.tsx",
+   "apps/ios/src/components/walks/manual-walk-dialog.tsx",
+   "apps/ios/src/components/walks/photo-prompt-sheet.tsx",
+   "apps/ios/src/components/walks/photo-share-flow.tsx",
+   "apps/ios/src/components/walks/camera-capture-modal.tsx",
+   "apps/ios/src/components/walks/walks-week-strip.tsx",
+   "apps/ios/src/components/walks/walk-row.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.walks",
+   "Walks.core.needPetTitle",
+   "Walks.core.needPetDescription",
+   "Walks.core.needPetCta",
+   "Walks.page.heroIncomplete",
+   "Walks.page.heroComplete",
+   "Walks.page.heroSub",
+   "Walks.page.heroSubNoPet",
+   "Walks.page.weekLabel",
+   "Walks.page.recentTitle",
+   "Walks.page.viewAll",
+   "Walks.page.showRecent",
+   "Walks.core.emptyWalksTitle",
+   "Walks.core.emptyWalksDescription",
+   "Walks.core.manualLog",
+   "Walks.manual.title",
+   "Walks.streak.labelShort",
+   "Walks.core.startWalking",
+   "Walks.page.petPicker.openLabel",
+   "Walks.page.petPicker.goalChip",
+   "Walks.core.pickPet",
+   "Walks.manual.pet",
+   "Walks.manual.duration",
+   "Walks.manual.distance",
+   "Walks.manual.notes",
+   "Walks.core.saveFailed",
+   "WalksPhotoPrompt.start.title",
+   "WalksPhotoPrompt.end.title",
+   "WalksPhotoPrompt.start.body",
+   "WalksPhotoPrompt.end.body",
+   "WalksPhotoPrompt.take",
+   "WalksPhotoPrompt.skip",
+   "WalksPhotoPrompt.captionStartDefault",
+   "WalksPhotoPrompt.captionEndDefault",
+   "Common.cancel",
+   "Common.save",
+   "Common.close"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.manual.errRequired = 請選擇寵物並填寫時長 | Pick a pet and enter a duration",
+   "Walks.manual.errDistance = 距離格式不正確 | Invalid distance",
+   "Walks.manual.notesPlaceholder = 今天走去公園… | Walked to the park…",
+   "Walks.manual.scorePreview = 預估分數 +{score} | Estimated score +{score}",
+   "Walks.camera.permTitle = 需要相機權限 | Camera access needed",
+   "Walks.camera.permBody = 開啟相機才能拍遛狗照片；不拍照也能完成這次遛狗。 | Allow the camera to take walk photos — you can finish the walk without one.",
+   "Walks.camera.allow = 允許相機 | Allow camera"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ }
+]

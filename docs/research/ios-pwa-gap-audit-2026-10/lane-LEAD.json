@@ -1,0 +1,292 @@
+[
+ {
+  "id": "LEAD-3",
+  "title": "Human board 家庭內 scope drops family members who haven't walked and never shows the 'only you' hint",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/leaderboard/human-leaderboard.tsx:97-148 (listFamilyMembers + zero-score placeholders, sorted by score), :187-189 + :268-272 (isFamilyOnlyMe → Leaderboard.familyOnlyMe)",
+  "ios_ref": "apps/ios/src/components/leaderboard/human-leaderboard.tsx:73-79 (filters `entries` by family.memberUids only), :134-151 (no hint)",
+  "current_ios": "Family scope shows only members who already have an entry doc for the period. A member who hasn't walked this week disappears from the family ranking instead of appearing at 0 points. A solo family sees just its own row with no invite nudge.",
+  "target": "Every family member appears; members with no entry get a 0-score placeholder (score/km/walks 0, no streak). The list is sorted by totalScore desc. When the family has exactly 1 member, show Leaderboard.familyOnlyMe as a centered 14px ink2 line under the list (marginTop 16).",
+  "fix_plan": "In human-leaderboard.tsx:\n1. Add `const [members, setMembers] = useState<FamilyMember[]>([])`.\n2. Add a refreshMembers callback calling listFamilyMembers(family) from @/lib/families-read. It already exists and strips private fields. Use try/catch, falling back to []. Run it in an effect on [family], and call it from refresh().\n3. Replace the `visible` useMemo for scope 'family': build entriesByUid = new Map(entries.map(e=>[e.uid,e])). Map members to `entriesByUid.get(m.uid) ?? {uid:m.uid, displayName:m.displayName, photoURL:m.photoURL, totalScore:0, totalDistanceKm:0, totalDurationMin:0, walkCount:0, streakDays:0} as LeaderboardEntry`, then sort by totalScore desc. Placeholders have no lastUpdatedAt, so glow ignores them; keep feeding `entries` to useLeaderboardEntryGlow.\n4. After the list: `{scope==='family' && members.length===1 && visible.length===1 ? <Text style={{marginTop:16,textAlign:'center',fontSize:14,color:colors.ink2}}>{t('Leaderboard.familyOnlyMe')}</Text> : null}`.",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Leaderboard.familyOnlyMe"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-4",
+  "title": "Human board flashes the personal-mode 'join a family' empty state while the family context is still loading",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/leaderboard/human-leaderboard.tsx:38,165 (`if (!familyLoading && !family)`), :247 (loading || familyLoading → loading)",
+  "ios_ref": "apps/ios/src/components/leaderboard/human-leaderboard.tsx:35 (ignores `loading` from useFamily), :92 (`if (!family)`)",
+  "current_ios": "FamilyProvider (apps/ios/src/state/family-context.tsx:43) starts with family=null and loading=true. On cold start, or after refresh() (e.g. join/[code].tsx:46), a family user briefly sees 加入家庭看排行榜 plus a CTA before the board appears.",
+  "target": "While familyLoading, render the board header and the loading indicator. Show the personal empty state only when loading is false and family is null.",
+  "fix_plan": "In human-leaderboard.tsx:\n1. Use `const { family, loading: familyLoading } = useFamily();`.\n2. Change the personal-mode guard to `if (!familyLoading && !family)`.\n3. Render the spinner when `loading || familyLoading`.\n4. In the subscribe effect, return early when familyLoading. When !family, call setEntries([]) and setLoading(false), mirroring web :67-84. Add familyLoading to the deps.",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-5",
+  "title": "Leaderboard empty states don't match web EmptyState (no dashed card, no lucide icon disc, personal mode loses the page title, friends CTA uses the wrong button variant)",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/ui/empty-state.tsx:10-27; human-leaderboard.tsx:165-183 (RouteHeader title above EmptyState icon=Trophy, primary Button with Users icon → /onboarding), :250-254 (computing: icon Trophy); dog-leaderboard.tsx:188-208 (emptyFriends: icon Users + variant='secondary' Button with Users icon; emptyAll: icon PawPrint)",
+  "ios_ref": "apps/ios/src/components/leaderboard/human-leaderboard.tsx:92-104, 128-132, styles :164-167; apps/ios/src/components/leaderboard/dog-leaderboard.tsx:126-145, styles :180-183",
+  "current_ios": "Plain centered text with no card or icon. In personal mode the whole board header, including 排行榜, is gone, so the tab shows only the toggle and floating text. The emptyFriends 加好友 CTA renders as the primary mango gradient, while web uses the secondary white button. Neither CTA has the Users icon.",
+  "target": "A web-equivalent card for all four states: personalEmpty, computing, emptyFriends, and emptyAll. In personal mode, show the RouteHeader-style title t('Nav.leaderboard') above the card.",
+  "fix_plan": "1. Create apps/ios/src/components/leaderboard/board-empty-state.tsx with props {icon: LucideIcon, title, description, action?: ReactNode}.\n  - Container: alignItems center, gap 12, paddingHorizontal 24, paddingVertical 48, borderRadius radius.sm (rounded-lg = 8), borderWidth 1, borderStyle 'dashed', borderColor colors.hairline, backgroundColor 'rgba(255,255,255,0.75)'.\n  - Icon disc: 48x48, radius.sm, bg colors.brandTint, centered, with <Icon size={24} color={colors.brandDeep} />.\n  - Title: 16/600 ink, centered. Description: 14 ink2, centered, lineHeight 20, maxWidth 384.\n2. Human board: personal mode returns the header (title only, no refresh) followed by BoardEmptyState icon=Trophy with Leaderboard.personalEmpty.* and a primary Button (Users icon) calling onCreateFamily. The computing state uses icon=Trophy with Leaderboard.computing.*.\n3. Dog board: emptyFriends uses icon=Users and <Button variant=\"secondary\" label={t('Leaderboard.dog.emptyFriends.cta')} icon={<Users size={16} color={colors.ink}/>} />. emptyAll uses icon=PawPrint.\n4. Button currently wraps `icon` in <Text> (Button.tsx:72). Change it to render non-string icons inside a <View> so the lucide SVG aligns vertically.",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/board-empty-state.tsx (new)",
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx",
+   "apps/ios/src/components/ui/Button.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.leaderboard",
+   "Leaderboard.personalEmpty.title",
+   "Leaderboard.personalEmpty.subtitle",
+   "Leaderboard.personalEmpty.cta",
+   "Leaderboard.computing.title",
+   "Leaderboard.computing.subtitle",
+   "Leaderboard.dog.emptyFriends.title",
+   "Leaderboard.dog.emptyFriends.subtitle",
+   "Leaderboard.dog.emptyFriends.cta",
+   "Leaderboard.dog.emptyAll.title",
+   "Leaderboard.dog.emptyAll.subtitle"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-6",
+  "title": "Board header typography and vertical rhythm smaller and tighter than web RouteHeader",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/nav/route-header.tsx:31-46 (h1 text-[26px] font-extrabold tracking-[-0.5px] mango-ink; subtitle mt-1 text-sm leading-6 mango-ink-2); human-leaderboard.tsx:199 (header mb-4), :224 (scope tabs mb-3), :235 (period tabs mb-4); dog-leaderboard.tsx:137,162,173 same",
+  "ios_ref": "apps/ios/src/components/leaderboard/human-leaderboard.tsx:157-161 (wrap gap 8, title 22/800, subtitle 11 ink3 mt2); apps/ios/src/components/leaderboard/dog-leaderboard.tsx:173-177 identical",
+  "current_ios": "Title is 22pt with no tracking. Subtitle is 11pt ink3, so the scoring-formula line is hard to read. Header, scope tabs, period tabs, and list are all spaced 8pt apart, versus web's 16/12/16.",
+  "target": "Title 26/800 with letterSpacing -0.5 in colors.ink. Subtitle 14 with lineHeight 24 in colors.ink2, marginTop 4. Spacing: header→scope tabs 16, scope→period 12, period→list 16.",
+  "fix_plan": "In both board files:\n1. Set styles.title = { fontSize: 26, fontWeight: '800', letterSpacing: -0.5, color: colors.ink }.\n2. Set styles.subtitle = { fontSize: 14, lineHeight: 24, color: colors.ink2, marginTop: 4 }.\n3. Replace wrap gap with explicit margins: headerRow marginBottom 16; wrap the scope Segmented in <View style={{marginBottom:12}}> and the period Segmented in <View style={{marginBottom:16}}>; set wrap gap to 0.\n4. Human header text: web uses Nav.leaderboard (human) and Leaderboard.title (dog). Both are 排行榜/Leaderboard, so this is optional. Use t('Nav.leaderboard') for the human board to mirror web exactly.",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.leaderboard",
+   "Leaderboard.title",
+   "Leaderboard.humanSubtitle",
+   "Leaderboard.dog.subtitle"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-7",
+  "title": "Row glow is invisible on the user's own (highlighted) row and starts at full intensity instead of pulsing",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/globals.css:270-280 (.leaderboard-row-glow: bg rgba(243,152,0,0) → 0.18 at 20% → 0 over 1.5s ease-out; reduced-motion none); leaderboard-row.tsx:37",
+  "ios_ref": "apps/ios/src/components/leaderboard/leaderboard-row.tsx:54-65 (glow.setValue(1) then timing →0 1500ms, useNativeDriver:false), :78-81 + :147-150 (overlay backgroundColor colors.brandTint), :142-146 (rowMe backgroundColor colors.brandTint)",
+  "current_ios": "The overlay is brandTint (#ffe7bf) laid over a 'me' row that is also brandTint. The row most likely to glow, your own row right after your walk, therefore shows no flash at all. On other rows the flash jumps to full opacity instantly, unlike web's ramp-in pulse. It also animates opacity on the JS thread.",
+  "target": "A visible mango pulse on every row, including the highlighted one: brand color at 18% alpha, ramping up over about 300ms and fading out over about 1200ms. Under reduced motion, no animation.",
+  "fix_plan": "In leaderboard-row.tsx:\n1. Change the glow overlay to backgroundColor 'rgba(243,152,0,0.18)', i.e. colors.brand at 18% alpha.\n2. Replace the effect body with: glow.setValue(0); Animated.sequence([Animated.timing(glow,{toValue:1,duration:300,easing:Easing.out(Easing.quad),useNativeDriver:true}), Animated.timing(glow,{toValue:0,duration:1200,easing:Easing.out(Easing.quad),useNativeDriver:true})]).start(). Opacity is native-driver safe.\n3. Keep the reduceMotion short-circuit.\n4. Give the overlay borderRadius: radius.sm so it does not need overflow:hidden on the row (see LEAD-9).",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/leaderboard-row.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-8",
+  "title": "Manual refresh doesn't refetch friends (dog board) or members (human board); friend fetch not cancelled / not reset on sign-out",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/leaderboard/dog-leaderboard.tsx:77-94 (friends effect deps [user, refreshNonce], cancelled flag, reset to empty Set when !user); human-leaderboard.tsx:86-95 (handleRefresh also calls refreshMembers)",
+  "ios_ref": "apps/ios/src/components/leaderboard/dog-leaderboard.tsx:52-55 (deps [user] only, no cancel, no reset), :98-102; apps/ios/src/components/leaderboard/human-leaderboard.tsx:86-90",
+  "current_ios": "After accepting a friend, tapping refresh still filters with the stale friend set, so the new friend's dogs don't appear until the tab remounts, which on iOS tabs is effectively app restart. A late promise can also set state after unmount or user switch. refresh() overwrites refreshTimer without clearing a pending one.",
+  "target": "Refresh re-pulls friends (dog board) and members (human board), matching web, with cancellation-safe effects.",
+  "fix_plan": "1. dog-leaderboard.tsx: change the friends effect to `useEffect(() => { if (!user) { setFriendUids(new Set()); return; } let cancelled=false; listFriendUids(user.uid).then(ids => { if (!cancelled) setFriendUids(new Set(ids)); }); return () => { cancelled = true; }; }, [user, nonce]);`.\n2. In both boards' refresh(): add `if (refreshing) return;` and `if (refreshTimer.current) clearTimeout(refreshTimer.current);` before setting the new timer.\n3. human-leaderboard.tsx: call refreshMembers() inside refresh() (depends on LEAD-3).",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-9",
+  "title": "Realtime leaderboard listeners stay live while the tab is unfocused / app backgrounded (tabs never unmount)",
+  "category": "optimization",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/leaderboard/human-leaderboard.tsx:67-84 / dog-leaderboard.tsx:61-72 (listener torn down when the route unmounts on navigation)",
+  "ios_ref": "apps/ios/app/(tabs)/leaderboard.tsx:20-62 (no focus handling); apps/ios/src/components/leaderboard/human-leaderboard.tsx:50-62; dog-leaderboard.tsx:57-68; apps/ios/src/lib/leaderboards.ts:9-10 (comment: callers MUST unsubscribe on unmount/background)",
+  "current_ios": "Expo Router Tabs keep the leaderboard screen mounted once visited. Its onSnapshot over up to 100 docs, and the dog board's over all dogs, keeps receiving and billing every recompute write while the user is on other tabs. The rows' glow also never matters there. This violates the quota warning in leaderboards.ts.",
+  "target": "Listeners are active only while the leaderboard tab is focused and the app is in the foreground. On re-focus, resubscribe; the glow baseline resets naturally because the first snapshot is a baseline.",
+  "fix_plan": "1. In apps/ios/app/(tabs)/leaderboard.tsx, add `const [active, setActive] = useState(true)`.\n2. Add useFocusEffect(useCallback(() => { setActive(true); return () => setActive(false); }, [])), imported from expo-router.\n3. Add an AppState listener: setActive(state === 'active' && focusedRef.current).\n4. Pass `active` to <HumanLeaderboard active={active}/> and <DogLeaderboard active={active}/>.\n5. In each board's subscribe effect, start with `if (!active) return;` and add `active` to the deps. Keep the last entries in state so re-focus shows data instantly while the listener reattaches. Set loading only when entries is empty, so re-focus doesn't flash the spinner.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-10",
+  "title": "Row card shadow is clipped (overflow:hidden on the same view as shadows.card)",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/leaderboard/leaderboard-row.tsx:33 (rounded-lg border p-3 shadow-sm)",
+  "ios_ref": "apps/ios/src/components/leaderboard/leaderboard-row.tsx:130-141 (row: overflow 'hidden' + ...shadows.card)",
+  "current_ios": "On iOS, overflow:'hidden' on a view suppresses its own shadow. Rows render flat, without web's subtle card lift.",
+  "target": "Rows show the soft card shadow.",
+  "fix_plan": "1. Remove `overflow: 'hidden'` from styles.row.\n2. Give styles.glow `borderRadius: radius.sm` so the absolute overlay stays inside the rounded corners.\n3. If any clipping is still needed, wrap the content in an inner View with overflow hidden and keep the shadow on the outer View.",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/leaderboard-row.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-11",
+  "title": "Dog row avatar is a rounded square; web dog row uses the round Avatar",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/leaderboard/dog-leaderboard-row.tsx:55 (<Avatar size={36}> → ui/avatar.tsx rounded-full)",
+  "ios_ref": "apps/ios/src/components/leaderboard/leaderboard-row.tsx:90-91 (PetAvatar → Avatar shape='rounded', radius ≈ 0.34*size)",
+  "current_ios": "Dog board avatars are rounded squares while human board avatars are circles. Web renders both boards with circles.",
+  "target": "Circle, 36px, on both boards.",
+  "fix_plan": "In leaderboard-row.tsx, replace the PetAvatar branch with `<Avatar name={name} photoURL={photoURL} size={36} shape=\"circle\" fallbackChar=\"🐾\" />`, imported from '@/components/ui/Avatar'. This keeps the paw fallback but uses a circle.",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/leaderboard-row.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-12",
+  "title": "Up to 100 rows rendered via .map inside a ScrollView; no native pull-to-refresh",
+  "category": "optimization",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/leaderboard/human-leaderboard.tsx:257-267, dog-leaderboard.tsx:210-220 (grid of rows; web has only the refresh icon)",
+  "ios_ref": "apps/ios/app/(tabs)/leaderboard.tsx:40-59 (ScrollView); human-leaderboard.tsx:134-150; dog-leaderboard.tsx:147-166",
+  "current_ios": "All 100 rows mount at once, each with an Animated.Value and a remote Image, inside a plain ScrollView. Pull-down does nothing, although it is the native refresh idiom used elsewhere in the app (feed.tsx:78-80, photos.tsx:207-209).",
+  "target": "Virtualized list, plus a RefreshControl that triggers the same refresh as the icon button. The icon button stays for web parity.",
+  "fix_plan": "1. Restructure each board to render a FlatList: data = visible, keyExtractor uid or petId, renderItem LeaderboardRow, ItemSeparatorComponent of 8px height, contentContainerStyle with the same padding and CONTENT_MAX_WIDTH centering.\n2. ListHeaderComponent holds the dimension Segmented (passed in from leaderboard.tsx), the header row, and both tab rows. ListEmptyComponent holds the empty card. ListFooterComponent holds the familyOnlyMe hint.\n3. Add refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brand} />}.\n4. leaderboard.tsx then drops its ScrollView and just renders the active board, passing the dimension toggle as a header prop.\n5. Wrap LeaderboardRow in React.memo.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/leaderboard-row.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "LEAD-13",
+  "title": "Listener errors are indistinguishable from 'computing' (offline/permission error shows 排行榜計算中)",
+  "category": "state-handling",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/leaderboard/human-leaderboard.tsx:81, dog-leaderboard.tsx:69 (onError only clears loading; web has the same weakness)",
+  "ios_ref": "apps/ios/src/components/leaderboard/human-leaderboard.tsx:59, dog-leaderboard.tsx:65",
+  "current_ios": "On a snapshot error the board falls through to the empty 'computing' state, which tells the user to go walk when the real problem is connectivity.",
+  "target": "An error card with a retry action, which is an iOS improvement over web.",
+  "fix_plan": "1. In each board, add `const [error, setError] = useState(false)`.\n2. onError: setError(true) and setLoading(false). On a successful snapshot: setError(false).\n3. When error is true and the list is empty, render BoardEmptyState (from LEAD-5) with icon AlertTriangle, title t('Error.title'), and action <Button variant='secondary' label={t('Error.retry')} onPress={refresh} />.",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Error.title",
+   "Error.retry"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "LEAD-14",
+  "title": "Persisted dimension/scope restore after first render causes a double subscribe and a wrong-board flash",
+  "category": "optimization",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/leaderboard/page.tsx:27-33; human-leaderboard.tsx:56-60; dog-leaderboard.tsx:53-57 (same post-mount restore on web, but localStorage is sync-fast)",
+  "ios_ref": "apps/ios/app/(tabs)/leaderboard.tsx:22-28; human-leaderboard.tsx:44-48; dog-leaderboard.tsx:46-50",
+  "current_ios": "If the user last chose 狗, the human board mounts first: it subscribes to leaderboards/{week}, may flash personal-empty, then is torn down when AsyncStorage resolves. The dog board similarly renders 朋友 and then switches to 全 App.",
+  "target": "Read the persisted dimension and scopes before mounting a board.",
+  "fix_plan": "1. In leaderboard.tsx, add `const [hydrated, setHydrated] = useState(false)`.\n2. Load all three keys with AsyncStorage.multiGet(['mango.leaderboard.dimension','mango.leaderboard.scope','mango.leaderboard.dogScope']). Set the state, then setHydrated(true), in .finally so a read failure still renders.\n3. Pass initialScope / initialDogScope props into the boards and drop their own restore effects.\n4. Render the boards only when hydrated (show the toggle immediately).",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "LEAD-16",
+  "title": "Dog rows use the human-board i18n keys for walk count / score unit",
+  "category": "copy-i18n",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/leaderboard/dog-leaderboard-row.tsx:36,76 (Leaderboard.dog.walkCount, Leaderboard.dog.scoreUnit)",
+  "ios_ref": "apps/ios/src/components/leaderboard/leaderboard-row.tsx:69,121 (Leaderboard.unitWalks, Leaderboard.unitScore for both boards)",
+  "current_ios": "The rendered text is currently identical in both locales ({count} 次 / 分; {count} walks / pts). It will drift if copy edits target the dog namespace.",
+  "target": "Use the same keys as web per board.",
+  "fix_plan": "In leaderboard-row.tsx, when isDog is true use t('Leaderboard.dog.walkCount',{count}) and t('Leaderboard.dog.scoreUnit'). Otherwise keep the Leaderboard.unitWalks and Leaderboard.unitScore keys.",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/leaderboard-row.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Leaderboard.dog.walkCount",
+   "Leaderboard.dog.scoreUnit"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-18",
+  "title": "Leaderboard onSnapshot listeners stay live while the tab is not focused",
+  "category": "optimization",
+  "severity": "P2",
+  "web_ref": "apps/web leaderboard page unmounts on navigation, so its onSnapshot is released",
+  "ios_ref": "apps/ios/src/components/leaderboard/human-leaderboard.tsx:50-62; dog-leaderboard.tsx:57-68; apps/ios/src/lib/leaderboards.ts:9-10 (comment requires unsubscribe on background)",
+  "current_ios": "Tabs remain mounted, so once the Leaderboard tab is visited a 100-doc realtime listener keeps streaming (and re-rendering/glow timers) while the user is on Walks/Home or the app is backgrounded — quota drain the lib comment warns about.",
+  "target": "Subscribe only while the Leaderboard tab is focused and the app is active.",
+  "fix_plan": "Replace the useEffect subscription with `useFocusEffect(useCallback(() => { if (!family) return; setLoading(true); const unsub = subscribeLeaderboard(period, …); return unsub; }, [period, nonce, family]))` (import from 'expo-router'); same in dog-leaderboard. Focus loss on backgrounding is handled by react-navigation; optionally add AppState 'background' → unsub.",
+  "files_to_touch": [
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ }
+]

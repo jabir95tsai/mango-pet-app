@@ -1,0 +1,646 @@
+[
+ {
+  "id": "SOCIAL-1",
+  "title": "Friends screen has no guest (anonymous) gate — guests see tabs/QR and hit rules-denied writes",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/friends/page.tsx:121-138 (QR button hidden for guests; GuestLockedNotice replaces tabs+lists); apps/web/src/components/auth/guest-upgrade.tsx:207-237",
+  "ios_ref": "apps/ios/app/friends/index.tsx:46-276 (no isAnonymous check anywhere); reachable by guests via apps/ios/app/(tabs)/leaderboard.tsx:36 DogLeaderboard onAddFriend; apps/ios/app/friends/add.tsx:371-387",
+  "current_ios": "Anonymous users who open /friends (e.g. from the dog leaderboard '加好友' CTA) get the full UI: QR button (encodes a guest uid), search, and '加好友' which fails at Firestore rules with a raw permission error Alert. Settings hides the friends disc for guests, so the gate is inconsistent.",
+  "target": "Guests see title+subtitle, NO QR button, and a single locked notice: Lock icon + Guest.locked.friends text + btn-mango '綁定帳號' (Guest.upgradeCta). Tabs/lists not rendered.",
+  "fix_plan": "In friends/index.tsx: `const isGuest = !!user?.isAnonymous;`. When isGuest: do not render the QR Pressable, the Segmented tabs, the ScrollView content or the QR Modal; instead render a new `GuestLockedNotice` (create apps/ios/src/components/auth/guest-locked-notice.tsx, props `{ feature: 'post'|'reactions'|'friends'|'family' }`): View {backgroundColor: colors.cardSoft, borderWidth:1, borderColor: colors.bellTint, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md}; row with lucide `Lock` size 16 color colors.ink2 + Text t(`Guest.locked.${feature}`) (14, colors.ink); then `<Button size=\"sm\" label={t('Guest.upgradeCta')} onPress={() => router.push('/settings')} />` (settings hosts GuestUpgradeSection). Apply the same gate in friends/add.tsx: if user?.isAnonymous show the notice instead of the send button. Reusable for feed/family gates later.",
+  "files_to_touch": [
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/app/friends/add.tsx",
+   "apps/ios/src/components/auth/guest-locked-notice.tsx (new)"
+  ],
+  "i18n_keys_to_reuse": [
+   "Guest.locked.friends",
+   "Guest.upgradeCta"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: apps/ios/app/friends/index.tsx has no isAnonymous check. The QR button (145-147), Segmented tabs (150-160) and search/send all render for guests. Guests can reach the screen through DogLeaderboard's empty-friends CTA (dog-leaderboard.tsx:138-143 → leaderboard.tsx:36 router.push('/friends')), while settings.tsx:54 hides the friends disc for guests. On web, friends/page.tsx:121-138 hides the QR button and renders GuestLockedNotice instead of the tabs. firestore.rules:94-99 requires isRealUser() to create a friendRequest, so a guest send is rules-denied. Guest.locked.friends and Guest.upgradeCta exist. Two corrections: the ios_ref 'friends/add.tsx:371-387' is wrong because add.tsx has 125 lines (the relevant branch is add.tsx:84-100). Also, web friends/add/page.tsx has no guest gate (it only checks !user), so gating add.tsx goes beyond web parity. It is still justified because the rules deny the write.",
+  "corrected_fix_plan": "Same as the auditor plan, with these changes. (a) In add.tsx, add the guest branch before the `!user` note at line 90: `user?.isAnonymous ? <GuestLockedNotice feature=\"friends\"/> : ...`. (b) Web's CTA opens an upgrade dialog. On iOS, either render the existing <GuestUpgradeSection/> (apps/ios/src/components/settings/guest-upgrade-section.tsx) directly under the notice so the upgrade happens in place, or use router.navigate('/settings') rather than push so the tab is reused. (c) Map the notice colours as web amber-50/amber-200/amber-900 → colors.cardSoft / colors.bellTint / colors.ink. Give the lucide Lock icon size 16 and marginTop 2."
+ },
+ {
+  "id": "SOCIAL-2",
+  "title": "Friends header: small centered '好友' + icon-only QR disc instead of RouteHeader (26px title + subtitle) + labeled '我的 QR' secondary button",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/friends/page.tsx:115-132; apps/web/src/components/nav/route-header.tsx:56-71",
+  "ios_ref": "apps/ios/app/friends/index.tsx:140-148, 289-294",
+  "current_ios": "Nav row: ArrowLeft (a11y '返回' hard-coded) + centered Text '好友' (hard-coded, 18/800) + 40px brandTint circle with QrCode icon only. No subtitle. Header/tabs are not capped by CONTENT_MAX_WIDTH (only the ScrollView content is), so on iPad header and tabs span full width while rows are centred.",
+  "target": "Back arrow row, then left-aligned RouteHeader: title Nav.friends 26/800 tracking -0.5 ink, subtitle Friends.subtitle 14 ink2 (lineHeight 24) underneath; to the right of the title block a secondary sm button: QrCode 16 icon + Friends.myQr label.",
+  "fix_plan": "Replace header block: keep a 44pt back row (ArrowLeft, accessibilityLabel t('Common.back')). Below it add a View {flexDirection:'row', alignItems:'flex-start', justifyContent:'space-between', gap: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.lg}: left column Text t('Nav.friends') style {...type.h1, color: colors.ink} + Text t('Friends.subtitle') {fontSize:14, lineHeight:24, color: colors.ink2, marginTop:4}; right: Pressable styled like web Button secondary sm (height 36, paddingHorizontal 12, borderRadius radius.sm, backgroundColor colors.card, borderWidth 1, borderColor colors.hairline, flexDirection row, gap 6) with `<QrCode size={16} color={colors.ink} />` + Text t('Friends.myQr') (14/500 ink). Wrap header + tabs in a container {width:'100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf:'center'}.",
+  "files_to_touch": [
+   "apps/ios/app/friends/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.friends",
+   "Friends.subtitle",
+   "Friends.myQr",
+   "Common.back"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: iOS index.tsx:140-148 has a centred hard-coded '好友' (18/800), a back button with a11y '返回', and an icon-only 40pt brandTint QR disc. There is no subtitle. The header and tabs styles (289, 295) have no maxWidth, and only the scroll content is capped (300). Web friends/page.tsx:115-132 renders RouteHeader (26px extrabold, -0.5 tracking; subtitle 14 / leading-6 / ink-2) plus a secondary sm Button with QrCode size-4 and tF('myQr'). Nav.friends, Friends.subtitle, Friends.myQr and Common.back all exist. One detail: the web row is `flex flex-wrap items-center justify-between gap-3`, which is centre-aligned, not flex-start.",
+  "corrected_fix_plan": "Auditor plan, with these changes: header row alignItems:'center' and flexWrap:'wrap' (to match web items-center flex-wrap), marginBottom spacing.lg; tabs container marginBottom spacing.lg (web mb-4). The secondary QR button keeps height 36, paddingHorizontal 12, radius.sm (web rounded-lg = 8px), hairline border and card background. Apply the CONTENT_MAX_WIDTH wrapper to both the header and the tabs."
+ },
+ {
+  "id": "SOCIAL-3",
+  "title": "Friends/requests have no loading state and listener errors are swallowed (empty-state flash / permanent false empty)",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/friends/page.tsx:37, 154-157, 188-191 (Common.loading while fetching)",
+  "ios_ref": "apps/ios/app/friends/index.tsx:60-68, 163-166, 179-181; apps/ios/src/lib/friends-read.ts:30-64 (onError optional, not passed)",
+  "current_ios": "friends/requests start as [] and render '尚未加任何好友' / '尚無交友邀請' immediately until the first snapshot arrives; subscribeFriends/subscribeFriendRequests are called without onError, so a permission/network error leaves the screen showing the empty state forever with no message.",
+  "target": "Show loading until first snapshot of each listener; on listener error show an inline error line instead of the empty state.",
+  "fix_plan": "Add `const [friendsReady,setFriendsReady]=useState(false)`, `const [requestsReady,setRequestsReady]=useState(false)`, `const [loadError,setLoadError]=useState<string|null>(null)`. In the effect: subscribeFriends(user.uid, (f)=>{setFriends(f); setFriendsReady(true);}, (e)=>{setFriendsReady(true); setLoadError(e instanceof Error ? e.message : t('Common.loading'))}) and same for requests; reset ready flags when user changes. Render `<Text style={{fontSize:14,color:colors.ink2}}>{t('Common.loading')}</Text>` (or ActivityIndicator color brand) while !ready for the active tab; render loadError as `<Text style={{fontSize:14,color:colors.danger}}>` above the list (web line 152 pattern).",
+  "files_to_touch": [
+   "apps/ios/app/friends/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.loading"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: friends and requests start as [] (index.tsx:50-51). subscribeFriends and subscribeFriendRequests are called without onError (62-63), although friends-read.ts:33/49 accepts one. Empty states render immediately (164-165, 180-181), and a listener error leaves a permanent false-empty screen. Web shows tC('loading') while loading (154-156, 188-190). The plan uses t('Common.loading') as the error fallback text, which is semantically wrong.",
+  "corrected_fix_plan": "As auditor, except: error fallback = `e instanceof Error ? e.message : t('Error.title')` (Error.title = '出了點狀況' exists). Render the loading row as Text 14 colors.ink2 t('Common.loading'), matching web text, or an ActivityIndicator. Reset friendsReady/requestsReady/loadError at the top of the effect when user changes."
+ },
+ {
+  "id": "SOCIAL-4",
+  "title": "Request row actions are text pills (flat brand '接受' / grey '拒絕') instead of icon buttons Check (green tint) + UserX; no busy guard; hard-coded '失敗' alerts",
+  "category": "icon",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/friends/page.tsx:67-89, 195-224",
+  "ios_ref": "apps/ios/app/friends/index.tsx:120-134, 183-197, 307-311",
+  "current_ios": "Two 44pt pill Pressables with text t('Friends.accept') on flat colors.brand and t('Friends.reject') on bgAlt. No disabled/busy state, so double-tap fires the acceptFriendRequest callable twice. Failure shows Alert.alert('失敗') (hard-coded, no detail).",
+  "target": "Two square icon buttons (40-44pt, radius sm): accept = Check icon 16 on green tint (web emerald-100/emerald-700 → mango leafTint/leaf), aria Friends.accept; reject = UserX icon 16 on transparent, ink2 (red on press), aria Friends.reject. Disabled while busy for that row. Errors shown inline (red text) with err.message.",
+  "fix_plan": "Import Check, UserX from lucide-react-native. Add `const [busy,setBusy]=useState<string|null>(null)` and `const [error,setError]=useState<string|null>(null)`. accept(r): setBusy(r.fromUid); setError(null); try await acceptFriendRequest(r.fromUid) catch(e) setError(e instanceof Error ? e.message : t('Friends.add.failed')) finally setBusy(null). reject(r) same with r.requestId. Replace pills with Pressable {width:44,height:44,borderRadius: radius.sm, alignItems/justify center} — accept style {backgroundColor: colors.leafTint}, icon `<Check size={16} color={colors.leaf} strokeWidth={2.2}/>`, accessibilityLabel t('Friends.accept'), disabled={busy===r.fromUid}; reject style transparent, `<UserX size={16} color={pressed?colors.danger:colors.ink2}/>`, accessibilityLabel t('Friends.reject'), disabled={busy===r.requestId}; opacity 0.5 when disabled. Render `error` as Text {fontSize:14,color:colors.danger,marginBottom:spacing.md} under the tabs. Remove all Alert.alert('失敗').",
+  "files_to_touch": [
+   "apps/ios/app/friends/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Friends.accept",
+   "Friends.reject",
+   "Friends.wantsToAdd",
+   "Friends.add.failed"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: iOS index.tsx:190-195 renders text pills: flat colors.brand '接受' and bgAlt '拒絕', radius pill, with no disabled/busy state. accept/reject (120-134) show Alert.alert('失敗') hard-coded. Web 205-222: Check size-4 on emerald-100/emerald-700 (aria Friends.accept) and UserX ghost (aria Friends.reject), both rounded-lg p-2, disabled per busy id, with the accept error surfaced inline (73-74, 152). Mapping emerald → leafTint/leaf is consistent with the design system. The plan is correct and iOS-only."
+ },
+ {
+  "id": "SOCIAL-5",
+  "title": "Friend row remove uses X icon with no a11y label; confirm buttons hard-coded '取消/移除'; no busy guard",
+  "category": "icon",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/friends/page.tsx:91-111, 164-185 (UserMinus icon, aria Common.delete, danger confirm)",
+  "ios_ref": "apps/ios/app/friends/index.tsx:109-118, 167-175, 305",
+  "current_ios": "`<X size={16} color={colors.ink3}/>` in a 24pt Pressable (padding 4, hitSlop 6) without accessibilityLabel; Alert buttons '取消' / '移除' and failure Alert '失敗' are hard-coded Chinese; repeat taps can fire removeFriend twice.",
+  "target": "UserMinus 16 icon in a 44pt ghost button (red on press), accessibilityLabel Common.delete; confirm dialog localized with Common.cancel / Common.delete (destructive); busy-disabled during removal; errors inline.",
+  "fix_plan": "Swap X → UserMinus (lucide-react-native). Pressable {width:44,height:44,borderRadius: radius.sm, alignItems/justify center}, accessibilityLabel t('Common.delete'), disabled={busy===f.uid}, icon color pressed ? colors.danger : colors.ink2. confirmRemove: Alert.alert(t('Friends.removeConfirm'), f.displayName, [{text:t('Common.cancel'),style:'cancel'},{text:t('Common.delete'),style:'destructive',onPress: async()=>{setBusy(f.uid);setError(null);try{await removeFriend(f.uid)}catch(e){setError(e instanceof Error?e.message:t('Friends.add.failed'))}finally{setBusy(null)}}}]). Keep the iOS title Friends.removeConfirm (clearer than web's generic Common.delete title).",
+  "files_to_touch": [
+   "apps/ios/app/friends/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.delete",
+   "Common.cancel",
+   "Friends.removeConfirm"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: index.tsx:171-173 renders an X icon (ink3) in a Pressable with padding 4 + hitSlop 6 (about 36pt effective) and no accessibilityLabel. The Alert buttons '取消'/'移除' and the failure Alert('失敗') at 110-117 are hard-coded, and there is no busy guard. Web 174-182 uses UserMinus size-4, aria tC('delete'), disabled while busy, with a confirm using Common.delete/Common.cancel (danger). The keys exist and the plan is correct."
+ },
+ {
+  "id": "SOCIAL-6",
+  "title": "Search tab: emoji '🔍' button, flat-brand text-only '加好友', no 'no results' state, search/send errors swallowed, hard-coded strings",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/friends/friend-search.tsx:29-41 (error surfaced), 66-76 (Input + primary Button with Search icon), 97-109 (primary sm Button UserPlus + 加好友 / ghost 已是好友/已送出), 116-118 (Common.none when no results)",
+  "ios_ref": "apps/ios/app/friends/index.tsx:78-107, 203-241, 314-317; apps/ios/src/lib/friends-write.ts:150,158 (hard-coded thrown messages)",
+  "current_ios": "Search button is a 48pt brandTint square containing the emoji '🔍'. runSearch catch sets results [] silently. Result rows show a flat colors.brand pill with text '加好友' / grey '已是好友' / '已送出' (all hard-coded, no icon). After a search with zero hits nothing is shown. friends-write throws '不能加自己為好友' / '已是好友' literals.",
+  "target": "Input (h40-48, radius md, hairline) + btn-mango gradient square button with lucide Search 16 white icon (disabled while searching). Result row button: primary (gradient, white) with UserPlus 14 + '加好友'; when already/sent → ghost (transparent, ink2) with '已是好友' / '已送出'. Empty result → centered Common.none (14, ink2, py 12). Errors shown inline red.",
+  "fix_plan": "Search button: replace emoji Text with `<LinearGradient colors={mangoGradient.colors} locations={mangoGradient.locations} start={mangoGradient.start} end={mangoGradient.end} style={{width:48,height:48,borderRadius:radius.md,alignItems:'center',justifyContent:'center'}}><Search size={16} color=\"#fff\"/></LinearGradient>` inside the Pressable, accessibilityLabel t('Friends.tabs.search'), disabled={searching}, + shadows.mango. Track `const [searched,setSearched]=useState(false)` and `searchError`; in catch set searchError (e.message). After results map: `{searched && !searching && results.length===0 ? <Text style={{textAlign:'center',color:colors.ink2,fontSize:14,paddingVertical:12}}>{t('Common.none')}</Text> : null}`. Result button: use `<Button size=\"sm\" variant={already||sent?'ghost':'primary'} disabled={already||sent} label={...} icon={already||sent?undefined:<UserPlus size={14} color=\"#fff\"/>}/>` from @/components/ui, labels from new keys Friends.alreadyFriends / Friends.requestSent / Friends.addFriend. In friends-write.ts replace thrown literals with t('Friends.add.self') / t('Friends.alreadyFriends') (import t from '@/lib/i18n').",
+  "files_to_touch": [
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/src/lib/friends-write.ts",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "i18n_keys_to_reuse": [
+   "Friends.searchPlaceholder",
+   "Friends.tabs.search",
+   "Common.none",
+   "Friends.add.failed"
+  ],
+  "needs_new_i18n_keys": [
+   "Friends.addFriend = 加好友 | Add friend",
+   "Friends.alreadyFriends = 已是好友 | Already friends",
+   "Friends.requestSent = 已送出 | Sent"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "partially-correct",
+  "verdict_reason": "The gap is real: index.tsx:214-216 has an emoji '🔍' on a brandTint square. runSearch's catch (84-85) swallows errors. There is no zero-results line, and labels '已是好友/已送出/加好友' (235) are hard-coded. friends-write.ts:150/158 throw zh literals. Web friend-search.tsx: primary Button with Search size-4 (73-75), inline error (78), primary sm with UserPlus size-3.5 / ghost labels (97-109), and Common.none (116-118). Two plan defects: (1) it reuses the proposed Friends.add.self ('這是你自己的 QR code 喔') for friends-write's generic self-add error, which is wrong copy for that path. (2) It relies on the ui Button `icon` prop, which wraps the node in <Text> and has no current caller passing a lucide icon (see SOCIAL-M1).",
+  "corrected_fix_plan": "As auditor, with these changes. In friends-write.ts use new key Friends.cannotAddSelf ('不能加自己為好友' | \"You can't add yourself\") for the self-add throw, and Friends.alreadyFriends for the already-friends throw (import { t } from '@/lib/i18n'). Do not use Friends.add.self there. For the search submit button, use a dedicated Pressable (48x48, radius.md, LinearGradient mangoGradient, Search 16 #fff, disabled={searching}, opacity 0.7 when disabled, shadows.mango, accessibilityLabel t('Friends.tabs.search')). For result rows, use the ui Button only after SOCIAL-M1 lands; otherwise use a small custom Pressable (height 36, paddingHorizontal 12, radius.sm, gradient + UserPlus 14 #fff + label 14/500 #fff; ghost = transparent + ink2 text). Also add a per-row `sending` uid guard as web does (disabled={already||sent||sending===u.uid}). New keys: Friends.addFriend, Friends.alreadyFriends, Friends.requestSent, Friends.cannotAddSelf."
+ },
+ {
+  "id": "SOCIAL-7",
+  "title": "Friends empty states are plain centered text; web uses EmptyState card (dashed border, Users icon tile)",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/friends/page.tsx:157-162, 191-192; apps/web/src/components/ui/empty-state.tsx:10-26",
+  "ios_ref": "apps/ios/app/friends/index.tsx:278-285, 318-320",
+  "current_ios": "`Empty` = title 16/800 + sub 13 ink2, no container, no icon.",
+  "target": "Dashed-border card (rounded, white/75 bg, py 48, px 24, gap 12) with a 48pt icon tile (amber-100 → mango brandTint, icon brandDeep, radius lg) holding lucide Users 24, title semibold 16 ink, description 14 ink2 max-width ~384.",
+  "fix_plan": "Rewrite local `Empty` in friends/index.tsx (or add a `variant=\"card\"` + `icon` prop to apps/ios/src/components/ui/EmptyState.tsx so photos can reuse it): container {alignItems:'center', gap: spacing.md, borderWidth:1, borderStyle:'dashed', borderColor: colors.hairline, backgroundColor: colors.cardSoft, borderRadius: radius.lg, paddingVertical: 48, paddingHorizontal: spacing.xl}; tile {width:48,height:48,borderRadius: radius.lg, backgroundColor: colors.brandTint, alignItems/justify center} with `<Users size={24} color={colors.brandDeep}/>`; title {fontSize:16,fontWeight:'600',color:colors.ink,textAlign:'center'}; desc {fontSize:14,color:colors.ink2,textAlign:'center',maxWidth:384}. Use for emptyFriends (title+subtitle) and emptyRequests (title only).",
+  "files_to_touch": [
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/src/components/ui/EmptyState.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Friends.emptyFriends.title",
+   "Friends.emptyFriends.subtitle",
+   "Friends.emptyRequests"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: the iOS local Empty component (278-285, 318-320) is plain text with no container or icon. Web EmptyState (empty-state.tsx:12-24) is a dashed-border card (white/75, px-6 py-12, gap-3, shadow-sm) with a size-12 amber-100 tile and Users size-6, a semibold title, and a 14 zinc-500 max-w-sm description. Used at friends/page.tsx:158-162 and 192. The plan is correct. Note that the iOS ui EmptyState requires `emoji` and has box flex:1, so the card variant must make emoji optional and drop flex:1."
+ },
+ {
+  "id": "SOCIAL-8",
+  "title": "My QR modal: no Mango logo overlay, no display name, copy feedback via blocking Alert, hard-coded '分享'/'關閉', flat close button",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/friends/my-qr-dialog.tsx:57-66 (copy→inline 已複製 2s), 69-73, 75-97 (size-72 box rounded-2xl, centre 56px logo ring amber-500), 100 (displayName), 102-121 (secondary Copy/Check + primary Common.back)",
+  "ios_ref": "apps/ios/app/friends/index.tsx:245-273, 321-329; apps/ios/src/components/family/invite-qr.tsx:16-27",
+  "current_ios": "Centered modal card: title, instructions, InviteQR 220 (no logo), two grey pills '複製連結' (then Alert '已複製') and '分享' (hard-coded), and a flat brand pill '關閉' (hard-coded). No user display name.",
+  "target": "Same order as web: title qrTitle, instructions (14 ink2 centered), QR box ~288 with white bg, radius xl2, hairline border and a 56pt rounded logo overlay ringed in brand, user displayName (14/500), then a full-width row: secondary button Copy icon + copyLink → swaps to Check + copied for 2s; primary btn-mango Common.back. iOS Share is an accepted native extra but must be localized.",
+  "fix_plan": "invite-qr.tsx: add optional `logo?: ImageSourcePropType` prop and pass to react-native-qrcode-svg `logo={logo} logoSize={size*0.2} logoBackgroundColor=\"#fff\" logoBorderRadius={12} logoMargin={2}` (ecl already H); use `require('../../../assets/icon.png')` from friends screen (no new asset/dep). Increase size to 240 and box radius to radius.xl2. In the modal add `<Text style={{fontSize:14,fontWeight:'500',color:colors.ink}}>{user?.displayName ?? ''}</Text>` under the QR. Copy: `const [copied,setCopied]=useState(false)`; onPress → Clipboard.setStringAsync; setCopied(true); setTimeout(()=>setCopied(false),2000) — no Alert; render `<Button variant=\"secondary\" label={copied?t('Friends.copied'):t('Friends.copyLink')} icon={copied?<Check size={16}/>:<Copy size={16}/>} style={{flex:1}}/>` next to `<Button label={t('Common.back')} onPress={close} style={{flex:1}}/>` (primary gradient). Keep Share as an icon button (lucide Share size 18) with accessibilityLabel t('Family.invite.shareAria')-style new key Friends.share. Optionally replace transparent Modal with the ui Sheet.",
+  "files_to_touch": [
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/src/components/family/invite-qr.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Friends.qrTitle",
+   "Friends.qrInstructions",
+   "Friends.qrAlt",
+   "Friends.copyLink",
+   "Friends.copied",
+   "Common.back"
+  ],
+  "needs_new_i18n_keys": [
+   "Friends.share = 分享邀請連結 | Share invite link"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "partially-correct",
+  "verdict_reason": "The gap is real. iOS index.tsx:245-273 has: no logo overlay, no displayName, copy → blocking Alert(t('Friends.copied')), hard-coded '分享' (265) and '關閉' (269), a flat brand close pill, and instructions at 12pt (web 14). Web my-qr-dialog.tsx has: size-72 box, rounded-2xl, logo size-14 with ring-2 amber-500 (196-214), displayName (221), and a secondary Copy→Check 2s button + primary Common.back (223-241). react-native-qrcode-svg 6.3.14 supports logo/logoSize/logoBackgroundColor/logoMargin/logoBorderRadius, so no new dependency is needed. Plan defects: (1) the require path is wrong. From apps/ios/app/friends/index.tsx the asset is '../../assets/icon.png'; '../../../assets/icon.png' is only correct from apps/ios/src/components/family/invite-qr.tsx. (2) The proposed new key Friends.share duplicates the existing Family.invite.shareAria ('分享邀請連結'). (3) The amber ring can be emulated with logoBackgroundColor rather than '#fff'.",
+  "corrected_fix_plan": "invite-qr.tsx: add an optional `logo?: ImageSourcePropType` prop and pass `logo, logoSize={Math.round(size*0.2)}, logoBackgroundColor={colors.brand}, logoMargin={2}, logoBorderRadius={12}`. The brand margin approximates web's ring-2 amber. Pass `logo={require('../../assets/icon.png')}` from apps/ios/app/friends/index.tsx (or default it inside invite-qr.tsx with require('../../../assets/icon.png')). Box borderRadius radius.xl2, QR size 240. Instructions: fontSize 14, colors.ink2. Under the QR add Text 14/500 ink `user?.displayName ?? ''`. Copy: inline copied state with a 2s timeout and no Alert. Bottom row: [secondary Copy/Check + Friends.copyLink/Friends.copied, flex 1] [primary gradient t('Common.back'), flex 1]. Keep Share as a 44pt icon button (lucide Share2 or Share 18) with accessibilityLabel t('Family.invite.shareAria'); no new key is needed. Remove the hard-coded '分享'/'關閉'."
+ },
+ {
+  "id": "SOCIAL-9",
+  "title": "Friend-add: error state removes the send button (no retry) and hides the real error; not-found has no back CTA; back() dead-ends on cold deep link",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/friends/add/page.tsx:53-75 (error keeps button, shows err.message), 94-107 (not-found EmptyState with Back button → /app/friends), 79-88",
+  "ios_ref": "apps/ios/app/friends/add.tsx:36-52, 64-66, 68-72, 83-84, 57",
+  "current_ios": "On sendFriendRequest failure status='error' replaces the button with t('Friends.add.failed') — the user cannot retry and doesn't learn why (e.g. '已是好友'). Not-found shows emoji + text with no action. Header back uses router.back() which is a no-op when the screen was opened cold via mangopet://friends/add.",
+  "target": "Error: keep the send button enabled and show err.message (fallback Friends.add.failed) beneath it. Not-found: EmptyState with X icon + secondary Common.back button. Back: go back if possible, otherwise replace to /friends.",
+  "fix_plan": "Add `const [error,setError]=useState<string|null>(null)`; in catch: setStatus('idle'); setError(e instanceof Error ? e.message : t('Friends.add.failed')). Render the button whenever status is 'idle'|'sending' and render `{error ? <Text style={styles.errNote}>{error}</Text> : null}` below it (errNote color → colors.danger). Back handler: `const goBack = () => router.canGoBack() ? router.back() : router.replace('/friends')`; use it for the header arrow and for a `<Button variant=\"secondary\" label={t('Common.back')} onPress={goBack}/>` in the not-found branch (replace 🔍 emoji with lucide X 24 in a brandTint tile, same as SOCIAL-7 empty card). Also prefetch whether target is already a friend (users/{me}/friends/{uid} get) and show the alreadyFriends state instead of the button.",
+  "files_to_touch": [
+   "apps/ios/app/friends/add.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Friends.add.failed",
+   "Friends.add.notFoundTitle",
+   "Friends.add.notFoundDesc",
+   "Common.back"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: add.tsx catch (54-56) sets status 'error' without keeping the message, and the 'error' branch (88-89) replaces the send button, so the user cannot retry. Web add/page.tsx:71-74 keeps the button (status 'error' falls through to the Button branch, disabled only while sending) and shows err.message (139). Not-found (73-77) shows emoji + text with no action, while web 95-107 shows EmptyState X + secondary Common.back. _layout.tsx sets no unstable_settings/initialRouteName, so a cold mangopet://friends/add deep link has nothing to go back to and router.back() (62) dead-ends. The 'prefetch already-friends' step goes beyond web and is optional."
+ },
+ {
+  "id": "SOCIAL-10",
+  "title": "Friend-add layout/copy: centered floating content vs web RouteHeader + white card; flat button w/o icon or '送出中…'; hard-coded sent/self/sign-in strings",
+  "category": "layout",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/friends/add/page.tsx:90 (RouteHeader add.title + add.subtitle), 109-146 (card p-6, avatar 96, name 18 semibold, sent pill with Check icon, self text, lg full-width primary Button UserPlus + add.send/add.sending)",
+  "ios_ref": "apps/ios/app/friends/add.tsx:55-98, 103-120",
+  "current_ios": "Title centered in nav bar (no subtitle), avatar 88, name 22/900, content vertically centered on bg (no card). Send = flat colors.brand pill, no icon, spinner instead of add.sending text. Hard-coded: '這是你自己的 QR code 喔', '✅ 已送出邀請，等對方接受', '請先登入才能送出邀請', a11y '返回'.",
+  "target": "Back row, left RouteHeader (type.h1 Friends.add.title + 14 ink2 Friends.add.subtitle), then a card (colors.card, hairline border, radius.lg, shadows.card, padding 24, gap 16, centered) with avatar 96, name 18/600, city 12 ink3, then full-width lg btn-mango Button with UserPlus icon + add.send / add.sending; sent = leafTint pill with Check icon + text; self = brandDeep text.",
+  "fix_plan": "Restructure add.tsx: ScrollView content {padding: spacing.lg, maxWidth: CONTENT_MAX_WIDTH, alignSelf:'center', width:'100%'}; header as SOCIAL-2 pattern with t('Friends.add.title') / t('Friends.add.subtitle'). Card View {backgroundColor: colors.card, borderWidth:1, borderColor: colors.hairline, borderRadius: radius.lg, padding: spacing.xl, alignItems:'center', gap: spacing.lg, ...shadows.card}. UserAvatar size 96. Use `<Button size=\"lg\" fullWidth label={status==='sending'?t('Friends.add.sending'):t('Friends.add.send')} icon={<UserPlus size={16} color=\"#fff\"/>} disabled={status==='sending'}/>`. Sent: View {flexDirection:'row',gap:8,backgroundColor:colors.leafTint,borderRadius:radius.md,paddingHorizontal:16,paddingVertical:12} + Check 16 colors.leaf + Text t('Friends.add.sent') colors.leaf. Replace literals with new keys below.",
+  "files_to_touch": [
+   "apps/ios/app/friends/add.tsx",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "i18n_keys_to_reuse": [
+   "Friends.add.title",
+   "Friends.add.subtitle",
+   "Friends.add.send",
+   "Friends.add.sending"
+  ],
+  "needs_new_i18n_keys": [
+   "Friends.add.sent = 已送出邀請，等對方接受 | Request sent — waiting for them to accept",
+   "Friends.add.self = 這是你自己的 QR code 喔 | This is your own QR code",
+   "Friends.add.signInRequired = 請先登入才能送出邀請。 | Sign in to send a friend request."
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: iOS add.tsx has a nav-centred title with no subtitle (65), avatar 88 (80), name 22/900 (116), floating centred content with no card (114), and a flat brand pill with a spinner instead of add.sending (93-99). Hard-coded strings: '這是你自己的 QR code 喔' (85), '✅ 已送出邀請，等對方接受' (87), '請先登入才能送出邀請' (91), a11y '返回' (62). Web: RouteHeader add.title/add.subtitle (90), card p-6 gap-4 (109), avatar 96, name text-lg semibold, sent pill with Check, lg full-width primary Button UserPlus + add.sending/add.send (128-136). Web itself hard-codes the sent/self/sign-in strings, so the new keys should be adopted by web too. Friends.add.title, subtitle, send and sending exist."
+ },
+ {
+  "id": "SOCIAL-11",
+  "title": "Photos: primary 'Save N unsaved photos' / 'All saved' action is missing on iOS",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/photos/page.tsx:101-104, 170-173, 182-187 (PhotoDownloadButton primary: actions.saveRemaining / actions.allSaved / actions.saving, disabled when 0)",
+  "ios_ref": "apps/ios/app/photos.tsx:104-107 (remaining computed only for subtitle), 122-156 (only saveSelected exists)",
+  "current_ios": "The only batch save is 'save selected' (requires manually ticking each photo). The page's headline web action — one tap to save every not-yet-downloaded photo — does not exist, even though the subtitle advertises '{remaining} 張尚未儲存'.",
+  "target": "Header action stack: primary btn-mango full-width (min-h 44) Download icon + 'Photos.actions.saveRemaining {count}' → 'Photos.actions.saving' while busy → disabled 'Photos.actions.allSaved' when 0 remaining.",
+  "fix_plan": "Generalise saveSelected into `saveAssets(targets: GalleryPhotoAsset[])` (same loop, mark downloaded, only remove COMPLETED ids from `selected`). Compute `const undownloaded = useMemo(()=>assets.filter(a=>!downloadedIds.has(a.id)),[assets,downloadedIds])`. In the header area (see SOCIAL-12) render `<Button fullWidth icon={<Download size={16} color=\"#fff\"/>} label={saving ? t('Photos.actions.saving') : undownloaded.length===0 ? t('Photos.actions.allSaved') : t('Photos.actions.saveRemaining',{count: undownloaded.length})} disabled={undownloaded.length===0} loading={false} onPress={()=>saveAssets(undownloaded)}/>`. Request MediaLibrary permission once up front (SOCIAL-17).",
+  "files_to_touch": [
+   "apps/ios/app/photos.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Photos.actions.saveRemaining",
+   "Photos.actions.allSaved",
+   "Photos.actions.saving"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: iOS photos.tsx computes `remaining` only for the subtitle (104-107, 167) and has only saveSelected (122-156). There is no 'save all unsaved' action. Web photos/page.tsx:182-187 has the primary PhotoDownloadButton saveRemaining/allSaved/saving, disabled at 0, with onClick saveAssets(undownloadedAssets). Photos.actions.saveRemaining, allSaved and saving exist. P0 is appropriate because this is the page's headline action."
+ },
+ {
+  "id": "SOCIAL-12",
+  "title": "Photos header + save-selected placement: small nav title and floating flat-orange bottom bar vs web RouteHeader with stacked primary/secondary buttons",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/photos/page.tsx:179-197 (RouteHeader title+subtitle, then column of PhotoDownloadButton primary + secondary 'saveSelected' when selection>0); photo-download-button.tsx:15-33",
+  "ios_ref": "apps/ios/app/photos.tsx:160-170, 253-268, 299-304, 337-342",
+  "current_ios": "Title 18/800 + subtitle 12 ink3 in the nav row (a11y '返回' hard-coded). Save-selected is an absolutely positioned 52pt pill with flat colors.brand (not the gradient) floating over the grid.",
+  "target": "Back row; RouteHeader (type.h1 Photos.title + Photos.subtitle 14 ink2 lh 24); below it a column (gap 8) of full-width buttons: primary saveRemaining (SOCIAL-11) and, only when selection>0, secondary (white, hairline, ink) Download icon + 'Photos.actions.saveSelected {count}'.",
+  "fix_plan": "Move title/subtitle out of the nav row into a header block at the top of the scroll content (ListHeaderComponent once SOCIAL-18 FlatList lands): Text {...type.h1,color:colors.ink}, Text {fontSize:14,lineHeight:24,color:colors.ink2}. Add the button column {gap: spacing.sm, marginTop: spacing.md}. Delete the floating `saveBar` + its styles; render `{selected.size>0 ? <Button variant=\"secondary\" fullWidth icon={<Download size={16} color={colors.ink}/>} label={t('Photos.actions.saveSelected',{count:selected.size})} disabled={saving} onPress={()=>saveAssets(assets.filter(a=>selected.has(a.id)))}/> : null}`. Back arrow accessibilityLabel t('Common.back').",
+  "files_to_touch": [
+   "apps/ios/app/photos.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Photos.title",
+   "Photos.subtitle",
+   "Photos.actions.saveSelected",
+   "Common.back"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: the iOS title (18/800) and subtitle (12 ink3) sit in the nav row (160-170, 303-304). Save-selected is an absolutely positioned 52pt flat colors.brand pill (253-268, 337-342), not the gradient. Web 179-197: RouteHeader with a column of full-width (sm:w-auto) min-h-11 md buttons, primary then secondary 'saveSelected' when selection > 0, each with Download size-4. The plan is correct. Note: in a scrolling FlatList header the secondary button scrolls away. That matches web, which is the fidelity target."
+ },
+ {
+  "id": "SOCIAL-13",
+  "title": "Photo grid cell is a bare image; web card has info footer (pet/title/date), per-photo Download button, 44pt select button and check-icon 'saved' badge",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/photos/photo-asset-card.tsx:46 (article card border/hairline/rounded/shadow), 47-62 (aspect-square image), 64-77 (select size-11 top-left, brand when selected), 79-87 (Download size-11 top-right, black/45), 89-91 (source pill bottom-left), 92-104 (brand '新' pill OR white circle Check bottom-right), 107-113 (petName ?? title / title / yyyy/MM/dd)",
+  "ios_ref": "apps/ios/app/photos.tsx:211-247, 318-335",
+  "current_ios": "Image with radius.md; 26pt checkbox top-left (hitSlop 8); source pill bottom-left; status pill TOP-right showing text '已儲存' on leaf green or '新' on brand. No per-photo save button, no petName/title/date footer, no card border/shadow.",
+  "target": "Card: colors.card bg, 1px hairline, radius.lg (design-system card radius), shadows.card, overflow hidden. Square image area with: select 44pt circle top-left (unselected rgba(0,0,0,0.35)+white/80 border; selected brand bg + brandDeep border + Check 20 white); Download 44pt circle top-right (rgba(0,0,0,0.45), Download 20 white, a11y Photos.saveOne, disabled while saving); source pill bottom-left (rgba(0,0,0,0.55), 11/600 white); bottom-right: brand pill '新' (Photos.newBadge) if not downloaded else 28pt white/90 circle with Check 16 brandDeep (a11y Photos.downloaded). Footer padding 12, minHeight 84: line1 petName ?? title (14/600 ink, 1 line), line2 title (12 ink2, 1 line), line3 date yyyy/MM/dd (12 ink3).",
+  "fix_plan": "Extract `PhotoAssetCard` into apps/ios/src/components/photos/photo-asset-card.tsx with props {asset, width, downloaded, selected, saving, onOpen, onToggleSelected, onSave}. Implement styles as in target (positions top/left/right/bottom: 8). Date: `const d = new Date(asset.createdAt?.toMillis?.() ?? Date.now()); const dateText = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`` (no date-fns needed). onSave → saveAssets([asset]). Image `accessibilityIgnoresInvertColors`; outer Pressable for onOpen with accessibilityLabel t('Photos.openPhoto',{title}). Remove old checkbox/dlBadge/newBadge styles.",
+  "files_to_touch": [
+   "apps/ios/app/photos.tsx",
+   "apps/ios/src/components/photos/photo-asset-card.tsx (new)"
+  ],
+  "i18n_keys_to_reuse": [
+   "Photos.select",
+   "Photos.deselect",
+   "Photos.saveOne",
+   "Photos.newBadge",
+   "Photos.downloaded",
+   "Photos.openPhoto",
+   "Photos.sources.post",
+   "Photos.sources.walk",
+   "Photos.sources.petAvatar",
+   "Photos.sources.expenseReceipt"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: the iOS cell (211-247) is a bare image with radius.md, a 26pt checkbox (318-323), the source pill bottom-left, and a status text pill TOP-right ('已儲存' on leaf / '新' on brand, 330-335). There is no per-photo Download, no footer and no card. Web photo-asset-card.tsx: article border/hairline/shadow (46); select size-11 (64-77); Download size-11 black/45 aria saveOne, disabled while saving (79-87); source pill (89-91); bottom-right '新' pill or white/90 size-7 Check badge (92-104); footer min-h 84 with petName??title / title / yyyy/MM/dd (107-113). Web radius is rounded-lg (8px), while the design system prefers radius.lg 14 for cards, so the target is fine. All listed Photos.* keys exist."
+ },
+ {
+  "id": "SOCIAL-14",
+  "title": "Photos filter pills: active = brandTint/brandDeep text, inactive = bgAlt, 34pt — web active is solid brand + white text, inactive white + hairline, 40pt",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/photos/page.tsx:199-218",
+  "ios_ref": "apps/ios/app/photos.tsx:172-192, 305-313",
+  "current_ios": "pill {height 34, bg colors.bgAlt, hairline border, 13/600 ink2}; pillOn {bg brandTint, border brand, text brandDeep 800}.",
+  "target": "h40, px16, radius pill, 14/600; active {bg colors.brand, border colors.brand, text #fff}; inactive {bg colors.card, border colors.hairline, text colors.ink2}. Pills row margin-bottom 16.",
+  "fix_plan": "Update styles: pill {height:40, paddingHorizontal: spacing.lg, borderRadius: radius.pill, borderWidth:1, borderColor: colors.hairline, backgroundColor: colors.card, justifyContent:'center'}; pillOn {backgroundColor: colors.brand, borderColor: colors.brand}; pillText {fontSize:14, fontWeight:'600', color: colors.ink2}; pillTextOn {color:'#fff'}; pillsWrap maxHeight 56. Add accessibilityRole='button' + accessibilityState={{selected:on}}.",
+  "files_to_touch": [
+   "apps/ios/app/photos.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Photos.filters.all",
+   "Photos.filters.post",
+   "Photos.filters.walk",
+   "Photos.filters.petAvatar",
+   "Photos.filters.expenseReceipt"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: iOS pill (307-313) is height 34, padding 12, bgAlt, 13/600; active is brandTint/brand border/brandDeep 800. Web 207-211 is h-10 px-4 rounded-full border text-sm semibold; active is border-brand bg-brand text-white, inactive is border-hairline bg-white text-ink-2. The plan matches exactly."
+ },
+ {
+  "id": "SOCIAL-15",
+  "title": "Photos empty states: filter-empty shows the global 'no photos' copy; no CTAs (去發動態 / 開始遛狗), no icon; no pull-to-refresh when empty",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/photos/page.tsx:233-261 (assets.length===0 → Images icon + empty.* + btn-mango Camera feedCta → /app/feed and secondary walkCta → /app/walks; filteredAssets.length===0 → emptyFilter.*)",
+  "ios_ref": "apps/ios/app/photos.tsx:198-203, 204-209",
+  "current_ios": "`filtered.length === 0` always renders Photos.empty.title/description (so picking the '收據' filter with no receipts says '還沒有照片' even when 200 photos exist). No CTA buttons/icon. RefreshControl only exists on the non-empty grid, so an empty or errored page can't be pulled to refresh.",
+  "target": "assets.length===0 → card empty state (Images icon tile) with Photos.empty.title/description + two buttons: primary Camera icon 'Photos.empty.feedCta' → router.push('/feed'), secondary 'Photos.empty.walkCta' → router.push('/walks'). assets>0 but filter empty → Photos.emptyFilter.title/description, no CTAs. Pull-to-refresh works in all states.",
+  "fix_plan": "Branch `assets.length === 0` vs `filtered.length === 0`. Use the card EmptyState from SOCIAL-7 with `<Images size={24} color={colors.brandDeep}/>`; action row {flexDirection:'row', flexWrap:'wrap', gap: spacing.sm, justifyContent:'center'} with `<Button size=\"md\" icon={<Camera size={16} color=\"#fff\"/>} label={t('Photos.empty.feedCta')} onPress={()=>router.push('/feed')}/>` and `<Button variant=\"secondary\" label={t('Photos.empty.walkCta')} onPress={()=>router.push('/walks')}/>`. Render empty states as the FlatList ListEmptyComponent (SOCIAL-18) so the RefreshControl stays attached.",
+  "files_to_touch": [
+   "apps/ios/app/photos.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Photos.empty.title",
+   "Photos.empty.description",
+   "Photos.empty.feedCta",
+   "Photos.empty.walkCta",
+   "Photos.emptyFilter.title",
+   "Photos.emptyFilter.description"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: iOS 198-202 branches only on filtered.length===0 and always shows Photos.empty.*. There are no CTA buttons or icon. RefreshControl is attached only to the non-empty grid ScrollView (207-209). Web 233-261 distinguishes assets.length===0 (Images icon + empty.* + btn-mango Camera feedCta → /app/feed + secondary walkCta → /app/walks) from filter-empty (emptyFilter.*). iOS routes /feed (app/feed.tsx) and /walks ((tabs)/walks) exist. All keys exist."
+ },
+ {
+  "id": "SOCIAL-16",
+  "title": "Photos ignores failedSources (no partialError banner) and load() has no catch — a failed family lookup shows a false 'no photos' with an unhandled rejection",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/photos/page.tsx:68-89 (allSettled; on gallery failure failedSources = all), 220-229 (amber partialError banner + status banner above grid)",
+  "ios_ref": "apps/ios/app/photos.tsx:75-94, 251; apps/ios/src/lib/photo-gallery.ts:178-218 (returns failedSources)",
+  "current_ios": "`const [{assets: list}, dl] = await Promise.all([...])` drops failedSources; resolveCurrentFamilyId is awaited outside any catch, so a network error rejects load() (try/finally only), leaves assets [] and renders the empty state. Status text is a small line pinned under the grid that never clears.",
+  "target": "partialError banner whenever any source failed (or the whole load failed); status message rendered as a banner above the grid like web.",
+  "fix_plan": "Add `const [failedSources,setFailedSources]=useState<PhotoGallerySourceKey[]>([])`. In load: wrap in try/catch; `const [galleryR, dlR] = await Promise.allSettled([listMyPhotoAssetsWithStatus(user.uid, famId), listDownloadedPhotoAssetIds(user.uid)])`; fulfilled → setAssets + setFailedSources(value.failedSources); rejected (or catch) → setAssets([]); setFailedSources(['posts','walks','pets','expenses']). Banner above the grid: View {borderWidth:1, borderColor: colors.bellTint, backgroundColor: colors.cardSoft, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.lg} + Text t('Photos.partialError') (14, colors.ink). Move `status` into the same position as a second banner {borderColor: colors.hairline, backgroundColor: colors.cardSoft, color ink2} and clear it at the start of each save.",
+  "files_to_touch": [
+   "apps/ios/app/photos.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Photos.partialError",
+   "Photos.status.saved",
+   "Photos.status.partial",
+   "Photos.status.failed"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: photos.tsx:82-85 destructures `[{ assets: list }, dl]` and drops failedSources, which photo-gallery.ts:214-217 returns. load() is try/finally with no catch. resolveCurrentFamilyId (walk-data.ts:23-33) does an un-caught users/{uid} get, so a network failure rejects load() and leaves assets [] with the false empty state. Status (251) is a small line under the grid that is never cleared. Web 68-89 uses allSettled + failedSources, with the partialError banner (220-224) and the status banner (225-229) above the grid. The Photos.partialError key exists. If SOCIAL-20 is applied, resolveCurrentFamilyId goes away, but the allSettled/catch handling is still needed."
+ },
+ {
+  "id": "SOCIAL-17",
+  "title": "Batch save: permission requested per photo, denial reported as 'partial 0', failed items deselected, lightbox single-save unguarded; remote image re-encoded via ImageManipulator",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/photos/page.tsx:131-168 (only completed ids are deselected; failures → status.partial; exception → status.failed; savingIds disables buttons)",
+  "ios_ref": "apps/ios/app/photos.tsx:122-156, 270-291; apps/ios/src/lib/save-photo.ts:20-26, 33-41",
+  "current_ios": "savePhotoToAlbum calls MediaLibrary.requestPermissionsAsync for every asset; if denied every item throws '需要相簿儲存權限' (hard-coded) and the status says '已完成 0 張照片，部分照片未能儲存' with no path to Settings. setSelected(new Set()) clears failed items too. Lightbox onSave doesn't set `saving`, so repeated taps save duplicates. localise() decodes+re-encodes each remote photo through ImageManipulator (slower, lossy, PNG avatars converted).",
+  "target": "Ask permission once per batch; on denial show Photos.status.failed with an Alert offering iOS Settings (Linking.openSettings). Keep failed items selected. Disable all save controls while any save runs (including lightbox). Download the original bytes instead of re-encoding.",
+  "fix_plan": "save-photo.ts: export `ensureAddPermission(): Promise<boolean>` (MediaLibrary.requestPermissionsAsync(true)); make savePhotoToAlbum(url, {skipPermission}) use `FileSystem.downloadAsync(url, FileSystem.cacheDirectory + hash + ext)` (expo-file-system is installed) and delete the temp file after saveToLibraryAsync; keep ImageManipulator only as fallback. photos.tsx saveAssets: `if (!(await ensureAddPermission())) { setStatus(t('Photos.status.failed')); Alert.alert(t('Photos.status.failed'), undefined, [{text:t('Common.cancel'),style:'cancel'},{text:t('Settings.title') /* or new key */, onPress:()=>Linking.openSettings()}]); return; }`; after the loop only delete `done` ids from `selected`; failed>0 && done===0 → status.failed. Lightbox onSave: route through saveAssets([asset]) so `saving` gates it. Optionally run saves with small concurrency (2-3) for large batches.",
+  "files_to_touch": [
+   "apps/ios/app/photos.tsx",
+   "apps/ios/src/lib/save-photo.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Photos.status.failed",
+   "Photos.status.partial",
+   "Photos.status.saved",
+   "Common.cancel"
+  ],
+  "needs_new_i18n_keys": [
+   "Photos.permissionDenied = 需要相簿權限才能儲存照片，請到「設定」開啟。 | Photo library access is needed to save photos. Enable it in Settings.",
+   "Photos.openSettings = 前往設定 | Open Settings"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "partially-correct",
+  "verdict_reason": "The behaviours are real. save-photo.ts:27-29 requests permission on every call and throws the hard-coded '需要相簿儲存權限'. saveSelected clears all selections, including failures (149). Web only removes completed ids (150-154). The lightbox onSave (277-290) never sets `saving`, and the iOS lightbox has no internal busy guard (web has actionBusy). localise() re-encodes through ImageManipulator, and expo-file-system ~18.0.12 is installed. Note: web also reports an all-failed batch as status.partial with count 0 (158-159), so 'partial 0' matches web. Only the denial path needs special handling. Plan defect: it uses t('Settings.title'), which does not exist (the Settings namespace has no title key). Use Nav.settings ('設定') or the proposed Photos.openSettings key.",
+  "corrected_fix_plan": "save-photo.ts: export `ensureAddPermission()` → (await MediaLibrary.requestPermissionsAsync(true)).granted. Change savePhotoToAlbum(url, fileName?) to: `const dest = FileSystem.cacheDirectory + (fileName ?? `mango-${Date.now()}.jpg`); const { uri } = await FileSystem.downloadAsync(url, dest); try { await MediaLibrary.saveToLibraryAsync(uri) } finally { FileSystem.deleteAsync(uri, { idempotent: true }) }`. Pass asset.fileName, which already ends in .jpg, and fall back to localise() on download failure. Replace the thrown literal with t('Photos.permissionDenied'). photos.tsx saveAssets(targets): if !(await ensureAddPermission()), then setStatus(t('Photos.status.failed')) and Alert.alert(t('Photos.permissionDenied'), undefined, [{text:t('Common.cancel'),style:'cancel'},{text:t('Photos.openSettings'),onPress:()=>Linking.openSettings()}]), then return. Remove only completed ids from `selected`. Route the lightbox onSave through saveAssets([asset]) so `saving` gates both. New keys: Photos.permissionDenied and Photos.openSettings (Nav.settings is an acceptable fallback label)."
+ },
+ {
+  "id": "SOCIAL-18",
+  "title": "Gallery renders up to ~400 full-size images via ScrollView.map, and the lightbox mounts every filtered photo at once",
+  "category": "optimization",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/photos/photo-gallery-grid.tsx:26 (grid-cols-2, gap-3)",
+  "ios_ref": "apps/ios/app/photos.tsx:204-248, 270-275; apps/ios/src/components/feed/photo-lightbox.tsx:140-155 (photos.map renders all), 157-170 (one dot per photo)",
+  "current_ios": "MAX_POSTS 80 + MAX_WALKS 120 + MAX_EXPENSES 200 + pets → potentially hundreds of 1920px Storage images mounted simultaneously in a ScrollView (memory pressure/jank). Opening the lightbox from the gallery mounts every filtered photo in a width*N Animated row and draws N indicator dots (overflows with hundreds).",
+  "target": "Virtualised 2-column grid (gap 12 like web gap-3) and a lightbox that only mounts current ±1 images; indicator shows counter only (no dots) when N is large.",
+  "fix_plan": "Replace the grid ScrollView with `<FlatList data={filtered} keyExtractor={a=>a.id} numColumns={2} columnWrapperStyle={{gap: spacing.md}} contentContainerStyle={{gap: spacing.md, paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl, maxWidth: CONTENT_MAX_WIDTH, width:'100%', alignSelf:'center'}} ListHeaderComponent={header+pills+banners} ListEmptyComponent={empty states} refreshControl={...} initialNumToRender={8} windowSize={5} removeClippedSubviews renderItem={({item,index})=> <PhotoAssetCard .../>}/>` (cellW = (width - 32 - 12)/2). In photo-lightbox.tsx render `photos.map((uri,i)=> Math.abs(i-index)<=1 ? <Image .../> : <View style={{width}}/>)` and only render dots when photos.length <= 10 (counter via t('PhotoLightbox.counter',{current,total}) always).",
+  "files_to_touch": [
+   "apps/ios/app/photos.tsx",
+   "apps/ios/src/components/feed/photo-lightbox.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PhotoLightbox.counter"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: the grid is ScrollView + filtered.map (204-248) over up to MAX_POSTS 80 (multi-photo) + MAX_WALKS 120 (≤5 photos each) + MAX_EXPENSES 200 + pets. photo-lightbox.tsx:141-155 mounts every photo in a width*N track and 157-170 draws one dot per photo. The counter is also hard-coded ('{index+1} / {n}'), not PhotoLightbox.counter. Web's lightbox also mounts all photos and dots, so the lightbox half is an iOS optimisation rather than a parity gap. Showing dots only when count ≤ 10 deviates from web, which is acceptable on iOS. Avoid removeClippedSubviews together with Image cells on iOS, because it can produce blank cells. initialNumToRender/windowSize alone are enough."
+ },
+ {
+  "id": "SOCIAL-19",
+  "title": "Lightbox save control is an emoji '⬇︎' with hard-coded '儲存到相簿' label; screens use hard-coded '返回' a11y labels",
+  "category": "copy-i18n",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/ui/photo-lightbox.tsx:341-369 (Download icon pill, label Photos.actions.saveOne / busy Photos.actions.saving); apps/web/src/app/app/photos/page.tsx:279-286",
+  "ios_ref": "apps/ios/src/components/feed/photo-lightbox.tsx:119-127, 131-133 ('關閉'); apps/ios/app/photos.tsx:161; apps/ios/app/friends/index.tsx:141; apps/ios/app/friends/add.tsx:392",
+  "current_ios": "Lightbox left button shows Text '⬇︎' / '…' with accessibilityLabel '儲存到相簿'; close a11y '關閉'; back buttons a11y '返回' — all hard-coded zh.",
+  "target": "lucide Download 20 white in a 44pt rgba(0,0,0,0.4) pill with optional label; a11y labels from i18n.",
+  "fix_plan": "photo-lightbox.tsx: add optional props `saveLabel?: string; savingLabel?: string`; render `<Download size={20} color=\"#fff\"/>` (ActivityIndicator white when saving), accessibilityLabel saving ? savingLabel : saveLabel (default t('Common.saveToAlbum.label')); close a11y t('PhotoLightbox.close'). photos.tsx passes saveLabel={t('Photos.actions.saveOne')} savingLabel={t('Photos.actions.saving')}. Replace every accessibilityLabel=\"返回\" in the three screens with t('Common.back').",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/photo-lightbox.tsx",
+   "apps/ios/app/photos.tsx",
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/app/friends/add.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Photos.actions.saveOne",
+   "Photos.actions.saving",
+   "PhotoLightbox.close",
+   "Common.back",
+   "Common.saveToAlbum.label"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: photo-lightbox.tsx:119-127 has Text '⬇︎'/'…' with a11y '儲存到相簿', and 131-133 has a11y '關閉'. photos.tsx:161 and friends/index.tsx:141 use a11y '返回'. Web lightbox 341-369 uses Download size-5 in an h-11 black/40 pill with the downloadAction label/busyLabel (Photos.actions.saveOne/saving). Correction: the friends/add.tsx ref ':392' is wrong; the hard-coded '返回' is at add.tsx:62. Common.saveToAlbum.label, PhotoLightbox.close and Common.back exist. Also use rgba(0,0,0,0.4) to match web, instead of the current rgba(255,255,255,0.15)."
+ },
+ {
+  "id": "SOCIAL-21",
+  "title": "Gallery asset titles hard-coded in Chinese in iOS aggregator (web hard-codes English) — shown in card footer and a11y",
+  "category": "copy-i18n",
+  "severity": "P2",
+  "web_ref": "apps/web/src/lib/firebase/photo-gallery.ts:105,121,138,154 ('Post photo', '{pet} walk photo', '{pet} avatar', 'Receipt photo')",
+  "ios_ref": "apps/ios/src/lib/photo-gallery.ts:107, 123, 140, 156",
+  "current_ios": "'貼文照片', '${petName} 散步照' / '散步照片', '${name} 頭像', '收據照片' regardless of locale (en users see Chinese).",
+  "target": "Locale-aware titles via shared i18n (fix web too later — web is English-only, flag to web owner).",
+  "fix_plan": "Import t from '@/lib/i18n' in photo-gallery.ts and replace literals with t('Photos.titles.post'), petName ? t('Photos.titles.walkWithPet',{pet}) : t('Photos.titles.walk'), t('Photos.titles.petAvatar',{pet}), t('Photos.titles.receipt'). Add keys to both catalogs; note in docs/team/backlog.md that web photo-gallery.ts should adopt them.",
+  "files_to_touch": [
+   "apps/ios/src/lib/photo-gallery.ts",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [
+   "Photos.titles.post = 貼文照片 | Post photo",
+   "Photos.titles.walk = 散步照片 | Walk photo",
+   "Photos.titles.walkWithPet = {pet} 散步照 | {pet} walk photo",
+   "Photos.titles.petAvatar = {pet} 頭像 | {pet} avatar",
+   "Photos.titles.receipt = 收據照片 | Receipt photo"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: photo-gallery.ts hard-codes '貼文照片' (107), '${petName} 散步照'/'散步照片' (123), '${pet.name} 頭像' (140) and '收據照片' (156). These feed the a11y label (photos.tsx:217) and, after SOCIAL-13, the footer. Web hard-codes English titles. The proposed Photos.titles.* keys do not exist yet, so they are correctly listed as new. P2 is right."
+ },
+ {
+  "id": "SOCIAL-22",
+  "title": "Friend/request/search rows: radius md + no shadow, avatar 44 and name 15/700 vs web card (shadow-sm) avatar 40, 14/600",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/friends/page.tsx:166-173, 196-204; apps/web/src/components/friends/friend-search.tsx:86-96 (rounded-lg border hairline bg-white p-3 shadow-sm; Avatar 40; text-sm font-semibold; sub text-xs zinc-500)",
+  "ios_ref": "apps/ios/app/friends/index.tsx:168-170, 184-188, 224-227, 301-304",
+  "current_ios": "row {radius.md, hairline, padding 12, no shadow}; UserAvatar 44; rowName 15/700; rowSub 12 ink3.",
+  "target": "Per design-system card rule: radius.lg (14) + hairline + shadows.card; avatar 40; name 14/600 ink; sub 12 ink3 (mango equivalent of zinc-500); list gap 12.",
+  "fix_plan": "styles.row → {..., borderRadius: radius.lg, ...shadows.card}; UserAvatar size={40}; rowName {fontSize:14, fontWeight:'600'}; scroll gap spacing.md. Optional: convert the friends list to FlatList if friend counts grow (currently small, low priority).",
+  "files_to_touch": [
+   "apps/ios/app/friends/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: iOS row (301) is radius.md with no shadow, avatar 44 (169/185/224), and rowName 15/700 (303). Web rows (168, 198, friend-search 88) are rounded-lg + border + shadow-sm, Avatar 40, text-sm font-semibold, list gap-3 (gap-2 in search). The plan's radius.lg + shadows.card follows the design-system card rule."
+ },
+ {
+  "id": "FEED-22",
+  "title": "save-photo re-encodes via ImageManipulator (quality loss); permission error not surfaced",
+  "category": "optimization",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/ui/save-to-album-button.tsx:52-66 (saves original file bytes; distinct failed state)",
+  "ios_ref": "apps/ios/src/lib/save-photo.ts:13-19 (localise via manipulateAsync JPEG compress:1), :27-30 (throws Chinese literal; caller in feed.tsx:113-115 swallows it into the generic failure)",
+  "current_ios": "Every save decodes and re-encodes the image to JPEG, which is slow on large photos, loses PNG/WebP fidelity and strips metadata. The file comment claims expo-file-system isn't available, but it is installed (package.json:35) and already used in data-export.ts. A denied permission shows the generic failure with no hint to open Settings.",
+  "target": "Byte-exact download to cache then saveToLibraryAsync, and a distinct permission-denied message.",
+  "fix_plan": "Replace localise() with FileSystem.downloadAsync(url, FileSystem.cacheDirectory + `mango-${Date.now()}.${ext}`) (ext from the URL path, defaulting to jpg), and keep ImageManipulator only as a fallback for formats MediaLibrary rejects. Throw a typed error {code:\"permission\"} on denial. In callers, show t(\"Post.libraryPermissionDenied\") (new key from FEED-12) with an 'Open Settings' button via Linking.openSettings(). Delete the temp file afterwards with FileSystem.deleteAsync(uri,{idempotent:true}).",
+  "files_to_touch": [
+   "apps/ios/src/lib/save-photo.ts",
+   "apps/ios/app/feed.tsx"
+  ],
+  "needs_new_i18n_keys": [
+   "Post.libraryPermissionDenied = 需要相簿權限，請到「設定」開啟相簿存取 | Photo library access is off. Enable it in Settings."
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "XCUT-11",
+  "title": "Family/Friends/Onboarding alerts and headers hard-code '取消/失敗/返回/關閉/好友/移除/分享'",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/family/family-section.tsx:146-196,431,512 (errors show err.message; Common.* for actions); apps/web/src/app/app/friends/page.tsx:117 (Nav/Friends keys)",
+  "ios_ref": "apps/ios/app/family.tsx:89,99,114,124,140,151,164,290,311; apps/ios/src/components/settings/family-section.tsx:96,120,146,304; apps/ios/app/friends/index.tsx:111-132,141,144,235,265,269; apps/ios/app/friends/add.tsx:62,85,87,91; apps/ios/app/onboarding.tsx:50,110,130; apps/ios/app/photos.tsx:161; apps/ios/app/feed.tsx:47; apps/ios/src/lib/friends-write.ts:30,38",
+  "current_ios": "Destructive confirmations mix translated titles with hard-coded '取消'/'移除'; failures show '失敗' + fixed Chinese body (web shows err.message); back buttons labelled '返回'; friends header '好友'; search results '已是好友/已送出/加好友'; QR modal '分享/關閉'.",
+  "target": "Existing keys for all actions; error alerts = Error.title + err.message (web parity).",
+  "fix_plan": "family.tsx + family-section.tsx: '取消'→t('Common.cancel'); Alert.alert('失敗', …)→Alert.alert(t('Error.title'), err instanceof Error ? err.message : '') (catch with `(err)`); 164 a11y→t('Common.back'); 290→t('Common.close'). friends/index.tsx: 111→Common.cancel; 113→t('Family.removeConfirm.confirm') ('移除'/'Remove'); 115/124/132→Alert.alert(t('Error.title')); 141→Common.back; 144→t('Nav.friends'); 235→already ? new Friends.alreadyFriends : sent ? new Friends.requestSent : t('Friends.add.title'); 265→new Common.share; 269→Common.close. friends/add.tsx:62→Common.back; 85/87/91→new keys (web also hard-codes these). onboarding.tsx:50→t('Error.title') (or err.message); 110/130→'‹ '+t('Common.back'). photos.tsx:161, feed.tsx:47→t('Common.back'). friends-write.ts:30/38→throw new Error(t(new keys)).",
+  "files_to_touch": [
+   "apps/ios/app/family.tsx",
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/app/friends/add.tsx",
+   "apps/ios/app/onboarding.tsx",
+   "apps/ios/app/photos.tsx",
+   "apps/ios/app/feed.tsx",
+   "apps/ios/src/lib/friends-write.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.cancel",
+   "Common.back",
+   "Common.close",
+   "Error.title",
+   "Family.removeConfirm.confirm",
+   "Nav.friends",
+   "Friends.add.title"
+  ],
+  "needs_new_i18n_keys": [
+   "Friends.alreadyFriends = 已是好友 | Already friends",
+   "Friends.requestSent = 已送出 | Sent",
+   "Common.share = 分享 | Share",
+   "Friends.add.selfQr = 這是你自己的 QR code 喔 | This is your own QR code",
+   "Friends.add.sentNote = 已送出邀請，等對方接受 | Request sent — waiting for them to accept",
+   "Friends.add.signInFirst = 請先登入才能送出邀請 | Sign in to send a request",
+   "Friends.errors.self = 不能加自己為好友 | You can't add yourself"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-15",
+  "title": "Feed (up to ~90 PostCards) and Photos grid (hundreds of images) rendered with .map inside ScrollView",
+  "category": "optimization",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/feed/page.tsx:49 (listFeedPosts 30 per source); apps/web/src/app/app/photos/page.tsx",
+  "ios_ref": "apps/ios/app/feed.tsx:75-93; apps/ios/src/lib/posts.ts listFeedPosts (mine+public+friends chunks, each limit 30, merged without slice); apps/ios/app/photos.tsx:204-248; apps/ios/src/lib/photo-gallery.ts:31-33 (80 posts × photos + 120 walks × ≤5 + 200 receipts)",
+  "current_ios": "Feed mounts every PostCard (images, reactions, comment toggles) at once — 30-90+ items; Photos mounts every <Image> in a flexWrap ScrollView, potentially several hundred full-size remote images → memory pressure and slow first render on older iPhones.",
+  "target": "Virtualized lists with identical visuals.",
+  "fix_plan": "feed.tsx: replace ScrollView+map with <FlatList data={posts} keyExtractor={p=>p.postId} renderItem={({item}) => <PostCard …/>} contentContainerStyle={styles.scroll} ItemSeparatorComponent={() => <View style={{height: spacing.md}}/>} refreshControl={…} initialNumToRender={5} windowSize={7} removeClippedSubviews />; move the empty/loading branches to ListEmptyComponent. photos.tsx: <FlatList data={filtered} numColumns={2} keyExtractor={a=>a.id} columnWrapperStyle={{gap}} contentContainerStyle={[styles.grid,{gap}]} (drop flexWrap/flexDirection from styles.grid) renderItem={({item, index}) => cell} initialNumToRender={8} refreshControl={…} />. Keep CONTENT_MAX_WIDTH centering via contentContainerStyle. Home stays ScrollView (capped at 10). Friends list (friends/index.tsx:167) can stay map (small) — optional FlatList.",
+  "files_to_touch": [
+   "apps/ios/app/feed.tsx",
+   "apps/ios/app/photos.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ }
+]

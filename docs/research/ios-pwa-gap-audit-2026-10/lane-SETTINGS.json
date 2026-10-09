@@ -1,0 +1,447 @@
+[
+ {
+  "id": "LEAD-2",
+  "title": "Settings has no 成就徽章 entry card (web shows it right after profile/guest-upgrade)",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:128-144 (Link card: Trophy in tint square, Settings.achievements.title/subtitle, ChevronRight; shown to everyone incl. guests)",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:82-85 (GuestUpgradeSection then PhotosPreviewSection; no achievements card)",
+  "current_ios": "No entry point. The fidelity doc item S5b (docs/features/ios-uiux-fidelity-gaps.md:48) is still open in code. Once LEAD-1 lands, the page would be unreachable without this card.",
+  "target": "Card at the same position as web: after the profile card and the guest upgrade, before latest photos. Visible to all users, guests included.",
+  "fix_plan": "In apps/ios/app/(tabs)/settings.tsx, insert the card between `{isGuest ? <GuestUpgradeSection /> : null}` and `{user ? <PhotosPreviewSection /> : null}`.\n- Card: Pressable with onPress={() => router.push('/achievements')} and accessibilityRole 'button'. Style: flexDirection row, alignItems center, justifyContent space-between, gap 12, padding spacing.xl (24, web p-6), borderRadius radius.xl, borderWidth 1, borderColor colors.hairline, bg colors.card, ...shadows.card. Pressed state: opacity 0.7.\n- Left group (row, gap 12, flex 1): a 36x36 View with radius.md, bg brandTint, centered, holding lucide Trophy size 16 color brandDeep. Beside it, a text column:\n  - title t('Settings.achievements.title') at 15/500 ink\n  - subtitle t('Settings.achievements.subtitle') at 14 ink2\n- Right side: lucide ChevronRight size 20 color ink3.\n- Import Trophy and ChevronRight from lucide-react-native.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Settings.achievements.title",
+   "Settings.achievements.subtitle"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-1",
+  "title": "Achievements entry card and the achievements screen are missing on iOS",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:128-144 (Trophy card linking to /app/achievements, shown to everyone incl. guests); apps/web/src/app/app/achievements/page.tsx",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:82-85 (goes straight from guest card to PhotosPreview); there is no achievements route under apps/ios/app/ and a grep for 'achievement' in apps/ios finds nothing",
+  "current_ios": "No achievements card in Settings and no screen to open. The 'achievement' engagement push type is listed in Settings, but a badge push on iOS has nowhere to land.",
+  "target": "Right after the guest-upgrade card and before the photos card, show a pressable card: 36x36 icon disc (radius.md, brandTint, Trophy 16 brandDeep), title 'Settings.achievements.title' (15/500 ink), subtitle 'Settings.achievements.subtitle' (13 ink2), ChevronRight 20 ink3 on the right. It opens an Achievements screen with the same layout as the web page (progress ring hero, then badge groups by category).",
+  "fix_plan": "1) Port apps/web/src/lib/achievements.ts (147 lines of pure logic: ACHIEVEMENT_CATEGORY_ORDER, groupAchievements, metric values) to apps/ios/src/lib/achievements.ts, importing ACHIEVEMENTS / LifetimeStats / AchievementGrant from @mango/shared-types. 2) Add apps/ios/src/lib/achievements-read.ts with RN-Firebase versions of getLifetimeStats (users/{uid}/stats/lifetime), listEarnedAchievements (users/{uid}/achievements) and getAchievementCounts (pets count, plus posts by authorUid for non-guests), all through Promise.allSettled as on web. 3) Add apps/ios/app/achievements.tsx: Screen with a back header titled 'Achievements.pageTitle', a hero card (summary 'Achievements.summary' {earned,total}, guestHint for guests with a CTA to the upgrade sheet), then category sections 'Achievements.categories.*' rendered as a 2-column grid of badge cards (port badge-card.tsx with react-native-svg for the ring; respect useReducedMotion). Use 'Achievements.emptyHint' when nothing is earned. 4) In settings.tsx insert the entry card between GuestUpgradeSection and PhotosPreviewSection with router.push('/achievements'). 5) Route a tapped 'achievement' push to /achievements.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx",
+   "apps/ios/app/achievements.tsx",
+   "apps/ios/src/lib/achievements.ts",
+   "apps/ios/src/lib/achievements-read.ts",
+   "apps/ios/src/components/achievements/badge-card.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Settings.achievements.title",
+   "Settings.achievements.subtitle",
+   "Achievements.pageTitle",
+   "Achievements.summary",
+   "Achievements.guestHint",
+   "Achievements.emptyHint",
+   "Achievements.locked",
+   "Achievements.earnedOn",
+   "Achievements.categories.walks"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-3",
+  "title": "Guest gating does not match web: iOS hides the family, engagement push, walk auto-photo, export and delete-account sections from guests",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:162-164 (FamilySection for all; renders GuestLockedNotice for guests, family-section.tsx:204-206), 173-177 / 185-189 / 223-234 / 240-260 (gated only on `user`, so guests see them); guest-upgrade.tsx:207-238 (GuestLockedNotice)",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:89,92,93,97,101 (all `!isGuest ? ... : null`); the file header comment claims 'Guest gating matches web'",
+  "current_ios": "A guest sees only the profile, upgrade, photos, push and legal cards. Functional problem: guests can walk, and the walk start/end photo prompts read walkPrefs.autoPhotoShare (apps/ios/src/lib/walk-data.ts:44-46, walks.tsx:74), but guests have no switch to turn them off. Guests also cannot export or delete their data on iOS.",
+  "target": "Match web gating: Family card shows a locked notice for guests; EngagementPush, WalkAutoPhoto, Export and Danger zone are shown to any signed-in user including guests; Leaderboard and Blocked stay hidden for guests.",
+  "fix_plan": "1) Create apps/ios/src/components/auth/guest-locked-notice.tsx: a row with Lock 16 and the text t(`Guest.locked.${feature}`) (13, ink), plus a primary Button size sm 'Guest.upgradeCta' that opens the shared upgrade sheet (see SETTINGS-18). Container: cardSoft background, hairline border, radius.md, padding 16. 2) In settings.tsx render <FamilySection/> for everyone; inside FamilySection, `if (isGuest) return <Card><GuestLockedNotice feature=\"family\"/></Card>`. 3) Change the gates for EngagementPushSection, WalkAutoPhotoSection, ExportDataSection and the danger card from `!isGuest` to `user`. Keep LeaderboardVisibilitySection and BlockedUsersSection gated on `user && !isGuest`. 4) Fix the header comment.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx",
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/src/components/auth/guest-locked-notice.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Guest.locked.family",
+   "Guest.upgradeCta"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-4",
+  "title": "Settings card shell differs: most cards use radius lg (14) instead of xl (18), padding 16 instead of 24, and no shadow-card",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:71,157,162,166,174,186,198,207,212,224 (every section: rounded-[var(--radius-xl)] border-mango-hairline bg-mango-card p-6 shadow-card, stack gap-4)",
+  "ios_ref": "push-toggle.tsx:76-82, engagement-push-section.tsx:89-96, prefs-sections.tsx:121-128, blocked-users-section.tsx:102-109, export-data-section.tsx:52-59, guest-upgrade-section.tsx:82-89 (radius.lg, padding spacing.lg, no shadow); settings.tsx:132-139 profile (radius.xl but padding 16, no shadow); settings.tsx:164 dangerCard has an extra marginTop spacing.lg",
+  "current_ios": "Cards look flatter and tighter than web, and the radius jumps between 14 and 18 from card to card. The danger card has an extra 16pt gap above it.",
+  "target": "Every settings card uses radius.xl (18), padding spacing.xl (24), a hairline border, colors.card background and shadows.card, with a uniform 16pt gap between cards. The danger card keeps its red tint and border, has no shadow (web has none) and no extra margin.",
+  "fix_plan": "Swap each section's root <View style={styles.card}> for the existing <Card style={{ padding: spacing.xl, gap: ... }}> primitive (apps/ios/src/components/ui/Card.tsx already has radius.xl + shadows.card), or update each local `card` style to borderRadius: radius.xl, padding: spacing.xl, ...shadows.card. Apply this in push-toggle, engagement-push-section, prefs-sections (both), blocked-users-section, export-data-section, family-section, photos-preview-section and the profile card in settings.tsx. Remove `marginTop: spacing.lg` from styles.dangerCard and set its padding to spacing.xl. Guest card: background brandTint at 50% opacity (e.g. 'rgba(255,224,170,0.5)', or the token alpha), border brand at 40%.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx",
+   "apps/ios/src/components/settings/push-toggle.tsx",
+   "apps/ios/src/components/settings/engagement-push-section.tsx",
+   "apps/ios/src/components/settings/prefs-sections.tsx",
+   "apps/ios/src/components/settings/blocked-users-section.tsx",
+   "apps/ios/src/components/settings/export-data-section.tsx",
+   "apps/ios/src/components/settings/guest-upgrade-section.tsx",
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/src/components/settings/photos-preview-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-5",
+  "title": "Page header: title is the hard-coded '設定' at 22/800 instead of t('Nav.settings') at the RouteHeader 26/800/-0.5 style",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:53-68 (RouteHeader title={t('settings')}); route-header.tsx:34-36 (text-[26px] font-extrabold tracking-[-0.5px] mango-ink, mb-6)",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:39-41, 129-130",
+  "current_ios": "'設定' always shows in Chinese, even in en, and is smaller and lighter than the other top-level page titles.",
+  "target": "Title t('Nav.settings') styled with type.h1 (26/800/-0.5) in colors.ink, with paddingHorizontal spacing.lg.",
+  "fix_plan": "In settings.tsx replace the literal with t('Nav.settings') and set headerTitle to { ...type.h1, color: colors.ink }. Optionally reuse the shared page-header component if other tabs already use one.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.settings"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-6",
+  "title": "Web's top-right '更多' overflow-drawer trigger has no iOS counterpart",
+  "category": "missing-feature",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:55-66 (MoreHorizontal size-10 button, aria-label Nav.more, opens the nav drawer); app-nav.tsx:61-75,98-102 (on mobile the drawer lists photos, restaurants and knowledge; feed and friends are excluded)",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:39-41 (header has only the title)",
+  "current_ios": "No overflow trigger. With Restaurants and Knowledge deferred, the drawer would hold only Photos, which is already reachable from the Settings photos card.",
+  "target": "Either document this as an accepted difference, or add a 40x40 MoreHorizontal 20 ink3 button on the right of the header (radius.md, accessibilityLabel 'Nav.more') that opens ActionSheetIOS with 'Nav.photos' (plus 'Settings.achievements.title' once SETTINGS-1 lands) and Common.cancel.",
+  "fix_plan": "Recommended: record it as an accepted difference in docs/features/ios-uiux-fidelity-gaps.md, since the destinations are deferred or duplicated. If 1:1 chrome is wanted: in settings.tsx make the header a row with justifyContent space-between and add a Pressable MoreHorizontal that calls ActionSheetIOS.showActionSheetWithOptions({ options: [t('Common.cancel'), t('Nav.photos')], cancelButtonIndex: 0 }, i => i===1 && router.push('/photos')).",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.more",
+   "Nav.photos",
+   "Common.cancel"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "SETTINGS-7",
+  "title": "The push retry link calls a key that does not exist, t('Common.retry'), so iOS renders a raw '[missing \"zh-TW.Common.retry\" translation]' string",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "packages/shared-i18n/src/messages/zh-TW.json: the Common namespace has no 'retry'; the existing key is Error.retry = '重試'",
+  "ios_ref": "apps/ios/src/components/settings/push-toggle.tsx:69; also apps/ios/app/_layout.tsx:55",
+  "current_ios": "When push registration fails (status 'error'), the retry link shows the i18n-js missing-key marker instead of '重試'/'Retry'. The fallback locale cannot help because the key is missing in every locale.",
+  "target": "The retry link reads '重試' / 'Retry'.",
+  "fix_plan": "Replace t('Common.retry') with t('Error.retry') in push-toggle.tsx:69 and _layout.tsx:55. Optionally add a dev-only check in i18n.ts (i18n.missingBehavior = 'error' under __DEV__) so missing keys fail loudly.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/push-toggle.tsx",
+   "apps/ios/app/_layout.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Error.retry"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-8",
+  "title": "Hard-coded Chinese and activeLocale-ternary strings across the settings and family surfaces (R20-style)",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "Web uses next-intl keys throughout; family errors render err.message inline (family-section.tsx:374)",
+  "ios_ref": "settings.tsx:35 ('訪客'), 72 (sign-out failure alert ternary); push-toggle.tsx:42, 62, 70 (ternaries); family-section.tsx:96, 120, 146, 304 (Alert '失敗' + Chinese bodies); app/family.tsx:89, 114, 140 ('取消'), 99, 124, 151, 311 ('失敗' alerts), 164 ('返回'), 290 ('關閉'); guest-upgrade-section.tsx:35 (Alert body '✅'); lib/data-export.ts:31 (dialogTitle 'Mango Pet 資料')",
+  "current_ios": "en users see Chinese alerts and labels on the family screen and in family errors. The push error copy and sign-out copy bypass the shared catalog.",
+  "target": "Every string comes from the shared catalog: reuse existing keys where they exist and add the few missing ones.",
+  "fix_plan": "family.tsx: '取消' -> t('Common.cancel'), '返回' -> t('Common.back'), '關閉' -> t('Common.close'). family-section.tsx and family.tsx failure alerts: replace them with an inline <Text style={{fontSize:12,color:colors.danger}}>{error}</Text> under the card (web parity), with error = (e as Error).message || t('Family.actionFailed'). Join errors use t('Join.error'). settings.tsx guest name: t('Settings.guestName'). Sign-out alert: t('Settings.signOutFailed.title') / t('Settings.signOutFailed.body'). push-toggle: t('Push.status.error'), t('Push.openIosSettings'), t('Push.openSettingsManually'). guest-upgrade '✅' alert: remove it (auth state flips the UI), or show Guest.settings.title. data-export: dialogTitle t('Settings.privacyData.shareTitle').",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx",
+   "apps/ios/src/components/settings/push-toggle.tsx",
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/app/family.tsx",
+   "apps/ios/src/components/settings/guest-upgrade-section.tsx",
+   "apps/ios/src/lib/data-export.ts",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.cancel",
+   "Common.back",
+   "Common.close",
+   "Join.error",
+   "JoinFamily.errorTitle"
+  ],
+  "needs_new_i18n_keys": [
+   "Settings.guestName = 訪客 | Guest",
+   "Settings.signOutFailed.title = 暫時無法登出 | Could not sign out",
+   "Settings.signOutFailed.body = 尚未解除此裝置的通知綁定，請確認連線後重試。 | Could not unregister this device. Check your connection and try again.",
+   "Push.status.error = 推播註冊失敗，請確認連線後重試。 | Registration failed. Check your connection and try again.",
+   "Push.openIosSettings = 開啟 iOS 設定 | Open iOS Settings",
+   "Push.openSettingsManually = 請手動開啟系統設定，選擇通知。 | Open Settings manually and select Notifications.",
+   "Family.actionFailed = 操作失敗，請稍後再試 | Something went wrong. Please try again.",
+   "Settings.privacyData.shareTitle = Mango Pet 資料 | Mango Pet data"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-9",
+  "title": "Push card has no state icon disc (Bell / BellRing / BellOff) and no 'Test' push action",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/settings/push-toggle.tsx:156-194 (icon disc size-9 brandTint with BellRing when enabled, BellOff when denied, Bell otherwise; title 14/500; status 12 ink-2; when enabled: ghost 'Push.test' with Send icon plus secondary 'Push.disable'; when disabled: primary 'Push.enable'); 196-200 (green test result text)",
+  "ios_ref": "apps/ios/src/components/settings/push-toggle.tsx:34-57 (text plus a native Switch only; title 15/800, hint ink3)",
+  "current_ios": "No leading icon and no way to send a test push. The backend sendTestPush callable reads the same private/contact fcmTokens and sends a plain notification payload, which works for APNs-backed FCM tokens.",
+  "target": "Header row: 36x36 icon disc (radius.md, brandTint) with BellRing, BellOff (for denied or error) or Bell, size 16 brandDeep; title t('Push.title') 14/600 ink; status 12 ink2. Keep the Switch as the iOS-native control (acceptable), or match web buttons. When enabled, add a ghost sm Button with Send 14 + t('Push.test') under or beside the control. Show the result in green 12: Push.testSent {sent} / Push.testPartial {sent,failed} / Push.testFailed {failed}; on throw show Push.testError in red.",
+  "fix_plan": "1) Add sendTestPush() to apps/ios/src/lib/push.ts (or account.ts) using firebase.app().functions('asia-east1').httpsCallable('sendTestPush'), returning {ok,sent,failed}. 2) In push-toggle.tsx add a `testing` state and a `testResult` state, render the icon disc, and add the test button (disabled while busy or testing). Colors: success '#047857' (emerald-700), error colors.danger.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/push-toggle.tsx",
+   "apps/ios/src/lib/push.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Push.title",
+   "Push.test",
+   "Push.testSent",
+   "Push.testPartial",
+   "Push.testFailed",
+   "Push.testError",
+   "Push.status.enabled",
+   "Push.status.disabled",
+   "Push.status.deniedIos",
+   "Push.status.checking"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-10",
+  "title": "Engagement push section is missing the Sparkles header disc, per-row Bell icons, row dividers, pending guard and error text",
+  "category": "layout",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/settings/engagement-push-section.tsx:94-102 (Sparkles disc + title 14/600 + subtitle 12 ink-2), 104-105 (loading text Settings.engagementPush.loading), 107-163 (rows divided by hairline, Bell 16 ink-3 or hairline when disabled, switch disabled while pending), 167-169 (error text)",
+  "ios_ref": "apps/ios/src/components/settings/engagement-push-section.tsx:54-83 (plain title/subtitle, ActivityIndicator, rows without icon or divider), 26-32 (load error swallowed), 44-48 (write error silently rolled back, no pending lock)",
+  "current_ios": "The card is visually plainer than web. A failed save silently flips the switch back with no message, and rapid double taps are not blocked.",
+  "target": "Header row with a 36 brandTint disc containing Sparkles 16 brandDeep, then title and subtitle. Rows: Bell 16 (ink3, or hairline when disabled) + label 14/500 + hint 12 ink2 + Switch, separated by StyleSheet.hairlineWidth hairline borders (first row has no top padding). Loading shows the text t('Settings.engagementPush.loading'). Keep a pending type and disable that row's Switch while it saves. On error, show red 12 text.",
+  "fix_plan": "Edit engagement-push-section.tsx: add `pending` and `error` state; in toggle() set pending and clear error, and in catch roll back and setError(e.message). Restructure the JSX as described. Import Sparkles and Bell from lucide-react-native.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/engagement-push-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Settings.engagementPush.title",
+   "Settings.engagementPush.subtitle",
+   "Settings.engagementPush.loading",
+   "Settings.engagementPush.familyOnlyHint"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-11",
+  "title": "Walk auto-photo and leaderboard visibility: no loading state, no pending guard, unhandled read rejection, no error text",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/settings/walk-auto-photo-section.tsx:29-71 (loading + pending disable the switch; errors shown); leaderboard-visibility-section.tsx:37-77, 93-95 (loading text 'Settings.leaderboardVisibility.loading', options disabled while pending, error text), 113-115 (selected = brand border + brandTint/40; label stays ink)",
+  "ios_ref": "apps/ios/src/components/settings/prefs-sections.tsx:24-26 and 70-73 (getUserPrefs().then with no catch, so an unhandled promise rejection when offline), 28-37 and 75-84 (no pending lock; failure is a silent rollback), 97-115 (options render 'public' as selected before the load finishes and are tappable), 152 and 156 (selected style is full brandTint fill with a brandDeep label)",
+  "current_ios": "On open, the leaderboard card briefly shows 'public' selected even when the user chose 'off'. A tap during that window writes a value based on wrong state. Offline loads raise unhandled rejections, and save failures are invisible.",
+  "target": "Match web: show t('Settings.leaderboardVisibility.loading') until loaded, disable the controls while loading or saving, and show red error text on failure. Selected option: border colors.brand with brandTint at 40% opacity; label stays ink (14/500), hint 12 ink2.",
+  "fix_plan": "In prefs-sections.tsx add `loading`, `pending` and `error` state to both sections. Use `.catch(e => setError(e.message)).finally(() => setLoading(false))`. Set `disabled={loading || pending}` on the Switch and Pressables. In pick() and toggle(), set pending in a try/finally. Set optionOn to { borderColor: colors.brand, backgroundColor: 'rgba(...brandTint, 0.4)' } and remove optionLabelOn. Better still, lift the single users/{uid} read into the settings screen (see SETTINGS-20) and pass the prefs in as props.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/prefs-sections.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Settings.leaderboardVisibility.loading"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-12",
+  "title": "Delete-account sheet: the keyboard covers the confirm input and buttons, and a failed preview stays on 'loading' forever",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/settings/delete-account-dialog.tsx:72-79 and 123-127 (impactError renders 'DeleteAccount.previewFailed'; the user can still proceed)",
+  "ios_ref": "apps/ios/src/components/settings/delete-account-section.tsx:71-74 (transparent Modal with a bottom-anchored sheet, no KeyboardAvoidingView, ScrollView without automaticallyAdjustKeyboardInsets), 41 (`.catch(() => setImpact(null))`, and null means loading), 79-80",
+  "current_ios": "Focusing the name field pushes the keyboard over the input and the 取消/永久刪除 buttons in the bottom sheet, so the user types blind and must dismiss the keyboard to reach the button. If previewDeleteAccountImpact fails, '盤點即將刪除的資料...' shows forever.",
+  "target": "The input and actions stay above the keyboard. On a preview failure, show 'DeleteAccount.previewFailed' (12 ink2) and still allow the delete.",
+  "fix_plan": "Wrap the backdrop content in <KeyboardAvoidingView behavior='padding' style={{flex:1, justifyContent:'flex-end'}}> (from react-native), or add automaticallyAdjustKeyboardInsets to the ScrollView. Add autoFocus to the TextInput. Add `impactLoading` and `impactError` state: before the call set loading true and error null; in .then set impact and loading false; in .catch set the error and loading false. Render previewLoading, previewFailed or the summary accordingly.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/delete-account-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "DeleteAccount.previewLoading",
+   "DeleteAccount.previewFailed"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-13",
+  "title": "Delete-account content differs: no red warning box, no 'my activity' and cascade lines, no 'nothing to delete' state, hint always visible, orange instead of red confirm button",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/settings/delete-account-dialog.tsx:115-121 (red box: AlertTriangle + DeleteAccount.warning bold + cannotUndo), 142-144 (hint only when typed and not matching), 147-151 (error in red box), 162-178 (red-600 confirm with Trash2; label 'deleting' while busy), 186-246 (ImpactSummary: only non-zero lines; personal / family + cascadeWarning chip / myActivityCount {walks,reminders,expenses} / social; nothingToDelete when everything is zero)",
+  "ios_ref": "apps/ios/src/components/settings/delete-account-section.tsx:75-93 (no warning box; always renders 3 lines including zeros; no myActivity or cascade), 106 (confirmInputHint always shown), 119-123 (spinner instead of 'deleting' text), 156, 174, 178 (colors.cookie orange for cannotUndo, error and the confirm button)",
+  "current_ios": "Users are not warned that family members' records on their pets get deleted (cascadeWarning) and do not see their activity on other people's pets. The destructive button is mango-orange instead of danger red.",
+  "target": "Port ImpactSummary 1:1. Warning box: red-50 background, red-300/70 border, radius.md, padding 12, AlertTriangle 20 colors.dangerDeep, 'warning' 14/700 and 'cannotUndo' 12 in red-900. The confirm button uses colors.danger with Trash2 16 white + 'confirmButton', and t('DeleteAccount.deleting') while busy. Show the hint only when confirmName is non-empty and does not match. Errors use colors.danger.",
+  "fix_plan": "Edit delete-account-section.tsx: add a WarningBox and an ImpactSummary component that mirrors web lines 193-246 (use impact.familyWalks, familyReminders, familyExpenses and posts). The cascade chip uses a brandTint/50 background, radius.sm and 12 ink2 text prefixed '⚠ '. Replace colors.cookie with colors.danger / colors.dangerDeep. Use the same `matches` logic as web for the hint.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/delete-account-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "DeleteAccount.warning",
+   "DeleteAccount.cannotUndo",
+   "DeleteAccount.impactHeader",
+   "DeleteAccount.personalDataSection",
+   "DeleteAccount.personalDataCount",
+   "DeleteAccount.familyDataSection",
+   "DeleteAccount.familyDataCount",
+   "DeleteAccount.cascadeWarning",
+   "DeleteAccount.myActivitySection",
+   "DeleteAccount.myActivityCount",
+   "DeleteAccount.socialDataSection",
+   "DeleteAccount.socialDataCount",
+   "DeleteAccount.nothingToDelete",
+   "DeleteAccount.deleting",
+   "DeleteAccount.confirmInputHint"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-20",
+  "title": "Settings tab stays mounted and never refreshes, and the same users/{uid} doc is read 4-5 times on mount",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "On web every navigation to /app/settings remounts the page, so each section re-reads (page.tsx sections load in useEffect on mount)",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:42 (plain ScrollView, no RefreshControl or useFocusEffect); engagement-push-section.tsx:26-32, prefs-sections.tsx:23-26 and 70-73, blocked-users-section.tsx:27-51, photos-preview-section.tsx:30-46, family-section.tsx:66-68 (each loads once on mount)",
+  "current_ios": "Expo Router tabs keep Settings mounted. After blocking someone in the feed, the blocked list in Settings does not show them. New photos do not appear in the preview, new family members do not appear, and prefs changed on another device stay stale until the app restarts. engagement, walk-auto-photo, leaderboard and blocked each fetch users/{uid} separately.",
+  "target": "Settings refreshes on tab focus and supports pull-to-refresh. A single users/{uid} read feeds all pref sections.",
+  "fix_plan": "In settings.tsx add a `reloadKey` state bumped by useFocusEffect (from expo-router, skip the first focus) and by a RefreshControl (tintColor colors.brand) on the ScrollView, whose onRefresh also awaits family refresh(). Fetch getUserPrefs(user.uid) once in the screen and pass prefs (pushPrefs, walkPrefs, leaderboardVisibility, blockedUids) as props to EngagementPushSection, WalkAutoPhotoSection, LeaderboardVisibilitySection and BlockedUsersSection. Have those sections initialise from props and re-sync when props change. Pass reloadKey into PhotosPreviewSection's effect dependencies, and into FamilySection's loadMembers.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx",
+   "apps/ios/src/components/settings/engagement-push-section.tsx",
+   "apps/ios/src/components/settings/prefs-sections.tsx",
+   "apps/ios/src/components/settings/blocked-users-section.tsx",
+   "apps/ios/src/components/settings/photos-preview-section.tsx",
+   "apps/ios/src/components/settings/family-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-22",
+  "title": "Profile card: guest subtitle shows the family 'personal mode' copy instead of the email placeholder; name weight differs; no shadow",
+  "category": "copy-i18n",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:72-83 (name font-medium 16, `user?.email ?? '—'` in 14 ink-2; fallback name 'Guest')",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:35 (fallback '訪客' / email prefix), 50-52 (guest shows t('Family.personalMode') = '個人模式 · 尚未加入家庭'), 142-143 (name 16/700, email 13)",
+  "current_ios": "A guest's profile says '個人模式 · 尚未加入家庭', which is family-scope copy and wrong when the subject is the account.",
+  "target": "Name 16/500 ink. Subtitle 14 ink2 = user.email ?? '—'. Guest fallback name t('Settings.guestName') (or the profile displayName).",
+  "fix_plan": "In settings.tsx, set the email line to `{user?.email ?? '—'}`, the name fallback to `user?.displayName ?? (isGuest ? t('Settings.guestName') : user?.email?.split('@')[0] ?? '')`, name fontWeight '500', email fontSize 14. Shadow and padding are covered by SETTINGS-4.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [
+   "Settings.guestName = 訪客 | Guest"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-23",
+  "title": "Export button differs (full-width pill, no Download icon, spinner instead of 'downloading' label, no success text, silent when sharing is unavailable)",
+  "category": "layout",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/settings/export-data-button.tsx:63-82 (secondary Button self-start with Download 16 + downloadAction / 'downloading'; green successToast; red errorPrefix); page.tsx:224-233 (ShieldCheck 20 + title 16/600, subtitle 14 ink-2)",
+  "ios_ref": "apps/ios/src/components/settings/export-data-section.tsx:39-46 (full-width h48 pill, ActivityIndicator, no icon), 22-29 (no done state); apps/ios/src/lib/data-export.ts:28-34 (if Sharing is unavailable the file is written with no user feedback)",
+  "current_ios": "Visually heavier than web, with no confirmation after the share sheet closes.",
+  "target": "<Button variant='secondary' size='md' icon={<Download size={16}/>} label={busy ? t('Settings.privacyData.downloading') : t('Settings.privacyData.downloadAction')} style={{alignSelf:'flex-start'}}/>. On success, show t('Settings.privacyData.successToast') in green 12. If Sharing is unavailable, throw so the error line shows.",
+  "fix_plan": "Edit export-data-section.tsx (button, `done` state, title 16/600, subtitle 14 ink2) and data-export.ts (`if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing unavailable')`).",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/export-data-section.tsx",
+   "apps/ios/src/lib/data-export.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Settings.privacyData.downloadAction",
+   "Settings.privacyData.downloading",
+   "Settings.privacyData.successToast",
+   "Settings.privacyData.errorPrefix"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-24",
+  "title": "Blocked users: unblock failure is silent and the unblock button style differs",
+  "category": "state-handling",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/settings/blocked-users-section.tsx:57-71 and 113 (rollback + 'Moderation.unblockFailed' red text), 101-109 (Button secondary sm)",
+  "ios_ref": "apps/ios/src/components/settings/blocked-users-section.tsx:60-62 (rollback with no message), 86-93 and 123-132 (outlined pill, ink2 12/700)",
+  "current_ios": "If unblocking fails, the row reappears with no explanation.",
+  "target": "Add `error` state rendered as red 12 text t('Moderation.unblockFailed'). The button uses the shared Button variant='secondary' size='sm' label t('Moderation.unblock').",
+  "fix_plan": "Edit blocked-users-section.tsx: add error state set in the catch block, and swap the Pressable for <Button variant='secondary' size='sm' .../>.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/blocked-users-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Moderation.unblockFailed",
+   "Moderation.unblock"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SHELL-16",
+  "title": "Overflow 'More' drawer has no iOS equivalent (web settings top-right MoreHorizontal)",
+  "category": "missing-feature",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:53-67 (MoreHorizontal 40px button, Nav.more); apps/web/src/components/nav/app-nav.tsx:78, 100-104, 287-336 (bottom drawer: Nav.more title + X, 3-col grid of tiles min-h-20 with icon 20 + label 12; items = photos, restaurants, knowledge)",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:39-41 (header has no action)",
+  "current_ios": "No 'more' affordance exists. Photos is reachable only through the settings photos-preview card. Restaurants and knowledge are deferred-v1, so the drawer would hold only Photos today (plus Achievements once SHELL-14 lands, though web does not list it there).",
+  "target": "In the settings RouteHeader action, a 40px MoreHorizontal button (ink3, radius md, accessibilityLabel Nav.more). It opens a ui/Dialog titled Nav.more containing a 3-column tile grid. Each tile: minHeight 80, radius md, bgAlt background, 20px icon, 12/500 label. The only tile is Images → /photos. Omit restaurants and knowledge.",
+  "fix_plan": "After SHELL-10 and SHELL-11, add the button and Dialog in settings.tsx, and drive the tiles from a const array so deferred items can be added later. Optional: skip this until a second iOS destination exists, and record the decision.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/settings.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium",
+  "i18n_keys_to_reuse": [
+   "Nav.more",
+   "Nav.photos",
+   "Common.close"
+  ]
+ }
+]

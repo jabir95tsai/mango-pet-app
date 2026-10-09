@@ -1,0 +1,236 @@
+[
+ {
+  "id": "LEAD-1",
+  "title": "Achievements page missing on iOS (web /app/achievements has no iOS route, data module, or badge card)",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/achievements/page.tsx:19-178; apps/web/src/components/achievements/badge-card.tsx:19-141; apps/web/src/lib/achievements.ts:12-147; apps/web/src/lib/firebase/achievements.ts:17-70",
+  "ios_ref": "none. grep for 'achievement' under apps/ios finds only the engagement-push opt-out (ENGAGEMENT_PUSH_TYPES includes 'achievement'); apps/ios/app/_layout.tsx:82-92 registers no achievements screen",
+  "current_ios": "No achievements surface at all. Badges are granted server-side (and an unlock push is sent), but iOS users cannot see their badges, progress, or the earned/total count.",
+  "target": "1:1 port of the web page. (1) A top bar with a back button, then a 26px extrabold title 'Achievements.pageTitle'. (2) A progress hero card: an SVG ring around 🏆, 'Achievements.summary' {earned,total}, and 'Achievements.emptyHint' when 0 earned. (3) For guests only, a hint row that opens the upgrade flow ('Achievements.guestHint', Sparkles icon). (4) 8 category sections in ACHIEVEMENT_CATEGORY_ORDER, each with a title 'Achievements.categories.{cat}', an earned/total count, a 4px progress bar, and a 2-column badge grid. Badges have 3 states: earned (gradient disc, check badge, 'Achievements.earnedOn' pill), unearned (dimmed disc and a progress bar 'current / threshold' when the metric can be computed), and locked (guest viewing a guest:false badge; lock badge, 'Achievements.locked' text, and the whole tile taps through to upgrade).",
+  "fix_plan": "DATA. Create apps/ios/src/lib/achievements.ts (@react-native-firebase/firestore). Reads match web exactly, and firestore.rules already allows the owner to read both paths:\n(a) getLifetimeStats(uid): firestore().collection('users').doc(uid).collection('stats').doc('lifetime').get(). Return snap.exists ? data as LifetimeStats : null. In RNFB v21, exists is a property.\n(b) listEarnedAchievements(uid): .collection('users').doc(uid).collection('achievements').get(), mapped to AchievementGrant.\n(c) getAchievementCounts(uid, {includePosts}):\n  - petCount from firestore().collection('pets').where('ownerUid','==',uid).where('familyId','==',null).count().get(), then .data().count. RNFB v21 has count(). Keep the familyId==null constraint: it is the only rules-allowed shape, same as web.\n  - postCount from .collection('posts').where('authorUid','==',uid).count().get(), only when includePosts is true.\n(d) Copy the pure helpers verbatim from apps/web/src/lib/achievements.ts: ACHIEVEMENT_CATEGORY_ORDER, AchievementMetricValues, metricValue, BadgeState, computeBadgeState, groupAchievements, formatMetricValue. Import ACHIEVEMENTS and the types from @mango/shared-types. Later: lift these into packages/shared-business so web and iOS share them.\n(e) Add formatEarnedDate(ts) using activeLocale from @/lib/i18n. zh-TW gives `${y}年${m}月${d}日`; en gives `Jun 2, 2026` from a hand-written short-month array. This avoids depending on Hermes Intl, following the pattern of the format.ts comment.\n\nROUTE. Create apps/ios/app/achievements.tsx and register it in apps/ios/app/_layout.tsx with <Stack.Screen name=\"achievements\" options={{ presentation: \"card\" }} />.\n- Layout: SafeAreaView edges top, bg colors.bg. Header row copies feed.tsx:45-53: a 40x40 ArrowLeft back button with accessibilityLabel t('Common.back').\n- Content: ScrollView with contentContainerStyle padding spacing.lg, gap 32 (web gap-8), maxWidth CONTENT_MAX_WIDTH, alignSelf center. Add RefreshControl (tintColor colors.brand) bound to load(). Title Text is 26/800, letterSpacing -0.5, colors.ink.\n- State: user and isGuest = !!user?.isAnonymous from useAuth; families from useFamily (familyJoined = families.length). load() runs Promise.allSettled over the 3 reads with the same fallbacks as web page.tsx:31-50; pass includePosts = !isGuest. Also reload via useFocusEffect so a newly granted badge shows up after returning from a walk.\n- Loading: centered ActivityIndicator with color colors.brand, or Text t('Common.loading').\n- Derive with useMemo: const {groups,totalEarned,total} = groupAchievements({isGuest, grants:new Map(grants.map(g=>[g.achievementId,g])), values}).\n\nHERO. Row with gap 16, padding 20, borderRadius 16 (web rounded-2xl = 16px default Tailwind; radius.xl 18 acceptable), borderWidth 1, borderColor 'rgba(243,152,0,0.3)', bg colors.cardSoft.\n- ProgressRing: 68x68 react-native-svg Svg with viewBox '0 0 64 64' and style transform rotate -90deg. Track Circle: cx 32, cy 32, r 26, stroke colors.bgAlt, strokeWidth 6, fill none. Fill Circle: stroke colors.brand, strokeWidth 6, strokeLinecap round, strokeDasharray `${circ*pct} ${circ}` with circ = 2*PI*26. Overlay an absolutely centered Text '🏆' at fontSize 24.\n- Text: t('Achievements.summary',{earned,total}) at 18/800, letterSpacing -0.3, ink. When totalEarned===0, add t('Achievements.emptyHint') at 14/500 ink2, marginTop 2.\n\nGUEST HINT (isGuest only). Pressable row: gap 12, padding 16, borderRadius radius.sm (8), border 1 'rgba(243,152,0,0.4)', bg 'rgba(255,231,191,0.5)'. Content: lucide Sparkles size 20 color brandDeep, then Text t('Achievements.guestHint') 14 ink2. onPress = router.push('/(tabs)/settings'), because GuestUpgradeSection lives there and iOS has no upgrade dialog.\n\nSECTION, one per group.\n- Header row (space-between): Text t(`Achievements.categories.${g.category}`) 16/700 ink, and count `${g.earnedCount}/${g.badges.length}` 12/600 ink2 with tabular-nums.\n- Bar: marginTop 8, height 4, radius pill, bg bgAlt. Inner fill: brand at opacity 0.7, width `${pct}%`.\n- Grid: marginTop 12, flexDirection row, flexWrap wrap, gap 12. Each tile width = (containerWidth-12)/2, measured with onLayout.\n\nBADGE CARD. Create apps/ios/src/components/achievements/badge-card.tsx with props {state: BadgeState, onUpgrade}.\n- Card: alignItems center, gap 8, padding 16, borderRadius 16, borderWidth 1, bg cardSoft, textAlign center, flex 1. Earned: borderColor 'rgba(243,152,0,0.5)' plus shadow (color brand, opacity 0.35, radius 8, offset 0/4). Otherwise borderColor colors.hairline.\n- Disc: 56x56, radius 16, emoji fontSize 30. Earned uses LinearGradient [amber, brandTint, amber], locations [0,0.55,1], start {x:0.15,y:0}, end {x:0.85,y:1}, with a 1px border 'rgba(243,152,0,0.25)'. Unearned/locked uses View bg bgAlt at opacity 0.45. RN cannot grayscale an emoji, so opacity is the accepted approximation.\n- Corner badge: absolute bottom -4, right -4, 24x24 circle, borderWidth 2, borderColor cardSoft. Earned: bg brand with lucide Check size 14, strokeWidth 3, white. Locked: bg ink with lucide Lock size 14, white.\n- Text: title t(`Achievements.${id}.title`) 14/600 (ink when earned, else ink2); desc t(`Achievements.${id}.desc`) 12 ink2, numberOfLines 2.\n- Earned: pill with bg brandTint, px 8, py 2, text t('Achievements.earnedOn',{date}) 11/600 brandDeep, marginTop auto.\n- Locked: text t('Achievements.locked') 11/600 brandDeep, marginTop auto. The whole card is a Pressable with onPress onUpgrade and accessibilityLabel `${title} — ${t('Achievements.locked')}`.\n- Progress (unearned, not locked, progress != null): accessibilityRole 'progressbar', accessibilityValue {min:0, max:threshold, now:current}. Track height 8 bgAlt pill with brand fill at pct%; label `${formatMetricValue(current)} / ${threshold}` 11/500 ink2, tabular-nums.\n- Optional P2 shine: a one-shot 1.1s Animated translateX white skewed band over earned discs, skipped when useReducedMotion() is true.\n\nFOLLOW-UP (push surface). The unlock push deep-links to /app/achievements, but iOS has no notification-open routing (no onNotificationOpenedApp / getInitialNotification in apps/ios/src). Map url '/app/achievements' to router.push('/achievements') when that handler is added.",
+  "files_to_touch": [
+   "apps/ios/app/achievements.tsx (new)",
+   "apps/ios/app/_layout.tsx",
+   "apps/ios/src/lib/achievements.ts (new)",
+   "apps/ios/src/components/achievements/badge-card.tsx (new)",
+   "apps/ios/src/components/achievements/progress-ring.tsx (new, optional split)"
+  ],
+  "i18n_keys_to_reuse": [
+   "Achievements.pageTitle",
+   "Achievements.summary",
+   "Achievements.emptyHint",
+   "Achievements.guestHint",
+   "Achievements.earnedOn",
+   "Achievements.locked",
+   "Achievements.categories.walks",
+   "Achievements.categories.streak",
+   "Achievements.categories.distance",
+   "Achievements.categories.duration",
+   "Achievements.categories.pets",
+   "Achievements.categories.family",
+   "Achievements.categories.social",
+   "Achievements.categories.rank",
+   "Achievements.{id}.title",
+   "Achievements.{id}.desc",
+   "Common.loading",
+   "Common.back"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-14",
+  "title": "Family create/join sheets: keyboard covers the input and submit, no cancel button, and join maps every failure to 'invalid code'",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/family/family-section.tsx:423-436 (createFamily(name.trim() || tF('defaultName')), maxLength 40, inline error), 457-464 and 536-543 (Cancel ghost + Submit), 494-518 (digit-only input, submit disabled until 6 digits, server err.message shown), 529 (placeholder '123456')",
+  "ios_ref": "apps/ios/src/components/settings/family-section.tsx:310-327 and 363-381 (transparent Modal with a bottom sheet, no KeyboardAvoidingView, no autoFocus, no cancel button); 301 (createFamily(name) with an empty name lets the server default to Chinese '我的家庭' even for en users), 322 (maxLength 30), 356-358 (catch -> errInvalidCode for network or not-found errors), 371 (no digit sanitising), 372 (placeholder '000000'); the same code is duplicated in app/family.tsx:299-390",
+  "current_ios": "The number-pad or text keyboard hides the field and the 建立/加入 button. Offline join attempts tell the user the code is invalid. en users get a Chinese default family name.",
+  "target": "The sheet content sits above the keyboard, autoFocus is on, and the actions row has Button ghost t('Common.cancel') + primary submit. Create: maxLength 40, falls back to t('Family.defaultName'), inline error. Join: onChangeText strips non-digits and slices to 6, submit disabled unless code.length === 6, placeholder '123456', errors use the server message or t('Join.error') (alreadyMember keeps errAlready).",
+  "fix_plan": "Extract CreateFamilyDialog and JoinFamilyDialog into apps/ios/src/components/family/family-dialogs.tsx (used by both family-section.tsx and family.tsx). Wrap them in KeyboardAvoidingView behavior='padding', or use the existing <Sheet keyboardAvoiding title=...> primitive with cancelLabel=t('Common.cancel') and the submit in headerRight. Apply the logic changes above, and add an onDone(familyId) argument for SETTINGS-15.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/app/family.tsx",
+   "apps/ios/src/components/family/family-dialogs.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Family.defaultName",
+   "Family.createDialog.title",
+   "Family.createDialog.instructions",
+   "Family.createDialog.nameLabel",
+   "Family.createDialog.namePlaceholder",
+   "Family.createDialog.submit",
+   "Family.joinDialog.title",
+   "Family.joinDialog.instructions",
+   "Family.joinDialog.submit",
+   "Family.joinDialog.errInvalidCode",
+   "Family.joinDialog.errAlready",
+   "Join.error",
+   "Common.cancel"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-15",
+  "title": "No 'move personal data into the family' import wizard after creating or joining a family",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/family/family-section.tsx:58-66 and 387-394 (handleCreatedOrJoined -> ImportWizardDialog); import-wizard-dialog.tsx (counts personal pets/walks/reminders/expenses, checkbox per type, importPersonalToFamily callable, auto-skips when all counts are 0)",
+  "ios_ref": "apps/ios/src/components/settings/family-section.tsx:272-287 and app/family.tsx:266-281 (onDone only calls refresh()); a grep for importPersonal/ImportWizard in apps/ios finds nothing",
+  "current_ios": "An iOS user in personal mode who creates or joins a family keeps all existing pets and walks in personal scope, invisible to the family. The personalInfo copy itself promises they can be moved over.",
+  "target": "After a successful create or join, open a sheet titled 'ImportWizard.title' with subtitle, a loading state, 4 checkbox rows (PawPrint/Footprints/Bell/Wallet in a 32 brandTint disc + label + tabular count; rows with a 0 count are disabled at 50% opacity), ghost 'skip' and primary 'importN' {n} / 'importEmpty' / 'importing'. Auto-close when every count is 0.",
+  "fix_plan": "1) Add importPersonalToFamily(familyId, types) to apps/ios/src/lib/families-write.ts via callable('importPersonalToFamily') (the same callable web uses, region asia-east1). 2) Count personal docs with the existing iOS personal-scope readers (listPetsForScope(null, uid), listWalksForScope(null, uid), plus the reminders/expenses personal readers in apps/ios/src/lib) through Promise.allSettled. 3) Build apps/ios/src/components/family/import-wizard-sheet.tsx. 4) Have the create/join dialogs return familyId (createFamily resolves {familyId}; join resolves {familyId}) and set pendingImportFamilyId in both family-section.tsx and family.tsx; on close or complete, call refresh().",
+  "files_to_touch": [
+   "apps/ios/src/lib/families-write.ts",
+   "apps/ios/src/components/family/import-wizard-sheet.tsx",
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/app/family.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "ImportWizard.title",
+   "ImportWizard.subtitle",
+   "ImportWizard.loading",
+   "ImportWizard.pets",
+   "ImportWizard.walks",
+   "ImportWizard.reminders",
+   "ImportWizard.expenses",
+   "ImportWizard.skip",
+   "ImportWizard.importN",
+   "ImportWizard.importEmpty",
+   "ImportWizard.importing"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-16",
+  "title": "Inline family card detail differences: copy feedback, regen spinner, members loading, owner badge, remove icon, leave colour, '＋' glyph, switch pill style",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/family/family-section.tsx:232-235 (secondary sm Button with the Plus icon), 254-257 (active switch pill = solid brand + white text), 284-307 (Share/Copy swap to Check for 2s; RefreshCw spins while busy), 321-323 (members loading text), 334-338 (owner = pill badge, brandTint bg, 10px), 352 (X icon for remove), 362-370 (leave = LogOut + red-600 text)",
+  "ios_ref": "apps/ios/src/components/settings/family-section.tsx:176 (text '＋ '), 72-76 (Alert after copy), 221-223 (no busy indicator), 231-262 (no members loading; empty list flashes '成員 (0)'), 243 (owner tag is plain text), 256 (UserMinus icon), 266 and 452 (colors.cookie leave), 432-434 (tint pill)",
+  "current_ios": "Several small visual and interaction differences. Copying the code opens a blocking Alert instead of a quick check-mark.",
+  "target": "Plus 14 icon in the 新建 button. Copy and share swap their icon to Check for 2s (shared fallback only). RefreshCw is replaced by an ActivityIndicator while busy (reduced-motion safe). Show t('Common.loading') (12 ink3) while members load. Owner badge: pill with brandTint bg, brandDeep text 10/600, paddingHorizontal 6. Remove button uses X 16 ink3. Leave uses LogOut 16 + text 14/500 in colors.danger. Active switch pill: brand background with white text.",
+  "fix_plan": "Edit family-section.tsx: add `copied` state with setTimeout(2000); remove the Alert; render Check when copied. Add `membersLoading` around listFamilyMembers. Restyle ownerTag as a View pill (move it out of the nested Text). Import X and Plus. Change the leaveText and LogOut colour to colors.danger. Set switchPillOn to { backgroundColor: colors.brand, borderColor: colors.brand } and switchTextOn to { color: '#fff' }.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/family-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.loading",
+   "Family.owner",
+   "Family.you",
+   "Family.removeMember",
+   "Family.leave",
+   "Family.create",
+   "Family.copyCode"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-17",
+  "title": "Standalone /family screen is a ~450-line divergent copy of the inline family card (different layout, hard-coded strings)",
+  "category": "optimization",
+  "severity": "P1",
+  "web_ref": "Web has a single FamilySection (apps/web/src/components/family/family-section.tsx); there is no separate family page",
+  "ios_ref": "apps/ios/app/family.tsx:43-390 (its own copy of the members, invite and dialog logic: a centered code card with pill text buttons, regen as cookie text, memberRow cards, an outlined leave pill, '取消' literals), still opened from app/(tabs)/index.tsx:103 and app/(tabs)/leaderboard.tsx:35",
+  "current_ios": "Two family UIs drift apart: fixes to one (i18n, dialogs, import wizard) must be done twice, and the home and leaderboard entry points show a different design from Settings.",
+  "target": "/family renders the same <FamilySection/> inside a back-header screen, with the iOS-only QR action added to the invite-code action row.",
+  "fix_plan": "Rewrite app/family.tsx as: SafeAreaView + header (ArrowLeft back with accessibilityLabel t('Common.back'), title t('Family.title')) + ScrollView (CONTENT_MAX_WIDTH) containing <FamilySection showQr />. In family-section.tsx add an optional `showQr` prop that adds a 4th 36x36 code button (QrCode 16 brandDeep, accessibilityLabel 'QR') opening the existing InviteQR modal (move it from family.tsx; close label t('Common.close')). Delete the duplicated CreateDialog and JoinDialog (see SETTINGS-14).",
+  "files_to_touch": [
+   "apps/ios/app/family.tsx",
+   "apps/ios/src/components/settings/family-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Family.title",
+   "Common.back",
+   "Common.close"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SHELL-8",
+  "title": "Onboarding create/join skips the 'move personal data into the family' import wizard",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/onboarding/page.tsx:46-58, 128-135 (ImportWizardDialog after create/join); apps/web/src/lib/firebase/families.ts:168-178 (importPersonalToFamily callable)",
+  "ios_ref": "apps/ios/app/onboarding.tsx:178-206 (create/join → refresh → finish); apps/ios/src/lib/families-write.ts:39-62 (no importPersonalToFamily)",
+  "current_ios": "After creating or joining, iOS goes straight to walks. Pets, walks, reminders and expenses created in personal mode stay personal and are not offered for import. The settings family section has the same gap, because web family-section.tsx:388 also opens the wizard.",
+  "target": "After a successful create or join, open an import sheet. Title ImportWizard.title, subtitle ImportWizard.subtitle. Four checkbox rows (pets with PawPrint, walks with Footprints, reminders with Bell, expenses with Wallet), each with its count. Buttons: ImportWizard.skip (ghost) and ImportWizard.importN({n}) (primary). If there is nothing to import, skip the sheet automatically. Navigate to walks after it completes.",
+  "fix_plan": "In families-write.ts, add importPersonalToFamily(familyId, types?) as callable<{familyId:string;types?:string[]},{counts:Record<string,number>}>('importPersonalToFamily'). The callable already exists server-side. Build src/components/family/import-wizard-sheet.tsx on the SHELL-11 Dialog. Get counts from the existing iOS personal-list helpers in src/lib/pets-data.ts, walk-data.ts and health/reminder/expense readers, or count the docs where familyId==null and ownerUid==uid. In onboarding.tsx, set pendingImportFamilyId from the createFamily or joinFamilyByCode result (familyId), show the sheet, and call finish() on completion. Wire the same sheet into settings/family-section.tsx.",
+  "files_to_touch": [
+   "apps/ios/src/lib/families-write.ts",
+   "apps/ios/src/components/family/import-wizard-sheet.tsx (new)",
+   "apps/ios/app/onboarding.tsx",
+   "apps/ios/src/components/settings/family-section.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium",
+  "i18n_keys_to_reuse": [
+   "ImportWizard.title",
+   "ImportWizard.subtitle",
+   "ImportWizard.loading",
+   "ImportWizard.pets",
+   "ImportWizard.walks",
+   "ImportWizard.reminders",
+   "ImportWizard.expenses",
+   "ImportWizard.skip",
+   "ImportWizard.importN",
+   "ImportWizard.importEmpty",
+   "ImportWizard.importing"
+  ]
+ },
+ {
+  "id": "SHELL-14",
+  "title": "Achievements has no iOS route or entry point (web: settings card → /app/achievements)",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:131-147 (achievements entry card: Trophy tile + Settings.achievements.title/subtitle + ChevronRight); apps/web/src/app/app/achievements/page.tsx (reads users/{uid}/stats/lifetime + users/{uid}/achievements, groupAchievements from apps/web/src/lib/achievements.ts)",
+  "ios_ref": "apps/ios/app/ (no achievements route); apps/ios/app/(tabs)/settings.tsx:82-85 (no entry card between guest upgrade and photos)",
+  "current_ios": "Users earn badges (Cloud Functions grant them for walks on iOS too) but cannot see them on iOS.",
+  "target": "In the settings stack, insert an entry card after the guest-upgrade card and before the photos preview. Card styling: radius xl, hairline border, shadows.card, padding 24. Contents: a 36px Trophy tile (radius md, brandTint, brandDeep), Settings.achievements.title (16/500) and subtitle (14 ink2), and a ChevronRight in ink3. It pushes a new /achievements stack screen with RouteHeader(Achievements.pageTitle) and the grouped badge grid.",
+  "fix_plan": "Add apps/ios/app/achievements.tsx and register it in _layout.tsx Stack (presentation 'card'). Port the read helpers into src/lib/achievements.ts, which reads only Firestore: getDoc users/{uid}/stats/lifetime, getDocs users/{uid}/achievements, and count queries. Move the badge catalog and groupAchievements from apps/web/src/lib/achievements.ts into packages/shared-business if it is pure, or else copy it. Render the badges on the existing earned-disc style (amber→brandTint gradient via expo-linear-gradient), with the sweep gated by useReducedMotion. Guests skip the posts count, as on web.",
+  "files_to_touch": [
+   "apps/ios/app/achievements.tsx (new)",
+   "apps/ios/app/_layout.tsx",
+   "apps/ios/app/(tabs)/settings.tsx",
+   "apps/ios/src/lib/achievements.ts (new)",
+   "apps/ios/src/components/achievements/badge-card.tsx (new)"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium",
+  "i18n_keys_to_reuse": [
+   "Settings.achievements.title",
+   "Settings.achievements.subtitle",
+   "Achievements.pageTitle"
+  ]
+ },
+ {
+  "id": "SHELL-20",
+  "title": "Dead or duplicated shell code: PlaceholderScreen, Sheet, Pill and Card unused; app/family.tsx duplicates settings FamilySection (~450 lines each)",
+  "category": "optimization",
+  "severity": "P2",
+  "web_ref": "Web has no /app/family route. The invite CTAs go to /onboarding (apps/web/src/components/home/invite-family-card.tsx:27, human-leaderboard.tsx:174) and family management lives only in settings FamilySection.",
+  "ios_ref": "apps/ios/src/components/placeholder-screen.tsx (0 imports); ui/Sheet.tsx, ui/Pill.tsx, ui/Card.tsx (0 imports; Screen used once); apps/ios/app/family.tsx (450 lines) vs apps/ios/src/components/settings/family-section.tsx (462 lines), with near-identical CreateDialog/JoinDialog/regen/leave/remove logic and diverging styles (radius lg vs xl, switch pill height 34 vs 30)",
+  "current_ios": "Two copies of the family UI drift independently, already differing in radius, pill height and the cancel string. Unused primitives mislead future work.",
+  "target": "Single source: family.tsx = RouteHeader(Family.title, onBack) + ScrollView + <FamilySection />. Delete placeholder-screen.tsx. Either adopt Card, Pill and Screen in the new shell primitives or delete them.",
+  "fix_plan": "Reduce app/family.tsx to a wrapper around FamilySection, keeping the route because home invite-family-card and the leaderboard push to it. Remove placeholder-screen.tsx. Keep Card, since SHELL-14 and SHELL-15 cards can use it.",
+  "files_to_touch": [
+   "apps/ios/app/family.tsx",
+   "apps/ios/src/components/placeholder-screen.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ }
+]

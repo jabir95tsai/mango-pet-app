@@ -1,0 +1,255 @@
+[
+ {
+  "id": "PETS-4",
+  "title": "Expenses tab layout differs from web: no month-total bar or %-vs-last-month chip, no donut+legend card, different filter pills",
+  "category": "layout",
+  "severity": "P0",
+  "web_ref": "apps/web/src/components/pets/pet-expenses-body.tsx:73-115 (data incl. lastMonth/pctChange), 131-154 (total bar card), 157-197 (donut+legend card), 202-224 (8 fixed filter pills incl. 全部)",
+  "ios_ref": "apps/ios/src/components/pets/pet-expenses-body.tsx:89-133",
+  "current_ios": "Plain '{month} 月開銷' text heading, then a centered bare donut. Below it, the legend doubles as toggle pills, shown only for categories that have spend, with a dot and a $amount. There is no total-bar card, no percent change vs last month, no 'byCategory / N 項' legend card with per-row %, and no '全部' pill.",
+  "target": "In order, matching web: (1) Total bar card: radius.xl (18), hairline border, card bg, shadows.card, padding 16x14, row space-between. Left: monthTitle (11px, 700, uppercase, letterSpacing .4, ink3), then 'NT$' (12px, 600, ink3, mr 4) + total (24px, 800, letterSpacing -.5, ink). Right, when lastTotal>0: pill chip (px10 py4, 11.5px, 700) with expenses.monthCompare {sign,pct}. Chip uses leafTint/leaf when pct<0, else cookieTint/cookie. (2) Donut+legend card: same card style, padding 14, row gap 14. 128px donut on the left. Right column (flex1, gap 10): header row with expenses.byCategory (12.5px, 700, ink) and expenses.itemCount {count} (11px, 600, ink3). Then per slice a row: 10px swatch (radius 3), label (12.5px, 600, ink2, flex1), pct% (13px, 800, ink, minWidth 28, right), $value (11px, 600, ink3, minWidth 52, right). (3) Horizontal ScrollView of 8 fixed filter pills [all, ...EXPENSE_CATEGORIES]: height 32, px 12, 12px 600, radius.pill. Active is brand bg with white text. Inactive is card bg, 1px hairline border, ink2. Label Filter.all or Expense.categories.*. (4) The list (see PETS-5). Filter state 'all' | category affects only the list. filterEmpty shows when the filter has no rows.",
+  "fix_plan": "Rewrite PetExpensesBody: compute monthStart and lastMonthStart (new Date(y, m-1, 1)), thisMonth, lastMonth, total, lastTotal, and pctChange = lastTotal===0 ? null : Math.round((total-lastTotal)/lastTotal*100). Keep slices sorted desc. Replace the monthTitle Text plus the centered donutWrap with the two cards above. Replace the legend Pressables with `<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:6}}>` holding the 8 pills, with state `filter: 'all' | ExpenseCategory` (default 'all'). Reuse ExpenseDonut unchanged (it already matches web geometry). The new props onEdit/onDelete/onAdd come from pets.tsx (see PETS-5 and PETS-12).",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-expenses-body.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PetsPage.expenses.monthTitle",
+   "PetsPage.expenses.monthCompare",
+   "PetsPage.expenses.byCategory",
+   "PetsPage.expenses.itemCount",
+   "PetsPage.expenses.donutLabel",
+   "PetsPage.expenses.filterEmpty",
+   "Filter.all",
+   "Expense.categories.*"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-5",
+  "title": "Expenses can't be edited or deleted on iOS; list uses a legacy ExpenseRow instead of PetExpenseCard",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/components/pets/pet-expenses-body.tsx:226-236 (PetExpenseCard with onEdit/onDelete); pets-page-content.tsx:282-300 (handleUpdateExpense/handleDeleteExpense with confirm), 526-532 (edit ExpenseFormDialog initial=expense)",
+  "ios_ref": "apps/ios/src/components/pets/pet-expenses-body.tsx:130 (ExpenseRow); apps/ios/src/components/pets/expense-row.tsx:16-38; apps/ios/src/lib/expenses-write.ts:46-64 (updateExpense/deleteExpense exist but are never called)",
+  "current_ios": "Tab rows are ExpenseRow, a different design: radius.lg (14), a 38px circular emoji icon with 33% category tint, 'M/D · category' sub-line, '$amount', and no actions. A mis-scanned AI expense can't be fixed or removed from the app.",
+  "target": "Each row is PetExpenseCard (already ported) with edit and delete. Edit opens ExpenseForm in edit mode prefilled from the expense. Delete asks for confirmation with title Common.delete, message `${vendor ?? ''} · NT$ ${amount}`, and a destructive Common.delete button.",
+  "fix_plan": "(1) pet-expenses-body.tsx: render `<PetExpenseCard expense={e} onEdit={() => onEdit(e)} onDelete={() => onDelete(e)} />` for each filtered row and delete expense-row.tsx. (2) pets.tsx: add FormState `{ kind: 'expense'; editing?: Expense; ... }`. Pass `onEdit={(e) => setForm({kind:'expense', editing:e})}` and `onDelete={confirmDeleteExpense}`. confirmDeleteExpense = Alert.alert(tC('delete'), `${e.vendor ?? ''} · NT$ ${groupThousands(e.amount)}`, [cancel, {text:tC('delete'), style:'destructive', onPress: async () => { await deleteExpense(e.expenseId); refresh(); }}]), with try/catch that alerts on failure. (3) expense-form.tsx: accept `expense?: Expense`. Seed state from it (amount, vendor, category, spentAt.toDate(), notes, items). Use title tC('edit') when editing. On save, call updateExpense(expense.expenseId, {petId, petName, amount, vendor, category, spentAt, notes}) instead of createExpense.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-expenses-body.tsx",
+   "apps/ios/src/components/pets/expense-row.tsx",
+   "apps/ios/src/components/pets/expense-form.tsx",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.edit",
+   "Common.delete",
+   "Common.cancel"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-6",
+  "title": "Health records can't be deleted on iOS",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/components/pets/pet-health-record-card.tsx:147-156 (Trash2 button); pets-page-content.tsx:309-320 (handleDeleteRecord with confirm)",
+  "ios_ref": "apps/ios/src/components/pets/health-record-card.tsx:71-93 (no actions); apps/ios/src/lib/health-write.ts:41-46 (deleteHealthRecord unused)",
+  "current_ios": "A wrong weight or vaccine entry is permanent from the app. A wrong weight record also stays in the weight trend.",
+  "target": "A trash button on each health record card (32x32, radius.sm, ink3 Trash2 size 16). Tapping it confirms with Common.delete and a destructive button, then calls deleteHealthRecord and reloads.",
+  "fix_plan": "Add `onDelete?: () => void` to HealthRecordCard and render a Pressable with Trash2 at the right of the header row (see PETS-7 layout), accessibilityLabel tC('delete'). In PetHealthBody accept `onDelete(record)`, or handle it internally: Alert.alert(tC('delete'), '', [cancel, {destructive, onPress: async () => { await deleteHealthRecord(petId, r.recordId); reload(); }}]). Use the `reload` returned by useHealthRecords.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/health-record-card.tsx",
+   "apps/ios/src/components/pets/pet-health-body.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.delete",
+   "Common.cancel"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-7",
+  "title": "Health record card design differs: emoji circle, different tones, no dashed detail row",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-health-record-card.tsx:45-51 (TONE + lucide icons), 53-103 (summarize detail/note/title), 118-168 (layout)",
+  "ios_ref": "apps/ios/src/components/pets/health-record-card.tsx:23-37 (TYPE_EMOJI / TYPE_TINT), 40-69, 71-118",
+  "current_ios": "Row card: radius.lg, padding 12, no shadow. A 38px round emoji icon (⚖️🍽️💉🏥💊). The title is the type label (15px), the summary is an ink2 line plus notes, and the date is 'M/D'. Tints are weight brandTint, feeding cookieTint, vaccine leafTint, vet peachTint, medication bellTint, all different from web.",
+  "target": "Web: card radius.xl (18), hairline border, shadows.card, padding 14. Header row (gap 12): a 42px rounded square (radius 14) with tone bg and a lucide icon (size 18, stroke 1.8). Icons and tones: weight Scale on leafTint/leaf; vaccine Syringe on brandTint/brandDeep; vet Stethoscope on peachTint/cookie; feeding UtensilsCrossed on brandTint/brandDeep; medication Pill on cookieTint/cookie. Then a column with the type label (Health.types.*, 11px, 700, uppercase, letterSpacing .6, tone fg) and the title (14.5px, 700, ink, 1 line). Then the date 'yyyy/MM/dd' (11.5px, ink3) and the trash button (PETS-6). Below, when detail or note is present: a dashed top border (borderStyle 'dashed', 1px hairline), mt 10, pt 10, row space-between. Detail is 17px, 800, letterSpacing -.3, ink. Note is 12px ink2, 1 line. summarize(): weight gives detail '{kg} {PetsPage.kgUnit}' and title 'routine weigh-in'. Feeding: detail 'brand · {g}g · foodType', title brand or the feeding fallback. Vaccine: title and detail = name. Vet: title and detail = clinic, note = diagnosis. Medication: title and detail = name, note = frequency or notes. Otherwise the note is record.notes.",
+  "fix_plan": "Rewrite health-record-card.tsx per target, using lucide-react-native { Scale, UtensilsCrossed, Syringe, Stethoscope, Pill, Trash2 } and colors.* tokens. Format the date as `${y}/${pad(m)}/${pad(d)}`. Remove TYPE_EMOJI and TYPE_TINT. The web weight title '定期量測' and feeding fallback '餵食紀錄' are hard-coded on web. Add the new keys listed, or reuse Health.types.feeding for the feeding fallback.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/health-record-card.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Health.types.*",
+   "PetsPage.kgUnit",
+   "Common.delete"
+  ],
+  "needs_new_i18n_keys": [
+   "PetsPage.health.weightRecordTitle = 定期量測 | Routine weigh-in",
+   "PetsPage.health.feedingRecordTitle = 餵食紀錄 | Feeding log"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-8",
+  "title": "Health weight-trend card: wrong title key, current/delta footer missing, extra 時間軸 heading",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-health-body.tsx:32-47 (current + 6m delta, fallback pet.weightKg), 59-100 (card: header weightTrend + range, chart 70px, footer current kg + '+x kg / 6m'), 102-110 (records list, no heading)",
+  "ios_ref": "apps/ios/src/components/pets/pet-health-body.tsx:50-63; apps/ios/src/components/pets/weight-chart.tsx:24 (HEIGHT 80), 58-66, 72-75",
+  "current_ios": "Card title is Health.weightChart '體重變化' (web uses PetsPage.health.weightTrend '體重趨勢'). Inside the chart, the 'latest kg' sits ABOVE the line next to the range. There is no delta. With fewer than 2 points only the insufficient text shows, with no current weight. The chart is 80px. The card has radius 14, padding 12 and no shadow. A '時間軸' (Health.timeline) section title appears above the list; web has none.",
+  "target": "Card: radius.xl, hairline, shadows.card, padding 14/14/10. Header row: PetsPage.health.weightTrend (13px, 700, ink) on the left, PetsPage.health.weightTrendRange (11.5px, ink3) on the right. Then mt 8: the chart (height 70), or when fewer than 2 points the insufficient text in a bgAlt rounded (radius 8) box, py 12, 11.5px ink3, centered. Footer row: current = last weight point or pet.weightKg (20px, 800, letterSpacing -.4) + ' 公斤' (12px, 600, ink2), or '—' in ink3. On the right, only when there are 2+ points: '{+}{delta} kg / 6m' (11.5px, 700, leaf if >=0 else cookie). Delta = last minus the first point within 180 days (else the first point), toFixed(1). No 時間軸 heading; records list gap 10, mt 8. Show EmptyHealth only when records.length===0 AND weights<2 (web logic).",
+  "fix_plan": "Split weight-chart.tsx into a pure chart (height prop default 70, no head, no insufficient branch). Move the header, insufficient box and footer into PetHealthBody. Pass `petWeightKg` from pets.tsx (activePet.weightKg) as the fallback current value. Compute the delta in PetHealthBody with useMemo. Remove the Health.timeline Text.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-health-body.tsx",
+   "apps/ios/src/components/pets/weight-chart.tsx",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PetsPage.health.weightTrend",
+   "PetsPage.health.weightTrendRange",
+   "PetsPage.health.weightTrendInsufficient",
+   "PetsPage.kgUnit"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-14",
+  "title": "Expense card icons are emoji instead of the web's lucide icons (category, AI chip, edit/delete)",
+  "category": "icon",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-expense-card.tsx:36-44 (Cookie/Stethoscope/Scissors/Gamepad2/GraduationCap/Shield/Receipt), 76-80 (Sparkles AI chip), 99-118 (Pencil/Trash2 size 14 in 28px buttons)",
+  "ios_ref": "apps/ios/src/components/pets/pet-expense-card.tsx:54-56 (CATEGORY_EMOJI), 65-67 ('✨ AI'), 88-105 ('✏️' / '🗑️'); apps/ios/src/lib/expense-ui.ts:11-19",
+  "current_ios": "The category icon is an emoji (🍖💊✂️🧸🎓🛡️🧾) in the tinted square. The AI chip reads '✨ AI' and the edit/delete buttons are emoji.",
+  "target": "Same lucide icon per category (size 18, stroke 1.8, tone.fg). The AI chip uses Sparkles size 9 + 'AI' (10px, 700, brandDeep). Edit and delete are Pencil and Trash2 (size 14, ink3) in 28x28 radius.sm buttons.",
+  "fix_plan": "Add `CATEGORY_ICON: Record<ExpenseCategory, LucideIcon>` to expense-ui.ts (import { Cookie, Stethoscope, Scissors, Gamepad2, GraduationCap, Shield, Receipt } from 'lucide-react-native') and drop CATEGORY_EMOJI once expense-row.tsx is removed (PETS-5). In pet-expense-card.tsx render `<Icon size={18} color={tone.fg} strokeWidth={1.8} />`. The AI chip becomes a row (gap 2) with Sparkles size 9. The action buttons use Pencil and Trash2.",
+  "files_to_touch": [
+   "apps/ios/src/lib/expense-ui.ts",
+   "apps/ios/src/components/pets/pet-expense-card.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.edit",
+   "Common.delete"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-15",
+  "title": "Donut/legend category colors don't match web (grooming pink, 'other' nearly invisible)",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-expenses-body.tsx:40-48 (food #d77b3f, medical #3f8a3a, grooming #f39800, toy #ee9a5a, training #5fa858, insurance #9a8a74, other #5a4a38)",
+  "ios_ref": "apps/ios/src/lib/expense-ui.ts:22-30",
+  "current_ios": "medical uses leaf #5fa858, grooming peach #ffb3ba, toy brand #f39800, training amber #ffc25c, and other hairline #eadfc4, which almost disappears on the cream card.",
+  "target": "Identical hex per category to web: food colors.cookie, medical '#3f8a3a' (leaf-deep, not in shared tokens), grooming colors.brand, toy '#ee9a5a', training colors.leaf, insurance colors.ink3, other colors.ink2.",
+  "fix_plan": "Replace CATEGORY_COLOR in expense-ui.ts with the web map. Add local consts LEAF_DEEP='#3f8a3a' and TOY='#ee9a5a', or reuse LEAF_DEEP from weight-chart.tsx by moving it into expense-ui or theme.",
+  "files_to_touch": [
+   "apps/ios/src/lib/expense-ui.ts"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-16",
+  "title": "Expense form is missing web parity: AI-prefill banner, editable items list, pet picker, edit mode; default category differs; silent save failure",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/expenses/expense-form-dialog.tsx:85-101 (default category 'other', defaultPetId), 148-159 (AI banner), 161-174 (pet Select), 176-203 (amount with NT$ prefix + date), 229-269 (items editor + 新增品項), 134-136 (error text)",
+  "ios_ref": "apps/ios/src/components/pets/expense-form.tsx:53-55 (default 'food'), 64-87 (try/finally, no catch), 89-133 (fields)",
+  "current_ios": "AI-scanned items are saved silently and are never shown or editable. There is no hint that fields were AI-filled. The pet is fixed to the active pet. The category defaults to 飼料. A failed Firestore write becomes an unhandled rejection: the sheet stays open with no message. There is no edit mode (see PETS-5).",
+  "target": "Order: pet picker (SelectField of pets, default active pet) → amount (with an 'NT$' prefix inside the input) → spentAt → category → vendor → items list (each row a TextField with an X remove button; a '+ 品項' ghost button adds one) → notes. When source==='ai_scan' and not editing, show a banner at the top: a brandTint card (radius.md, padding 12) with a Sparkles icon and the AI note. Default category 'other'. On a save error, show Alert.alert with the error message or Reminder.errors.saveFailed.",
+  "fix_plan": "expense-form.tsx: add props `pets: Pet[]` and `expense?: Expense` (see PETS-5). Keep `items` in useState seeded from props/expense and let save() write the trimmed items. Add SelectField for the pet (petName derived from the selection). Change the default category to 'other'. Add `catch (e) { Alert.alert(tExp('add'), e instanceof Error ? e.message : '') }`. Add the banner. Banner and add-item text need new keys (web hard-codes them).",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/expense-form.tsx",
+   "apps/ios/src/components/pets/form-sheet.tsx",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Expense.fields.pet",
+   "Expense.fields.items",
+   "Expense.itemPlaceholder",
+   "Expense.removeItem",
+   "Expense.noPet",
+   "Expense.fields.amount",
+   "Expense.fields.spentAt"
+  ],
+  "needs_new_i18n_keys": [
+   "Expense.aiPrefillNotice = AI 已自動填入欄位，所有欄位都可手動編輯，請確認後儲存 | AI filled these fields — everything is editable, please check before saving",
+   "Expense.addItem = 新增品項 | Add item"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-17",
+  "title": "Receipt scanner: no 'choose from library', wrong permission-denied copy, no preview/retake, no Settings link",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/expenses/receipt-scanner.tsx:436-482 (intro: 拍照 / 從相簿選 / 手動輸入), 483-546 (preview + X reset + save-to-album + 開始辨識 + manual link)",
+  "ios_ref": "apps/ios/src/components/pets/receipt-scanner.tsx:51-66 (capture then scan immediately), 80-103 (denied sheet titled tPP('expenses.empty') '本月還沒有開銷'), 106-143 (camera only)",
+  "current_ios": "Only live-camera capture is possible, so a receipt already saved in Photos can't be scanned. The shutter immediately uploads to AI with no preview or retake. When permission is denied, the sheet title shows the unrelated '本月還沒有開銷' and offers no way to open iOS Settings when canAskAgain is false. There is no option to save the receipt photo to the album (PhotosKit equivalent of the web SaveToAlbumButton).",
+  "target": "Camera view adds a secondary 'library' button (lucide Image icon) next to the shutter, using expo-image-picker launchImageLibraryAsync. After capture or pick, show a preview step: the image (contain) with an X (retake), a primary btn-mango '開始辨識' with Sparkles (spinner + scanner.scanning while scanning), a manual-entry link, and optionally a save-to-album icon via expo-media-library. Denied state: title scanner.cameraDeniedTitle, body cameraDeniedBody, and an 'Open Settings' button (Linking.openSettings()) when !permission.canAskAgain, plus library-pick and manual-entry fallbacks.",
+  "fix_plan": "In receipt-scanner.tsx add state `previewUri`. capture() and pickFromLibrary() set previewUri. A scan() runs compressReceiptToBase64 + extractReceipt. Render a preview branch. Fix the denied title. Import Linking from react-native. Primary buttons use LinearGradient mangoGradient with white text (design-system btn-mango). All copy comes from the PETS-13 scanner keys.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/receipt-scanner.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Expense.scanReceipt",
+   "PetsPage.expenses.manualEntry",
+   "Common.cancel",
+   "Common.saveToAlbum.label"
+  ],
+  "needs_new_i18n_keys": [
+   "PetsPage.scanner.startScan = 開始辨識 | Read receipt"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-18",
+  "title": "Health form is missing the vaccine next-due and medication start/end dates; save failures are silent",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/health/health-record-form-dialog.tsx:224-255 (vaccine nextDueAt), 303-367 (medication frequency + startsAt/endsAt), 71-98 (inline validation errors)",
+  "ios_ref": "apps/ios/src/components/pets/health-form.tsx:76-93 (vaccine name only; medication name+frequency), 114-116 (catch {} no-op)",
+  "current_ios": "Vaccine next-due and medication date range can't be recorded, so the data is less complete than web. A failed write gives no feedback.",
+  "target": "Vaccine: an optional nextDue DateField (with '+ 下次到期' and clear, like the birthday pattern in pet-form). Medication: optional startsAt and endsAt DateFields. Each is stored as a Timestamp in data (tsFromDate). A save error shows Alert.alert.",
+  "fix_plan": "Add `nextDue: Date|null`, `startsAt: Date|null`, `endsAt: Date|null` state. In buildData include `nextDueAt: nextDue ? tsFromDate(nextDue) : undefined` (and the same for start/end) via defined(). Import tsFromDate from '@/lib/write-utils'. Replace the empty catch with Alert.alert(tH('addRecord'), e instanceof Error ? e.message : '').",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/health-form.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Health.fields.nextDue",
+   "Health.fields.startsAt",
+   "Health.fields.endsAt",
+   "Health.weightPositive"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ }
+]

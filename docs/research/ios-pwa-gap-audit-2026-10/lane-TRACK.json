@@ -1,0 +1,720 @@
+[
+ {
+  "id": "WALKS-5",
+  "title": "No pending-walk draft recovery banner (web walk-drafts), and R16 session identity not persisted",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:128-136,212-312 (recovery and discard), 405-415 (store draft before createWalk), 498-518 (banner); apps/web/src/lib/walk-drafts.ts",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx (absent); apps/ios/src/components/walks/walk-tracking-view.tsx:162-200 (handleSave: createWalk, error phase only); apps/ios/src/lib/walk-tracking-service.ts:42 (only the BG GPS accumulator is persisted)",
+  "current_ios": "iOS keeps no local copy of a finished walk. If createWalk fails (e.g. a rules rejection or the app is killed while the 'saving' phase waits on an offline ack), the only trace is an error string inside the tracking modal. Closing it loses the session. The home page has no pending/retry/discard UI.",
+  "target": "Same behaviour as web: finished tracked walks are stored locally under a per-uid, per-walkId key before writing, removed once the server acks, listed on the walks home as a status banner with retry and per-draft discard (with confirm), and retried when the app returns to the foreground.",
+  "fix_plan": "1) New apps/ios/src/lib/walk-drafts.ts: an AsyncStorage port of the web module with the same key prefixes 'mango.walks.pending.v1.{uid}.{walkId}' and 'mango.walks.discarded.v1.{uid}.{walkId}'. Async versions of store/remove/discard/wasDiscarded/list (use AsyncStorage.getAllKeys + multiGet). Serialise startedAt/endedAt as ISO strings and the CreateWalkInput fields except scorePet: store petId plus the score inputs, or store the precomputed score and pass it through. 2) walk-tracking-view.tsx handleSave: if wasDiscarded, throw t('Walks.core.draftDiscarded'); call storeWalkDraft before createWalk and removeWalkDraft after success. 3) walks.tsx: keep `pendingDrafts` state; load it on focus and on AppState→'active' (the retry hint, since NetInfo is not installed). Render a banner above the top bar: View with radius.lg, 1px hairline, bg colors.cardSoft (or the equivalent mango-card-soft token), padding 16, role status. Text t('Walks.core.pendingRecovery',{count}). If there is an error, show t('Walks.core.saveFailed') or t('Walks.core.discardDraftFailed'). Add a pill Button: recovering ? t('Walks.core.savingWalk') : t('Error.retry'). Note: web uses tC('retry') but Common.retry does not exist in either catalog; Error.retry exists in zh and en. Add one row per draft: `${petName} · ${startedAt.toLocaleString()}` plus a secondary pill t('Walks.core.discardDraft') that confirms via Alert (title Walks.core.discardDraftTitle, body discardDraftBody, destructive). Serialise recovery with an in-flight ref, as web does, so foreground events never run parallel writes. Render the banner in the 0-pet branch too (web page.tsx:525).",
+  "files_to_touch": [
+   "apps/ios/src/lib/walk-drafts.ts",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.pendingRecovery",
+   "Walks.core.saveFailed",
+   "Walks.core.discardDraftFailed",
+   "Walks.core.savingWalk",
+   "Walks.core.discardDraft",
+   "Walks.core.discardDraftTitle",
+   "Walks.core.discardDraftBody",
+   "Walks.core.draftDiscarded",
+   "Error.retry",
+   "Common.cancel"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-8",
+  "title": "Guests get the auto-photo-share prompt; web skips it because guests cannot post",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:429-441 (`autoPhotoEnabled && !isGuest`), 882-888 (`open={startPromptOpen && !isGuest}`)",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:70-79,212-222,231",
+  "current_ios": "handleStartWalking checks only `autoPhotoShare`, so an anonymous (guest) user gets the START photo prompt and composer, and WalkTrackingView receives autoPhotoShare={autoPhotoShare}, so the END prompt fires too. Posting is a community action guests cannot complete.",
+  "target": "Guests skip both prompts and go straight into tracking, as on web.",
+  "fix_plan": "In walks.tsx: `const { user } = useAuth(); const isGuest = !!user?.isAnonymous; const canAutoShare = autoPhotoShare && !isGuest;` Use canAutoShare in handleStartWalking and pass `autoPhotoShare={canAutoShare}` to WalkTrackingView. This is the same isGuest pattern settings.tsx:34 uses.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-9",
+  "title": "Refreshing right after a save double-counts today's minutes on the done/recap screen",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:416-418 (tracked saves deliberately do not refresh while recap is open), 839-846 (refresh on close)",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:233-236; apps/ios/src/components/walks/walk-tracking-view.tsx:188-195,206-210",
+  "current_ios": "walks.tsx passes onSaved={data.refresh}. The tracking view calls onSaved() right after createWalk and then stays open (phase 'done' plus the END share prompt) when autoPhotoShare is on. The refresh brings back walks that include the new one, so the `todayMinBefore` prop (todayProgress.minutes) now contains it, and blendedMin = todayMinBefore + doneMin counts the walk twice in the recap's percent and remaining minutes. If the pets read fails during that refresh, activePet becomes null under the open share flow.",
+  "target": "Same as web: refresh the home data only when the tracking overlay closes.",
+  "fix_plan": "In walks.tsx, pass `onSaved={() => { savedRef.current = true; }}` (or a no-op) and `onClose={() => { setSessionOpen(false); setPendingWalkId(''); void data.refresh(); }}`. Alternative: in walk-tracking-view.tsx, snapshot todayMinBefore into a ref when the session starts (in the `visible` effect) and use that snapshot for blendedMin.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "TRACK-1",
+  "title": "Stop/save flow is a pre-save summary with unconfirmed 捨棄 and auto-close; web saves immediately and shows a post-save recap with retry/discard-draft + back/leaderboard CTAs",
+  "category": "behavior",
+  "severity": "P0",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:543-567 (finishWalk freezes input + saves immediately), 599-641 (saveWalkOnce/ensureWalkSavedOnce single in-flight promise, then onUpdate patch loop for notes/photos), 893-896 (savingWalk/walkNotSaved headline before saved), 1077-1114 (saveError + Retry + Discard draft only when !saved, status line, 回到遛狗 / 查看排行榜 CTAs disabled until saved); apps/web/src/lib/firebase/walks.ts:174-179 updateWalkDetails",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:142-146, 162-200, 231-242, 380-405",
+  "current_ios": "Stop goes to a done screen that has NOT saved anything; user must tap 儲存 (flat brand pill, white text) or 捨棄. 捨棄 (line 397-405) calls onClose immediately with no confirmation, silently throwing away the whole walk (data-loss on a mis-tap). On save failure the whole screen is replaced by a full-screen '存檔失敗' page whose only action is 返回. After a successful save the view closes immediately (or after the END share flow) so the user never sees a saved recap, and there is no 查看排行榜 path.",
+  "target": "Match web: on confirmed stop, freeze the walk input and save immediately; done screen shows status (savingWalk → walkSaved), recap, notes; notes/photos patched afterward via update; on failure show inline saveFailed + Retry + (only if not yet saved) Discard draft with a confirm; bottom CTAs 回到遛狗 (primary gradient) and 查看排行榜 (secondary), disabled while saving/uploading/unsaved.",
+  "fix_plan": "1) apps/ios/src/lib/walks.ts: add `export async function updateWalkDetails(walkId: string, details: { notes: string | null; photoURLs: string[] })` → `firestore().collection('walks').doc(walkId).update(details)` (rules already allow walker updates limited to notes/photoURLs, firestore.rules:345-348). 2) In walk-tracking-view.tsx replace Phase with `'tracking' | 'done'` plus `saving`, `saved`, `saveError` state. Add refs: `stoppedInputRef` (CreateWalkInput frozen at stop: startedAt from final.startedAt, endedAt = new Date() at stop, distance/duration/path, petId/petName/familyId/scorePet/streakDays snapshot), `savePromiseRef`, `savedDetailsRef` (JSON of {notes, photoURLs} last persisted). 3) `ensureSaved()` mirrors web ensureWalkSavedOnce: if no in-flight promise, run: if not saved → createWalk(stoppedInput) then setSaved(true); then loop while JSON(detailsRef.current) !== savedDetailsRef.current → updateWalkDetails(walkId, details). Catch → setSaveError(t('Walks.core.saveFailed')). 4) finishWalk(final) after stop confirm → setPhase('done'); stoppedInputRef = ...; void ensureSaved(). 5) Notes TextInput onBlur → void ensureSaved(); photo upload completion when saved → void ensureSaved(). 6) Replace save/discard block (lines 380-405) with: `{saveError && <Text style={errorText} accessibilityRole='alert'>{saveError}</Text>}`, `{saveError && <Button label={t('Error.retry')} pill onPress={ensureSaved} disabled={saving} />}`, `{saveError && !saved && <Button variant='secondary' pill label={t('Walks.core.discardDraft')} onPress={confirmDiscard} />}` where confirmDiscard uses Alert.alert(t('Walks.core.discardDraftTitle'), t('Walks.core.discardDraftBody'), [{text:t('Common.cancel'),style:'cancel'},{text:t('Walks.core.discardDraft'),style:'destructive',onPress:...}]); a status Text (12pt, colors.ink2, centered) showing uploading→t('Walks.photo.uploading') / saving→t('Walks.core.savingWalk') / saved→t('Walks.core.walkSaved'); then `<Button size='lg' fullWidth label={t('Walks.core.backToWalking')} onPress={async()=>{ if(await ensureSaved()) onClose(); }} disabled={saving||uploading||!saved} />` and `<Button size='lg' variant='secondary' fullWidth label={t('Walks.core.viewLeaderboard')} onPress={async()=>{ if(await ensureSaved()){ onClose(); router.push('/(tabs)/leaderboard'); } }} />`. Wrap the CTA column in maxWidth 320 (web max-w-xs). 7) Headline: when !saved show centered 18pt/700 ink text savingWalk/walkNotSaved instead of the celebration (web 893-896); render goal-hit/missed headline only when saved. 8) Delete the `phase === 'error'` full-screen branch (231-242).",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/src/lib/walks.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.savingWalk",
+   "Walks.core.walkSaved",
+   "Walks.core.walkNotSaved",
+   "Walks.core.saveFailed",
+   "Walks.core.discardDraft",
+   "Walks.core.discardDraftTitle",
+   "Walks.core.discardDraftBody",
+   "Walks.core.backToWalking",
+   "Walks.core.viewLeaderboard",
+   "Walks.photo.uploading",
+   "Error.retry",
+   "Common.cancel"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-2",
+  "title": "Manual pause / resume missing (service + UI)",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/lib/walk-tracking.ts:183-207 (pause/resume, pausedMs subtraction), 452-456 (samples ignored while paused); apps/web/src/components/walks/walk-tracking-view.tsx:528-534, 852-864 (secondary pill Pause/Play + Walks.core.pause/resume), 700-707 (pill flips to 已暫停, dot stops pulsing)",
+  "ios_ref": "apps/ios/src/lib/walk-tracking-service.ts:97-110, 241-259; apps/ios/src/components/walks/walk-tracking-view.tsx:244-297",
+  "current_ios": "No pause control. WalkTrackingService has no pause()/resume(); isPaused only means 'backgrounded in foreground-fallback mode' and in background mode the clock and GPS run until stop.",
+  "target": "Secondary pill button (Pause/Play lucide icon + 暫停/繼續) above the stop button; pausing freezes duration and distance; status pill shows 已暫停 with a static dot.",
+  "fix_plan": "Service: add `pausedMs` and `pausedSince` (persist both in the AsyncStorage bgSession, see TRACK-7) and a `userPaused` flag in state (keep isPaused semantics = user pause; move the fallback-background notion into a new `backgrounded?: boolean` field). `pause()`: if tracking && !paused → pausedSince=Date.now(); bgSession.paused=true; persistBgSession(); update({isPaused:true}). `resume()`: pausedMs += now-pausedSince; pausedSince=null; bgSession.paused=false; persist; update({isPaused:false}). In tick()/stop() subtract `pausedMs + (pausedSince? now-pausedSince : 0)` from elapsed. In handleFix() and in the headless task `ingestLocations` early-return when paused (task reads bgSession.paused after hydrate). View: add `<Pressable style={pauseBtn} onPress={()=> state.isPaused ? svc.resume() : svc.pause()}>` with `{state.isPaused ? <Play size={16} color={colors.ink}/> : <Pause size={16} color={colors.ink}/>}` + Text t(state.isPaused ? 'Walks.core.resume' : 'Walks.core.pause'); style: height 40, paddingHorizontal 20, borderRadius radius.pill, backgroundColor colors.card, hairline border, 14pt/500 ink (web Button secondary h-10 rounded-full px-5 text-sm font-medium). Place it in the same column as stop (gap 12, maxWidth 320).",
+  "files_to_touch": [
+   "apps/ios/src/lib/walk-tracking-service.ts",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.pause",
+   "Walks.core.resume",
+   "Walks.core.paused",
+   "Walks.core.tracking"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-3",
+  "title": "No confirmation before stopping a walk",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:509-526 (askConfirm stopConfirmTitle/Body/Yes, danger, re-entrancy guard)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:142-146, 289-296",
+  "current_ios": "Tapping 停止 immediately stops GPS and ends the session; an accidental tap in a pocket ends the walk.",
+  "target": "Confirm dialog '結束這次散步？' / '確認後會儲存並結束這次散步。' with 取消 and destructive '結束散步'.",
+  "fix_plan": "In handleStop: guard with `stopConfirmRef`; call `Alert.alert(t('Walks.core.stopConfirmTitle'), t('Walks.core.stopConfirmBody'), [{ text: t('Common.cancel'), style: 'cancel', onPress: release }, { text: t('Walks.core.stopConfirmYes'), style: 'destructive', onPress: () => { const f = svc.stop(); finishWalk(f); } }], { cancelable: true, onDismiss: release })`. Alert.alert is already the confirm pattern used across iOS (post-menu, settings).",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.stopConfirmTitle",
+   "Walks.core.stopConfirmBody",
+   "Walks.core.stopConfirmYes",
+   "Common.cancel"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-4",
+  "title": "Tracking screen layout differs: header/pill, distance style, extra path-points line, round peach stop button vs full-width red stop",
+  "category": "layout",
+  "severity": "P0",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:698-873 (centered column gap-8 px-6; status pill rounded-full bg-mango-brand-tint px-3 py-1.5 12pt/500 brand-deep with 6px pulsing brand dot + ' · 🐾 {pet}' in ink-2; timer text-7xl bold ink tabular; distance text-3xl semibold ink + 'km' 16pt normal ink-2; stop = Button danger h-14 w-full max-w-xs 16pt semibold with Square icon)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:244-297, 435-497",
+  "current_ios": "justifyContent space-between: big pet name (20/800) + '● 記錄中（背景持續）' text at top, timer 72/800, distance 36/800 in brandDeep with 18/700 unit, an iOS-only 'N 個路徑點' line, emoji photo tile row, and a 120×120 round PEACH stop button with white border and '停止' text.",
+  "target": "Web order and styling: status pill → timer → distance → today progress bar (TRACK-5) → GPS hint (TRACK-13) → photo button + thumbs (TRACK-14) → pause pill + full-width red stop.",
+  "fix_plan": "Restyle body: `{flex:1, alignItems:'center', justifyContent:'center', gap:32, paddingHorizontal:24, paddingVertical:32}`. Status pill: View row gap 8, borderRadius radius.pill, backgroundColor colors.brandTint, paddingHorizontal 12, paddingVertical 6; dot 6×6 radius 3 colors.brand (Animated opacity loop 1→0.4 when !isPaused && !reduceMotion, via useReducedMotion); Text 12pt/500 colors.brandDeep t(isPaused?'Walks.core.paused':'Walks.core.tracking') + Text colors.ink2 ` · 🐾 ${pet.name}`. Optionally append a small ink3 line under the pill only when backgroundEnabled (iOS-only, new key Walks.core.backgroundOn). Timer: fontSize 72, fontWeight '700', colors.ink, tabular-nums. Distance: 30pt/'600' colors.ink + unit Text 16pt/'400' colors.ink2 marginLeft 4. Delete the path-points Text (line 264) and its style. Stop: replace round button with full-width (maxWidth 320) height 56 borderRadius radius.sm backgroundColor colors.danger, row with `<Square size={20} color='#fff'/>` + Text t('Walks.core.stop') 16pt/600 white (or use ui/Button variant='danger' size='lg' with explicit height 56). Remove stopBtn peach styles.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.tracking",
+   "Walks.core.paused",
+   "Walks.core.stop"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.core.backgroundOn = 背景持續記錄中 | Recording in the background"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-5",
+  "title": "Live today-progress bar (stored + current session vs goal) missing during tracking",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:664-671 (WalkSession.blendTodayProgress), 722-746 (todayPercent label left, '{min} / {goal} min' right, 8px rounded-full track mango-hairline, fill mango-amber → mango-leaf at 100%, role=progressbar)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:256-265",
+  "current_ios": "Tracking screen shows only timer/distance/path-points; the blended today progress (todayMinBefore + session) is computed only on the done screen (lines 207-210).",
+  "target": "Progress block (maxWidth 320) under the distance: row baseline space-between with '今日完成度 {percent}%' (12pt ink2) and '{blended} / {goal} min' (12pt/600 ink tabular), then 8px track.",
+  "fix_plan": "Compute live `const blendedMin = Math.round((todayMinBefore + state.durationMin)*10)/10; const pct = Math.min(100, Math.round(blendedMin/goalMin*100));` (same as web blendTodayProgress; use the frozen session snapshot from TRACK-11). Render View width '100%' maxWidth 320: header row (marginBottom 6) with Text t('Walks.core.todayPercent',{percent:pct}) style {fontSize:12,color:colors.ink2} and Text `${Math.round(blendedMin)} / ${goalMin} min` style {fontSize:12,fontWeight:'600',color:colors.ink,fontVariant:['tabular-nums']}; track View {height:8,borderRadius:radius.pill,backgroundColor:colors.hairline,overflow:'hidden'} with fill {height:'100%',width:`${pct}%`,borderRadius:radius.pill,backgroundColor: pct>=100?colors.leaf:colors.amber}; accessibilityRole='progressbar' accessibilityValue={{min:0,max:100,now:pct}}.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.todayPercent"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-6",
+  "title": "R16: start failure (and pre-permission state) still shows '● 記錄中'; start() result ignored; reset during pending start leaks location updates",
+  "category": "ios-bug",
+  "severity": "P0",
+  "web_ref": "apps/web/src/lib/walk-tracking.ts:116-124, 290-323 (unsupported/denied stop tracking and surface errorKind); walk-tracking-view.tsx:692 (tracking UI only rendered when state exists), 748-760",
+  "ios_ref": "apps/ios/src/lib/walk-tracking-service.ts:156-223 (returns false + isTracking:false + errorKind 'position_unavailable' at 211-215); apps/ios/src/components/walks/walk-tracking-view.tsx:68-76, 127-140 (void start()), 202, 243-252",
+  "current_ios": "The view only branches on errorKind === 'permission_denied'. If startLocationUpdatesAsync/watchPositionAsync throws, state becomes isTracking:false/position_unavailable but the UI still shows '● 記錄中' with a frozen 00:00 timer and the stop button saves a 0-min walk. While the permission prompts are pending (INITIAL state, isTracking:false) the UI also already claims 記錄中. If the overlay closes while start() is awaiting permission, reset() runs first and start() then begins location updates + ticker with no owner.",
+  "target": "Explicit tracking state: 'starting' (spinner, no recording copy), 'tracking', 'start_failed' (message + Retry + Back), 'permission_denied'; no orphaned location sources.",
+  "fix_plan": "Service: add a `generation` counter; start() captures gen and after each await checks `if (gen !== this.generation) { await this.stopLocationSource(); return false; }`; reset() increments generation. Add `status: 'idle'|'starting'|'tracking'|'failed'` to WalkTrackingState (set 'starting' before permission requests, 'tracking' after the source starts, 'failed' in the catch at 211-215). View: `useEffect` → `void svc.start().then(ok => { if (!ok && mounted) ... })`; render branches: status==='starting' → centered ActivityIndicator + t('Walks.core.tracking') muted; errorKind==='permission_denied' → existing permission screen (i18n per TRACK-20); status==='failed' → centered AlertTriangle (lucide) + t('Walks.core.startFailed') + Button t('Error.retry') (calls svc.start()) + secondary t('Common.back') (onClose). Only render the tracking body when status==='tracking' or (stopped & phase done). Disable stop when status!=='tracking'.",
+  "files_to_touch": [
+   "apps/ios/src/lib/walk-tracking-service.ts",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Error.retry",
+   "Common.back",
+   "Walks.core.tracking"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.core.startFailed = 無法開始定位，請確認定位服務已開啟後再試一次。 | Couldn't start location tracking. Check that Location Services are on and try again."
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-7",
+  "title": "R16: active walk session identity not persisted — app kill/relaunch loses the walk and can leave background location running with no UI",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/lib/walk-drafts.ts:11-54 (per-uid/walkId keyed persistence, discard markers); walks/page.tsx:212-290 (recovery on mount/reconnect)",
+  "ios_ref": "apps/ios/src/lib/walk-tracking-service.ts:41-62, 81-89 (bgSession = {acc,startedAt} only); apps/ios/app/(tabs)/walks.tsx:43-49 (sessionOpen/pendingWalkId in memory)",
+  "current_ios": "Only the GPS accumulator + startedAt are persisted (mango.walk.bgSession.v1) — no uid, walkId, petId, familyId, pausedMs. sessionOpen/pendingWalkId live in React state. If iOS evicts the app mid-walk, relaunch shows the walks home with no active session; nothing calls Location.hasStartedLocationUpdatesAsync, so the headless task can keep recording (blue location bar) indefinitely and the stale AsyncStorage entry is never cleared or used.",
+  "target": "Persist the full session identity; on WalksScreen mount detect an in-progress session (stored record and/or hasStartedLocationUpdatesAsync) and offer Continue (reopen tracking view hydrated from bgSession) or End & save (build a draft from the stored accumulator and go to the done screen). If the record belongs to another uid, stop updates and drop it.",
+  "fix_plan": "1) Extend BgSession to `{ v:2, uid, walkId, petId, petName, familyId, startedAt, pausedMs, pausedSince, paused, backgroundMode, acc }`; WalkTrackingService.start(identity) receives these and persists before starting updates (also in foreground-fallback mode, persist on each accepted fix throttled ~5s). 2) Export `getActiveWalkSession(): Promise<BgSession|null>` (hydrate + `Location.hasStartedLocationUpdatesAsync(BG_LOCATION_TASK)`) and `WalkTrackingService.resume(session)` which re-attaches the ticker without resetting acc/startedAt. 3) walks.tsx: on focus (useFocusEffect) when not sessionOpen, call getActiveWalkSession(); if uid !== user.uid → stopLocationUpdatesAsync + clear; else Alert.alert(t('Walks.core.resumeActiveTitle'), t('Walks.core.resumeActiveBody'), [Continue → setPendingWalkId(s.walkId); open tracking view in resume mode; End → open tracking view directly in done phase with the stored final state (uses TRACK-1 save path)]). 4) Clear the record on successful save or confirmed discard. Requires real-device verification of OS relaunch (per review note).",
+  "files_to_touch": [
+   "apps/ios/src/lib/walk-tracking-service.ts",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.stopConfirmYes",
+   "Common.cancel"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.core.resumeActiveTitle = 有一趟散步還在記錄中 | A walk is still in progress",
+   "Walks.core.resumeActiveBody = 要繼續這次散步，還是結束並儲存？ | Continue this walk, or end and save it?",
+   "Walks.core.resumeActiveContinue = 繼續散步 | Continue walk"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "TRACK-8",
+  "title": "No local draft / recovery for stopped-but-unsaved walks; offline save leaves the UI stuck on a spinner",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:390-422 (storeWalkDraft before createWalk, removeWalkDraft after), 212-312 + 498-518 (pendingRecovery notice with Retry + per-draft Discard), apps/web/src/lib/walk-drafts.ts; walk-tracking-view.tsx:470-489 (retry on reconnect)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:162-200; apps/ios/src/lib/walks.ts:54-89; apps/ios/app/(tabs)/walks.tsx (no recovery UI)",
+  "current_ios": "Walk input lives only in component state. RNFB `ref.set()` does not resolve until the server acks, so offline the button spins indefinitely and (since 捨棄 is disabled while saving and the Modal has no other exit) the user is stuck; killing the app loses the walk. No pending-walk notice on the walks home.",
+  "target": "Persist each finalized walk to AsyncStorage before writing; remove after ack; show the web recovery notice on the walks home with Retry and Discard local draft; retry automatically once when the app returns to foreground/connectivity.",
+  "fix_plan": "Add apps/ios/src/lib/walk-drafts.ts mirroring web (async AsyncStorage): keys `mango.walks.pending.v1.{uid}.{walkId}` and `mango.walks.discarded.v1.{uid}.{walkId}`; serialize Dates as ISO; functions storeWalkDraft/removeWalkDraft/discardWalkDraft/wasWalkDraftDiscarded/listWalkDrafts(uid) (getAllKeys + multiGet). In TRACK-1 save path: `await storeWalkDraft(input)` before createWalk, remove after. Race createWalk against a 15s timer → on timeout show saveFailed + Retry (keep draft). walks.tsx: on focus/AppState 'active' list drafts; render a card above the hero (cardSoft bg, hairline border, radius.lg, padding 16, 14pt ink) with t('Walks.core.pendingRecovery',{count}), Button t('Error.retry') (pill) that serially createWalk()s each draft then data.refresh(), and per-draft row `${petName} · ${startedAt.toLocaleString()}` + secondary Button t('Walks.core.discardDraft') guarded by the discardDraftTitle/Body Alert. No NetInfo dep needed: retry on AppState→active.",
+  "files_to_touch": [
+   "apps/ios/src/lib/walk-drafts.ts (new)",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.pendingRecovery",
+   "Walks.core.discardDraft",
+   "Walks.core.discardDraftTitle",
+   "Walks.core.discardDraftBody",
+   "Walks.core.discardDraftFailed",
+   "Walks.core.draftDiscarded",
+   "Walks.core.savingWalk",
+   "Walks.core.saveFailed",
+   "Error.retry"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-9",
+  "title": "iOS createWalk is not idempotent: retry on a pre-minted id uses set() which rules reject as an update",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/lib/firebase/walks.ts:102-112 (runTransaction: get, set only if !exists)",
+  "ios_ref": "apps/ios/src/lib/walks.ts:54-89",
+  "current_ios": "createWalk always does `ref.set({... createdAt: serverTimestamp() })`. If the first write landed but the ack was lost (timeout/background), the retry becomes an update touching createdAt etc.; firestore.rules:345-348 only allow notes/photoURLs on update → permission-denied → user sees 存檔失敗 for a walk that is actually saved (and recovery would loop).",
+  "target": "Same as web: transactional create-if-missing; treat existing doc as success.",
+  "fix_plan": "In createWalk when input.walkId is set: `await db.runTransaction(async tx => { const snap = await tx.get(ref); if (!snap.exists) tx.set(ref, data); });` (RNFB snapshot.exists is a property in v21 / method in newer — match the version used elsewhere in apps/ios/src/lib). Keep the plain set path for walks without a pre-minted id (manual walk dialog).",
+  "files_to_touch": [
+   "apps/ios/src/lib/walks.ts"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-10",
+  "title": "endedAt is taken at save time (not stop time); missing startedAt silently fabricated",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:547-566 (endedAt frozen at stop; no startedAt → saveFailed)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:178-179",
+  "current_ios": "`startedAt: final.startedAt ?? new Date(), endedAt: new Date()` evaluated when 儲存 is tapped; minutes spent on the summary/notes screen inflate endedAt so endedAt-startedAt ≠ durationMin; a null startedAt produces a zero-length walk stamped now.",
+  "target": "Freeze endedAt at stop; refuse to save without startedAt.",
+  "fix_plan": "Build the CreateWalkInput in finishWalk (TRACK-1) with `endedAt: new Date()` at that moment and store in stoppedInputRef; if `!final.startedAt` set saveError t('Walks.core.saveFailed') and do not call createWalk.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.saveFailed"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-11",
+  "title": "Done screen recomputes from live props after onSaved refresh → today minutes double-count (goal-hit/percent jump)",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:221-225, 658-660 (session context snapshot: pet, streakDays, storedTodayMin, goalMin frozen at open); walks/page.tsx:418 (tracked sessions do not refresh until close), 839-846",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:188, 204-213; apps/ios/app/(tabs)/walks.tsx:233-236",
+  "current_ios": "handleSave calls onSaved (= data.refresh) and, when autoPhotoShare is on, keeps the done screen mounted. After refresh todayMinBefore already contains the just-saved walk, so blendedMin = todayMinBefore + doneMin counts it twice; streakDays, goalMin and pet can also change underneath the open session.",
+  "target": "Freeze session context at open; refresh the walks list on close.",
+  "fix_plan": "In walk-tracking-view.tsx store `sessionRef.current = { pet, pets, streakDays, familyId, goalMin, todayMinBefore, weeklyAvgMin }` in the visible effect (127-140) and read every done/tracking computation from it instead of props. In walks.tsx move `data.refresh()` into onClose (`onClose={() => { setSessionOpen(false); void data.refresh(); }}`) and drop/no-op onSaved for tracked walks.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-12",
+  "title": "3-hour runaway auto-stop + notice missing",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/lib/walk-tracking.ts:18, 150-156, 421-426 (RUNAWAY_CAP_MIN=180, autoStopped); walk-tracking-view.tsx:536-541, 955-962 (autoStoppedNotice card)",
+  "ios_ref": "apps/ios/src/lib/walk-tracking-service.ts:241-259",
+  "current_ios": "No cap. In background mode a forgotten walk keeps background GPS (blue bar) running and duration growing without bound, inflating score/leaderboard and battery drain.",
+  "target": "Auto-stop at 180 min, flag autoStopped, move to done screen and show the amber notice.",
+  "fix_plan": "Service: `const RUNAWAY_CAP_MIN = 180;` in tick(): if durationMin >= cap && !state.autoStopped → stop location source/ticker (reuse stop()) and update({durationMin: 180, autoStopped: true}). Add `autoStopped?: boolean` to WalkTrackingState. View: `useEffect(() => { if (state.autoStopped && phase==='tracking') finishWalk(state); }, [state.autoStopped])`. Done screen: after headline render View {flexDirection:'row', gap:8, maxWidth:320, width:'100%', borderRadius:radius.sm, backgroundColor:colors.bellTint, padding:12} with `<AlertTriangle size={16} color={colors.brandDeep}/>` + Text 12pt t('Walks.core.autoStoppedNotice'). Note: the headless task can't run the ticker while suspended — also enforce the cap in stop()/resume using wall-clock (min(elapsed, 180)).",
+  "files_to_touch": [
+   "apps/ios/src/lib/walk-tracking-service.ts",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.autoStoppedNotice"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-13",
+  "title": "GPS status hints (weak signal / retrying / background gap) never shown during tracking",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:98-113, 748-760 (AlertTriangle + errWeak/errRetrying/errBackground, red for denied, brand-deep otherwise)",
+  "ios_ref": "apps/ios/src/lib/walk-tracking-service.ts:92-95, 226-236, 262-274; apps/ios/src/components/walks/walk-tracking-view.tsx:243-297",
+  "current_ios": "errorKind only has permission_denied/position_unavailable, and position_unavailable is set only on start failure. Low-accuracy fixes are silently dropped with no 'weak signal' hint; in foreground-fallback mode backgrounding silently pauses time AND distance and the only copy is '背景暫停中…', which is only visible while the app is hidden.",
+  "target": "Inline hint row under the progress bar: AlertTriangle 14 + 12pt/500 text in brandDeep (danger color for denied).",
+  "fix_plan": "Service: track `lastFixAt` (any fix, accepted or rejected) and `lastAcceptedAt`; in tick() set errorKind 'position_unavailable' when no accepted fix for >20s while tracking & !paused, clear on next accepted fix. In fallback mode, on AppState→active after >3s hidden set `errorKind: 'backgrounded'` for 6s (mirrors web BG_HINT_MIN_MS/TTL). Extend WalkTrackingErrorKind with 'backgrounded'. View: map position_unavailable → t('Walks.core.errWeak'); backgrounded → t('Walks.core.errBackgroundIos') (new, because iOS fallback also pauses time, unlike web errBackground). Render `<View style={{flexDirection:'row',alignItems:'center',gap:6}}><AlertTriangle size={14} color={colors.brandDeep}/><Text style={{fontSize:12,fontWeight:'500',color:colors.brandDeep}}>…</Text></View>`.",
+  "files_to_touch": [
+   "apps/ios/src/lib/walk-tracking-service.ts",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.errWeak",
+   "Walks.core.errRetrying"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.core.errBackgroundIos = 背景期間沒有記錄（到「設定」把定位改為「永遠」即可在背景持續記錄） | Not recorded while in the background — set Location to \"Always\" in Settings to keep recording."
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "TRACK-14",
+  "title": "In-walk photo control: emoji dashed tile vs web pill button with counter; thumbnails lack upload/failed overlays, delete X, and save-to-album",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:774-845 (h-11 rounded-full pill, border mango-brand, bg brand-tint, Camera icon + 'Walks.photo.button {n}/{max}' / limitReached disabled; 64px rounded-lg thumbs, uploading overlay RotateCw, failed overlay AlertTriangle on red, top-right X delete (20px zinc-900 circle), SaveToAlbumButton bottom-right when done), 433-449 (delete + best-effort storage delete)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:267-287, 462-481",
+  "current_ios": "Row of 56px radius.md thumbs plus a 56px dashed tile with a 📷 emoji (spinner while uploading); no count, no limit copy, no per-photo status, no delete, upload failures swallowed silently, no save-to-album.",
+  "target": "Web pill button + horizontally scrolling 64px thumbnails with status overlays, delete and save.",
+  "fix_plan": "Replace photoURLs: string[] with `slots: {id, localUri, status:'uploading'|'done'|'failed', url?, storagePath?}[]` keyed by an immutable id (fixes the R16 web idx issue on iOS too). Button: Pressable height 44, paddingHorizontal 16, borderRadius radius.pill, borderWidth 1, borderColor colors.brand, backgroundColor colors.brandTint, row gap 8: `<Camera size={16} color={colors.ink}/>` + Text 14pt/500 ink t('Walks.photo.button',{n:slots.length,max:5}); when slots.length>=5 → disabled, borderColor hairline, text ink3 t('Walks.photo.limitReached'). Thumbs: horizontal ScrollView (contentContainer gap 8), each 64×64 Image (local uri first, borderRadius radius.sm, hairline ring) with overlays: uploading → absolute fill rgba(0,0,0,0.3) + ActivityIndicator white; failed → rgba(239,68,68,0.4) + AlertTriangle white + tap to retry; X button absolute top:-4 right:-4 20×20 radius pill backgroundColor colors.ink, `<X size={12} color='#fff'/>`, accessibilityLabel t('Walks.photo.delete'), removes slot and best-effort deletes storage (photos.ts: add deleteStorageObject or return path from uploadWalkPhoto); save button bottom-right 20×20 calling savePhotoToAlbum(url) (apps/ios/src/lib/save-photo.ts) when status done, accessibilityLabel t('Common.saveToAlbum').",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/src/lib/photos.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.photo.button",
+   "Walks.photo.limitReached",
+   "Walks.photo.uploading",
+   "Walks.photo.failed",
+   "Walks.photo.delete",
+   "Common.saveToAlbum"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-15",
+  "title": "Photo still uploading when the walk is saved is dropped from walk.photoURLs (orphaned in Storage)",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:461-468 (uploading blocks CTAs; post-save uploads patched via onUpdate), 1100, 1109",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:148-160, 162-187, 383",
+  "current_ios": "Stop and 儲存 are not gated on uploadingPhoto; handleSave snapshots photoURLs at tap time, so an upload finishing afterward only updates local state and never reaches Firestore.",
+  "target": "Uploads that finish after the core save are patched onto the same walk via updateWalkDetails; leaving is blocked while uploads are in flight.",
+  "fix_plan": "With TRACK-1's ensureSaved loop, keep a `detailsRef = { notes: notes.trim() || null, photoURLs: slots.filter(done).map(url) }` updated each render and add `useEffect(() => { if (saved) void ensureSaved(); }, [saved, doneUrlsKey])`. Disable 回到遛狗/查看排行榜 while any slot is uploading and show t('Walks.photo.uploading') in the status line. Guard upload callbacks with the session generation so a late upload from a closed session is ignored.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.photo.uploading"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-16",
+  "title": "Done screen lacks the '本次紀錄 (n)' photo grid + lightbox",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:1022-1049 (label 12pt semibold uppercase zinc-500; 2-col square grid gap-2 rounded-lg; tap → PhotoLightbox), 1118-1127",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:298-407",
+  "current_ios": "Photos taken during the walk are not shown anywhere on the done screen.",
+  "target": "After the noPath warning: label + 2-column square grid; tap opens the existing iOS PhotoLightbox with save support.",
+  "fix_plan": "Below the warning block: View width '100%' maxWidth 320; Text t('Walks.photo.recapGridLabel',{n:slots.length}) style {fontSize:12,fontWeight:'600',color:colors.ink3,marginBottom:8}; View {flexDirection:'row',flexWrap:'wrap',gap:8} with Pressables width (320-8)/2, aspectRatio 1, borderRadius radius.sm, overflow hidden, hairline border, Image (url ?? localUri) resizeMode cover, accessibilityLabel t('Walks.photo.viewLightbox'). Render `<PhotoLightbox photos={urls} initialIndex={lightboxIdx ?? 0} open={lightboxIdx !== null} onClose={() => setLightboxIdx(null)} onSave={(url) => savePhotoToAlbum(url)} />` from apps/ios/src/components/feed/photo-lightbox.tsx.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.photo.recapGridLabel",
+   "Walks.photo.viewLightbox"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-17",
+  "title": "Done-screen visuals differ: emoji trophy on invisible circle, solid tint bg (no gradient / no missed backdrop), 3 separate tiles incl. extra km/h, noPath condition",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:878-888 (emerald-50→white gradient when saved & goal hit, zinc-50→white otherwise, max-w-md), 926-931 (64px circle emerald-100 + lucide Trophy 32 emerald-700), 929 (24pt bold emerald), 976-1010 (ONE bordered card rounded-xl with 2-col grid km | min, 24pt bold; recap list card rounded-lg 12pt), 1015-1020 (noPath shown when path.length === 0, amber card + AlertTriangle)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:216-219, 307-367, 433-434, 510-571",
+  "current_ios": "Background is solid successTint when goal hit (also before saving) and plain bg otherwise; trophy is a 🏆 emoji inside a successTint circle on a successTint background (circle invisible); title 22/800 leaf; three separate bordered tiles (km / 分鐘 / km/h) with radius.lg; noPath warning only when km===0 AND path empty, emoji ⚠️ in text, bellTint card.",
+  "target": "Web look using mango tokens: gradient wash, lucide Trophy in a contrasting circle, single 2-col stat card (km, min), same recap list card, noPath on path.length===0 with AlertTriangle icon.",
+  "fix_plan": "Wrap the done ScrollView in `<LinearGradient colors={saved && goalHit ? [colors.successTint, colors.bg] : [colors.cardSoft, colors.bg]} style={{flex:1}}>` (expo-linear-gradient installed) and remove styles.safeCelebrate. Trophy: View 64×64 radius pill backgroundColor colors.leafTint (or a white card with successTint ring) + `<Trophy size={32} color={colors.leaf} />`. Title fontSize 24 fontWeight '700' colors.leaf. Stats: single View {width:'100%',maxWidth:320,flexDirection:'row',borderWidth:1,borderColor:colors.hairline,backgroundColor:colors.cardSoft,borderRadius:radius.xl,padding:16} with two flex:1 centered columns: label 10pt uppercase ink3 ('km' / 'min' literals as web) and value 24pt/700 tabular; drop the km/h tile and avgSpeedKmh(). Recap list: radius.sm padding 12, 12pt ink2, gap 6. noPath: condition `(final?.path.length ?? 0) === 0`, row with `<AlertTriangle size={16} color={colors.brandDeep}/>` + 12pt text, backgroundColor colors.bellTint, radius.sm. Constrain the done column to maxWidth 448 (web sm:max-w-md) centered.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-18",
+  "title": "Notes input always expanded; web uses a collapsible '加備註' disclosure",
+  "category": "layout",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:1051-1075 (details/summary centered 14pt zinc-500 with rotating ChevronDown; Textarea aria-label noteOptional; onBlur saves)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:369-378",
+  "current_ios": "Always-visible 72pt TextInput with placeholder '留個備註（選填）' and maxLength 300.",
+  "target": "Collapsed row '⌄ 加備註' that expands to the TextInput; blur persists via updateWalkDetails.",
+  "fix_plan": "State notesOpen. Pressable row (height 36, centered, gap 4): `<ChevronDown size={16} color={colors.ink3} style={{transform:[{rotate: notesOpen?'180deg':'0deg'}]}}/>` + Text 14pt ink3 t('Walks.core.addNote'); accessibilityState={{expanded:notesOpen}}. When open render the TextInput (marginTop 8, radius.sm, hairline, accessibilityLabel t('Walks.core.noteOptional'), placeholder t('Walks.core.noteOptional')) with onBlur → ensureSaved() (TRACK-1).",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.addNote",
+   "Walks.core.noteOptional"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-19",
+  "title": "END/START auto-photo prompt: no guest gate, no 1s post-save delay, and END flow closes the whole view instead of returning to the recap",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:327-340 (prompt 1s after saved, skipped when !autoPhotoEnabled || isGuest), 353-373 (skip/composer close keep recap open); apps/web/src/app/app/walks/page.tsx:436-441, 883 (START prompt skipped for guests)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:189-195, 418-426; apps/ios/app/(tabs)/walks.tsx:70-79, 212-222",
+  "current_ios": "autoPhotoShare alone gates both prompts — anonymous (guest) users get the START and END share prompts and a PostComposer that cannot publish for them. The END sheet opens instantly after save (over the celebration) and its onDone calls onClose, so skipping or posting dismisses the whole tracking view.",
+  "target": "Skip both prompts when user.isAnonymous; open the END prompt 1000ms after saved; closing the END flow returns to the saved recap (user leaves via 回到遛狗 / 查看排行榜).",
+  "fix_plan": "walks.tsx handleStartWalking: `if (autoPhotoShare && !user?.isAnonymous) setStartShareOpen(true) else setSessionOpen(true)` (get user from useAuth). walk-tracking-view.tsx: `const isGuest = !!user?.isAnonymous;` `useEffect(() => { if (!visible || phase!=='done' || !saved || !autoPhotoShare || isGuest) { setEndShareOpen(false); return; } const id = setTimeout(() => setEndShareOpen(true), 1000); return () => clearTimeout(id); }, [visible, phase, saved, autoPhotoShare, isGuest]);` and `<PhotoShareFlow ... onDone={() => setEndShareOpen(false)} />`. Use a `endShareShownRef` so the prompt fires once per session even if saved toggles.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-20",
+  "title": "PhotoPromptSheet styling: flat brand button with INK text + emoji, sheet radius, no iPad width cap, slide ignores reduced motion",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/photo-prompt-sheet.tsx:91-134 (max-w-md, rounded-t-3xl, border hairline, shadow-elevated, px-6 pt-6; take = btn-mango h-12 rounded-full 16pt bold WHITE + Camera icon; skip h-11 rounded-full 14pt semibold ink-2; slide-up collapses under reduced motion)",
+  "ios_ref": "apps/ios/src/components/walks/photo-prompt-sheet.tsx:34-103",
+  "current_ios": "Take button is flat colors.brand with colors.ink text and '📷  拍照' emoji label (violates design-system btn-mango = gradient + white text); sheet top radius 18 (web 24); padding 16 (web 24); no hairline border/elevated shadow; full-width on iPad; Modal animationType='slide' always (no reduced-motion branch).",
+  "target": "Gradient pill with white text and lucide Camera icon; 22pt (radius.xl2, nearest scale step to rounded-t-3xl) top radius; 24 padding; maxWidth 448 centered; animationType none under reduced motion.",
+  "fix_plan": "Replace takeBtn with `<Button label={t('WalksPhotoPrompt.take')} pill fullWidth size='lg' icon={<Camera size={20} color='#fff'/>} onPress={onTake} />` (ui/Button primary = mangoGradient + white). Skip: height 44 radius pill, 14pt/600 colors.ink2, label t('WalksPhotoPrompt.skip'). sheetWrap: borderTopLeft/RightRadius radius.xl2, borderWidth 1 borderBottomWidth 0 borderColor colors.hairline, ...shadows.elevated, width '100%', maxWidth 448, alignSelf 'center'; sheet padding 24 (bottom handled by SafeArea + 24). Title 18pt/700, body marginTop 4. `const reduceMotion = useReducedMotion(); <Modal animationType={reduceMotion ? 'none' : 'slide'} …>`.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/photo-prompt-sheet.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "WalksPhotoPrompt.take",
+   "WalksPhotoPrompt.skip"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-21",
+  "title": "R20: hard-coded (and divergent) Chinese strings across tracking view, prompt sheet, share flow, camera modal",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "walk-tracking-view.tsx uses Walks.core.*, Walks.photo.*, Walks.celebration.*, WalksPhotoPrompt.*; photo-prompt-sheet.tsx:66-71, 125, 132",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:12, 198, 223-228, 234, 246-251, 264, 275, 291-295, 312-320, 327-336, 347-355, 364, 372, 382-404; photo-prompt-sheet.tsx:27-31, 53, 55; photo-share-flow.tsx:55-56; camera-capture-modal.tsx:50-60, 87, 97",
+  "current_ios": "All copy inline zh-TW and several strings differ from web: goal title '達標了！今天遛狗目標完成 🎉' (web 完成今日目標！), streak '🔥 連續 N 天' (web 🔥 {days} 天), missed hint '再走 N 分鐘就達標' (web 再 {min} 分鐘就達標 — 明天加油 💪), vs-avg '比近 7 天平均長…' (web 比本週平均多…), calories '大約消耗了' (web 消耗約), tile '分鐘' (web 'min'), noPath long sentence (web 沒取得 GPS 點 — 試試手動補登), prompt titles '出發前拍一張？'/'遛完拍一張紀念？' (web 拍張開始照？/拍張結束照分享給家人？), '略過' (web 跳過), captions '{pet} 出發遛狗囉 🐾' / '{pet} 今天走了 N 分鐘 🐾' (web '{pet} 開始遛狗 🐾' / '{pet} 遛完了！走了 {min} 分 ✨'). English locale users see Chinese.",
+  "target": "Every string via t() from the shared catalog; new keys only for iOS-only surfaces (permission screens).",
+  "fix_plan": "import { t } from '@/lib/i18n'. walk-tracking-view: goal title → t('Walks.core.goalHitTitle'); streak → `🔥 ${t('Walks.core.streakDaysCount',{days})}`; missed → t('Walks.celebration.goalMissedTitle',{percent}) / t('Walks.celebration.goalMissedHint',{min}); vs avg → t('Walks.celebration.vsAvgLonger'|'vsAvgShorter'|'vsAvgSame',{min}); calories → t('Walks.celebration.calories',{name,kcal}); noPath → t('Walks.core.noPathWarning'); tracking label/fallback → t('Walks.core.tracking'); paused → t('Walks.core.paused'); stop → t('Walks.core.stop'); errors → t('Walks.core.saveFailed'); permission screen → new Walks.core.locationNeededTitle/Body + t('Common.back'); remove '個路徑點'. photo-prompt-sheet: t('WalksPhotoPrompt.start.title'), t('WalksPhotoPrompt.start.body',{pet}), t('WalksPhotoPrompt.end.title'), t('WalksPhotoPrompt.end.body',{pet,min}), take/skip keys. photo-share-flow: t('WalksPhotoPrompt.captionStartDefault',{pet}) / t('WalksPhotoPrompt.captionEndDefault',{pet,min}). camera-capture-modal: new Walks.camera.* keys, shutter label t('WalksPhotoPrompt.take'), close label t('Common.close'), skip t('WalksPhotoPrompt.skip'). Note: web uses tCommon('retry') but Common.retry does not exist in the catalog — iOS should use Error.retry.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/src/components/walks/photo-prompt-sheet.tsx",
+   "apps/ios/src/components/walks/photo-share-flow.tsx",
+   "apps/ios/src/components/walks/camera-capture-modal.tsx",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.goalHitTitle",
+   "Walks.core.streakDaysCount",
+   "Walks.core.noPathWarning",
+   "Walks.core.tracking",
+   "Walks.core.paused",
+   "Walks.core.stop",
+   "Walks.core.saveFailed",
+   "Walks.celebration.goalMissedTitle",
+   "Walks.celebration.goalMissedHint",
+   "Walks.celebration.vsAvgLonger",
+   "Walks.celebration.vsAvgShorter",
+   "Walks.celebration.vsAvgSame",
+   "Walks.celebration.calories",
+   "WalksPhotoPrompt.start.title",
+   "WalksPhotoPrompt.start.body",
+   "WalksPhotoPrompt.end.title",
+   "WalksPhotoPrompt.end.body",
+   "WalksPhotoPrompt.take",
+   "WalksPhotoPrompt.skip",
+   "WalksPhotoPrompt.captionStartDefault",
+   "WalksPhotoPrompt.captionEndDefault",
+   "Common.back",
+   "Common.close",
+   "Error.retry"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.core.locationNeededTitle = 需要定位權限 | Location access needed",
+   "Walks.core.locationNeededBody = 請到「設定」開啟 Mango Pet 的定位權限，才能記錄遛狗路線。 | Turn on location access for Mango Pet in Settings to record your walk route.",
+   "Walks.camera.permissionTitle = 需要相機權限 | Camera access needed",
+   "Walks.camera.permissionBody = 開啟相機才能拍遛狗照片；不拍照也能完成這次遛狗。 | Allow camera access to take walk photos — you can still finish the walk without one.",
+   "Walks.camera.allow = 允許相機 | Allow camera"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-22",
+  "title": "Location-denied screen has no 'Open Settings' action and uses emoji",
+  "category": "behavior",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:748-760 (inline AlertTriangle + errDenied in red)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:220-230",
+  "current_ios": "Full-screen 📍 emoji + text + 返回 only; the user is told to go to Settings but given no shortcut. Camera denied screen (camera-capture-modal.tsx:45-63) has the same issue when canAskAgain is false.",
+  "target": "Native equivalent of the web hint: lucide MapPin/AlertTriangle icon, the denial text, a primary 'open settings' button and 返回.",
+  "fix_plan": "Replace emoji with `<MapPin size={48} color={colors.brandDeep}/>`; add `<Button label={t('Walks.core.openSettings')} pill onPress={() => Linking.openSettings()} />` (react-native Linking, no new dep) above the secondary 返回 button. Same in camera-capture-modal when !permission.canAskAgain.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/src/components/walks/camera-capture-modal.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.back"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.core.openSettings = 前往設定 | Open Settings"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "TRACK-23",
+  "title": "Confetti: hard-coded 320pt width, reduced-motion shows static slivers (web hides), streak pop + overlay motion ignore reduced motion",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:903-925, 933-934; apps/web/src/app/globals.css:230-261 (8×14 pieces, 2.4s ease-in, fall 110vh, 720deg, display:none under reduced motion; walk-streak-pop 0.6s scale 1→1.25→1)",
+  "ios_ref": "apps/ios/src/components/walks/walk-confetti.tsx:14-87; apps/ios/src/components/walks/walk-tracking-view.tsx:216, 301, 313-315",
+  "current_ios": "WalkConfetti is called without width so pieces span only the left 320pt of a 390–430pt screen; fall height 360pt (not full screen); pieces 7×12, 1.8s ease-out, 540deg. Under reduced motion it renders 20 static slivers stuck along the top edge instead of nothing. Streak badge has no pop. The tracking Modal always uses animationType='slide'.",
+  "target": "Full-width/full-height fall matching web timing; render nothing under reduced motion; streak pop (skipped under reduced motion); Modal animationType 'none' under reduced motion.",
+  "fix_plan": "walk-confetti.tsx: `const { width, height } = useWindowDimensions();` left = ((i*53)%100)/100*width; translateY outputRange [-0.1*height, 1.1*height]; piece 8×14 radius 2; duration 2400, Easing.in(Easing.quad), delay (i%5)*120, rotate 720deg; `if (reduceMotion) return null;`. Streak badge: Animated.View scale sequence 1→1.25 (240ms)→1 (360ms) on mount when !reduceMotion. walk-tracking-view Modal: `animationType={reduceMotion ? 'none' : 'slide'}`.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-confetti.tsx",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-3",
+  "title": "R16: native tracking start failure (position_unavailable) still shows the '● 記錄中' recording screen",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx (errUnsupported/errRetrying states via Walks.core.err*)",
+  "ios_ref": "apps/ios/src/lib/walk-tracking-service.ts:186-215; apps/ios/src/components/walks/walk-tracking-view.tsx:136,202,220-253",
+  "current_ios": "service.start() returns false and sets errorKind 'position_unavailable' + isTracking false when watchPositionAsync/startLocationUpdatesAsync throws, but the view ignores the promise result (`void serviceRef.current!.start()`) and only branches on permission_denied; phase stays 'tracking' and the header shows '● 記錄中' with a frozen 00:00 timer. The start() catch also leaves startedAt set from the earlier update and a persisted bgSession in AsyncStorage.",
+  "target": "A failed start shows an explicit error panel with retry/back; the live label is driven by state.isTracking.",
+  "fix_plan": "walk-tracking-view.tsx: `const unavailable = state.errorKind === 'position_unavailable';` render an error box (same centerBox styles as 220-230) with title t('Walks.core.errUnavailable') (new key), primary button t('Error.retry') → `void serviceRef.current!.start()`, secondary t('Common.back') → onClose. Render the live label only when `state.isTracking`, else nothing. walk-tracking-service.ts:211-214: in catch call `this.update({ ...emptyState(), errorKind: 'position_unavailable' })`, reset bgSession and `void AsyncStorage.removeItem(BG_STORE_KEY)`.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/src/lib/walk-tracking-service.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Error.retry",
+   "Common.back"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.core.errUnavailable = 無法啟動定位，請稍後再試 | Couldn't start location tracking. Please try again."
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-4",
+  "title": "R16: walk session identity not persisted, no draft recovery, one-tap discard without confirm",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/lib/walk-drafts.ts:1-60 (per-uid/walkId pending drafts + discarded markers); apps/web/src/components/walks/walk-tracking-view.tsx:475-589 (auto-save on stop, discard confirm via Walks.core.discardDraftTitle/Body); apps/web/src/app/app/walks/page.tsx:504 (pendingRecovery banner + retry)",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:43-49 (sessionOpen/pendingWalkId memory-only); apps/ios/src/lib/walk-tracking-service.ts:41-62 (only accumulator persisted); apps/ios/src/components/walks/walk-tracking-view.tsx:162-200,397-405",
+  "current_ios": "If the app is killed/evicted during a walk, only the GPS accumulator survives in AsyncStorage; walkId/pet/familyId/session-open are lost and nothing on launch reads mango.walk.bgSession.v1 to resume. In the done phase the walk exists only in component state: a failed createWalk shows '存檔失敗' and the data is lost if the app closes; tapping '捨棄' (404) immediately throws the walk away with no confirmation.",
+  "target": "Parity with web walk drafts: persisted session identity, draft stored before save, recovery banner with retry/discard (confirm).",
+  "fix_plan": "1) New apps/ios/src/lib/walk-drafts.ts mirroring web API (storeWalkDraft/removeWalkDraft/discardWalkDraft/listWalkDrafts) on AsyncStorage keys `mango.walks.pending.v1.{uid}.{walkId}` and `mango.walks.discarded.v1.{uid}.{walkId}`. 2) On start (walks.tsx handleStartWalking / tracking start) persist `mango.walks.session.v1` = {uid, walkId, petId, familyId, startedAt, backgroundMode}; on WalksScreen mount, if a session exists for the current uid, reopen WalkTrackingView (service hydrates bgSession) or, if expired, convert to a draft. 3) handleStop: build CreateWalkArgs and storeWalkDraft before createWalk; on success removeWalkDraft. 4) Walks screen banner when listWalkDrafts(uid).length>0: t('Walks.core.pendingRecovery',{count}) + retry button t('Error.retry') (note web uses missing Common.retry) + t('Walks.core.discardDraft') with Alert confirm t('Walks.core.discardDraftTitle')/t('Walks.core.discardDraftBody'), result t('Walks.core.draftDiscarded') / t('Walks.core.discardDraftFailed'). 5) Done-phase discard (walk-tracking-view.tsx:397-405): Alert confirm with Walks.core.discardDraftTitle/Body before onClose. Retry on AppState 'active' (no polling).",
+  "files_to_touch": [
+   "apps/ios/src/lib/walk-drafts.ts",
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/src/components/walks/walk-tracking-view.tsx",
+   "apps/ios/src/lib/walk-tracking-service.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.pendingRecovery",
+   "Walks.core.discardDraft",
+   "Walks.core.discardDraftTitle",
+   "Walks.core.discardDraftBody",
+   "Walks.core.draftDiscarded",
+   "Walks.core.discardDraftFailed",
+   "Walks.core.savingWalk",
+   "Walks.core.walkSaved",
+   "Walks.core.walkNotSaved",
+   "Error.retry"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-7",
+  "title": "R20: walk-tracking-view (tracking + done recap) hard-codes ~30 zh strings that map to Walks.core/Walks.celebration keys",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/walks/walk-tracking-view.tsx:146-150 (tW/tP/tCel/tPP/tCommon)",
+  "ios_ref": "apps/ios/src/components/walks/walk-tracking-view.tsx:198,223-264,275,291-295,312-404",
+  "current_ios": "Inline: 需要定位權限/請到「設定」…, 返回, 存檔失敗, 遛狗中, 背景暫停中…, ● 記錄中（背景持續）, N 個路徑點, 拍遛狗照片, 停止, 達標了！今天遛狗目標完成 🎉, 🔥 連續 N 天, 今天完成 N%, 再走 N 分鐘就達標, 分鐘, 比近 7 天平均長/短…, X 大約消耗了 N 大卡, ⚠️ 沒有記錄到路徑…, 留個備註（選填）, 儲存, 捨棄.",
+  "target": "Web keys for every string; iOS-only states (Always/background, iOS location settings) get new keys.",
+  "fix_plan": "198→t('Walks.core.saveFailed'); 223/225→new Walks.core.errDeniedIos (web errDenied mentions the browser); 228/240→t('Common.back'); 234→t('Walks.core.saveFailed'); 246 fallback→t('Home.stories.tracking'); 248→t('Walks.core.paused') with sub-line t('Walks.core.errBackground'); 251→backgroundEnabled ? new Walks.core.trackingBackground : t('Walks.core.tracking'); 264→new Walks.core.pathPoints {count} (or drop, web shows no point count); 275→t('Walks.photo.button',{n:photoURLs.length,max:5}); 291/295→t('Walks.core.stop'); 312→t('Walks.core.goalHitTitle'); 314→'🔥 '+t('Walks.core.streakDaysCount',{days:streakDays}); 319→t('Walks.celebration.goalMissedTitle',{percent:blendedPercent}); 320→t('Walks.celebration.goalMissedHint',{min:remainingMin}); 347/349/350→t('Walks.celebration.vsAvgLonger'|'vsAvgShorter',{min}) / t('Walks.celebration.vsAvgSame'); 355→t('Walks.celebration.calories',{name:pet.name,kcal}); 364→t('Walks.core.noPathWarning'); 372→t('Walks.core.noteOptional'); 382/394→t('Common.save'); 399/404→new Walks.core.discardWalk (with confirm per XCUT-4); 331→new Walks.core.minutesLabel.",
+  "files_to_touch": [
+   "apps/ios/src/components/walks/walk-tracking-view.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Walks.core.saveFailed",
+   "Common.back",
+   "Home.stories.tracking",
+   "Walks.core.paused",
+   "Walks.core.errBackground",
+   "Walks.core.tracking",
+   "Walks.photo.button",
+   "Walks.core.stop",
+   "Walks.core.goalHitTitle",
+   "Walks.core.streakDaysCount",
+   "Walks.celebration.goalMissedTitle",
+   "Walks.celebration.goalMissedHint",
+   "Walks.celebration.vsAvgLonger",
+   "Walks.celebration.vsAvgShorter",
+   "Walks.celebration.vsAvgSame",
+   "Walks.celebration.calories",
+   "Walks.core.noPathWarning",
+   "Walks.core.noteOptional",
+   "Common.save"
+  ],
+  "needs_new_i18n_keys": [
+   "Walks.core.errDeniedIos = 需要定位權限，請到「設定」開啟 Mango Pet 的定位權限 | Location access needed — enable it for Mango Pet in Settings",
+   "Walks.core.trackingBackground = 追蹤中（背景持續） | Tracking (continues in background)",
+   "Walks.core.pathPoints = {count} 個路徑點 | {count} GPS points",
+   "Walks.core.discardWalk = 捨棄 | Discard",
+   "Walks.core.minutesLabel = 分鐘 | min"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ }
+]

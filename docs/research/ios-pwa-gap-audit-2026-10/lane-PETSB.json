@@ -1,0 +1,441 @@
+[
+ {
+  "id": "PETS-1",
+  "title": "R08: Pets scope reads currentFamilyId itself; stale family after switch leads to writes into the wrong family",
+  "category": "ios-bug",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/pets/page.tsx:28-50 (useFamily(); refresh deps [family,user]); pets-page-content.tsx:101 (useFamily) and :180 (createPet familyId from context)",
+  "ios_ref": "apps/ios/src/lib/use-pets-data.ts:41-66 (resolveCurrentFamilyId inside load, deps [user] only); apps/ios/app/(tabs)/pets.tsx:84,139,259,267,284 (familyId passed to PetForm/ReminderForm/ExpenseForm)",
+  "current_ios": "usePetsData resolves users/{uid}.currentFamilyId once per user change and keeps it in local state. FamilyProvider.switchFamily (state/family-context.tsx:74-80) updates context only, so the mounted Pets tab keeps family A's pets/reminders/expenses AND keeps familyId=A, so new pets/reminders/expenses are created in family A after the user switched to B. A failed users/{uid} read rejects load() (no catch), and per-query catch(() => []) makes a load error look like the 0-pet empty state.",
+  "target": "Pets data is keyed on the family-context scope. Switching family, joining or leaving re-fetches and changes the write scope at the same moment. An unknown or failed scope never falls back to personal writes.",
+  "fix_plan": "In use-pets-data.ts: import { useFamily } from '@/state/family-context'; const { family, loading: familyLoading } = useFamily(); const familyId = family?.familyId ?? null. Remove the resolveCurrentFamilyId call and the familyId useState. load() early-returns while familyLoading. Make load's deps [user, familyId] and add `useEffect(() => { if (!familyLoading) void load(false); }, [load, familyLoading])`. Add a request-generation ref (`const gen = useRef(0); const my = ++gen.current; ... if (my !== gen.current) return;`) before each setState so a slow family-A response can't overwrite family B. Reset selectedPetId to null when familyId changes. Return familyId from the context value so pets.tsx keeps passing it to the forms. Also make the FAB/forms no-ops while familyLoading is true. Pair this with PETS-3 (error state) so a failed read never shows the empty state.",
+  "files_to_touch": [
+   "apps/ios/src/lib/use-pets-data.ts",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-2",
+  "title": "Pets tab never refetches on focus; data goes stale after walks/reminders change elsewhere",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/pets/page.tsx:47-50 and pets-page-content.tsx:148-150 (refetch on every route mount)",
+  "ios_ref": "apps/ios/src/lib/use-pets-data.ts:68-70 (load only on mount/user change); no useFocusEffect anywhere in apps/ios",
+  "current_ios": "Expo Router keeps the Pets tab mounted, so after recording a walk (walk-days stat), completing a reminder on Home, or editing a pet on another screen, the Pets tab shows stale numbers until a manual pull-to-refresh.",
+  "target": "Fresh data each time the tab gains focus, like the web which remounts per navigation.",
+  "fix_plan": "In pets.tsx, `import { useFocusEffect } from 'expo-router'` and add `useFocusEffect(useCallback(() => { if (!loading) void refresh(); }, [refresh]))`. Use a silent refresh: add `load(isRefresh, {silent:true})` that doesn't toggle `refreshing`, so the RefreshControl spinner doesn't flash. Also bump healthKey inside the same callback so health records reload (see PETS-21).",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/pets.tsx",
+   "apps/ios/src/lib/use-pets-data.ts"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-3",
+  "title": "A load failure renders as the 0-pet empty state, with no error or retry",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/pets/page.tsx:59-74 (loading text, then empty state; web also lacks an error state, flagged as R08 'unknown/error vs empty')",
+  "ios_ref": "apps/ios/src/lib/use-pets-data.ts:50-55 (.catch(() => [])); apps/ios/app/(tabs)/pets.tsx:121-148",
+  "current_ios": "A network or permission failure on listPetsForScope returns [], and the screen shows '還沒有寵物 / 新增第一隻寵物', which invites creating duplicate pets.",
+  "target": "Keep a distinct error state: a centered card with Error.title and an Error.retry button. Never show the add-first-pet empty state when the pets query failed.",
+  "fix_plan": "In use-pets-data.ts, let listPetsForScope reject (no catch) and keep a catch only on the secondary lists. Wrap load in try/catch, `setError(true)` on failure and clear it on success, and expose `error`. In pets.tsx, before the `pets.length === 0` branch, add `if (error && pets.length === 0)`. It renders `<EmptyState emoji=\"⚠️\" title={t('Error.title')} ctaLabel={t('Error.retry')} onPressCta={refresh} />` (or the lucide AlertCircle once EmptyState supports icons).",
+  "files_to_touch": [
+   "apps/ios/src/lib/use-pets-data.ts",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Error.title",
+   "Error.retry"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-9",
+  "title": "Tab empty states (reminders, expenses, health) are bare emoji text with no add CTA",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-reminders-body.tsx:96-114 (Bell, brand tint, addCta); pet-expenses-body.tsx:252-270 (Wallet, cookie tint); pet-health-body.tsx:115-133 (HeartPulse, leaf tint)",
+  "ios_ref": "apps/ios/src/components/pets/pet-reminders-body.tsx:75-82 (🔔); pet-expenses-body.tsx:80-87 (🧾); pet-health-body.tsx:41-48 (🩺)",
+  "current_ios": "Each empty tab shows a centered 40pt emoji and an ink3 text, with no card and no button.",
+  "target": "Card: radius.xl, hairline, card bg, shadows.card, px 24, py 40, items centered, gap 12. Inside: a 56px circle with tone tint and a lucide icon (size 24, stroke 1.8), the message (14px ink2), and a 36px-tall pill button (px 12, tone tint bg, tone fg 14px 700) with a Plus icon (16, stroke 2.5) and the CTA label. Tones: reminders brandTint/brandDeep + Bell; expenses cookieTint/cookie + Wallet; health leafTint/leaf + HeartPulse. The CTA opens the tab's add action: reminders opens ReminderForm, expenses opens the manual ExpenseForm (web onAdd opens the form, not the scanner), health opens HealthForm.",
+  "fix_plan": "Create components/pets/pet-tab-empty.tsx `PetTabEmpty({ Icon, tone, message, ctaLabel, onAdd })` and use it in the three bodies. Add `onAdd` props to PetRemindersBody, PetExpensesBody and PetHealthBody, wired from pets.tsx to setForm({kind:'reminder'}), setForm({kind:'expense', source:'manual'}) and setForm({kind:'health'}). Reminders empty condition must be `active.length===0 && doneCount===0` (see PETS-10).",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-tab-empty.tsx",
+   "apps/ios/src/components/pets/pet-reminders-body.tsx",
+   "apps/ios/src/components/pets/pet-expenses-body.tsx",
+   "apps/ios/src/components/pets/pet-health-body.tsx",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PetsPage.reminders.empty",
+   "PetsPage.reminders.addCta",
+   "PetsPage.expenses.empty",
+   "PetsPage.expenses.addCta",
+   "PetsPage.health.empty",
+   "PetsPage.health.addCta"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-10",
+  "title": "Reminders tab is missing the summary row ('本月 X 條 · 已完成 Y' + sort hint)",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-reminders-body.tsx:40-59 (totalThisMonth/doneCount), 71-81 (summary row); pets-page-content.tsx:128-130 (listRecentlyCompletedReminders, family only, default last 24h)",
+  "ios_ref": "apps/ios/src/components/pets/pet-reminders-body.tsx:40-46, 84-97",
+  "current_ios": "Only the active reminder cards are shown, with no summary or sort hint.",
+  "target": "Above the list, a row (px 4, pb 4, space-between, baseline): PetsPage.reminders.summary {total, done} (12px, 600, ink2) and PetsPage.reminders.sortHint (12px, ink3). total = the set of active reminders for this pet triggering this month, unioned with done-this-month. done = done-this-month count.",
+  "fix_plan": "No extra query is needed: listRemindersForScope (pets-data.ts:12-29) already returns done reminders, because it doesn't filter `done`. In PetRemindersBody compute `doneThisMonth = reminders.filter(r => r.petId===petId && r.done && ms(r.doneAt) >= startOfMonth())`. This is better than web, which counts only the last 24h and only in family mode; note the drift for PM. Compute the total via a Set of reminderIds per the web code. Render the row only when list.length>0 || doneCount>0, else the empty card (PETS-9).",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-reminders-body.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PetsPage.reminders.summary",
+   "PetsPage.reminders.sortHint"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-11",
+  "title": "Overview stat 'next reminder' shows '-1 天前' when overdue (shared-business carries the bug web already fixed)",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-overview-body.tsx:31-50 (local dayDiffFromNow: overdue gives '{N}小時前' under 24h, else '{N}天前', no minus sign)",
+  "ios_ref": "apps/ios/src/components/pets/pet-overview-body.tsx:12,134; packages/shared-business/src/dates.ts:32-46 (overdue returns value '-{days}', unit '天前', always days)",
+  "current_ios": "An overdue reminder renders '-1 天前' even when only 1 hour overdue. Web fixed this locally but the shared helper iOS imports did not get the fix.",
+  "target": "Overdue: under 24h shows '{max(1,round(h))}' + 小時前, else '{ceil(days)}' + 天前. No leading minus.",
+  "fix_plan": "iOS-only: add a local `dueStat(ts)` in pet-overview-body.tsx mirroring web lines 31-50, with units from i18n (see PETS-13), and stop importing dayDiffFromNow. Optionally (outside the iOS-only scope) fix packages/shared-business/src/dates.ts:37-40 the same way, since web no longer uses it here.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-overview-body.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-12",
+  "title": "Overview 'upcoming' reminder card shows check/trash buttons that do nothing",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-overview-body.tsx:126-131 (onComplete/onDelete are no-ops on web too)",
+  "ios_ref": "apps/ios/src/components/pets/pet-overview-body.tsx:180-186",
+  "current_ios": "The card renders a 36px check and a trash button. Tapping either does nothing, which reads as broken. Web has the same dead buttons.",
+  "target": "Optimization beyond web: the overview card is fully actionable, the same as the reminders tab (complete, edit, confirm-delete). Alternatively hide the action cluster via a `readOnly` prop. Recommended: wire it.",
+  "fix_plan": "Move complete() and confirmDelete() from pet-reminders-body.tsx into a small hook `useReminderActions(uid, onChanged)` in components/pets/use-reminder-actions.ts. Use it in both PetRemindersBody and PetOverviewBody, passing uid, onChanged=refresh and onEdit=(r)=>setForm({kind:'reminder', reminder:r}) from pets.tsx. Add a light success haptic only if already in the project; otherwise skip. Flag to the web PM that web has the same dead buttons.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-overview-body.tsx",
+   "apps/ios/src/components/pets/pet-reminders-body.tsx",
+   "apps/ios/src/components/pets/use-reminder-actions.ts",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Reminder.errors.saveFailed",
+   "Common.delete",
+   "Common.cancel"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-13",
+  "title": "Hard-coded Chinese strings on the iOS Pets surface (R20 class)",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "Web uses keys where they exist: PetEdit.walkGoal.label/unit/hint (pet-walk-goal-input.tsx:53-113), Expense.scanReceipt (receipt-scanner.tsx:434). Web also hard-codes some (pet-overview-body.tsx:41-49,109; pet-expense-card.tsx:84; expense-form-dialog.tsx:149-157,267; receipt-scanner.tsx:439,464,471,525,530).",
+  "ios_ref": "pet-form.tsx:205-213 ('每日散步目標', '分'); pet-overview-body.tsx:171 ('天 · 本月'); pet-reminder-card.tsx:49-70 (分鐘/大約/小時/天/個月/年/內/前); pet-expense-card.tsx:72 (' 付'); receipt-scanner.tsx:63,92,115,124 (permission/hint/AI 辨識中/AI 辨識失敗); ai-receipt.ts:116 (parse error); shared-business formatAge '歲/個月' used in pet-header.tsx:38",
+  "current_ios": "In English locale these render in Chinese. The walk-goal label and unit ignore existing keys, and the unit '分' differs from the key value '分鐘 / 天'.",
+  "target": "All user-visible copy comes from shared-i18n keys.",
+  "fix_plan": "Use existing keys: PetEdit.walkGoal.label and PetEdit.walkGoal.unit in the StepperField, plus render PetEdit.walkGoal.hint (11px ink3) under it. Add the new keys below to BOTH zh-TW.json and en.json and use them via scoped('PetsPage'): stat.walkDaysUnit in pet-overview-body; due.* in a pet-reminder-card relativeDue rewrite, built as t('PetsPage.due.future', {span}) with span from t('PetsPage.due.minutes', {n}) etc. (and use them in PETS-11); age.* replacing formatAge in pet-header; expenses.paidBy in pet-expense-card; the scanner.* strings in receipt-scanner.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-form.tsx",
+   "apps/ios/src/components/pets/pet-overview-body.tsx",
+   "apps/ios/src/components/pets/pet-reminder-card.tsx",
+   "apps/ios/src/components/pets/pet-expense-card.tsx",
+   "apps/ios/src/components/pets/receipt-scanner.tsx",
+   "apps/ios/src/components/pets/pet-header.tsx",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "i18n_keys_to_reuse": [
+   "PetEdit.walkGoal.label",
+   "PetEdit.walkGoal.unit",
+   "PetEdit.walkGoal.hint",
+   "Expense.scanReceipt",
+   "PetsPage.expenses.manualEntry"
+  ],
+  "needs_new_i18n_keys": [
+   "PetsPage.stat.walkDaysUnit = 天 · 本月 | days · this month",
+   "PetsPage.stat.hoursAgo = 小時前 | h ago",
+   "PetsPage.stat.daysAgo = 天前 | d ago",
+   "PetsPage.stat.hoursLater = 小時後 | h left",
+   "PetsPage.stat.daysLater = 天後 | d left",
+   "PetsPage.due.future = {span}內 | in {span}",
+   "PetsPage.due.past = {span}前 | {span} ago",
+   "PetsPage.due.minutes = {n} 分鐘 | {n} min",
+   "PetsPage.due.hours = 大約 {n} 小時 | about {n} h",
+   "PetsPage.due.days = {n} 天 | {n} days",
+   "PetsPage.due.months = 大約 {n} 個月 | about {n} months",
+   "PetsPage.due.years = 大約 {n} 年 | about {n} years",
+   "PetsPage.age.years = {n} 歲 | {n} yr",
+   "PetsPage.age.months = {n} 個月 | {n} mo",
+   "PetsPage.expenses.paidBy = {name} 付 | paid by {name}",
+   "PetsPage.scanner.hint = 拍張收據，AI 自動抓出金額、商家、日期、類別。 | Snap a receipt and AI fills in amount, store, date and category.",
+   "PetsPage.scanner.takePhoto = 拍照 | Take photo",
+   "PetsPage.scanner.pickFromLibrary = 從相簿選 | Choose from library",
+   "PetsPage.scanner.scanning = AI 辨識中… | Reading receipt…",
+   "PetsPage.scanner.failed = AI 辨識失敗，請手動輸入。 | Couldn't read the receipt. Please enter it manually.",
+   "PetsPage.scanner.cameraDeniedTitle = 需要相機權限 | Camera access needed",
+   "PetsPage.scanner.cameraDeniedBody = 需要相機權限才能掃描收據。你也可以直接手動輸入。 | Allow camera access to scan receipts, or enter the expense manually.",
+   "PetsPage.scanner.openSettings = 前往設定 | Open Settings"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-19",
+  "title": "Reminder edit always resets the notified flag, which can cause duplicate pushes",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pets-page-content.tsx:238-252 (resetNotification only when triggerAt or notifyBeforeMinutes changed)",
+  "ios_ref": "apps/ios/src/components/pets/reminder-form.tsx:66-78 ({ resetNotification: true } unconditionally)",
+  "current_ios": "Editing just the title or description of an already-notified reminder writes notified=false. The scanReminders cron then re-sends the push because now is past trigger minus notifyBefore.",
+  "target": "Reset notified only when the schedule changed.",
+  "fix_plan": "In save(): `const scheduleChanged = reminder.triggerAt.toMillis() !== triggerAt.getTime() || reminder.notifyBeforeMinutes !== notifyBeforeMinutes;` and pass `{ resetNotification: scheduleChanged }`.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/reminder-form.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-20",
+  "title": "Reminder form differs from web: field order, defaults (notify 0 vs 60, +1h vs +24h), no linked-pet picker, edit title",
+  "category": "behavior",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/reminders/reminder-form-dialog.tsx:24-30 (default now+24h), 91-93 (notifyBefore default 60), 128-198 (order: title → triggerAt → repeat+notify → linkedPet → description), 55 (edit title Common.edit)",
+  "ios_ref": "apps/ios/src/components/pets/reminder-form.tsx:23-27 (next full hour), 53-55 (notify default 0), 103 (edit title Reminder.title '提醒'), 109-142 (order title → description → trigger → repeat → notify)",
+  "current_ios": "New iOS reminders notify at trigger time (web: 1 hour before) and default to the next hour. Description sits second. The reminder can't be re-linked to another pet or to none. Edit shows the title '提醒'.",
+  "target": "Match web order and defaults. Add a linked-pet SelectField (Common.none plus pets, default active pet). The edit sheet title is Common.edit.",
+  "fix_plan": "Change defaultTrigger to Date.now()+24h with seconds zeroed and the notify default to '60'. Reorder the JSX. Add a `pets` prop and a petId state (string, '' = none) passed into create/update (petId || undefined). Title: editing ? tC('edit') : tRem('add').",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/reminder-form.tsx",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Reminder.fields.linkedPet",
+   "Common.none",
+   "Common.edit",
+   "Reminder.add"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-22",
+  "title": "No way to delete a pet on iOS",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pets-page-content.tsx:322-339 (handleDeletePet + confirm), 474-482 (bottom '刪除 {name}' button in detail mode)",
+  "ios_ref": "apps/ios/src/lib/pets-write.ts:90-95 (deletePet unused); apps/ios/src/components/pets/pet-form.tsx (no delete); iOS has no pet detail route",
+  "current_ios": "A pet created by mistake (e.g. a duplicate after PETS-3) can't be removed from the app.",
+  "target": "In the PetForm edit sheet (editing only), a bottom destructive row: full-width card button, radius.xl, hairline border, 14px 600 in '#dc2626', label '{Common.delete} {pet.name}'. It confirms with title '{Common.delete}: {name}', the web body, and a destructive button. On success, close the sheet and refresh; usePetsData already falls back to the primary pet.",
+  "fix_plan": "Add `onDeleted?: () => void` to PetForm. Render the delete button after the bio field when editing. Alert.alert(`${tC('delete')}: ${pet.name}`, t('PetsPage.deletePetBody'), [cancel, {destructive, onPress: async () => { await deletePet(pet.petId); onSaved(); onClose(); }}]) with try/catch. The web body string is hard-coded and needs a new key.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-form.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.delete",
+   "Common.cancel"
+  ],
+  "needs_new_i18n_keys": [
+   "PetsPage.deletePetBody = 刪除後相關的健康紀錄與貼文照片仍會保留，但寵物本身會被移除。 | Health records and post photos are kept, but the pet itself will be removed."
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-23",
+  "title": "Pet form: walk-goal max 120 vs web 180 (silently clamps), missing hint, misleading error copy, edit title",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-walk-goal-input.tsx:36-43 (clamp to WALK_GOAL_MAX_MINUTES=180), 113 (hint); pet-form-dialog.tsx:117-119 (shows err.message), 128 (edit title Common.edit), 264 (weight placeholder 8.5)",
+  "ios_ref": "apps/ios/src/components/pets/pet-form.tsx:33 (WALK_GOAL_FORM_MAX=120), 205-213, 113-115 (catch always tPet('imageError')), 123 (title Pet.petDetail)",
+  "current_ios": "A pet with a 150-minute goal set on web is clamped to 120 as soon as the user taps a stepper on iOS. Any save failure (network or permission) shows '圖片處理失敗'. The edit sheet is titled '寵物詳情' and the header pencil's a11y label is also '寵物詳情' (web: '編輯').",
+  "target": "Max = WALK_GOAL_MAX_MINUTES (180) from @mango/shared-business. Show the PetEdit.walkGoal.hint under the stepper. Errors show the real message (fall back to Reminder.errors.saveFailed-style generic copy). Edit title and pencil a11y label are Common.edit. Weight placeholder '8.5'.",
+  "fix_plan": "Import WALK_GOAL_MAX_MINUTES and delete WALK_GOAL_FORM_MAX. In catch(e) use Alert.alert(e instanceof Error ? e.message : tPet('imageError')), keeping imageError only for picker failures. Set title={editing ? tC('edit') : tPet('addPet')}. In pet-header.tsx:83 use accessibilityLabel={tC('edit')}. Add the hint Text under the StepperField (see PETS-13).",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-form.tsx",
+   "apps/ios/src/components/pets/pet-header.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PetEdit.walkGoal.label",
+   "PetEdit.walkGoal.unit",
+   "PetEdit.walkGoal.hint",
+   "Common.edit",
+   "Pet.addPet"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-24",
+  "title": "0-pet empty hero differs: mango gradient disc with emoji vs web radial tint disc with tilted white paw card and + badge",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pets-empty-state.tsx:25-76 (pt-12 top-aligned; 140px radial brandTint→bgAlt disc; 96px card radius 34 rotated -6deg with brandDeep paw SVG; 38px + badge top-right; 22px title; 13.5px body max 280; btn-mango 50px pill with Plus icon; hint mt-6)",
+  "ios_ref": "apps/ios/src/components/pets/pets-empty-state.tsx:7-22; apps/ios/src/components/ui/EmptyState.tsx:39-48 (96px amber→brand gradient circle + '🐾' emoji, vertically centered)",
+  "current_ios": "A solid orange gradient circle with a 🐾 emoji, centered vertically on screen. The CTA has no Plus icon. There is no + badge.",
+  "target": "Web composition: top-aligned (paddingTop 48). A 140px circle filled with an SVG RadialGradient (react-native-svg; center 50%/35%, brandTint → bgAlt at 70%). Inside, a 96px card (radius 34, colors.card, shadows.card, transform rotate -6deg) holding the paw path from the web SVG (react-native-svg Path/Ellipse, 56px, brandDeep). A 38px card-colored circle badge (hairline border, small shadow) at top 6 / right -2 with Plus 20 brandDeep. Then title (22px 800), body (13.5px 500 ink2, maxWidth 280, centered), the btn-mango CTA (height 50, pill, white 16px 800) with Plus 18, and the hint (12px ink3, marginTop 24).",
+  "fix_plan": "Build the hero inside pets-empty-state.tsx with react-native-svg (Svg, Defs, RadialGradient, Stop, Circle, Ellipse, Path) instead of the shared EmptyState, so the Home empty state is unaffected. Use Button with `icon={<Plus size={18} color='#fff' strokeWidth={2.5} />}`. Check that Button's primary variant is the mango gradient with white text.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pets-empty-state.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PetsPage.empty.title",
+   "PetsPage.empty.body",
+   "PetsPage.empty.cta",
+   "PetsPage.empty.hint"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-25",
+  "title": "Pet switcher renders inline (pushes the tabs down) instead of a floating 240px panel; no active-row highlight or outside-tap dismiss",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-switcher-dropdown.tsx:65-125 (absolute, top 100%+4, w-60, radius 18, p-1.5, shadow-elevated; active row bg brandTint radius 12; row name 14 bold, meta 11; add row = 34px radius-12 tint square with Plus); pets-page-content.tsx:407-427 (relative wrapper, click-outside/Esc close)",
+  "ios_ref": "apps/ios/app/(tabs)/pets.tsx:189-202 (inline in the scroll flow); apps/ios/src/components/pets/pet-switcher.tsx:37-82, 87-135",
+  "current_ios": "A full-width card inserted between the header and the tabs, so everything below jumps down. Radius 14. The active row has only a check mark with no tint. Name 15 and sub 12. The add icon is a circular pill with a '＋' text glyph. It only closes via the chevron or a selection.",
+  "target": "An overlay panel anchored under the pet header: position absolute, left 0, top = header height + 4, width 240, zIndex 20, radius.xl (18), padding 6, hairline border, shadows.elevated. The active row gets a brandTint background with radius.md (12). Rows have padding 8 and gap 10. Name 14/700 and sub 11 ink3. The add row has a 34px brandTint square (radius 12) with lucide Plus 18. A transparent full-screen Pressable backdrop behind it closes the panel on outside tap.",
+  "fix_plan": "In pets.tsx wrap PetHeader and the switcher in `<View style={{ position:'relative', zIndex: 20 }}>`. Render PetSwitcher with absolute positioning, and render a sibling absolute backdrop Pressable (StyleSheet.absoluteFill on the screen container, outside the ScrollView, or a transparent Modal) that calls setSwitcherOpen(false). Update pet-switcher.tsx styles per target and swap the '＋' Text for <Plus/>. Keep the ScrollView maxHeight 240 for many pets.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-switcher.tsx",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PetsPage.switcher.addPet"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "PETS-26",
+  "title": "FAB sits far above the tab bar and the + is oversized",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/pets/pet-floating-add.tsx:44-54 (fixed right-5, bottom = safe-area + 5.25rem, which already includes the ~76px nav; size 56; Plus 22, stroke 2.5)",
+  "ios_ref": "apps/ios/app/(tabs)/pets.tsx:234-253 (bottom: insets.bottom + 76; Plus 28), 155 (scroll paddingBottom insets.bottom + 96); apps/ios/src/components/raised-tab-bar.tsx:78,160 (bar is in-flow with height BAR_H + insets.bottom, so the screen already ends above the bar)",
+  "current_ios": "Because the custom tab bar is in normal layout flow (position relative) and already consumes insets.bottom, the screen's bottom edge is the top of the bar. Adding insets.bottom + 76 floats the FAB about 110pt above the bar, versus about 8px on web. The + glyph is 28 versus web 22.",
+  "target": "FAB 16-20pt above the tab bar top, right 20, 56x56, Plus 22 stroke 2.5, gradient and brand shadow unchanged. Scroll paddingBottom of about 56 + 16 + 16 so the last card clears the FAB.",
+  "fix_plan": "Change bottom to spacing.lg (16), or 20 to match right-5, and drop insets.bottom. Set Plus size 22. Set contentContainer paddingBottom to 96 without insets.bottom. Verify on device with the raised center disc (the disc overlaps upward only at the center, and the FAB is right-aligned).",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "PETS-27",
+  "title": "Text glyphs instead of lucide icons in header, top bar, switcher, stepper and birthday controls",
+  "category": "icon",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/pets/pet-header.tsx:81-91 (ChevronDown 14 in 22px box, ink2, rotate 180 when open, motion-reduce); pets-top-bar.tsx:28 (Plus 16 stroke 2.5, pl-2 pr-3 gap-1); pet-walk-goal-input.tsx:79,109 (Minus/Plus 16 in 40px radius-8 bordered buttons)",
+  "ios_ref": "apps/ios/src/components/pets/pet-header.tsx:64-68 ('⌄' text, ink3); apps/ios/app/(tabs)/pets.tsx:175 ('＋ ' text); apps/ios/src/components/pets/form-sheet.tsx:226,238 ('−'/'＋' text in brandTint circles); pet-form.tsx:188,201 ('✕', '＋')",
+  "current_ios": "Unicode glyphs render at inconsistent weights and baselines. The chevron uses ink3 (web ink2). The top-bar pill has symmetric padding.",
+  "target": "lucide-react-native ChevronDown (14, stroke 2.2, ink2) inside a 22px box, rotated 180deg when open (no animation, so reduced-motion is satisfied). Top-bar pill: Plus 16 stroke 2.5, paddingLeft 8, paddingRight 12, gap 4. Stepper: Minus and Plus 16 in 40x40 radius.sm card buttons with a hairline border (web style), the value in a hairline box with the unit. Birthday add and clear use Plus and X icons.",
+  "fix_plan": "Swap the Text glyphs for lucide components in the listed files. Restyle StepperField per web: 40px square buttons radius 8, border hairline, card bg, ink2 icon, disabled opacity .4 at min/max.",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-header.tsx",
+   "apps/ios/app/(tabs)/pets.tsx",
+   "apps/ios/src/components/pets/form-sheet.tsx",
+   "apps/ios/src/components/pets/pet-form.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PetsPage.addPet"
+  ],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-28",
+  "title": "Tab pill bar is not sticky while scrolling",
+  "category": "layout",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/pets/pet-tabs.tsx:35-41 (sticky top-0, pt-3.5 pb-2.5, bg gradient fade from mango-bg)",
+  "ios_ref": "apps/ios/app/(tabs)/pets.tsx:152-231 (tabs are a normal child of the ScrollView, tabsWrap marginVertical 8)",
+  "current_ios": "On long reminder or expense lists the 4-tab switch scrolls away, so switching tabs needs a scroll back to the top.",
+  "target": "The tabs stick to the top of the scroll area with a colors.bg background (padding 14 top / 10 bottom). Optionally add a short bottom fade with an expo-linear-gradient from bg to transparent.",
+  "fix_plan": "Restructure the ScrollView children so the tabs wrapper is a direct child at a known index: [0] top bar, [1] header+switcher View, [2] tabs View, [3] body View. Then set `stickyHeaderIndices={[2]}`. Give the tabs wrapper backgroundColor colors.bg, paddingTop 14, paddingBottom 10. The switcher overlay from PETS-25 must keep a higher zIndex.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "PETS-29",
+  "title": "Overview polish: section header weight and spacing, stat label uppercase, avatar paw overlay",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/pets/pets-section-header.tsx:18-21 (14px 700, pt-5 pb-2); pet-stat-grid.tsx:69 (label uppercase tracking .3); pet-avatar.tsx:76-94 (at >=48px a 16px white paw badge bottom-right, onError falls back to the initial)",
+  "ios_ref": "apps/ios/src/components/pets/pet-overview-body.tsx:209 (wrap gap 12), 231-237 (no textTransform), 242-248 (sectionTitle 800), 248 (sectionGap 8); apps/ios/src/components/ui/Avatar.tsx:48-66 (no paw badge, no onError fallback)",
+  "current_ios": "Section titles are heavier (800 vs 700), with about 12-20px spacing versus web's 20px above and 8px below. English stat labels are not uppercased. The no-photo avatar lacks the paw badge, and a broken photoURL shows an empty tinted square.",
+  "target": "Section title 14px 700, marginTop 20 (8 for the first) and marginBottom 8, no extra gap. tileLabel textTransform 'uppercase'. PetAvatar: for size >= 48 without a photo, add an absolute 16px circle (white 90%, small shadow) at right 4 / bottom 4 with a 10px brandDeep paw (react-native-svg). Image onError switches to the initial fallback.",
+  "fix_plan": "Adjust StyleSheet values in pet-overview-body.tsx. Add the paw overlay and `const [errored,setErrored]=useState(false)` with `<Image onError={() => setErrored(true)}>` in PetAvatar (or Avatar behind a `pawBadge` prop so feed avatars stay unchanged).",
+  "files_to_touch": [
+   "apps/ios/src/components/pets/pet-overview-body.tsx",
+   "apps/ios/src/components/pets/pet-avatar.tsx",
+   "apps/ios/src/components/ui/Avatar.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ }
+]

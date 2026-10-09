@@ -1,0 +1,1556 @@
+{
+ "HOME-1": {
+  "lane": "HOME",
+  "severity": "P0",
+  "title": "Home data never reloads after family switch / pet add / post elsewhere (no family-context dependency, no focus refresh)",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-2": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "Load failure is silent: an offline/failed load shows the 0-pet welcome hero or an empty feed, and can raise an unhandled rejection",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-3": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "0-pet variant drops the HomeTopBar and is not scrollable or refreshable",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-4": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "Empty-state hero differs: emoji gradient disc instead of a PawPrint tile on a radial halo with confetti; CTA has no Plus icon; wrong section order",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-5": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "Missing secondary '加入家庭' outlined CTA in the 0-pet hero",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-6": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "3-step strip uses emojis and › arrows instead of numbered badge cards",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-7": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "'No posts' hint is a static centered box; web is a tappable composer row with a PenSquare icon",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-8": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "Missing the full-width '查看更多動態' CTA under the feed",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-9": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "Guest upgrade nudge banner missing on iOS Home",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-10": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "Guests can open the composer and see reactions, comments and the report/block menu on Home; all of these writes are rejected by rules",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-11": {
+  "lane": "HOME",
+  "severity": "P1",
+  "title": "InviteFamilyCard: emoji instead of lucide Users, only the CTA is tappable, wrong radius/shadow/CTA color",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-12": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "PostCard on Home: hard-coded Chinese strings, zh-only relative time, emoji visibility markers instead of lucide icons",
+  "state": "done",
+  "note": ""
+ },
+ "HOME-13": {
+  "lane": "A3",
+  "severity": "P2",
+  "title": "Wasteful home load: fetches up to 3×30 posts to show 10, runs scope/friends/blocked reads one after another, and makes an extra family doc read",
+  "state": "done",
+  "note": ""
+ },
+ "HOME-14": {
+  "lane": "HOME",
+  "severity": "P2",
+  "title": "FeedSectionHeader typography and chevron differ, and the 'view all' link is hidden when there are no posts",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-15": {
+  "lane": "HOME",
+  "severity": "P2",
+  "title": "YourStoryAvatar: text '＋' glyph instead of lucide Plus; missing bgAlt fill; plus-disc ring uses white instead of page bg; label weight",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-16": {
+  "lane": "HOME",
+  "severity": "P2",
+  "title": "PetStoryAvatar: the label doesn't encode status (web: pending bold ink, done semibold ink2); item width and ring padding differ",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-17": {
+  "lane": "HOME",
+  "severity": "P2",
+  "title": "HomeTopBar pill: icon size/color differ, and the user-label fallback shows an email prefix or English 'Friend' where web shows no pill",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-1": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Friends screen has no guest (anonymous) gate — guests see tabs/QR and hit rules-denied writes",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-2": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Friends header: small centered '好友' + icon-only QR disc instead of RouteHeader (26px title + subtitle) + labeled '我的 QR' secondary button",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-3": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Friends/requests have no loading state and listener errors are swallowed (empty-state flash / permanent false empty)",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-4": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Request row actions are text pills (flat brand '接受' / grey '拒絕') instead of icon buttons Check (green tint) + UserX; no busy guard; hard-coded '失敗' alerts",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-5": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Friend row remove uses X icon with no a11y label; confirm buttons hard-coded '取消/移除'; no busy guard",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-6": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Search tab: emoji '🔍' button, flat-brand text-only '加好友', no 'no results' state, search/send errors swallowed, hard-coded strings",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-7": {
+  "lane": "SOCIAL",
+  "severity": "P2",
+  "title": "Friends empty states are plain centered text; web uses EmptyState card (dashed border, Users icon tile)",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-8": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "My QR modal: no Mango logo overlay, no display name, copy feedback via blocking Alert, hard-coded '分享'/'關閉', flat close button",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-9": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Friend-add: error state removes the send button (no retry) and hides the real error; not-found has no back CTA; back() dead-ends on cold deep link",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-10": {
+  "lane": "SOCIAL",
+  "severity": "P2",
+  "title": "Friend-add layout/copy: centered floating content vs web RouteHeader + white card; flat button w/o icon or '送出中…'; hard-coded sent/self/sign-in strings",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-11": {
+  "lane": "SOCIAL",
+  "severity": "P0",
+  "title": "Photos: primary 'Save N unsaved photos' / 'All saved' action is missing on iOS",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-12": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Photos header + save-selected placement: small nav title and floating flat-orange bottom bar vs web RouteHeader with stacked primary/secondary buttons",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-13": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Photo grid cell is a bare image; web card has info footer (pet/title/date), per-photo Download button, 44pt select button and check-icon 'saved' badge",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-14": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Photos filter pills: active = brandTint/brandDeep text, inactive = bgAlt, 34pt — web active is solid brand + white text, inactive white + hairline, 40pt",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-15": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Photos empty states: filter-empty shows the global 'no photos' copy; no CTAs (去發動態 / 開始遛狗), no icon; no pull-to-refresh when empty",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-16": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Photos ignores failedSources (no partialError banner) and load() has no catch — a failed family lookup shows a false 'no photos' with an unhandled rejection",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-17": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Batch save: permission requested per photo, denial reported as 'partial 0', failed items deselected, lightbox single-save unguarded; remote image re-encoded via ImageManipulator",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-18": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Gallery renders up to ~400 full-size images via ScrollView.map, and the lightbox mounts every filtered photo at once",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-19": {
+  "lane": "SOCIAL",
+  "severity": "P2",
+  "title": "Lightbox save control is an emoji '⬇︎' with hard-coded '儲存到相簿' label; screens use hard-coded '返回' a11y labels",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-20": {
+  "lane": "A3",
+  "severity": "P2",
+  "title": "Photos resolves family scope itself (resolveCurrentFamilyId) instead of consuming useFamily() — same pattern as R08",
+  "state": "done",
+  "note": ""
+ },
+ "SOCIAL-21": {
+  "lane": "SOCIAL",
+  "severity": "P2",
+  "title": "Gallery asset titles hard-coded in Chinese in iOS aggregator (web hard-codes English) — shown in card footer and a11y",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-22": {
+  "lane": "SOCIAL",
+  "severity": "P2",
+  "title": "Friend/request/search rows: radius md + no shadow, avatar 44 and name 15/700 vs web card (shadow-sm) avatar 40, 14/600",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-1": {
+  "lane": "A3",
+  "severity": "P0",
+  "title": "R08: walks data reads its own currentFamilyId instead of the family context, so the family scope goes stale after a switch",
+  "state": "done",
+  "note": ""
+ },
+ "WALKS-2": {
+  "lane": "WALKS",
+  "severity": "P0",
+  "title": "Walks tab never refetches on focus: a newly added pet or walk does not show up, and no pull-to-refresh",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-3": {
+  "lane": "WALKS",
+  "severity": "P0",
+  "title": "Recent-walk row is the old WalkCard layout: no delete, no walker line, no photo thumbnail, wrong icons and time format",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-4": {
+  "lane": "WALKS",
+  "severity": "P1",
+  "title": "R20: walks home and its child components hard-code zh-TW copy, and several strings differ from web",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-5": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "No pending-walk draft recovery banner (web walk-drafts), and R16 session identity not persisted",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-6": {
+  "lane": "WALKS",
+  "severity": "P1",
+  "title": "Pet picker differs from web (content, icons, manage link) and the selection is not persisted",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-7": {
+  "lane": "WALKS",
+  "severity": "P1",
+  "title": "Manual walk dialog: no start/end time pickers, different validation, hard-coded copy, flat brand Save button, no keyboard avoidance",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-8": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "Guests get the auto-photo-share prompt; web skips it because guests cannot post",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-9": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "Refreshing right after a save double-counts today's minutes on the done/recap screen",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-10": {
+  "lane": "WALKS",
+  "severity": "P1",
+  "title": "Empty states use emoji and plain text instead of the web EmptyState with a Footprints icon",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-11": {
+  "lane": "WALKS",
+  "severity": "P1",
+  "title": "Walks tab has no iPad content-width cap",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-12": {
+  "lane": "A3",
+  "severity": "P1",
+  "title": "iOS loads at most 50 walks while web loads all, so streak, week stats and 'View all' can diverge",
+  "state": "done",
+  "note": ""
+ },
+ "WALKS-13": {
+  "lane": "WALKS",
+  "severity": "P2",
+  "title": "Manual-log button uses an emoji instead of the lucide Hand ghost button",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-14": {
+  "lane": "WALKS",
+  "severity": "P2",
+  "title": "Start CTA is smaller than the web v2 pill (54 vs 62 tall)",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-15": {
+  "lane": "WALKS",
+  "severity": "P2",
+  "title": "Week-strip details: 22 radius (web 16), dashed today border (web solid), halo drawn inside the circle",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-16": {
+  "lane": "WALKS",
+  "severity": "P2",
+  "title": "No goal-hit confetti on the walks home",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-17": {
+  "lane": "WALKS",
+  "severity": "P2",
+  "title": "Dial and hero polish: flat glow, check badge ring drawn inside, hero weight 800 vs 700, dial bottom spacing",
+  "state": "todo",
+  "note": ""
+ },
+ "WALKS-18": {
+  "lane": "UNASSIGNED",
+  "severity": "P2",
+  "title": "R11: today's progress for the selected pet's goal counts every family walk, for all pets",
+  "state": "todo",
+  "note": ""
+ },
+ "FEED-1": {
+  "lane": "FEED",
+  "severity": "P0",
+  "title": "No guest gating anywhere in iOS feed (compose, reactions, comments, report menu)",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-2": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Feed header differs: wrong title, no subtitle, '＋' glyph instead of the primary 發文 button",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-3": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Empty state is plain text with no icon, no compose CTA and no pull-to-refresh",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-4": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Unbounded feed rendered with .map inside ScrollView (up to ~90 cards, each firing a reaction read)",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-5": {
+  "lane": "A3",
+  "severity": "P1",
+  "title": "feed-data resolves family scope itself (R08): stale pets/scope after a family switch; serial awaits; unguarded rejection",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-6": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Reaction main-button tap switches a non-❤️ reaction to ❤️ instead of removing it",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-7": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Reaction counts never re-sync from props after pull-to-refresh",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-8": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Reaction tray opener uses 🙂/✕ text glyphs instead of lucide SmilePlus; tray is inline and hard-coded labels",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-9": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Comment delete has no confirm, failures are silent, and the report menu is hidden on others' comments on your own post",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-10": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Comment row layout and composer don't match web (no bubble, inline time, text 送出 button, no avatar)",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-11": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Hard-coded Chinese strings across comment-section instead of Comments.* keys (copy also differs)",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-12": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Composer copy hard-coded and different from web Post.* keys",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-13": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Composer publish button is flat brand, not btn-mango gradient; visibility chips use emoji and tint instead of lucide icons and a solid selected state; no header X",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-14": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Partial photo-upload failure leaves the composer open and never refreshes the feed (risk of duplicate posts)",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-15": {
+  "lane": "FEED",
+  "severity": "P2",
+  "title": "Post card header: visibility shown as trailing emoji (not lucide icon before time); time strings not localized",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-16": {
+  "lane": "FEED",
+  "severity": "P2",
+  "title": "Post delete confirm and other post-card labels hard-coded; confirm copy differs from web",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-17": {
+  "lane": "FEED",
+  "severity": "P2",
+  "title": "Post actions row layout and comment pill styling differ from web",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-18": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Lightbox save: no busy state (double-tap saves duplicates), text glyph instead of lucide Download, wrong success copy, hard-coded labels",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-19": {
+  "lane": "FEED",
+  "severity": "P2",
+  "title": "Lightbox: no tap-backdrop-to-close, dots style differs, counter not via i18n, dismiss animations ignore reduced motion",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-20": {
+  "lane": "FEED",
+  "severity": "P2",
+  "title": "Report flow drops the optional note field and hard-codes 取消",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-21": {
+  "lane": "FEED",
+  "severity": "P2",
+  "title": "Composer photo previews: fixed 96px tiles, 24px remove button, no per-photo save; emoji add-photo buttons",
+  "state": "done",
+  "note": ""
+ },
+ "FEED-22": {
+  "lane": "SOCIAL",
+  "severity": "P2",
+  "title": "save-photo re-encodes via ImageManipulator (quality loss); permission error not surfaced",
+  "state": "todo",
+  "note": ""
+ },
+ "FEED-23": {
+  "lane": "FEED",
+  "severity": "P2",
+  "title": "iOS post card shows tagged-pet chips that the web post card does not render",
+  "state": "done",
+  "note": ""
+ },
+ "LEAD-1": {
+  "lane": "FAMACH",
+  "severity": "P0",
+  "title": "Achievements page missing on iOS (web /app/achievements has no iOS route, data module, or badge card)",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-2": {
+  "lane": "SETTINGS",
+  "severity": "P0",
+  "title": "Settings has no 成就徽章 entry card (web shows it right after profile/guest-upgrade)",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-3": {
+  "lane": "LEAD",
+  "severity": "P1",
+  "title": "Human board 家庭內 scope drops family members who haven't walked and never shows the 'only you' hint",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-4": {
+  "lane": "LEAD",
+  "severity": "P1",
+  "title": "Human board flashes the personal-mode 'join a family' empty state while the family context is still loading",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-5": {
+  "lane": "LEAD",
+  "severity": "P1",
+  "title": "Leaderboard empty states don't match web EmptyState (no dashed card, no lucide icon disc, personal mode loses the page title, friends CTA uses the wrong button variant)",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-6": {
+  "lane": "LEAD",
+  "severity": "P1",
+  "title": "Board header typography and vertical rhythm smaller and tighter than web RouteHeader",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-7": {
+  "lane": "LEAD",
+  "severity": "P1",
+  "title": "Row glow is invisible on the user's own (highlighted) row and starts at full intensity instead of pulsing",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-8": {
+  "lane": "LEAD",
+  "severity": "P1",
+  "title": "Manual refresh doesn't refetch friends (dog board) or members (human board); friend fetch not cancelled / not reset on sign-out",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-9": {
+  "lane": "LEAD",
+  "severity": "P1",
+  "title": "Realtime leaderboard listeners stay live while the tab is unfocused / app backgrounded (tabs never unmount)",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-10": {
+  "lane": "LEAD",
+  "severity": "P2",
+  "title": "Row card shadow is clipped (overflow:hidden on the same view as shadows.card)",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-11": {
+  "lane": "LEAD",
+  "severity": "P2",
+  "title": "Dog row avatar is a rounded square; web dog row uses the round Avatar",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-12": {
+  "lane": "LEAD",
+  "severity": "P2",
+  "title": "Up to 100 rows rendered via .map inside a ScrollView; no native pull-to-refresh",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-13": {
+  "lane": "LEAD",
+  "severity": "P2",
+  "title": "Listener errors are indistinguishable from 'computing' (offline/permission error shows 排行榜計算中)",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-14": {
+  "lane": "LEAD",
+  "severity": "P2",
+  "title": "Persisted dimension/scope restore after first render causes a double subscribe and a wrong-board flash",
+  "state": "todo",
+  "note": ""
+ },
+ "LEAD-15": {
+  "lane": "A1",
+  "severity": "P2",
+  "title": "Leaderboard tab label hard-coded Chinese (tab bar '排行榜', Tabs.Screen title '排行')",
+  "state": "done",
+  "note": ""
+ },
+ "LEAD-16": {
+  "lane": "LEAD",
+  "severity": "P2",
+  "title": "Dog rows use the human-board i18n keys for walk count / score unit",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-1": {
+  "lane": "TRACK",
+  "severity": "P0",
+  "title": "Stop/save flow is a pre-save summary with unconfirmed 捨棄 and auto-close; web saves immediately and shows a post-save recap with retry/discard-draft + back/leaderboard CTAs",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-2": {
+  "lane": "TRACK",
+  "severity": "P0",
+  "title": "Manual pause / resume missing (service + UI)",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-3": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "No confirmation before stopping a walk",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-4": {
+  "lane": "TRACK",
+  "severity": "P0",
+  "title": "Tracking screen layout differs: header/pill, distance style, extra path-points line, round peach stop button vs full-width red stop",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-5": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "Live today-progress bar (stored + current session vs goal) missing during tracking",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-6": {
+  "lane": "TRACK",
+  "severity": "P0",
+  "title": "R16: start failure (and pre-permission state) still shows '● 記錄中'; start() result ignored; reset during pending start leaks location updates",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-7": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "R16: active walk session identity not persisted — app kill/relaunch loses the walk and can leave background location running with no UI",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-8": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "No local draft / recovery for stopped-but-unsaved walks; offline save leaves the UI stuck on a spinner",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-9": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "iOS createWalk is not idempotent: retry on a pre-minted id uses set() which rules reject as an update",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-10": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "endedAt is taken at save time (not stop time); missing startedAt silently fabricated",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-11": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "Done screen recomputes from live props after onSaved refresh → today minutes double-count (goal-hit/percent jump)",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-12": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "3-hour runaway auto-stop + notice missing",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-13": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "GPS status hints (weak signal / retrying / background gap) never shown during tracking",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-14": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "In-walk photo control: emoji dashed tile vs web pill button with counter; thumbnails lack upload/failed overlays, delete X, and save-to-album",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-15": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "Photo still uploading when the walk is saved is dropped from walk.photoURLs (orphaned in Storage)",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-16": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "Done screen lacks the '本次紀錄 (n)' photo grid + lightbox",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-17": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "Done-screen visuals differ: emoji trophy on invisible circle, solid tint bg (no gradient / no missed backdrop), 3 separate tiles incl. extra km/h, noPath condition",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-18": {
+  "lane": "TRACK",
+  "severity": "P2",
+  "title": "Notes input always expanded; web uses a collapsible '加備註' disclosure",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-19": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "END/START auto-photo prompt: no guest gate, no 1s post-save delay, and END flow closes the whole view instead of returning to the recap",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-20": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "PhotoPromptSheet styling: flat brand button with INK text + emoji, sheet radius, no iPad width cap, slide ignores reduced motion",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-21": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "R20: hard-coded (and divergent) Chinese strings across tracking view, prompt sheet, share flow, camera modal",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-22": {
+  "lane": "TRACK",
+  "severity": "P2",
+  "title": "Location-denied screen has no 'Open Settings' action and uses emoji",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-23": {
+  "lane": "TRACK",
+  "severity": "P2",
+  "title": "Confetti: hard-coded 320pt width, reduced-motion shows static slivers (web hides), streak pop + overlay motion ignore reduced motion",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-24": {
+  "lane": "WALKS",
+  "severity": "P2",
+  "title": "Walks-home goal-hit 'paper' confetti (ConfettiCanvas, 4s auto-hide) has no iOS counterpart",
+  "state": "todo",
+  "note": ""
+ },
+ "TRACK-25": {
+  "lane": "A3",
+  "severity": "P1",
+  "title": "R08: tracking view saves with familyId/pets resolved by useWalksData, not the family context → stale scope after a family switch",
+  "state": "done",
+  "note": ""
+ },
+ "TRACK-26": {
+  "lane": "UNASSIGNED",
+  "severity": "P2",
+  "title": "R11: done-screen goal/percent blends ALL family walks today with the active pet's goal (needs PM semantics)",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-1": {
+  "lane": "SETTINGS",
+  "severity": "P0",
+  "title": "Achievements entry card and the achievements screen are missing on iOS",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-2": {
+  "lane": "A2",
+  "severity": "P0",
+  "title": "Language switcher section (語言 / Language, 繁中|EN) is missing; the iOS locale is frozen at app start",
+  "state": "done",
+  "note": ""
+ },
+ "SETTINGS-3": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "Guest gating does not match web: iOS hides the family, engagement push, walk auto-photo, export and delete-account sections from guests",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-4": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "Settings card shell differs: most cards use radius lg (14) instead of xl (18), padding 16 instead of 24, and no shadow-card",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-5": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "Page header: title is the hard-coded '設定' at 22/800 instead of t('Nav.settings') at the RouteHeader 26/800/-0.5 style",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-6": {
+  "lane": "SETTINGS",
+  "severity": "P2",
+  "title": "Web's top-right '更多' overflow-drawer trigger has no iOS counterpart",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-7": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "The push retry link calls a key that does not exist, t('Common.retry'), so iOS renders a raw '[missing \"zh-TW.Common.retry\" translation]' string",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-8": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "Hard-coded Chinese and activeLocale-ternary strings across the settings and family surfaces (R20-style)",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-9": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "Push card has no state icon disc (Bell / BellRing / BellOff) and no 'Test' push action",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-10": {
+  "lane": "SETTINGS",
+  "severity": "P2",
+  "title": "Engagement push section is missing the Sparkles header disc, per-row Bell icons, row dividers, pending guard and error text",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-11": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "Walk auto-photo and leaderboard visibility: no loading state, no pending guard, unhandled read rejection, no error text",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-12": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "Delete-account sheet: the keyboard covers the confirm input and buttons, and a failed preview stays on 'loading' forever",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-13": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "Delete-account content differs: no red warning box, no 'my activity' and cascade lines, no 'nothing to delete' state, hint always visible, orange instead of red confirm button",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-14": {
+  "lane": "FAMACH",
+  "severity": "P1",
+  "title": "Family create/join sheets: keyboard covers the input and submit, no cancel button, and join maps every failure to 'invalid code'",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-15": {
+  "lane": "FAMACH",
+  "severity": "P1",
+  "title": "No 'move personal data into the family' import wizard after creating or joining a family",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-16": {
+  "lane": "FAMACH",
+  "severity": "P2",
+  "title": "Inline family card detail differences: copy feedback, regen spinner, members loading, owner badge, remove icon, leave colour, '＋' glyph, switch pill style",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-17": {
+  "lane": "FAMACH",
+  "severity": "P1",
+  "title": "Standalone /family screen is a ~450-line divergent copy of the inline family card (different layout, hard-coded strings)",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-18": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "Guest upgrade card layout and flow differ from web (no Sparkles row, no CTA-to-sheet, coarse errors, no conflict acknowledgement)",
+  "state": "done",
+  "note": ""
+ },
+ "SETTINGS-19": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "Cancelling Google bind shows a 'binding failed' error, because google-signin v13 returns {type:'cancelled'} instead of throwing",
+  "state": "done",
+  "note": ""
+ },
+ "SETTINGS-20": {
+  "lane": "SETTINGS",
+  "severity": "P1",
+  "title": "Settings tab stays mounted and never refreshes, and the same users/{uid} doc is read 4-5 times on mount",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-21": {
+  "lane": "A3",
+  "severity": "P1",
+  "title": "Switching family in Settings does not reach the Walks/Pets data hooks (R08), and switchFamily errors are unhandled",
+  "state": "done",
+  "note": ""
+ },
+ "SETTINGS-22": {
+  "lane": "SETTINGS",
+  "severity": "P2",
+  "title": "Profile card: guest subtitle shows the family 'personal mode' copy instead of the email placeholder; name weight differs; no shadow",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-23": {
+  "lane": "SETTINGS",
+  "severity": "P2",
+  "title": "Export button differs (full-width pill, no Download icon, spinner instead of 'downloading' label, no success text, silent when sharing is unavailable)",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-24": {
+  "lane": "SETTINGS",
+  "severity": "P2",
+  "title": "Blocked users: unblock failure is silent and the unblock button style differs",
+  "state": "todo",
+  "note": ""
+ },
+ "SETTINGS-25": {
+  "lane": "A3",
+  "severity": "P2",
+  "title": "Photos preview fetches before the family is resolved (double fetch, possible personal-only flash)",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-1": {
+  "lane": "PETSB",
+  "severity": "P0",
+  "title": "R08: Pets scope reads currentFamilyId itself; stale family after switch leads to writes into the wrong family",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-2": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "Pets tab never refetches on focus; data goes stale after walks/reminders change elsewhere",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-3": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "A load failure renders as the 0-pet empty state, with no error or retry",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-4": {
+  "lane": "PETSA",
+  "severity": "P0",
+  "title": "Expenses tab layout differs from web: no month-total bar or %-vs-last-month chip, no donut+legend card, different filter pills",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-5": {
+  "lane": "PETSA",
+  "severity": "P0",
+  "title": "Expenses can't be edited or deleted on iOS; list uses a legacy ExpenseRow instead of PetExpenseCard",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-6": {
+  "lane": "PETSA",
+  "severity": "P0",
+  "title": "Health records can't be deleted on iOS",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-7": {
+  "lane": "PETSA",
+  "severity": "P1",
+  "title": "Health record card design differs: emoji circle, different tones, no dashed detail row",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-8": {
+  "lane": "PETSA",
+  "severity": "P1",
+  "title": "Health weight-trend card: wrong title key, current/delta footer missing, extra 時間軸 heading",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-9": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "Tab empty states (reminders, expenses, health) are bare emoji text with no add CTA",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-10": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "Reminders tab is missing the summary row ('本月 X 條 · 已完成 Y' + sort hint)",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-11": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "Overview stat 'next reminder' shows '-1 天前' when overdue (shared-business carries the bug web already fixed)",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-12": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "Overview 'upcoming' reminder card shows check/trash buttons that do nothing",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-13": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "Hard-coded Chinese strings on the iOS Pets surface (R20 class)",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-14": {
+  "lane": "PETSA",
+  "severity": "P1",
+  "title": "Expense card icons are emoji instead of the web's lucide icons (category, AI chip, edit/delete)",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-15": {
+  "lane": "PETSA",
+  "severity": "P1",
+  "title": "Donut/legend category colors don't match web (grooming pink, 'other' nearly invisible)",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-16": {
+  "lane": "PETSA",
+  "severity": "P1",
+  "title": "Expense form is missing web parity: AI-prefill banner, editable items list, pet picker, edit mode; default category differs; silent save failure",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-17": {
+  "lane": "PETSA",
+  "severity": "P1",
+  "title": "Receipt scanner: no 'choose from library', wrong permission-denied copy, no preview/retake, no Settings link",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-18": {
+  "lane": "PETSA",
+  "severity": "P1",
+  "title": "Health form is missing the vaccine next-due and medication start/end dates; save failures are silent",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-19": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "Reminder edit always resets the notified flag, which can cause duplicate pushes",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-20": {
+  "lane": "PETSB",
+  "severity": "P2",
+  "title": "Reminder form differs from web: field order, defaults (notify 0 vs 60, +1h vs +24h), no linked-pet picker, edit title",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-21": {
+  "lane": "A3",
+  "severity": "P1",
+  "title": "Health records: no stale-request guard on pet switch, pull-to-refresh doesn't reload them, unbounded list",
+  "state": "done",
+  "note": ""
+ },
+ "PETS-22": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "No way to delete a pet on iOS",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-23": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "Pet form: walk-goal max 120 vs web 180 (silently clamps), missing hint, misleading error copy, edit title",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-24": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "0-pet empty hero differs: mango gradient disc with emoji vs web radial tint disc with tilted white paw card and + badge",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-25": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "Pet switcher renders inline (pushes the tabs down) instead of a floating 240px panel; no active-row highlight or outside-tap dismiss",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-26": {
+  "lane": "PETSB",
+  "severity": "P1",
+  "title": "FAB sits far above the tab bar and the + is oversized",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-27": {
+  "lane": "PETSB",
+  "severity": "P2",
+  "title": "Text glyphs instead of lucide icons in header, top bar, switcher, stepper and birthday controls",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-28": {
+  "lane": "PETSB",
+  "severity": "P2",
+  "title": "Tab pill bar is not sticky while scrolling",
+  "state": "todo",
+  "note": ""
+ },
+ "PETS-29": {
+  "lane": "PETSB",
+  "severity": "P2",
+  "title": "Overview polish: section header weight and spacing, stat label uppercase, avatar paw overlay",
+  "state": "todo",
+  "note": ""
+ },
+ "SHELL-1": {
+  "lane": "A2",
+  "severity": "P0",
+  "title": "Sign-in screen has no 'Continue as guest' entry (App Store review notes depend on it)",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-2": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "No guest upgrade nudge banner, no shared upgrade sheet, no GuestLockedNotice gates",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-3": {
+  "lane": "A1",
+  "severity": "P1",
+  "title": "Bottom tab labels and tab titles are hard-coded Chinese (English users see 首頁/我的寵物/遛狗/排行榜/設定)",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-4": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "Sign-in screen layout and copy diverge from the web landing (brand name, tagline, welcome card, Google icon, legal links)",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-5": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "Cancelling Google or Apple sign-in shows a '登入失敗' error alert with the raw native message; error codes are not mapped",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-6": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "Family invite deep link is lost when the user is signed out (no ?next= equivalent)",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-7": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "Join screen uses the legacy Join.* copy, emoji, flat button and bounces to the leaderboard; web uses JoinFamily.* title+hint, an icon tile and goes home",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-8": {
+  "lane": "FAMACH",
+  "severity": "P1",
+  "title": "Onboarding create/join skips the 'move personal data into the family' import wizard",
+  "state": "skipped",
+  "note": "[A2] Another lane does the personal-data import wizard. A clearly marked SHELL-8 HOOK POINT is in app/onboarding.tsx handleCreatedOrJoined(newFamilyId): open the wizard there and call handleImportComplete() from its onComplete and onClose. "
+ },
+ "SHELL-9": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "Onboarding visual structure differs: emoji instead of icon tiles, no per-card CTA button, flat primary button, hard-coded strings",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-10": {
+  "lane": "A1",
+  "severity": "P1",
+  "title": "No shared RouteHeader: page titles are 22pt or 18pt nav-bar style with hard-coded strings instead of web's 26/800 header",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-11": {
+  "lane": "A1",
+  "severity": "P1",
+  "title": "No shared Dialog primitive; a dozen hand-rolled slide-up modals ignore Reduce Motion, and the Sheet primitive is unused with a hard-coded '取消'",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-12": {
+  "lane": "A1",
+  "severity": "P1",
+  "title": "Confirm dialogs: Alert.alert sites hard-code 取消/刪除/移除/失敗 and post-delete copy; no confirm() helper mirroring useConfirm",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-13": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "Profile-bootstrap error screen renders a missing-key marker (t('Common.retry') is not in the catalog) and is unstyled with hard-coded copy",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-14": {
+  "lane": "FAMACH",
+  "severity": "P1",
+  "title": "Achievements has no iOS route or entry point (web: settings card → /app/achievements)",
+  "state": "todo",
+  "note": ""
+ },
+ "SHELL-15": {
+  "lane": "A1",
+  "severity": "P1",
+  "title": "EmptyState primitive does not match web (no card, emoji instead of icon tile) and most empty states are hand-rolled",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-16": {
+  "lane": "SETTINGS",
+  "severity": "P2",
+  "title": "Overflow 'More' drawer has no iOS equivalent (web settings top-right MoreHorizontal)",
+  "state": "todo",
+  "note": ""
+ },
+ "SHELL-17": {
+  "lane": "A1",
+  "severity": "P2",
+  "title": "Button primitive: default radius 14 matches neither web nor the design-system SoT; icon is wrapped in <Text>; press scale 0.99 vs SoT .97",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-18": {
+  "lane": "A1",
+  "severity": "P2",
+  "title": "Tab semantics: bottom bar and Segmented tabs use accessibilityRole='button'; Segmented lives in the leaderboard folder although it is the ui/Tabs primitive",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-19": {
+  "lane": "A1",
+  "severity": "P2",
+  "title": "No Input/Textarea/FieldLabel primitives: text fields diverge per screen (height 48/52, card vs bgAlt fill) with no focus state",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-20": {
+  "lane": "FAMACH",
+  "severity": "P2",
+  "title": "Dead or duplicated shell code: PlaceholderScreen, Sheet, Pill and Card unused; app/family.tsx duplicates settings FamilySection (~450 lines each)",
+  "state": "todo",
+  "note": ""
+ },
+ "SHELL-21": {
+  "lane": "A2",
+  "severity": "P2",
+  "title": "No way to choose the UI language (web has a 繁中/EN switcher on the landing page and in settings)",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-22": {
+  "lane": "A1",
+  "severity": "P2",
+  "title": "Avatar fallback shows 1 grapheme vs web's 2-character initials",
+  "state": "done",
+  "note": ""
+ },
+ "SHELL-23": {
+  "lane": "XC",
+  "severity": "P2",
+  "title": "Re-tapping the active tab does not scroll to top",
+  "state": "skipped",
+  "note": "[FEED] Not applicable: feed is a pushed stack screen, not a tab. [PETSA] Not applicable: this lane owns no tab screen (pets.tsx belongs to PETSB). "
+ },
+ "XCUT-1": {
+  "lane": "A3",
+  "severity": "P0",
+  "title": "R08: data hooks resolve family scope themselves, ignore FamilyContext; stale scope after switch/join/leave and personal-scope writes on load failure",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-2": {
+  "lane": "A3",
+  "severity": "P0",
+  "title": "Tabs never refetch on focus and empty states have no pull-to-refresh; after adding the first pet, Walks/Home stay empty until app relaunch",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-3": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "R16: native tracking start failure (position_unavailable) still shows the '● 記錄中' recording screen",
+  "state": "todo",
+  "note": ""
+ },
+ "XCUT-4": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "R16: walk session identity not persisted, no draft recovery, one-tap discard without confirm",
+  "state": "todo",
+  "note": ""
+ },
+ "XCUT-5": {
+  "lane": "A2",
+  "severity": "P1",
+  "title": "Missing catalog key Common.retry renders '[missing \"zh-TW.Common.retry\" translation]'",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-6": {
+  "lane": "WALKS",
+  "severity": "P1",
+  "title": "R20: Walks tab + walk components hard-code zh-TW instead of the web's Walks.* keys",
+  "state": "todo",
+  "note": ""
+ },
+ "XCUT-7": {
+  "lane": "TRACK",
+  "severity": "P1",
+  "title": "R20: walk-tracking-view (tracking + done recap) hard-codes ~30 zh strings that map to Walks.core/Walks.celebration keys",
+  "state": "todo",
+  "note": ""
+ },
+ "XCUT-8": {
+  "lane": "A1",
+  "severity": "P1",
+  "title": "Bottom tab bar and Tabs.Screen titles hard-coded instead of Nav.* keys",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-9": {
+  "lane": "FEED",
+  "severity": "P1",
+  "title": "Feed/social components hard-code zh strings (comments, reactions, composer, post menu, lightbox) and comment delete has no confirm/failure message",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-10": {
+  "lane": "FEED",
+  "severity": "P2",
+  "title": "Locale-unaware relative time / weekday labels (format.ts relativeTime, walk-row '今天', week strip 一…日, reminder countdown)",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-11": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Family/Friends/Onboarding alerts and headers hard-code '取消/失敗/返回/關閉/好友/移除/分享'",
+  "state": "todo",
+  "note": ""
+ },
+ "XCUT-12": {
+  "lane": "XC",
+  "severity": "P2",
+  "title": "Remaining hard-coded strings: sign-in, settings header/guest name, inline activeLocale ternaries, pets units, receipt scanner, misc lib errors",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-13": {
+  "lane": "A3",
+  "severity": "P1",
+  "title": "Data hooks swallow load errors into empty arrays; offline looks like 'no pets / no walks / no photos'; Photos ignores failedSources",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-14": {
+  "lane": "A3",
+  "severity": "P1",
+  "title": "Stale async responses: health records race on pet switch; leaderboard friend/scope reads without catch",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-15": {
+  "lane": "SOCIAL",
+  "severity": "P1",
+  "title": "Feed (up to ~90 PostCards) and Photos grid (hundreds of images) rendered with .map inside ScrollView",
+  "state": "todo",
+  "note": ""
+ },
+ "XCUT-16": {
+  "lane": "XC",
+  "severity": "P1",
+  "title": "Icon-only buttons without accessibilityLabel and sub-44pt tap targets; text buttons missing accessibilityRole",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-17": {
+  "lane": "XC",
+  "severity": "P2",
+  "title": "Modal slide transitions and lightbox dismiss/snap-back animations not gated by useReducedMotion",
+  "state": "done",
+  "note": ""
+ },
+ "XCUT-18": {
+  "lane": "LEAD",
+  "severity": "P2",
+  "title": "Leaderboard onSnapshot listeners stay live while the tab is not focused",
+  "state": "todo",
+  "note": ""
+ },
+ "XCUT-19": {
+  "lane": "UNASSIGNED",
+  "severity": "P1",
+  "title": "R11: per-pet goal/progress/week flags/streak computed over all family walks (needs PM semantics)",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-M1": {
+  "lane": "HOME",
+  "severity": "P2",
+  "title": "iPad: HomeTopBar is not capped to CONTENT_MAX_WIDTH, so the title and bell sit at the screen edges while the content is a centered 480pt column",
+  "state": "todo",
+  "note": ""
+ },
+ "HOME-M2": {
+  "lane": "HOME",
+  "severity": "P2",
+  "title": "iOS-only tagged-pet chips on Home posts (🐾 emoji + hard-coded color) that the web PostCard does not render",
+  "state": "todo",
+  "note": ""
+ },
+ "SOCIAL-M1": {
+  "lane": "A1",
+  "severity": "P2",
+  "title": "ui Button primitive (prerequisite for most SOCIAL fixes): icon slot is wrapped in <Text> and horizontal padding is a fixed 24 for every size",
+  "state": "done",
+  "note": ""
+ },
+ "SOCIAL-M2": {
+  "lane": "UNASSIGNED",
+  "severity": "P2",
+  "title": "Friend QR cannot be used inside the iOS app: no in-app scanner, so apps/ios/app/friends/add.tsx is reachable only through a typed mangopet:// link",
+  "state": "todo",
+  "note": ""
+ }
+}

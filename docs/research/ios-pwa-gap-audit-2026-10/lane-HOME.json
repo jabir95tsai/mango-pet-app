@@ -1,0 +1,411 @@
+[
+ {
+  "id": "HOME-1",
+  "title": "Home data never reloads after family switch / pet add / post elsewhere (no family-context dependency, no focus refresh)",
+  "category": "state-handling",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/page.tsx:43,50-88 (refresh depends on useFamily().family; route navigation remounts page); use-today-walk-status.ts:39,60-65",
+  "ios_ref": "apps/ios/src/lib/feed-data.ts:50-82 (load deps [user, home]; resolves family itself via resolveCurrentFamilyId:56 + getFamilyName:66); apps/ios/app/(tabs)/_layout.tsx:7 (Tabs keep Home mounted); no useFocusEffect anywhere in apps/ios",
+  "current_ios": "useFeedData loads once on mount and re-reads users/{uid}.currentFamilyId itself (same R08 pattern). Because the Home tab stays mounted, switching family in /family or Settings, creating/joining a family, adding the first pet in the Pets tab (the 0-pet CTA sends you there), or posting from /feed leaves Home showing the old scope/pets/posts until a manual pull-to-refresh. The 0-pet hero has no RefreshControl at all, so a new user who adds a pet and comes back stays stuck on 'add your first pet'.",
+  "target": "Home follows the active family from FamilyProvider (like web useFamily) and refreshes silently when the tab regains focus.",
+  "fix_plan": "1) feed-data.ts: `const { family, loading: familyLoading } = useFamily()` from @/state/family-context. In load(): return early while familyLoading; `const fam = family?.familyId ?? null`; drop resolveCurrentFamilyId() and getFamilyName() (use family?.name for familyName). Add family?.familyId and familyLoading to the useCallback deps so a switchFamily()/refresh() in the context re-runs load. 2) Add a `silent` load mode (no setLoading/setRefreshing) and a `lastLoadedAt` ref. 3) app/(tabs)/index.tsx: `useFocusEffect(useCallback(() => { if (Date.now() - lastLoadedAt > 15_000) void refreshSilent(); }, [refreshSilent]))` (useFocusEffect is exported by expo-router, so no new dependency). Expose refreshSilent from useFeedData. app/feed.tsx gets the same fix because it uses the same hook. 4) Wrap the 0-pet branch in a ScrollView with the same RefreshControl (see HOME-3).",
+  "files_to_touch": [
+   "apps/ios/src/lib/feed-data.ts",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. feed-data.ts:56 calls resolveCurrentFamilyId(user.uid) and :66 calls getFamilyName. The load deps are [user, home] (:77) and it never consumes useFamily(). (tabs)/_layout.tsx keeps Home mounted, and a grep of apps/ios shows no useFocusEffect or useIsFocused anywhere. The 0-pet branch (index.tsx:71-77) has no RefreshControl and its CTA pushes /(tabs)/pets, so a new user who adds a pet and returns stays on the hero. Story rings are also stale after finishing a walk on the Walks tab. Web page.tsx:43,78,85-88 re-runs on useFamily().family and remounts per route. FamilyProvider (family-context.tsx:74-81) updates `family` on switchFamily and refresh, so consuming it works. expo-router 4.0.22 exports useFocusEffect (build/exports.d.ts:17), so no new dependency is needed. The plan is right but incomplete, see corrected plan.",
+  "corrected_fix_plan": "As proposed (consume useFamily(), drop resolveCurrentFamilyId/getFamilyName, add a throttled useFocusEffect silent refresh, add RefreshControl to the 0-pet branch), plus: (a) Add a request-generation guard (`const gen = useRef(0)`; at the start of load `const my = ++gen.current`; after the awaits `if (my !== gen.current) return;` before any setState). Once load re-runs on family change, a fast switch could otherwise let an older family's response overwrite the newer one. (b) Only the first load should show the full-screen spinner. Track `hasLoadedRef`; once data exists, any re-run triggered by family?.familyId changing, or by FamilyProvider.refresh() toggling `loading` (family-context.tsx:52), should use the refreshing/silent path. Otherwise creating or joining a family flashes a blank spinner over Home. While familyLoading is true and nothing is loaded yet, return early without touching the loading state. (c) Run the focus refresh in silent mode even when the last load is under 15s old, if `pets.length === 0`, so the add-first-pet round trip always updates."
+ },
+ {
+  "id": "HOME-2",
+  "title": "Load failure is silent: an offline/failed load shows the 0-pet welcome hero or an empty feed, and can raise an unhandled rejection",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/page.tsx:52-77 (Promise.allSettled, never throws)",
+  "ios_ref": "apps/ios/src/lib/feed-data.ts:55-75 (try/finally without catch; listPetsForScope(...).catch(() => []):61; void load(false):81)",
+  "current_ios": "If resolveCurrentFamilyId (or any awaited call before Promise.all) throws, load() rejects inside `void load(false)` (unhandled promise), loading flips false, and pets=[] renders the 'Welcome, add your first pet' hero to an existing user. If pets fail on their own, the same misleading hero appears. There is no error UI and no retry.",
+  "target": "Tell 'failed to load' apart from 'truly 0 pets'. Show an error card with a retry instead of the onboarding hero.",
+  "fix_plan": "In feed-data.ts add `const [error, setError] = useState(false)`. Wrap the load body in try/catch: set error=true on throw, and also when the pets query rejects (track it with Promise.allSettled the way web does instead of `.catch(() => [])` for pets). Keep the previously loaded pets/posts on a refresh failure so data doesn't blank. In index.tsx, before the `pets.length === 0` branch: if `error && pets.length === 0`, render HomeTopBar plus a centered card with t(\"Error.title\") and a mango Button t(\"Error.retry\") calling refresh(). On a refresh failure while data exists, show Alert.alert(t(\"Error.title\")) instead.",
+  "files_to_touch": [
+   "apps/ios/src/lib/feed-data.ts",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Error.title",
+   "Error.retry"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. feed-data.ts:55-75 uses try/finally with no catch, and `void load(false)` (:81) plus RefreshControl onRefresh both leave a rejection unhandled. The pets failure is swallowed as [] (:61), so index.tsx:71 renders the welcome hero to an existing user on any failure. Web page.tsx:53-58 uses allSettled (web also shows the hero when pets fail, but it never throws). Error.title and Error.retry exist in zh-TW.json ('出了點狀況' and '重試')."
+ },
+ {
+  "id": "HOME-3",
+  "title": "0-pet variant drops the HomeTopBar and is not scrollable or refreshable",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/page.tsx:108-124 (HomeTopBar rendered above HomeEmptyState)",
+  "ios_ref": "apps/ios/app/(tabs)/index.tsx:71-77; apps/ios/src/components/home/home-empty-state.tsx:65 (box flex:1 justifyContent center)",
+  "current_ios": "The 0-pet screen renders only HomeEmptyState, vertically centered in a non-scrolling View. There is no '🥭 芒果寵物' title, family/user pill or bell. On small iPhones (SE) the hero, steps and CTAs can clip, and there is no pull-to-refresh.",
+  "target": "Same top bar as the populated home, then the hero top-aligned (web uses pt-6, not vertical centering) inside a scroll view.",
+  "fix_plan": "index.tsx 0-pet branch: <SafeAreaView edges={['top']}> containing <HomeTopBar familyName={isPersonal ? null : familyName} userDisplayName={…}/> and then <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl …/>}><HomeEmptyState …/></ScrollView>. In home-empty-state.tsx change box to `{ alignItems:'center', gap: spacing.md, paddingTop: spacing.xl, paddingHorizontal: spacing.lg }` (remove flex:1 and justifyContent center).",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/index.tsx",
+   "apps/ios/src/components/home/home-empty-state.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. Web page.tsx:108-124 renders HomeTopBar above HomeEmptyState, and the hero uses pt-6 top alignment (home-empty-state.tsx:22). iOS index.tsx:71-77 renders only HomeEmptyState, and home-empty-state.tsx:65 has flex:1 with justifyContent center and no ScrollView or RefreshControl.",
+  "corrected_fix_plan": "As proposed. Also give the 0-pet ScrollView contentContainerStyle the same iPad cap as the populated branch (`width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center'`), and pass familyName from context (HOME-1) so a family member with 0 pets still sees their family pill."
+ },
+ {
+  "id": "HOME-4",
+  "title": "Empty-state hero differs: emoji gradient disc instead of a PawPrint tile on a radial halo with confetti; CTA has no Plus icon; wrong section order",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/home/home-empty-state.tsx:22-73 (168px radial halo brandTint→bgAlt; 120px white tile radius 36 + shadow-card; lucide PawPrint 64 brandDeep strokeWidth 1.6; 3 confetti bits brand/leaf/peach; title 24/800/-0.5; body max-w 290 14/500 ink2; CTA btn-mango h-52 pill full-width max 280 + Plus 18 strokeWidth 2.5; order hero→title→body→CTAs→steps)",
+  "ios_ref": "apps/ios/src/components/home/home-empty-state.tsx:24-59,66-86",
+  "current_ios": "The hero is a 96px amber→brand→brandDeep gradient circle with a 🐾 emoji. Title is 22pt. The steps strip is rendered BEFORE the CTA. The CTA is 48pt tall, auto-width with paddingHorizontal 32, has no Plus icon, and uses an ad-hoc gradient instead of theme.mangoGradient.",
+  "target": "Match the web hero: halo disc, white rounded tile with a lucide PawPrint, confetti, then title, body, the CTA stack, and finally the steps.",
+  "fix_plan": "Disc: a 168×168 View, radius 84, holding a react-native-svg <Svg><Defs><RadialGradient cx='50%' cy='35%'> stops brandTint 0 → bgAlt 0.7 → bgAlt with opacity 0 at 1</RadialGradient></Defs><Circle r=84 fill='url(#halo)'/></Svg> absolutely filled. Center a 120×120 View (backgroundColor colors.card, borderRadius 36, ...shadows.card) with <PawPrint size={64} color={colors.brandDeep} strokeWidth={1.6}/> from lucide-react-native. Add 3 absolute confetti Views: 8×8 brand radius 2 rotate 20deg at left 18/top 8; 6×12 leaf radius 2 rotate -15deg at right 14/bottom 18; 6×6 peach circle at right 6/top 30. Title: fontSize 24, fontWeight 800, letterSpacing -0.5. Body: maxWidth 290, fontSize 14, fontWeight 500, lineHeight 21. Reorder to title → body → CTA stack (HOME-5) → steps (HOME-6). CTA: <Button variant='primary' size='lg' pill fullWidth label={t('Home.empty.cta')} icon={<Plus size={18} color='#fff' strokeWidth={2.5}/>}/> inside a wrapper with width '100%' and maxWidth 280, height 52 (or a LinearGradient using mangoGradient.colors/locations/start/end + shadows.mango). Drop the local MANGO_GRADIENT constant.",
+  "files_to_touch": [
+   "apps/ios/src/components/home/home-empty-state.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Home.empty.title",
+   "Home.empty.body",
+   "Home.empty.cta"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "partially-correct",
+  "verdict_reason": "The gap is real: iOS home-empty-state.tsx:24-31 has a 96px amber→brand→brandDeep disc with a 🐾 emoji, title 22 (:71), steps before the CTA (:35-59), and a CTA 48 high with auto width and no Plus (:84). Web home-empty-state.tsx:22-73 matches the auditor's description. Two plan details are wrong. The Button primitive (ui/Button.tsx:46,72,142-143) has lg = 48pt minHeight and label weight 700, and it wraps `icon` inside a <Text>. So `<Button size='lg' pill fullWidth icon={<Plus/>}>` cannot produce the web 52px, 16/800 CTA, and the SVG-in-Text is untested in the codebase (no existing icon={<…/>} usage). The radial gradient also needs r≈82%, not the default 50%, to match CSS farthest-corner.",
+  "corrected_fix_plan": "Halo: a 168×168 View with radius 84 and overflow hidden, containing an absolutely filled <Svg width={168} height={168}><Defs><RadialGradient id='halo' cx='50%' cy='35%' fx='50%' fy='35%' r='82%'> with <Stop offset='0' stopColor={colors.brandTint}/>, <Stop offset='0.7' stopColor={colors.bgAlt}/> and <Stop offset='1' stopColor={colors.bgAlt} stopOpacity={0}/>, then </RadialGradient></Defs><Circle cx={84} cy={84} r={84} fill='url(#halo)'/></Svg>. r=82% approximates CSS farthest-corner for a center at 35% height. Tile, confetti, title and body as in the auditor's plan. Order: title → body → CTA stack → steps. Primary CTA: do NOT use <Button>. Build a dedicated Pressable (width '100%', maxWidth 280, ...shadows.mango, pressed transform scale 0.95 only when !useReducedMotion()) wrapping <LinearGradient colors={mangoGradient.colors} locations={mangoGradient.locations} start={mangoGradient.start} end={mangoGradient.end} style={{height:52, borderRadius: radius.pill, flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8}}>. Inside it, put <Plus size={18} color='#fff' strokeWidth={2.5}/> as a sibling of <Text style={{fontSize:16, fontWeight:'800', letterSpacing:-0.2, color:'#fff'}}>{t('Home.empty.cta')}</Text>. Wrap the CTA stack in a View {width:'100%', maxWidth:280, gap:10, marginTop:12, alignSelf:'center'}. Delete the local MANGO_GRADIENT."
+ },
+ {
+  "id": "HOME-5",
+  "title": "Missing secondary '加入家庭' outlined CTA in the 0-pet hero",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/home/home-empty-state.tsx:66-72 (Link /onboarding, h-12 pill, 1.5px hairline border, transparent, Users 14, 14.5/700 ink, text Home.empty.joinFamily)",
+  "ios_ref": "apps/ios/src/components/home/home-empty-state.tsx:46-59 (only the add-pet CTA); apps/ios/app/(tabs)/index.tsx:74",
+  "current_ios": "Only 'Add your first pet' is offered. A user who was invited to an existing family (with pets already there) has no join entry from Home.",
+  "target": "Below the primary CTA, a secondary outlined pill '加入家庭' (Users icon) that opens the iOS create/join family surface.",
+  "fix_plan": "Add an `onJoinFamily: () => void` prop to HomeEmptyState and render it below the primary CTA (gap 10) as a Pressable: height 48, borderRadius radius.pill, borderWidth 1.5, borderColor colors.hairline, transparent background, row-centered with gap 8, containing <Users size={14} color={colors.ink} strokeWidth={2}/> and Text (14.5/700/ink, letterSpacing -0.1) t('Home.empty.joinFamily'). Pressed state: backgroundColor colors.bgAlt. In index.tsx pass `onJoinFamily={() => router.push('/family')}`. /family's personal-mode branch hosts create + join, which is the iOS equivalent of web /onboarding. For guests, hide the button or show Guest.locked.family (see HOME-10).",
+  "files_to_touch": [
+   "apps/ios/src/components/home/home-empty-state.tsx",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Home.empty.joinFamily"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. Web home-empty-state.tsx:66-72 has a secondary outlined 'Home.empty.joinFamily' link with a Users icon. iOS home-empty-state.tsx renders only the add-pet CTA. Home.empty.joinFamily exists ('加入家庭'). /family is the right iOS target: iOS onboarding.tsx:37-40 finish() sets ONBOARDED_KEY and replaces to /(tabs)/walks, so it is not suitable. However, family.tsx:177-184 shows the Join button only in the personal branch, while JoinDialog (:274) is mounted in both branches. A plain push therefore lands an existing-family member on the management view with no join entry.",
+  "corrected_fix_plan": "As proposed, but deep-link straight into the join dialog: index.tsx `onJoinFamily={() => router.push({ pathname: '/family', params: { join: '1' } })}`. In app/family.tsx add `const { join } = useLocalSearchParams<{ join?: string }>()` and `useEffect(() => { if (join === '1' && !loading) setJoinOpen(true); }, [join, loading])`. JoinDialog is already mounted for both branches, so this works for personal and family users alike. For guests (user.isAnonymous), hide the button: the createFamily and joinFamilyByCode callables reject guests (functions/src/index.ts isGuestAuth)."
+ },
+ {
+  "id": "HOME-6",
+  "title": "3-step strip uses emojis and › arrows instead of numbered badge cards",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/home/home-empty-state.tsx:78-95 (grid-cols-3 gap-2, cards: border hairline, bg card, radius 14, p-2.5, left-aligned; 22px brandTint circle with number 12/800 brandDeep; title 12.5/800 ink; sub 10.5/600 ink3)",
+  "ios_ref": "apps/ios/src/components/home/home-empty-state.tsx:15-19,35-44,73-78",
+  "current_ios": "The strip uses 🐶 / 👨‍👩‍👧 / 🦮 emojis, centered text and absolute › arrows between steps, with no card containers. It is a different visual language from web.",
+  "target": "Three equal-width bordered cards with number badges, left-aligned, placed after the CTAs.",
+  "fix_plan": "Replace STEPS with [1,2,3]. Container: flexDirection row, gap 8, width '100%', marginTop 20. Each card: flex 1, borderWidth 1, borderColor colors.hairline, backgroundColor colors.card, borderRadius radius.lg (14), padding 10, gap 4, alignItems 'flex-start'. Badge: 22×22, radius 11, backgroundColor colors.brandTint, centered Text `${n}` 12/800 brandDeep. Title t(`Home.empty.step${n}.title`) 12.5/800 ink letterSpacing -0.1. Sub t(`Home.empty.step${n}.sub`) 10.5/600 ink3 letterSpacing 0.2. Remove the emoji and arrow styles.",
+  "files_to_touch": [
+   "apps/ios/src/components/home/home-empty-state.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Home.empty.step1.title",
+   "Home.empty.step1.sub",
+   "Home.empty.step2.title",
+   "Home.empty.step2.sub",
+   "Home.empty.step3.title",
+   "Home.empty.step3.sub"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. iOS home-empty-state.tsx:15-19,35-44,73-78 uses emoji steps, centered text and absolute › arrows with no card container. Web :78-95 is grid-cols-3 gap-2: bordered radius-14 cards with a 22px brandTint number badge, 12.5/800 title and 10.5/600 ink3 sub. All six Home.empty.stepN keys exist."
+ },
+ {
+  "id": "HOME-7",
+  "title": "'No posts' hint is a static centered box; web is a tappable composer row with a PenSquare icon",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/home/no-posts-hint.tsx:19-35 (button onClick=onCompose; row; 40px brandTint circle with PenSquare 20 brandDeep; left-aligned title 14/800 ink + hint 12.5/500 ink2; radius 18, bg cardSoft, border hairline, shadow-card, px-4 py-4); page.tsx:179",
+  "ios_ref": "apps/ios/app/(tabs)/index.tsx:111-115,165-177",
+  "current_ios": "A non-interactive View with centered text, radius 16, padding 24 and no icon. Tapping it does nothing, even though the copy points users at posting.",
+  "target": "Extract a NoPostsHint component matching web that opens the composer on tap.",
+  "fix_plan": "Create apps/ios/src/components/home/no-posts-hint.tsx: Pressable (accessibilityRole 'button', onPress=onCompose) styled flexDirection row, alignItems center, gap 12, marginHorizontal spacing.lg, marginTop 4, paddingHorizontal 16, paddingVertical 16, borderRadius radius.xl (18), borderWidth 1, borderColor colors.hairline, backgroundColor colors.cardSoft, ...shadows.card, pressed → backgroundColor colors.bgAlt. Left: 40×40 circle brandTint with lucide-react-native <PenSquare size={20} color={colors.brandDeep} strokeWidth={1.8}/> (use SquarePen if PenSquare isn't exported by the installed version). Right: flex 1 column with title t('Home.feed.emptyTitle') 14/800 ink and hint t('Home.feed.emptyHint') 12.5/500 ink2 marginTop 2. In index.tsx replace the hint View with <NoPostsHint onCompose={() => setComposerOpen(true)}/> (guests: see HOME-10) and delete the hint/hintTitle/hintBody styles.",
+  "files_to_touch": [
+   "apps/ios/src/components/home/no-posts-hint.tsx",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Home.feed.emptyTitle",
+   "Home.feed.emptyHint"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. Web no-posts-hint.tsx:19-35 is a tappable button (onCompose) with a 40px brandTint circle, PenSquare 20/1.8, left-aligned 14/800 + 12.5/500, radius 18, cardSoft, shadow-card, and it is used at page.tsx:179. iOS index.tsx:111-115,165-177 is a static centered View with radius 16 and padding 24. lucide-react-native 1.17.0 exports PenSquare as an alias of SquarePen, so either name works."
+ },
+ {
+  "id": "HOME-8",
+  "title": "Missing the full-width '查看更多動態' CTA under the feed",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/page.tsx:170-176 (Link /app/feed, mt-4 full-width pill, border hairline, bg card, px-5 py-3, 13/800 brandDeep, shadow-card, ChevronRight 14 strokeWidth 2.4, text Home.feed.viewAllLong)",
+  "ios_ref": "apps/ios/app/(tabs)/index.tsx:117-131 (feed ends with no CTA); apps/ios/src/lib/feed-data.ts:99 (hasMoreThanHome computed but unused)",
+  "current_ios": "After the 10 home posts the scroll just ends. The only way into /feed is the small header link at the top.",
+  "target": "A full-width pill CTA after the post list whenever posts.length > 0 (web shows it even at exactly 10).",
+  "fix_plan": "After the feed View in index.tsx (posts.length > 0 branch) add a Pressable (accessibilityRole 'link', onPress router.push('/feed')) with marginHorizontal spacing.lg, marginTop 16, minHeight 44, paddingVertical 12, paddingHorizontal 20, borderRadius radius.pill, borderWidth 1, borderColor colors.hairline, backgroundColor colors.card, ...shadows.card, flexDirection row, center, gap 4. Contents: Text t('Home.feed.viewAllLong') 13/800 brandDeep and <ChevronRight size={14} color={colors.brandDeep} strokeWidth={2.4}/>. Pressed state: backgroundColor colors.bgAlt. Remove the unused hasMoreThanHome or leave it.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Home.feed.viewAllLong"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. Web page.tsx:170-176 renders a full-width pill Link to /app/feed with Home.feed.viewAllLong ('查看更多動態') and ChevronRight 14/2.4 whenever posts exist. iOS index.tsx:116-130 ends the list with no CTA, and hasMoreThanHome (feed-data.ts:99) is unused."
+ },
+ {
+  "id": "HOME-9",
+  "title": "Guest upgrade nudge banner missing on iOS Home",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/layout.tsx:17 (mounted above every /app page incl. home); apps/web/src/components/auth/guest-upgrade-nudge.tsx:20-91 (guest && ≥1 personal pet; localStorage 'mango.guestNudgeDismissed'; Sparkles tile; title/body; btn-mango CTA + ghost dismiss + X)",
+  "ios_ref": "apps/ios/app/(tabs)/index.tsx (no guest handling); the only guest upgrade surface is apps/ios/src/components/settings/guest-upgrade-section.tsx via settings.tsx:82",
+  "current_ios": "Anonymous users with pets never get the dismissible 'bind your account so you don't lose data' prompt on Home. The only upgrade entry is buried in Settings, so data-loss risk is higher on iOS (device-bound guest).",
+  "target": "The same dismissible banner at the top of Home for guests with ≥1 pet.",
+  "fix_plan": "New apps/ios/src/components/auth/guest-upgrade-nudge.tsx with props { petCount }. Show when `user?.isAnonymous && petCount > 0` and AsyncStorage.getItem('mango.guestNudgeDismissed') is null (read in useEffect, try/catch). Layout: row, alignItems flex-start, gap 12, padding 16, borderRadius radius.sm (web rounded-lg = 8), borderWidth 1, borderColor brand at ~40% alpha (e.g. 'rgba(243,152,0,0.4)'), backgroundColor brandTint at ~60% alpha. Left: 36×36 radius 8 brand tile with <Sparkles size={20} color='#fff'/>. Middle: title t('Guest.nudge.title') 14/600 ink, body t('Guest.nudge.body') 14 ink2, then a row with a primary Button size 'sm' label t('Guest.nudge.cta') and a ghost Button t('Guest.nudge.dismiss'). Right: <X size={16}/> Pressable (accessibilityLabel t('Guest.nudge.dismiss')). CTA: router.push('/(tabs)/settings') where GuestUpgradeSection lives, or reuse upgradeGuestWithGoogle/upgradeGuestWithApple from @/lib/auth via an ActionSheetIOS. Dismiss sets the AsyncStorage key and hides. Mount it as the first child of the Home ScrollView content (web order puts it above the top bar), marginHorizontal spacing.lg, marginBottom 16. Also mount it in the 0-pet branch (it won't show there because petCount is 0).",
+  "files_to_touch": [
+   "apps/ios/src/components/auth/guest-upgrade-nudge.tsx",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Guest.nudge.title",
+   "Guest.nudge.body",
+   "Guest.nudge.cta",
+   "Guest.nudge.dismiss"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. Web layout.tsx:17 mounts GuestUpgradeNudge above every /app page. guest-upgrade-nudge.tsx:20-91 shows it for a guest with ≥1 personal pet, dismissal is stored in localStorage 'mango.guestNudgeDismissed', and it uses a Sparkles tile, rounded-lg (Tailwind default 8px, because globals.css deliberately keeps --radius-* out of @theme) and btn-mango + ghost + X. A grep of apps/ios shows no Guest.nudge usage. The only upgrade entry is settings.tsx:82 GuestUpgradeSection. All Guest.nudge.* keys exist. One copy issue: Guest.nudge.body says '清除瀏覽器資料' ('clearing your browser'), which is web wording that is inaccurate in the iOS app.",
+  "corrected_fix_plan": "As proposed (AsyncStorage key 'mango.guestNudgeDismissed' with reads and writes in try/catch, show when user.isAnonymous && pets.length > 0, mounted as the first child of the Home ScrollView content). Additions: (1) CTA: router.push('/(tabs)/settings'), where GuestUpgradeSection already handles Google/Apple linking and the conflict alerts. Do not duplicate that logic. (2) For accurate copy, add an iOS-specific key: Guest.nudge.bodyApp = '訪客資料只存在這台裝置，刪除 App 或換裝置就會消失。綁定 Google 或 Apple 後永久保留。' | 'Guest data lives only on this device — deleting the app or switching devices loses it. Bind with Google or Apple to keep it for good.' Until that key exists, fall back to Guest.nudge.body. (3) Use Button size='sm' variant='primary' (not pill) and variant='ghost' for the two actions, to match web h-9 rounded-lg."
+ },
+ {
+  "id": "HOME-10",
+  "title": "Guests can open the composer and see reactions, comments and the report/block menu on Home; all of these writes are rejected by rules",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/post-composer.tsx:175 (Dialog open && !isGuest); apps/web/src/components/feed/post-card.tsx:88 (PostMenu hidden for guests), 142-143 (GuestLockedNotice feature='reactions' replaces reactions+comments); firestore.rules:31-37,468 (posts create requires isRealUser)",
+  "ios_ref": "apps/ios/app/(tabs)/index.tsx:92-98,133-138 (YourStory → composer for everyone); apps/ios/src/components/feed/post-card.tsx:102-121,144-173 (no isAnonymous checks); apps/ios/app/(tabs)/index.tsx:100-105 (InviteFamilyCard → /family for guests, while settings.tsx:89 hides FamilySection for guests)",
+  "current_ios": "An anonymous user can tap '發文', fill in the composer and hit a permission-denied failure. Reactions, comments and report/block are shown and fail on write. InviteFamilyCard leads guests into /family, where family create/join is also not allowed for guests.",
+  "target": "Mirror web's guest gating with an upgrade affordance instead of dead-end failures.",
+  "fix_plan": "Add a small GuestLockedNotice RN component (apps/ios/src/components/auth/guest-locked-notice.tsx): row card, borderRadius radius.sm, padding 16, backgroundColor colors.brandTint, borderColor colors.hairline (prefer mango over web's amber), lucide <Lock size={16} color={colors.brandDeep}/> + Text t(`Guest.locked.${feature}`), plus a primary Button size 'sm' t('Guest.upgradeCta') → router.push('/(tabs)/settings'). In post-card.tsx: `const isGuest = !!useAuth().user?.isAnonymous`. When isGuest, render <GuestLockedNotice feature='reactions'/> instead of the actions row and CommentSection, and hide PostMenu for non-author posts. In index.tsx: when isGuest, YourStoryAvatar onPress shows Alert.alert(t('Guest.locked.post'), undefined, [{text: t('Common.cancel'), style:'cancel'}, {text: t('Guest.upgradeCta'), onPress: () => router.push('/(tabs)/settings')}]) instead of opening PostComposer, and NoPostsHint does the same. For guests, hide InviteFamilyCard (or swap its CTA to the same locked alert with Guest.locked.family).",
+  "files_to_touch": [
+   "apps/ios/src/components/auth/guest-locked-notice.tsx",
+   "apps/ios/src/components/feed/post-card.tsx",
+   "apps/ios/app/(tabs)/index.tsx",
+   "apps/ios/src/components/home/invite-family-card.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Guest.locked.post",
+   "Guest.locked.reactions",
+   "Guest.locked.family",
+   "Guest.upgradeCta",
+   "Common.cancel"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. Web post-composer.tsx:175 forces `open && !isGuest`. Web post-card.tsx:88 hides PostMenu for guests, and :142-143 swaps reactions and comments for GuestLockedNotice feature='reactions'. firestore.rules:31-37 isGuest/isRealUser gates posts create (:468), reactions (:454), comments (:525) and reports (:556). functions/src/index.ts createFamily and joinFamilyByCode throw permission-denied for guests. iOS post-card.tsx:102-173, index.tsx:92-105 and post-composer have no isAnonymous checks (grep finds isAnonymous only in settings.tsx, auth*.ts and auth-context). Two plan details are off: web GuestLockedNotice is a COLUMN on mobile (flex-col items-start gap-3, sm:flex-row), and iOS PostComposer should also defensively refuse to open for guests the way web does.",
+  "corrected_fix_plan": "As proposed, with these changes. GuestLockedNotice RN layout: a column (alignItems 'flex-start', gap 12), padding 16, borderRadius radius.sm, borderWidth 1, borderColor colors.hairline, backgroundColor colors.brandTint (mango in place of web amber-50). It holds a row (gap 8) of <Lock size={16} color={colors.brandDeep}/> and Text 14 ink2 t(`Guest.locked.${feature}`), then <Button size='sm' label={t('Guest.upgradeCta')} onPress={() => router.push('/(tabs)/settings')}/>. In post-card.tsx: `const isGuest = !!useAuth().user?.isAnonymous`; render GuestLockedNotice feature='reactions' in place of the actions row and CommentSection; render PostMenu only when `!isAuthor && !isGuest`. In post-composer.tsx: `visible={visible && !user?.isAnonymous}` as a defensive guard. In index.tsx, for guests: YourStoryAvatar and NoPostsHint onPress → Alert.alert(t('Guest.locked.post'), undefined, [{text:t('Common.cancel'), style:'cancel'}, {text:t('Guest.upgradeCta'), onPress:() => router.push('/(tabs)/settings')}]). Hide InviteFamilyCard and the HOME-5 join button for guests."
+ },
+ {
+  "id": "HOME-11",
+  "title": "InviteFamilyCard: emoji instead of lucide Users, only the CTA is tappable, wrong radius/shadow/CTA color",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/home/invite-family-card.tsx:26-50 (whole card is a Link; radius 18; px-4 py-3.5; shadow-card; 44px radius-14 white tile + shadow-card with Users 20 brandDeep strokeWidth 1.8; title 14/800 -0.1; body 12.5/500 ink2; CTA pill bg brandDeep h-9 px-3.5 13/800 white + brand shadow); page.tsx:146-150 (mt-3)",
+  "ios_ref": "apps/ios/src/components/home/invite-family-card.tsx:31-33,40-46,52-75",
+  "current_ios": "Uses a 👨‍👩‍👧 emoji in a round 44px white circle. Card radius is 14 (lg) with no shadow and padding 16. Title is 15pt and body 12pt. The CTA is brand (#f39800) rather than brandDeep, at minHeight 44. Only the small CTA responds to taps, and there is no top margin from the stories bar.",
+  "target": "Match web: Users icon in a rounded-square tile, the whole card tappable, radius 18 + card shadow, brandDeep CTA.",
+  "fix_plan": "Wrap the LinearGradient in a Pressable (accessibilityRole 'button', onPress=onInvite, pressed opacity 0.9) and turn the inner CTA into a plain View. Card: borderRadius radius.xl (18), paddingHorizontal 16, paddingVertical 14, marginTop spacing.md, ...shadows.card (put the shadow on the Pressable wrapper and overflow hidden on the gradient). Icon tile: 44×44, borderRadius radius.lg (14), backgroundColor colors.card, ...shadows.card, <Users size={20} color={colors.brandDeep} strokeWidth={1.8}/>. Title fontSize 14, letterSpacing -0.1. Body fontSize 12.5, fontWeight '500'. CTA: height 36, paddingHorizontal 14, borderRadius pill, backgroundColor colors.brandDeep, text 13/800 white, shadow colors.brandDeep opacity 0.5 radius 9 offset y 8. The card stays 44pt+ tall, so the tap target holds.",
+  "files_to_touch": [
+   "apps/ios/src/components/home/invite-family-card.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Home.inviteFamily.title",
+   "Home.inviteFamily.body",
+   "Home.inviteFamily.bodyGeneric",
+   "Home.inviteFamily.cta"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. iOS invite-family-card.tsx:31-33 uses a 👨‍👩‍👧 emoji in a round 44 circle. Card radius.lg 14, padding 16, no shadow (:52-61), title 15, body 12, CTA colors.brand with minHeight 44 (:68-74), and only the CTA is a Pressable. Web invite-family-card.tsx:26-50: the whole card is a Link, radius 18, px-4 py-3.5, shadow-card, 44px radius-14 white tile with Users 20/1.8 brandDeep, 14/800, 12.5/500, a brandDeep h-9 CTA, and the mt-3 wrapper at page.tsx:147."
+ },
+ {
+  "id": "HOME-14",
+  "title": "FeedSectionHeader typography and chevron differ, and the 'view all' link is hidden when there are no posts",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/home/feed-section-header.tsx:16-31 (title 15/800 -0.1; subtitle ml-2 12 ink3; link 12.5/700 brandDeep + ChevronRight 12 strokeWidth 2.4; always rendered; pt-2 pb-2.5)",
+  "ios_ref": "apps/ios/src/components/home/feed-section-header.tsx:17-26,41-43; apps/ios/app/(tabs)/index.tsx:107-109 (onViewAll undefined when posts empty)",
+  "current_ios": "Title is 17pt, the link is 14pt, and the chevron is a '›' text glyph. The link disappears when there are 0 posts, whereas web always shows it (/feed can still show friends' public posts).",
+  "target": "Match web sizes and use a lucide ChevronRight, with the link always present.",
+  "fix_plan": "title fontSize 15, letterSpacing -0.1. link fontSize 12.5. Render <View row alignItems center gap 2><Text style={styles.link}>{t('Home.feed.viewAll')}</Text><ChevronRight size={12} color={colors.brandDeep} strokeWidth={2.4}/></View>. Row: marginTop 8, marginBottom 10, alignItems 'baseline'→'center'. In index.tsx always pass onViewAll={() => router.push('/feed')}.",
+  "files_to_touch": [
+   "apps/ios/src/components/home/feed-section-header.tsx",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Home.feed.title",
+   "Home.feed.subtitle",
+   "Home.feed.viewAll"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. iOS feed-section-header.tsx:41-43 has title 17, link 14 and a '›' text glyph (:24), and index.tsx:108 passes onViewAll only when posts.length > 0. Web feed-section-header.tsx:16-31 has title 15/800/-0.1, link 12.5/700 brandDeep + ChevronRight 12/2.4, is always rendered, and uses pt-2 pb-2.5 items-baseline. The plan's alignment note ('baseline'→'center') is muddled. Web uses items-baseline on the row.",
+  "corrected_fix_plan": "As proposed, but set the row to alignItems 'baseline' (web items-baseline; currently 'flex-end'), with marginTop 8 and marginBottom 10. Put the link in a Pressable whose child is a row View {flexDirection:'row', alignItems:'center', gap:2} containing Text 12.5/700 brandDeep and <ChevronRight size={12} color={colors.brandDeep} strokeWidth={2.4}/>. Always pass onViewAll from index.tsx."
+ },
+ {
+  "id": "HOME-15",
+  "title": "YourStoryAvatar: text '＋' glyph instead of lucide Plus; missing bgAlt fill; plus-disc ring uses white instead of page bg; label weight",
+  "category": "icon",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/home/your-story-avatar.tsx:37-63 (dashed 1.5 brand ring with bg-alt fill; avatar inset 3 size 58; 22px brand disc with Plus 14 strokeWidth 2.6, ring 2 mango-bg; label 11/700 ink2; item width 68; resolveUserPhotoURL with providerData fallback)",
+  "ios_ref": "apps/ios/src/components/home/your-story-avatar.tsx:32-35,45-70; apps/ios/app/(tabs)/index.tsx:96-97",
+  "current_ios": "The plus is a full-width '＋' Text (it renders off-center depending on the font). The disc border is colors.card (white) where web uses the cream page bg. The dashed ring has no bgAlt fill. The avatar is 56 instead of 58. The label is 600 weight. The wrapper is 76 wide versus web's 68. The photo is user.photoURL only, with no providerData fallback.",
+  "target": "Pixel-match the web slot.",
+  "fix_plan": "plus: <Plus size={14} color='#fff' strokeWidth={2.6}/> inside the 22px disc; disc borderColor colors.bg. ring: add backgroundColor colors.bgAlt; UserAvatar size SIZE-6 (58). label fontWeight '700'. wrap width 68 (also PetStoryAvatar, HOME-16). In index.tsx pass a photo resolved as `user?.photoURL ?? user?.providerData.find(p => p?.photoURL)?.photoURL ?? null`. Better: add resolveUserPhotoURL/resolveUserDisplayName helpers to apps/ios/src/lib/auth-profile.ts mirroring web auth.ts:216-234.",
+  "files_to_touch": [
+   "apps/ios/src/components/home/your-story-avatar.tsx",
+   "apps/ios/src/lib/auth-profile.ts",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Home.stories.yourStory"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. iOS your-story-avatar.tsx:32 uses avatar SIZE-8 = 56 (web 58), :34 a '＋' Text glyph, :65 plus-disc borderColor colors.card (web ring-mango-bg), the ring has no bgAlt fill (:46-55), the label is 600 (:70; web 700), and the wrap is 76 wide (:45; web w-[68px]). index.tsx:96 passes user?.photoURL with no providerData fallback (web resolveUserPhotoURL, auth.ts:216-223). One more detail: web's ring-[2px] is a box-shadow OUTSIDE the 22px disc, while iOS borderWidth 2 sits inside it, which shrinks the brand area to 18.",
+  "corrected_fix_plan": "As proposed, plus make the plus disc 26×26, borderRadius 13, borderWidth 2, borderColor colors.bg, positioned bottom -4 and right -4. That gives a 22px brand area with a 2px cream ring, like web. Add resolveUserPhotoURL/resolveUserDisplayName (providerData fallback) to apps/ios/src/lib/auth-profile.ts, mirroring web auth.ts:216-234."
+ },
+ {
+  "id": "HOME-16",
+  "title": "PetStoryAvatar: the label doesn't encode status (web: pending bold ink, done semibold ink2); item width and ring padding differ",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/home/pet-story-avatar.tsx:38-51 (done ring brand→leaf→leafTint→brand; 2.5px ring + 2px cream pad + 54 avatar), 61 (w-68), 86-95 (label 11.5; done → 600 ink2, else 700 ink)",
+  "ios_ref": "apps/ios/src/components/home/pet-story-avatar.tsx:22-25,60-63,108-124",
+  "current_ios": "The label is always 11/600 ink2, so pets that still need a walk aren't emphasized by text weight. The wrapper is 76 wide (stories row spacing differs from web's 68). The ring is a 3pt stroke with a 52pt avatar and a visible gap, against web's 2.5 ring + cream pad + 54 avatar. The done gradient has 2 stops instead of 3.",
+  "target": "Match web label emphasis and geometry.",
+  "fix_plan": "label: fontSize 11.5, letterSpacing -0.1, maxWidth 68, and `status === 'done' ? {fontWeight:'600', color: colors.ink2} : {fontWeight:'700', color: colors.ink}`. wrap width 68. Geometry: STROKE 2.5, INNER = SIZE - 2*2.5 - 2*2 = 55 → use 54 to match web, and give avatarHole a colors.bg backing circle of SIZE-5 so the cream pad shows. Done gradient stops: brand 0, leaf 0.45, leafTint 0.75, brand 1.",
+  "files_to_touch": [
+   "apps/ios/src/components/home/pet-story-avatar.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Home.stories.doneWalk",
+   "Home.stories.pendingWalk",
+   "Home.stories.tracking",
+   "Home.stories.filterFutureHint"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. iOS pet-story-avatar.tsx:22-25 has STROKE 3 and INNER 52, :60-63 a 2-stop gradient, :109 wrap 76, and :124 label always 11/600 ink2. Web pet-story-avatar.tsx:38-51,61,67-95 has a 2.5 ring, a 2px bg pad, avatar 54, w-68, and an 11.5 label that is 600 ink2 when done and 700 ink otherwise. Small correction: the unfilled gap between the iOS ring and avatar already shows the screen's colors.bg (cream), so the extra 'backing circle' is unnecessary on Home. Only the stroke, inner size and label need changing.",
+  "corrected_fix_plan": "STROKE 2.5, R=(64-2.5)/2, INNER 54 (gap ≈2.5 shows the cream page bg, which matches web's pad). No backing View is needed. Wrap width 68. Label: fontSize 11.5, letterSpacing -0.1, maxWidth 68, done → 600 ink2, else 700 ink. Done gradient stops: brand 0, leaf 0.45, leafTint 0.75, brand 1."
+ },
+ {
+  "id": "HOME-17",
+  "title": "HomeTopBar pill: icon size/color differ, and the user-label fallback shows an email prefix or English 'Friend' where web shows no pill",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/home/home-top-bar.tsx:41-49 (HomeIcon 11 brandDeep strokeWidth 2.4; label max-w 140 truncate; label = familyName ?? user.displayName, else no pill); page.tsx:111-114,131-134",
+  "ios_ref": "apps/ios/src/components/home/home-top-bar.tsx:32,65; apps/ios/app/(tabs)/index.tsx:58-59,81-84",
+  "current_ios": "The pill icon is 13pt in ink2 at strokeWidth 2, versus web's brandDeep 11/2.4. userName falls back to the email prefix (an Apple private-relay id for Sign in with Apple users) or a hard-coded English 'Friend', so guests and Apple users get a meaningless pill. The bell accessibilityLabel is hard-coded '通知'.",
+  "target": "Web pill styling, and the pill only appears when there is a real family name or display name.",
+  "fix_plan": "home-top-bar.tsx: <Home size={11} color={colors.brandDeep} strokeWidth={2.4}/>; pill maxWidth ~ 140 for the label (pillLabel maxWidth 140); remove the unused pillIcon/bellIcon styles. index.tsx: pass userDisplayName={resolveUserDisplayName(user)} (new helper in auth-profile.ts, providerData fallback, returns null otherwise). Keep a separate `storyName` with the existing fallback for the YourStory avatar initials. For the bell a11y label, either add a key or reuse an existing one. Web also hard-codes 'Notifications', so this is low priority.",
+  "files_to_touch": [
+   "apps/ios/src/components/home/home-top-bar.tsx",
+   "apps/ios/app/(tabs)/index.tsx",
+   "apps/ios/src/lib/auth-profile.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "App.name"
+  ],
+  "needs_new_i18n_keys": [
+   "Home.notifications = 通知 | Notifications"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. iOS home-top-bar.tsx:32 uses Home size 13, ink2, strokeWidth 2 (web 11, brandDeep, 2.4 at :43-46), and :39 a hard-coded a11y '通知' (web hard-codes English 'Notifications', so this is low priority). index.tsx:58-59 falls back to the email prefix or a literal English 'Friend', so guests (no displayName or email) get a 'Friend' pill where web shows none (page.tsx:113 passes user?.displayName only). The unused pillIcon and bellIcon styles exist (:73,86). Home.notifications does not exist in the catalog."
+ },
+ {
+  "id": "HOME-M1",
+  "title": "iPad: HomeTopBar is not capped to CONTENT_MAX_WIDTH, so the title and bell sit at the screen edges while the content is a centered 480pt column",
+  "severity": "P2",
+  "category": "layout",
+  "web_ref": "apps/web/src/app/app/layout.tsx:20 (top bar sits inside the same max-w container as the content)",
+  "ios_ref": "apps/ios/app/(tabs)/index.tsx:81-84 (HomeTopBar rendered outside the capped ScrollView; only styles.scroll at :163 has maxWidth); apps/ios/src/components/home/home-top-bar.tsx:47-54 (bar has no maxWidth); compare apps/ios/app/photos.tsx:299, which caps its header",
+  "current_ios": "On iPad the '🥭 芒果寵物' title hugs the far-left edge and the bell the far-right edge, while the stories and feed render in a centered 480pt column, so the header is visibly misaligned with the content.",
+  "target": "Top bar aligned with the centered content column, consistent with the accepted CONTENT_MAX_WIDTH iPad treatment.",
+  "fix_plan": "In home-top-bar.tsx styles.bar add `width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center'` (import CONTENT_MAX_WIDTH from @/theme/theme). Apply the same cap to the 0-pet branch ScrollView contentContainerStyle introduced by HOME-3.",
+  "files_to_touch": [
+   "apps/ios/src/components/home/home-top-bar.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "verdict": "missed-by-auditor (verifier-found)"
+ },
+ {
+  "id": "HOME-M2",
+  "title": "iOS-only tagged-pet chips on Home posts (🐾 emoji + hard-coded color) that the web PostCard does not render",
+  "severity": "P2",
+  "category": "fidelity",
+  "web_ref": "apps/web/src/components/feed/post-card.tsx:67-189 (header → text → photos → reactions; no pet-tag row)",
+  "ios_ref": "apps/ios/src/components/feed/post-card.tsx:66-68,126-134 (taggedNames chips with '🐾 {name}'), :248-255 (leafTint pill + hard-coded '#3f7a39' text); apps/ios/app/(tabs)/index.tsx:54-57,123 (petNameById passed so chips render on Home)",
+  "current_ios": "Every Home post with tagged pets shows an extra row of green '🐾 Name' pills between the text and the photos. The component's header comment claims this mirrors web, but web has no such element, and the text color is a literal hex outside the token set.",
+  "target": "Either match web (no chip row) or keep the chips as a deliberate iOS enhancement in token-compliant styling. This needs a PM decision.",
+  "fix_plan": "PM decision. For strict 1:1, stop passing petNameById from index.tsx (and feed.tsx), or remove the tagRow block in post-card.tsx along with the tagRow/tag/tagText styles. If kept, replace the emoji with <PawPrint size={11} color={colors.leaf} strokeWidth={2}/> in a row (gap 4) and use colors.ink2 (or a new leafDeep token added to shared-tokens) in place of '#3f7a39'. Update the header comment so it no longer claims web parity.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-card.tsx",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "verdict": "missed-by-auditor (verifier-found)"
+ }
+]

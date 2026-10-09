@@ -1,0 +1,623 @@
+[
+ {
+  "id": "HOME-12",
+  "title": "PostCard on Home: hard-coded Chinese strings, zh-only relative time, emoji visibility markers instead of lucide icons",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/post-card.tsx:28-32 (Globe/Users/Lock icon before time), 58-64 (date-fns locale-aware), 84 (aria tC('delete')), 124 (PhotoLightbox.counter aria), 158 (Comments.toggle); page.tsx:90-101 (confirm title Common.delete, message = post text snippet)",
+  "ios_ref": "apps/ios/src/components/feed/post-card.tsx:29-33,71-87,99,104,154,217; apps/ios/src/lib/format.ts:27-38",
+  "current_ios": "The delete Alert uses literal '刪除貼文' / '確定要刪除這篇貼文嗎？此動作無法復原。' / '取消' / '刪除' / '刪除失敗' / '請稍後再試。'. a11y labels '刪除貼文', '留言' and '照片 N' are hard-coded. Visibility shows 🌍/👥/🔒 emoji after the time, where web shows a 12px lucide icon before it. relativeTime always renders Chinese ('剛剛', 'N分鐘前'), so the English locale sees Chinese timestamps on every Home post.",
+  "target": "All copy comes from the shared catalog, matching web's iconography.",
+  "fix_plan": "post-card.tsx: replace VISIBILITY_ICON with lucide-react-native components {public: Globe, friends: Users, private: Lock} and render `<View style={row gap 4}><VIcon size={12} color={colors.ink3}/><Text style={styles.meta}>{relativeTime(...)}</Text></View>`. Delete Alert: Alert.alert(t('Common.delete'), post.text ? post.text.slice(0,80) : t('Feed.deleteConfirm'), [{text: t('Common.cancel'), style:'cancel'}, {text: t('Common.delete'), style:'destructive', …}]). Failure: Alert.alert(t('Comments.deleteFailed')). a11y: Trash accessibilityLabel t('Common.delete'); comment toggle t('Comments.toggle') plus accessibilityState {expanded: commentsOpen}; photo t('PhotoLightbox.counter', {current: i+1, total: photos.length}). format.ts relativeTime: switch to new Time.* keys (below) via t(), or use Intl.RelativeTimeFormat(getLocale()) if Hermes in this build supports it (verify on device). This overlaps with the FEED surface, so coordinate to fix it once.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-card.tsx",
+   "apps/ios/src/lib/format.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.delete",
+   "Common.cancel",
+   "Comments.toggle",
+   "Comments.deleteFailed",
+   "PhotoLightbox.counter"
+  ],
+  "needs_new_i18n_keys": [
+   "Feed.deleteConfirm = 確定要刪除這篇貼文嗎？此動作無法復原。 | Delete this post? This can't be undone.",
+   "Time.justNow = 剛剛 | just now",
+   "Time.minutesAgo = {n} 分鐘前 | {n} min ago",
+   "Time.hoursAgo = {n} 小時前 | {n} h ago",
+   "Time.daysAgo = {n} 天前 | {n} d ago"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. iOS post-card.tsx:71-87 has a hard-coded zh Alert ('刪除貼文', '確定要刪除…', '取消', '刪除', '刪除失敗', '請稍後再試。'). Also hard-coded: a11y labels '刪除貼文' (:104), '留言' (:154) and `照片 ${i+1}` (:217), and emoji visibility markers after the time (:29-33,99). format.ts:27-38 relativeTime is zh-only. Web post-card.tsx:28-32,57-64,73-76,83,120-123,157 uses lucide Globe/Users/Lock before a locale-aware date-fns time and i18n a11y labels. All the reuse keys exist (Common.delete/cancel, Comments.toggle, Comments.deleteFailed, PhotoLightbox.counter), and Feed.deleteConfirm and Time.* do not. One plan detail is wrong: apps/ios/src/lib/i18n.ts exports `activeLocale`, not getLocale(). format.ts:1-4 already notes that Hermes ships without full Intl, and Hermes does not implement Intl.RelativeTimeFormat, so the Intl alternative should be dropped.",
+  "corrected_fix_plan": "As proposed, but implement relativeTime only with the new catalog keys via t() (Time.justNow, Time.minutesAgo {n}, Time.hoursAgo {n}, Time.daysAgo {n}) and keep the M/D fallback after 7 days. Do NOT use Intl.RelativeTimeFormat. If a locale branch is ever needed, import `activeLocale` from @/lib/i18n. relativeTime is also used by comments/feed, so the change fixes those surfaces too. Coordinate with the FEED audit so it is changed once."
+ },
+ {
+  "id": "FEED-1",
+  "title": "No guest gating anywhere in iOS feed (compose, reactions, comments, report menu)",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/feed/page.tsx:98-110 (compose hidden + GuestLockedNotice feature=post), :119-126 (EmptyState CTA hidden for guests); apps/web/src/components/feed/post-card.tsx:88 (!isGuest gate on PostMenu), :142-143 (GuestLockedNotice feature=reactions replaces reactions+comments row); post-composer.tsx:175 (open && !isGuest)",
+  "ios_ref": "apps/ios/app/feed.tsx:55-62,96-101; apps/ios/src/components/feed/post-card.tsx:111-121,144-173; apps/ios/src/components/feed/post-composer.tsx:59-137",
+  "current_ios": "Anonymous (guest) users see the compose button, reaction controls, comment toggle and the ⋯ report/block menu. firestore.rules isRealUser() denies all posts/comments/reactions writes for sign_in_provider==anonymous, so every tap ends in a permission-denied failure, and the composer shows the raw error message.",
+  "target": "Match web: guests can read the feed but get a locked notice in place of compose, and another in place of the reactions/comments row. The ⋯ menu is hidden for guests.",
+  "fix_plan": "1) Create apps/ios/src/components/feed/guest-locked-notice.tsx: a row in a card (colors.brandTint bg, hairline border, radius.sm 8, padding 16) with lucide Lock 16 + Text t(`Guest.locked.${feature}`) + a primary <Button size=\"sm\" label={t(\"Guest.upgradeCta\")}> that does router.push(\"/(tabs)/settings\"), where GuestUpgradeSection lives. Alternatively, extract the upgrade handler from guest-upgrade-section.tsx into a hook and call it directly. 2) feed.tsx: const isGuest = !!user?.isAnonymous; hide the compose button when isGuest and render <GuestLockedNotice feature=\"post\"/> under the header; hide the EmptyState CTA too. 3) post-card.tsx: if isGuest, render <GuestLockedNotice feature=\"reactions\"/> instead of the actions row and CommentSection, and do not render PostMenu (the condition becomes !isAuthor && !isGuest). 4) post-composer.tsx: return null / visible={visible && !user?.isAnonymous} as a defensive guard. The PostCard fix also covers the home tab feed (app/(tabs)/index.tsx:60).",
+  "files_to_touch": [
+   "apps/ios/app/feed.tsx",
+   "apps/ios/src/components/feed/post-card.tsx",
+   "apps/ios/src/components/feed/post-composer.tsx",
+   "apps/ios/src/components/feed/guest-locked-notice.tsx (new)"
+  ],
+  "i18n_keys_to_reuse": [
+   "Guest.locked.post",
+   "Guest.locked.reactions",
+   "Guest.upgradeCta"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-2",
+  "title": "Feed header differs: wrong title, no subtitle, '＋' glyph instead of the primary 發文 button",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/feed/page.tsx:90-108; apps/web/src/components/nav/route-header.tsx (26px extrabold, -0.5 tracking, ink; subtitle 14px ink-2)",
+  "ios_ref": "apps/ios/app/feed.tsx:45-63,134-141",
+  "current_ios": "Back arrow + centered 18px title t(\"Home.feed.title\") (最新動態) + a 40px brandTint circle containing a text '＋'. No subtitle. The back button's a11y label is a hard-coded \"返回\".",
+  "target": "Title Nav.feed (動態) in 26px/800/-0.5 ink, subtitle Feed.subtitle (好友與公開動態) in 14px ink2, and a primary btn-mango (gradient, white text) full-width button with the PenSquare icon + Feed.compose (發文) below the title on phone widths.",
+  "fix_plan": "In feed.tsx, keep a slim top row with only the ArrowLeft back button (accessibilityLabel t(\"Common.back\")). Move the title into the ScrollView/FlatList ListHeaderComponent: Text t(\"Nav.feed\") style {fontSize:26,fontWeight:\"800\",letterSpacing:-0.5,color:colors.ink}, then Text t(\"Feed.subtitle\") {fontSize:14,lineHeight:24,color:colors.ink2,marginTop:4}, then (if !isGuest) <Button variant=\"primary\" size=\"md\" fullWidth label={t(\"Feed.compose\")} icon={<PenSquare size={16} color=\"#fff\"/>} onPress={()=>setComposerOpen(true)} style={{marginTop:12}}/>. Header block marginBottom 24, as web mb-6. Note that Button currently wraps `icon` in <Text>, so either pass the icon outside, or change Button to render a non-string icon inside a <View>. Remove the composeBtn and composeText styles.",
+  "files_to_touch": [
+   "apps/ios/app/feed.tsx",
+   "apps/ios/src/components/ui/Button.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.feed",
+   "Feed.subtitle",
+   "Feed.compose",
+   "Common.back"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-3",
+  "title": "Empty state is plain text with no icon, no compose CTA and no pull-to-refresh",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/feed/page.tsx:114-127 (EmptyState icon=Newspaper, title Feed.empty.title, description Feed.empty.subtitle, CTA PenSquare + Feed.compose for non-guests)",
+  "ios_ref": "apps/ios/app/feed.tsx:69-73",
+  "current_ios": "A centered View with two Text nodes. There is no icon and no CTA. Because the RefreshControl only exists on the non-empty ScrollView, the user cannot pull to refresh an empty or failed feed.",
+  "target": "The EmptyState primitive with the Newspaper icon, title, body and the 發文 CTA (hidden for guests), and pull-to-refresh that also works when the list is empty.",
+  "fix_plan": "Replace the block with the existing EmptyState component (apps/ios/src/components/ui/EmptyState.tsx). Extend EmptyState with an optional `icon?: ReactNode` (rendered in place of the emoji text), or pass emoji=\"📰\" and add the icon variant later. Use title=t(\"Feed.empty.title\"), body=t(\"Feed.empty.subtitle\"), ctaLabel=isGuest?undefined:t(\"Feed.compose\"), onPressCta=()=>setComposerOpen(true). Render it as ListEmptyComponent of the FlatList from FEED-4, so the RefreshControl stays attached.",
+  "files_to_touch": [
+   "apps/ios/app/feed.tsx",
+   "apps/ios/src/components/ui/EmptyState.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Feed.empty.title",
+   "Feed.empty.subtitle",
+   "Feed.compose"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-4",
+  "title": "Unbounded feed rendered with .map inside ScrollView (up to ~90 cards, each firing a reaction read)",
+  "category": "optimization",
+  "severity": "P1",
+  "web_ref": "apps/web/src/lib/firebase/posts.ts:189-210 (listFeedPosts merges mine+public+friends, each capped at 30, so up to 90 posts)",
+  "ios_ref": "apps/ios/app/feed.tsx:75-93; apps/ios/src/components/feed/emoji-reactions.tsx:48-58 (getMyReaction per mount)",
+  "current_ios": "All posts mount at once inside a ScrollView. Each PostCard mounts EmojiReactions, which does one getDoc for the user's reaction, and each card decodes its full-size images. Up to about 90 Firestore reads and image decodes run on open and again on every refresh.",
+  "target": "Virtualized list so cards (and their reaction reads and images) mount lazily as they scroll in.",
+  "fix_plan": "Convert to <FlatList data={posts} keyExtractor={p=>p.postId} renderItem={({item})=><PostCard .../>} ItemSeparatorComponent={()=> <View style={{height:spacing.md}}/>} contentContainerStyle={styles.scroll} ListHeaderComponent={header from FEED-2} ListEmptyComponent={EmptyState from FEED-3} refreshControl={<RefreshControl .../>} initialNumToRender={5} windowSize={7} removeClippedSubviews keyboardShouldPersistTaps=\"handled\"/>. Wrap PostCard in React.memo and memoize the onOpenPhotos/onDeleted callbacks with useCallback (removePost and removeBlockedAuthor in feed-data.ts are recreated every render, so wrap them in useCallback as well).",
+  "files_to_touch": [
+   "apps/ios/app/feed.tsx",
+   "apps/ios/src/components/feed/post-card.tsx",
+   "apps/ios/src/lib/feed-data.ts"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-6",
+  "title": "Reaction main-button tap switches a non-❤️ reaction to ❤️ instead of removing it",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/emoji-reactions.tsx:135-138 (commit(mine ? null : DEFAULT_EMOJI))",
+  "ios_ref": "apps/ios/src/components/feed/emoji-reactions.tsx:98",
+  "current_ios": "onPress={() => apply(mine === \"❤️\" ? null : \"❤️\")}: if the user's reaction is 😂, the main button shows 😂, but tapping it replaces the reaction with ❤️.",
+  "target": "Tapping the main button removes whatever reaction you have, or sets ❤️ when you have none.",
+  "fix_plan": "Change to onPress={() => apply(mine ? null : \"❤️\")}. Also fix the a11y label: accessibilityLabel={mine ? t(\"Post.yourReaction\",{emoji:mine}) : t(\"Post.react\",{emoji:\"❤️\"})} and accessibilityState={{selected: mine!==null, disabled: busy}}. The hint \"長按選擇其他反應\" has no key; either drop it or add one.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/emoji-reactions.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Post.yourReaction",
+   "Post.react"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-7",
+  "title": "Reaction counts never re-sync from props after pull-to-refresh",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/emoji-reactions.tsx:58-60 (useEffect setLocalCounts(counts) on prop change)",
+  "ios_ref": "apps/ios/src/components/feed/emoji-reactions.tsx:40-43",
+  "current_ios": "counts is only seeded from initialCounts in useState. A refresh keeps the same postId key, so the card does not remount and the new post.reactionCounts are ignored. Other users' reactions never appear until the screen is left.",
+  "target": "Local counts follow fresh server counts whenever the post prop changes (and no write is pending).",
+  "fix_plan": "Add useEffect(() => { if (!busy) setCounts({...emptyCounts(), ...(initialCounts ?? {})}); }, [initialCounts]). Also re-run getMyReaction when the post refreshes, by including initialCounts identity in that effect's deps or by keying on a refresh token.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/emoji-reactions.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-8",
+  "title": "Reaction tray opener uses 🙂/✕ text glyphs instead of lucide SmilePlus; tray is inline and hard-coded labels",
+  "category": "icon",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/emoji-reactions.tsx:222-235 (SmilePlus size-4 in 36px zinc-100 circle, aria Post.moreReactions), :257-288 (tray absolutely positioned above the button, rounded-full, shadow-lg, aria Post.pickReaction, per-emoji Post.react), :238-254 (summary aria Post.reactionCount), outside-tap dismiss :94-103",
+  "ios_ref": "apps/ios/src/components/feed/emoji-reactions.tsx:96-97,112-119,137-155,175-185",
+  "current_ios": "The more button renders Text \"🙂\", which becomes \"✕\" while open. The tray renders inline below the row and pushes the card content down, with no outside-tap dismiss. a11y labels are hard-coded Chinese (\"按愛心\", \"更多反應\", \"反應 😂\"), and the summary has no count label. The main and more buttons carry a hairline border that web doesn't have.",
+  "target": "lucide SmilePlus icon (same in both states), a tray floating above the row, and i18n labels.",
+  "fix_plan": "Import { SmilePlus } from \"lucide-react-native\" and render <SmilePlus size={16} color={colors.ink3} strokeWidth={2}/> regardless of trayOpen, with accessibilityLabel t(\"Post.moreReactions\") and accessibilityState={{expanded:trayOpen}}. Give the wrapper View position:\"relative\". Make the tray style {position:\"absolute\", bottom:\"100%\", left:0, marginBottom:8, zIndex:50, flexDirection:\"row\", gap:4, padding:4, borderRadius:radius.pill, backgroundColor:colors.card, borderWidth:1, borderColor:colors.hairline, ...shadows.card}, and set accessibilityLabel t(\"Post.pickReaction\") on it. Give each tray item accessibilityLabel t(\"Post.react\",{emoji:e}) and accessibilityState={{checked: mine===e}}. Give the summary View accessibilityLabel t(\"Post.reactionCount\",{count: total}). Remove borderWidth from mainBtn/moreBtn (web has none; bg zinc-100 maps to colors.bgAlt). Close the tray when any other card control is pressed: a transparent full-card Pressable behind it, or onBlur via onStartShouldSetResponder at the card level. Also bump delayLongPress to 450 to match the web LONG_PRESS_MS. The card must not clip the tray, so check overflow on the post-card container.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/emoji-reactions.tsx",
+   "apps/ios/src/components/feed/post-card.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Post.moreReactions",
+   "Post.pickReaction",
+   "Post.react",
+   "Post.reactionCount"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-9",
+  "title": "Comment delete has no confirm, failures are silent, and the report menu is hidden on others' comments on your own post",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/comment-section.tsx:164-183 (askConfirm title Comments.deleteTitle, message text.slice(0,60), confirm Common.delete, cancel Common.cancel, danger; rollback + Comments.deleteFailed), :231-251 (delete button AND PostMenu both render when c.authorUid !== currentUid)",
+  "ios_ref": "apps/ios/src/components/feed/comment-section.tsx:138-149 (remove: no confirm, silent rollback), :182-201 (canDelete ? Trash : PostMenu)",
+  "current_ios": "Tapping the 13px trash deletes immediately and permanently, with no confirmation. A failed delete rolls back silently. When the viewer is the post author, other people's comments show only the trash icon, so the viewer cannot report or block a commenter on their own post (UGC Guideline 1.2 path missing).",
+  "target": "Destructive confirm before delete, an error message on failure, and both delete and the ⋯ menu shown for others' comments when the viewer may delete them.",
+  "fix_plan": "In remove(): Alert.alert(t(\"Comments.deleteTitle\"), c.text.slice(0,60), [{text:t(\"Common.cancel\"),style:\"cancel\"},{text:t(\"Common.delete\"),style:\"destructive\",onPress: async()=>{...existing optimistic delete...; catch → setError(t(\"Comments.deleteFailed\"))}}]). Change the trailing slot to render the delete control when canDelete AND, independently, <PostMenu .../> when c.authorUid !== currentUid, so both can show. Move both into the meta line under the bubble, as in FEED-10.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/comment-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Comments.deleteTitle",
+   "Comments.deleteFailed",
+   "Common.delete",
+   "Common.cancel"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-10",
+  "title": "Comment row layout and composer don't match web (no bubble, inline time, text 送出 button, no avatar)",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/comment-section.tsx:218-254 (avatar 32 + bubble rounded-2xl bg-zinc-100 px-3 py-2 holding name 12px semibold + text 14px; meta row below at 11px: relTime · Trash2 size-3 + Comments.delete · PostMenu), :262-289 (composer: own Avatar 32 + rounded-2xl textarea + 36px round brand Send icon button, aria Comments.send), :199-206 (empty centered)",
+  "ios_ref": "apps/ios/src/components/feed/comment-section.tsx:155-202,223-250,258-306",
+  "current_ios": "Each row has the name and time inline on top, plain text below and a trash icon at the far right, with no bubble. The composer is a text input plus a pill button reading \"送出\" or a spinner, with no user avatar. The empty text is left-aligned.",
+  "target": "Web bubble layout and an icon-only round Send button with the user's avatar.",
+  "fix_plan": "Row: <View style={{flexDirection:\"row\",gap:8}}><UserAvatar size={32}/><View style={{flex:1,minWidth:0}}><View style={{alignSelf:\"flex-start\",maxWidth:\"100%\",borderRadius:radius[\"2xl\"] /*22*/ or 16,backgroundColor:colors.bgAlt,paddingHorizontal:12,paddingVertical:8}}><Text 12/600 ink>{name}</Text><Text 14 ink>{text}</Text></View><View style={{flexDirection:\"row\",alignItems:\"center\",gap:12,paddingHorizontal:12,marginTop:2}}><Text 11 ink3>{time}</Text>{canDelete && <Pressable hitSlop={8} row gap4><Trash2 size={12}/><Text 11>{t(\"Comments.delete\")}</Text></Pressable>}{menu}</View></View></View>. Composer row: <UserAvatar name={user.displayName??\"\"} photoURL={user.photoURL} size={32}/> + TextInput (borderRadius 16, bg colors.card, hairline border, minHeight 36) + a Pressable 36x36 round with backgroundColor colors.brand containing <Send size={16} color=\"#fff\"/> and accessibilityLabel t(\"Comments.send\"), at opacity 0.5 when disabled. Empty: textAlign center, paddingVertical 8. Gap between rows 12 (spacing.md). Keep the remaining-chars counter (an iOS-only extra is fine).",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/comment-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Comments.delete",
+   "Comments.send"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-11",
+  "title": "Hard-coded Chinese strings across comment-section instead of Comments.* keys (copy also differs)",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/comment-section.tsx:89,99-100,118,159,201,204,215,236,276-277,283 (t(\"loadFailed\"/\"tooLong\"/\"sendFailed\"/\"loading\"/\"empty\"/\"loadMore\"/\"placeholder\"/\"send\"))",
+  "ios_ref": "apps/ios/src/components/feed/comment-section.tsx:68 (\"無法載入留言\"), 97 (`留言最多 N 字`), 132 (raw e.message / \"留言失敗\"), 160 (\"還沒有留言，搶頭香！\"), 184 (\"刪除留言\"), 214 (\"載入中…\"/\"載入更多留言\"), 228 (\"留個言…\"), 235 (\"送出留言\"), 247 (\"送出\"); loadMore failure silent at :85-87",
+  "current_ios": "Every string is hard-coded zh-TW, and several differ from web copy, e.g. empty \"還沒有留言，搶頭香！\" vs web \"搶頭香留言！\" and placeholder \"留個言…\" vs \"寫下留言...\". English devices still see Chinese. The send error shows a raw exception message, and a loadMore failure is swallowed.",
+  "target": "Same Comments.* keys as web, and errors mapped to the localized messages.",
+  "fix_plan": "Import { t } from \"@/lib/i18n\". Replace: loadFailed → t(\"Comments.loadFailed\") (also setError in loadMore's catch); tooLong → t(\"Comments.tooLong\",{max:COMMENT_MAX_LEN}); send catch → setError(t(\"Comments.sendFailed\")); empty → t(\"Comments.empty\"); loading/loadMore → t(\"Comments.loading\")/t(\"Comments.loadMore\"); placeholder and input accessibilityLabel → t(\"Comments.placeholder\"); send button a11y → t(\"Comments.send\"); delete a11y → t(\"Comments.delete\").",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/comment-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Comments.loadFailed",
+   "Comments.tooLong",
+   "Comments.sendFailed",
+   "Comments.empty",
+   "Comments.loading",
+   "Comments.loadMore",
+   "Comments.placeholder",
+   "Comments.send",
+   "Comments.delete"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-12",
+  "title": "Composer copy hard-coded and different from web Post.* keys",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/post-composer.tsx:133,175,180,202,254,279,295,305,308 (Post.needTextOrPhoto, Post.compose, Post.placeholder, Post.removePhoto, Post.tagPet, Post.visibility, Post.visibility{Public,Friends,Private}, Common.cancel, Post.publish)",
+  "ios_ref": "apps/ios/src/components/feed/post-composer.tsx:35-39 (VISIBILITY labels), 95 (permission alert), 112 (\"請輸入文字或加一張照片\"), 133 (\"發佈失敗\"), 152 (\"分享動態\"), 158 (\"說點什麼…\"), 170 (\"移除照片\"), 184,193 (\"拍照\"), 197,207 (\"相簿 (n/4)\"), 214 (\"標記寵物\"), 234 (\"誰看得到\"), 256 (\"取消\"), 271 (\"發佈\")",
+  "current_ios": "The title reads 分享動態 (web 發新貼文), the placeholder 說點什麼… (web 今天和毛孩做了什麼?), the visibility label 誰看得到 (web 公開度) and the publish button 發佈 (web 發布), and the validation message differs. Everything is hard-coded Chinese.",
+  "target": "All composer copy via shared Post.* / Common.* keys.",
+  "fix_plan": "Replace with t(\"Post.compose\"), t(\"Post.placeholder\"), t(\"Post.removePhoto\"), t(\"Post.tagPet\"), t(\"Post.visibility\"), t(\"Post.visibilityPublic|Friends|Private\") (make VISIBILITY a {value, Icon, labelKey} table like web), t(\"Common.cancel\"), t(\"Post.publish\"), t(\"Post.needTextOrPhoto\"). For the camera button use t(\"WalksPhotoPrompt.take\"). For the library button add a new key (below) or show only the count as web does (`${n}/${MAX}` next to the icon). Permission alert: new key.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-composer.tsx",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "i18n_keys_to_reuse": [
+   "Post.compose",
+   "Post.placeholder",
+   "Post.removePhoto",
+   "Post.tagPet",
+   "Post.visibility",
+   "Post.visibilityPublic",
+   "Post.visibilityFriends",
+   "Post.visibilityPrivate",
+   "Post.publish",
+   "Post.needTextOrPhoto",
+   "Common.cancel",
+   "WalksPhotoPrompt.take"
+  ],
+  "needs_new_i18n_keys": [
+   "Post.libraryPermissionDenied = 需要相簿權限，請到「設定」開啟相簿存取 | Photo library access is off. Enable it in Settings.",
+   "Post.pickFromLibrary = 相簿 | Library"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-13",
+  "title": "Composer publish button is flat brand, not btn-mango gradient; visibility chips use emoji and tint instead of lucide icons and a solid selected state; no header X",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/post-composer.tsx:307-309 (primary Button = btn-mango gradient, white text), :281-297 (chips h-9 rounded-full with Globe/Users/Lock size-3.5; selected bg-amber-500 text-white, else zinc-100/zinc-700), :259-270 (pet chips h-8 text-xs, selected amber-500/white), apps/web/src/components/ui/dialog.tsx:52-60 (sticky header: title + X close, border-b)",
+  "ios_ref": "apps/ios/src/components/feed/post-composer.tsx:254-274 (cancel/publish), :359-367 (publishBtn backgroundColor colors.brand), :35-39 (emoji labels), :344-354 (chip/chipOn brandTint), :152 (title inside scroll, no close)",
+  "current_ios": "Publish is a solid colors.brand pill with no gradient or mango shadow. Visibility chips use 🌍/👥/🔒 emoji, and the selected chip is a light brandTint with a brand border where web uses a solid fill with white text. The title scrolls with the content and there is no X close or header divider.",
+  "target": "Primary <Button> (gradient), chips with lucide Globe/Users/Lock and a solid colors.brand selected state with white text, and a sheet header with the title + X.",
+  "fix_plan": "Replace the publish Pressable with <Button variant=\"primary\" label={t(\"Post.publish\")} loading={posting} disabled={posting} onPress={handlePublish}/>, and cancel with <Button variant=\"ghost\" label={t(\"Common.cancel\")} disabled={posting}/>. Chips: render <Icon size={14} color={on?\"#fff\":colors.ink2}/> + label, with style chipOn {backgroundColor: colors.brand, borderColor: colors.brand} and chipTextOn {color:\"#fff\"}. Use height 36 (visibility) / 32 (pet), drop the border on the off state, and use backgroundColor colors.bgAlt. Header: move the title out of the ScrollView into a row {flexDirection:\"row\",justifyContent:\"space-between\",alignItems:\"center\",padding:20,borderBottomWidth:1,borderBottomColor:colors.hairline} holding Text 16/600 t(\"Post.compose\") and a Pressable with <X size={20}/> and accessibilityLabel t(\"Common.close\").",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-composer.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Post.publish",
+   "Common.cancel",
+   "Common.close",
+   "Post.compose"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-14",
+  "title": "Partial photo-upload failure leaves the composer open and never refreshes the feed (risk of duplicate posts)",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/post-composer.tsx:155-166 (err.partial → onCreated() + show warning + auto-close after 1800ms); apps/web/src/lib/firebase/posts.ts:117-127 (attaches .partial)",
+  "ios_ref": "apps/ios/src/lib/posts.ts:114-120 (throws plain Error, no partial marker); apps/ios/src/components/feed/post-composer.tsx:128-134",
+  "current_ios": "When some photos fail, the post doc IS created, but iOS throws a plain Error. The composer shows the message, stays open with the draft intact, and never calls onPosted. Tapping 發佈 again creates a second post.",
+  "target": "Partial success is treated as success with a warning: the feed refreshes and the sheet closes.",
+  "fix_plan": "posts.ts: build `const err = new Error(...) as Error & {partial?: string}; err.partial = ref.id; throw err;`. post-composer.tsx catch: if ((err as {partial?:string}).partial) { onPosted?.(); setError(err.message); setTimeout(onClose, 1800); } else setError(err instanceof Error ? err.message : t(...)). For a generic fallback, reuse Photos.status.failed or add Post.publishFailed. The posts.ts error strings themselves are Chinese literals (same as web), so leave them for parity.",
+  "files_to_touch": [
+   "apps/ios/src/lib/posts.ts",
+   "apps/ios/src/components/feed/post-composer.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-15",
+  "title": "Post card header: visibility shown as trailing emoji (not lucide icon before time); time strings not localized",
+  "category": "icon",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/feed/post-card.tsx:28-32,72-75 (Globe/Users/Lock size-3 BEFORE relTime; date-fns formatDistanceToNow localized zh-TW/en)",
+  "ios_ref": "apps/ios/src/components/feed/post-card.tsx:29-33,98-100; apps/ios/src/lib/format.ts:27-38 (relativeTime returns hard-coded 剛剛/分鐘前/小時前/天前)",
+  "current_ios": "The meta line reads `3小時前 · 🌍`. On an English device the time is still Chinese.",
+  "target": "The lucide visibility icon (12px, ink3) followed by the localized relative time.",
+  "fix_plan": "Change VISIBILITY_ICON to {public: Globe, friends: Users, lock: Lock} from lucide-react-native and render <View style={{flexDirection:\"row\",alignItems:\"center\",gap:4}}><VIcon size={12} color={colors.ink3}/><Text style={styles.meta}>{relativeTime(...)}</Text></View>. Localize relativeTime in format.ts with new RelativeTime.* keys (Hermes lacks Intl.RelativeTimeFormat, so don't rely on it); this also fixes the comment timestamps.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-card.tsx",
+   "apps/ios/src/lib/format.ts",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "needs_new_i18n_keys": [
+   "RelativeTime.justNow = 剛剛 | just now",
+   "RelativeTime.minutesAgo = {n} 分鐘前 | {n} min ago",
+   "RelativeTime.hoursAgo = {n} 小時前 | {n} h ago",
+   "RelativeTime.daysAgo = {n} 天前 | {n} d ago"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-16",
+  "title": "Post delete confirm and other post-card labels hard-coded; confirm copy differs from web",
+  "category": "copy-i18n",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/feed/page.tsx:75-86 (confirm title Common.delete, message post.text.slice(0,80), confirm Common.delete, cancel Common.cancel); post-card.tsx:83 (aria Common.delete), :120-123 (photo aria PhotoLightbox.counter), :157 (aria Comments.toggle)",
+  "ios_ref": "apps/ios/src/components/feed/post-card.tsx:70-88 (\"刪除貼文\", \"確定要刪除這篇貼文嗎？…\", \"取消\", \"刪除\", \"刪除失敗\", \"請稍後再試。\"), :104 (\"刪除貼文\"), :154 (\"留言\"), :217 (`照片 ${i+1}`)",
+  "current_ios": "All post-card copy is zh-TW literals.",
+  "target": "Shared keys, with the same confirm content as web.",
+  "fix_plan": "Alert.alert(t(\"Common.delete\"), post.text ? post.text.slice(0,80) : t(\"Nav.feed\"), [{text:t(\"Common.cancel\"),style:\"cancel\"},{text:t(\"Common.delete\"),style:\"destructive\",...}]). The failure alert can reuse t(\"Comments.deleteFailed\") (generic text '刪除失敗，請再試一次'). Use a11y labels t(\"Common.delete\") for the trash, t(\"Comments.toggle\") for the comment button with accessibilityState={{expanded: commentsOpen}}, and t(\"PhotoLightbox.counter\",{current:i+1,total:photos.length}) for photo cells.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-card.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.delete",
+   "Common.cancel",
+   "Comments.deleteFailed",
+   "Comments.toggle",
+   "PhotoLightbox.counter"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-17",
+  "title": "Post actions row layout and comment pill styling differ from web",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/feed/post-card.tsx:146-167 (flex-wrap items-center gap-2, start-aligned; comment pill h-9 rounded-full bg-zinc-100 px-3, MessageCircle size-4, count text-xs medium, no border); :101 (text-sm leading-relaxed); :105-110 (grid container rounded-lg overflow-hidden, cells square-cornered)",
+  "ios_ref": "apps/ios/src/components/feed/post-card.tsx:144-163,257-275 (justifyContent space-between, commentBtn minHeight 44 + hairline border, icon 18), :247 (body 15/21), :195-205 (each cell radius.md 12)",
+  "current_ios": "The comment pill is pushed to the far right edge, is taller, and has a border. Body text is 15px. Each photo cell is individually rounded at 12px.",
+  "target": "Reactions and the comment pill sit left-aligned in a wrap row with an 8px gap. The comment pill is 36px high on bgAlt with no border and a 16px icon. Body is 14px with line height ~23. The grid is clipped as one 8px-rounded block.",
+  "fix_plan": "actions style: {flexDirection:\"row\",flexWrap:\"wrap\",alignItems:\"center\",gap:spacing.sm}, with no space-between and no marginTop. commentBtn: {flexDirection:\"row\",height:36,gap:6,paddingHorizontal:12,borderRadius:radius.pill,backgroundColor:colors.bgAlt,alignItems:\"center\"} plus hitSlop={4} to keep the 44pt touch target. MessageCircle size 16, color colors.ink2. body: {fontSize:14,lineHeight:23}. PhotoGrid: wrap in View {borderRadius:radius.sm,overflow:\"hidden\"} and remove the per-cell borderRadius.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-card.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-18",
+  "title": "Lightbox save: no busy state (double-tap saves duplicates), text glyph instead of lucide Download, wrong success copy, hard-coded labels",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/ui/photo-lightbox.tsx:341-370 (download action: actionBusy guard + disabled + Download icon + busyLabel), :379 (aria PhotoLightbox.close); apps/web/src/components/ui/save-to-album-button.tsx (Common.saveToAlbum.label/saved/failed)",
+  "ios_ref": "apps/ios/app/feed.tsx:103-118 (onSave without `saving` state; Alert t(\"Photos.status.saved\",{count:1})); apps/ios/src/components/feed/photo-lightbox.tsx:119-137 (\"⬇︎\"/\"…\" text, a11y \"儲存到相簿\" / \"關閉\")",
+  "current_ios": "The lightbox supports a `saving` prop, but feed.tsx never passes it, so rapid taps start several downloads and saves and duplicate the photo in Camera Roll. The icon is a text arrow. Success shows \"已完成 1 張照片。\" (bulk-gallery copy), and labels are hard-coded. (Save in the feed lightbox is an accepted iOS-only extra; web's feed passes no downloadAction.)",
+  "target": "Busy-guarded save with the lucide Download icon (Loader while saving), Common.saveToAlbum copy, and i18n a11y.",
+  "fix_plan": "Inside PhotoLightbox, own the busy state: const [busy,setBusy]=useState(false). Make onSave return a Promise, and in onPress do if(busy) return; setBusy(true); try{await onSave(...)} finally{setBusy(false)}. Render busy ? <ActivityIndicator color=\"#fff\"/> : <Download size={20} color=\"#fff\"/>. Use accessibilityLabel t(\"Common.saveToAlbum.label\"), and t(\"PhotoLightbox.close\") for X. In feed.tsx (and the home tab), alert t(\"Common.saveToAlbum.saved\") on success and t(\"Photos.status.failed\") on failure. Match web button bg rgba(0,0,0,0.4) instead of white/15.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/photo-lightbox.tsx",
+   "apps/ios/app/feed.tsx",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.saveToAlbum.label",
+   "Common.saveToAlbum.saved",
+   "Common.saveToAlbum.failed",
+   "Photos.status.failed",
+   "PhotoLightbox.close"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-19",
+  "title": "Lightbox: no tap-backdrop-to-close, dots style differs, counter not via i18n, dismiss animations ignore reduced motion",
+  "category": "behavior",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/ui/photo-lightbox.tsx:273-282,318-327 (tap on dark margin closes), :392-436 (counter PhotoLightbox.counter 12px 80% opacity; dots h-2, active w-5 bg-mango-brand pill, inactive w-2 white/40, tappable with prev/next labels), :251-256 (reduced motion → no transitions)",
+  "ios_ref": "apps/ios/src/components/feed/photo-lightbox.tsx:115 (Modal animationType=\"fade\" always), :96-103 (withTiming 160 / withSpring regardless of reduceMotion), :157-170,196-205 (counter literal, active dot white 9px)",
+  "current_ios": "Only the X or a swipe-down closes the lightbox; tapping the black area does nothing. The active dot is a slightly larger white circle rather than a 20x8 mango pill. Dots aren't tappable. Under Reduce Motion, the modal fade and the drag-dismiss timing and spring still animate.",
+  "target": "Web parity on dismiss affordance and indicator, and a full reduced-motion guard.",
+  "fix_plan": "Add Gesture.Tap().onEnd(()=>runOnJS(onClose)()) composed via Gesture.Exclusive(pan, tap) on the track; or put a Pressable behind each image with onPress=onClose, using a contain-sized image so taps outside the image hit it. Counter: t(\"PhotoLightbox.counter\",{current:index+1,total}) in 12px/500 at opacity 0.8. Dots: {height:8,width:8,borderRadius:4,backgroundColor:\"rgba(255,255,255,0.4)\"}, active {width:20,backgroundColor:colors.brand}. Wrap each dot in a Pressable (hitSlop 8) that sets the index and translateX, with a11y PhotoLightbox.prev/next. Reduced motion: animationType={reduceMotion?\"none\":\"fade\"}, and use duration 0 for the close/return timings when reduceMotion.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/photo-lightbox.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "PhotoLightbox.counter",
+   "PhotoLightbox.prev",
+   "PhotoLightbox.next"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "FEED-20",
+  "title": "Report flow drops the optional note field and hard-codes 取消",
+  "category": "missing-feature",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/feed/post-menu.tsx:68-76,183-190 (textarea placeholder Moderation.reportNotePlaceholder, maxLength 300, note written to report doc); apps/web/src/lib/firebase/posts.ts:357,368",
+  "ios_ref": "apps/ios/src/components/feed/post-menu.tsx:47-60,62-76 (reason sheet → submit immediately), :52,83,104-105 (\"取消\" literal); apps/ios/src/lib/posts.ts:324-347 (CreateReportArgs has no note)",
+  "current_ios": "Reporting submits right after the reason is picked, with no way to add context. The cancel labels are hard-coded.",
+  "target": "After choosing a reason, the user may add an optional note (≤300 chars) that is written to reports/{id}.note, as on web.",
+  "fix_plan": "posts.ts: add `note?: string` to CreateReportArgs and spread ...(args.note ? {note: args.note.trim().slice(0,300)} : {}). This is the same field web writes, so no rules change. post-menu.tsx: after the reason pick, call Alert.prompt(t(\"Moderation.reportTitle\"), t(\"Moderation.reportNotePlaceholder\"), [{text:t(\"Common.cancel\"),style:\"cancel\"},{text:t(\"Moderation.reportSubmit\"),onPress:(note)=>submitReport(reason, note)}], \"plain-text\"). Replace every \"取消\" with t(\"Common.cancel\").",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-menu.tsx",
+   "apps/ios/src/lib/posts.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Moderation.reportNotePlaceholder",
+   "Moderation.reportSubmit",
+   "Moderation.reportTitle",
+   "Common.cancel"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "FEED-21",
+  "title": "Composer photo previews: fixed 96px tiles, 24px remove button, no per-photo save; emoji add-photo buttons",
+  "category": "layout",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/feed/post-composer.tsx:184-221 (grid-cols-2 gap-2 aspect-square rounded-lg tiles; remove X size-8 top-right bg-black/60; SaveToAlbumButton size-8 bottom-right), :232-250 (ghost button ImageIcon + n/4; Loader2 while processing)",
+  "ios_ref": "apps/ios/src/components/feed/post-composer.tsx:164-179,180-210,316-328",
+  "current_ios": "Thumbnails are 96x96 tiles in a wrap row. The remove button is 24px with a 12px X, below the 44pt guideline. There is no save-to-album for camera captures, which are otherwise lost if the post fails. The add buttons use 📷/🖼️ text emoji.",
+  "target": "A 2-column square grid matching web, a 32px remove button (hitSlop to 44), an optional per-photo save, and lucide icons.",
+  "fix_plan": "Compute tile = (sheetContentWidth - 8)/2 from useWindowDimensions (cap at CONTENT_MAX_WIDTH) and give photoBox {width:tile,height:tile,borderRadius:radius.sm}. removeBtn: 32x32 with X size 16, hitSlop 6. Add a bottom-right 32px round button (bg colors.card, hairline border) with Download 16 that calls MediaLibrary.requestPermissionsAsync(true) + saveToLibraryAsync(uri); local URIs need no download. Use labels t(\"Common.saveToAlbum.label\"/\"saved\"/\"failed\"). Add-photo buttons: <Camera size={16}/> + t(\"WalksPhotoPrompt.take\") and <ImageIcon size={16}/> (lucide `Image` aliased) + `${n}/${MAX_PHOTOS}`.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-composer.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Common.saveToAlbum.label",
+   "Common.saveToAlbum.saved",
+   "Common.saveToAlbum.failed",
+   "WalksPhotoPrompt.take",
+   "Post.removePhoto"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "FEED-23",
+  "title": "iOS post card shows tagged-pet chips that the web post card does not render",
+  "category": "layout",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/feed/post-card.tsx:67-189 (no petIds rendering anywhere)",
+  "ios_ref": "apps/ios/src/components/feed/post-card.tsx:66-68,126-134 (🐾 name chips in leafTint)",
+  "current_ios": "Posts with petIds show green 🐾 chips between the text and photos, but only for pets in the viewer's own scope, so the same post looks different to different viewers. Web shows no chips.",
+  "target": "Either remove the chips for 1:1 parity, or propose them to web as a shared feature.",
+  "fix_plan": "Recommended for 1:1 fidelity: delete the taggedNames block and the petNameById prop from PostCard and its callers (feed.tsx:38-41,87; (tabs)/index.tsx). If PM prefers to keep them, leave the code as is and file a web backlog item. Product decision; flag to PM.",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/post-card.tsx",
+   "apps/ios/app/feed.tsx",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "XCUT-9",
+  "title": "Feed/social components hard-code zh strings (comments, reactions, composer, post menu, lightbox) and comment delete has no confirm/failure message",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/feed/comment-section.tsx (Comments.*, Common.cancel/delete), emoji-reactions.tsx (Post.react/moreReactions/pickReaction/yourReaction), post-composer.tsx (Post.*), post-menu.tsx (Moderation.*), post-card.tsx (Common.delete, Comments.toggle, PhotoLightbox.counter)",
+  "ios_ref": "apps/ios/src/components/feed/comment-section.tsx:68,97,132,138-149,160,184,214,228,235,247; emoji-reactions.tsx:96-97,114,143; post-card.tsx:71-83,104,154,217; post-menu.tsx:52,83,104-105; post-composer.tsx:36-38,95,112,133,152-271; photo-lightbox.tsx:121,132; apps/ios/src/lib/posts.ts:107,118,265,267",
+  "current_ios": "Inline zh-TW throughout; copy drifts from web (發佈 vs 發布, 分享動態 vs 發新貼文, 誰看得到 vs 公開度, 留個言… vs 寫下留言...). Comment delete (comment-section.tsx:138-149) deletes immediately with no confirm and silently rolls back on failure, while web confirms with Comments.deleteTitle and shows Comments.deleteFailed.",
+  "target": "Web keys; delete-comment confirm + failure message.",
+  "fix_plan": "comment-section: 68→Comments.loadFailed; 97→Comments.tooLong {max:COMMENT_MAX_LEN}; 132→Comments.sendFailed; 160→Comments.empty; 184→Comments.deleteTitle; 214→loadingMore ? Comments.loading : Comments.loadMore; 228→Comments.placeholder; 235/247→Comments.send; wrap remove() in Alert.alert(t('Comments.deleteTitle'), undefined, [{text:t('Common.cancel'),style:'cancel'},{text:t('Comments.delete'),style:'destructive',onPress:...}]) and on catch setError(t('Comments.deleteFailed')). emoji-reactions: 96→mine ? t('Post.yourReaction',{emoji:mine}) : t('Post.react',{emoji:'❤️'}); 97→t('Post.pickReaction'); 114→t('Post.moreReactions'); 143→t('Post.react',{emoji:e}). post-card: 104→t('Common.delete'); 72-74→Common.cancel/Common.delete; 83→t('Error.title'); 154→t('Comments.toggle'); 217→t('PhotoLightbox.counter',{current:i+1,total:photos.length}). post-menu 52/83/104/105→t('Common.cancel'). post-composer: 36-38→t('Post.visibilityPublic'|'visibilityFriends'|'visibilityPrivate') (keep emoji prefix); 112→Post.needTextOrPhoto; 152→Post.compose; 158→Post.placeholder; 170→Post.removePhoto; 184/193→WalksPhotoPrompt.take; 214→Post.tagPet; 234→Post.visibility; 256→Common.cancel; 271→Post.publish. photo-lightbox 121→Common.saveToAlbum.label; 132→PhotoLightbox.close. posts.ts:267→t('Comments.tooLong',{max}); 107/118/265 + composer 95/133/207 → new keys. Relative time in post-card meta via format.ts (XCUT-10).",
+  "files_to_touch": [
+   "apps/ios/src/components/feed/comment-section.tsx",
+   "apps/ios/src/components/feed/emoji-reactions.tsx",
+   "apps/ios/src/components/feed/post-card.tsx",
+   "apps/ios/src/components/feed/post-menu.tsx",
+   "apps/ios/src/components/feed/post-composer.tsx",
+   "apps/ios/src/components/feed/photo-lightbox.tsx",
+   "apps/ios/src/lib/posts.ts"
+  ],
+  "i18n_keys_to_reuse": [
+   "Comments.loadFailed",
+   "Comments.tooLong",
+   "Comments.sendFailed",
+   "Comments.empty",
+   "Comments.deleteTitle",
+   "Comments.delete",
+   "Comments.deleteFailed",
+   "Comments.loading",
+   "Comments.loadMore",
+   "Comments.placeholder",
+   "Comments.send",
+   "Comments.toggle",
+   "Post.react",
+   "Post.yourReaction",
+   "Post.moreReactions",
+   "Post.pickReaction",
+   "Post.compose",
+   "Post.placeholder",
+   "Post.removePhoto",
+   "Post.tagPet",
+   "Post.visibility",
+   "Post.visibilityPublic",
+   "Post.visibilityFriends",
+   "Post.visibilityPrivate",
+   "Post.needTextOrPhoto",
+   "Post.publish",
+   "Common.cancel",
+   "Common.delete",
+   "Common.saveToAlbum.label",
+   "PhotoLightbox.close",
+   "PhotoLightbox.counter",
+   "WalksPhotoPrompt.take",
+   "Error.title"
+  ],
+  "needs_new_i18n_keys": [
+   "Post.deleteConfirmTitle = 刪除貼文 | Delete post",
+   "Post.deleteConfirmBody = 確定要刪除這篇貼文嗎？此動作無法復原。 | Delete this post? This can't be undone.",
+   "Post.publishFailed = 發布失敗 | Couldn't publish",
+   "Post.albumPermission = 需要相簿權限，請到設定開啟相簿存取權限。 | Photo library access needed — enable it in Settings.",
+   "Post.albumButton = 相簿 ({n}/{max}) | Library ({n}/{max})",
+   "Post.uploadAllFailed = 照片上傳全部失敗，貼文已取消。 | All photo uploads failed; the post was cancelled.",
+   "Post.uploadPartialFailed = {failed}/{total} 張照片上傳失敗，貼文已建立但缺少部分照片 | {failed}/{total} photos failed to upload; the post was created without them.",
+   "Comments.emptyText = 留言不能是空白 | Comment can't be empty"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-10",
+  "title": "Locale-unaware relative time / weekday labels (format.ts relativeTime, walk-row '今天', week strip 一…日, reminder countdown)",
+  "category": "copy-i18n",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/feed/post-card.tsx:40,60 and walks/walk-row.tsx:39-55, pets/pet-reminder-card.tsx:83-94 (date-fns formatDistanceToNow with zhTW/enUS); walks-week-strip.tsx:11 (locale weekday via date-fns)",
+  "ios_ref": "apps/ios/src/lib/format.ts:22-37; apps/ios/src/components/walks/walk-row.tsx:21; apps/ios/src/components/walks/walks-week-strip.tsx:14; apps/ios/src/components/pets/pet-reminder-card.tsx:56-67",
+  "current_ios": "relativeTime() always returns 剛剛/N分鐘前/N小時前/N天前; walk-row prints 今天; week strip labels fixed 一…日; reminder card builds '大約 N 小時 內/前' in Chinese — English devices see Chinese in every feed/comment/walk/reminder row.",
+  "target": "Locale-aware strings without adding date-fns (no new dep): catalog keys + a single helper.",
+  "fix_plan": "Add keys (below) and rewrite format.ts relativeTime to use t('Common.time.justNow'|'minutesAgo'|'hoursAgo'|'daysAgo',{n}); add `relativeIn(ms)` for future (reminders) using Common.time.inMinutes/inHours/inDays/inMonths/inYears + overdue variants, and `weekdayNarrow(i)` reading Common.weekdayNarrow.{mon..sun}. walk-row.tsx:21 → t('Common.time.today'). walks-week-strip.tsx:14 → DAYS.map(weekdayNarrow). pet-reminder-card.tsx:56-67 → relativeIn/relativeAgo. (Alternative: add date-fns, flagged as new dependency.)",
+  "files_to_touch": [
+   "apps/ios/src/lib/format.ts",
+   "apps/ios/src/components/walks/walk-row.tsx",
+   "apps/ios/src/components/walks/walks-week-strip.tsx",
+   "apps/ios/src/components/pets/pet-reminder-card.tsx",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "needs_new_i18n_keys": [
+   "Common.time.justNow = 剛剛 | just now",
+   "Common.time.minutesAgo = {n} 分鐘前 | {n} min ago",
+   "Common.time.hoursAgo = {n} 小時前 | {n} h ago",
+   "Common.time.daysAgo = {n} 天前 | {n} d ago",
+   "Common.time.today = 今天 | Today",
+   "Common.time.inMinutes = {n} 分鐘內 | in {n} min",
+   "Common.time.inHours = 大約 {n} 小時內 | in about {n} h",
+   "Common.time.inDays = {n} 天內 | in {n} d",
+   "Common.weekdayNarrow.mon..sun = 一/二/三/四/五/六/日 | M/T/W/T/F/S/S"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ }
+]

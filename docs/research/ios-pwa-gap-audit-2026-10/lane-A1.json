@@ -1,0 +1,288 @@
+[
+ {
+  "id": "LEAD-15",
+  "title": "Leaderboard tab label hard-coded Chinese (tab bar '排行榜', Tabs.Screen title '排行')",
+  "category": "copy-i18n",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/nav/app-nav.tsx:48 (key 'leaderboard' → Nav.leaderboard)",
+  "ios_ref": "apps/ios/src/components/raised-tab-bar.tsx:41-48 (LABELS map, leaderboard: '排行榜'); apps/ios/app/(tabs)/_layout.tsx:18 (title '排行')",
+  "current_ios": "English devices still see 排行榜 in the tab bar and VoiceOver labels.",
+  "target": "Use t('Nav.leaderboard'), which is Leaderboard in en.",
+  "fix_plan": "1. In raised-tab-bar.tsx, build LABELS from i18n: { index: t('Nav.home'), pets: t('Nav.pets'), walks: t('Nav.walks'), leaderboard: t('Nav.leaderboard'), settings: t('Nav.settings') }. Confirm the other tabs' web labels with the nav auditor; this audit scopes only the leaderboard entry.\n2. In (tabs)/_layout.tsx, set the leaderboard Tabs.Screen title to t('Nav.leaderboard').",
+  "files_to_touch": [
+   "apps/ios/src/components/raised-tab-bar.tsx",
+   "apps/ios/app/(tabs)/_layout.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.leaderboard"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "SHELL-3",
+  "title": "Bottom tab labels and tab titles are hard-coded Chinese (English users see 首頁/我的寵物/遛狗/排行榜/設定)",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/nav/app-nav.tsx:213, 237, 269 (t(key) from the Nav namespace)",
+  "ios_ref": "apps/ios/src/components/raised-tab-bar.tsx:182-188 (LABELS), 250/265/275/289; apps/ios/app/(tabs)/_layout.tsx:134-138",
+  "current_ios": "LABELS is a static Chinese map, and the Tabs.Screen titles are also hard-coded ('寵物', '排行' differ from the bar labels).",
+  "target": "Labels come from Nav.home, Nav.pets, Nav.walks, Nav.leaderboard and Nav.settings, and the accessibility labels use the same strings.",
+  "fix_plan": "In raised-tab-bar.tsx, import t from '@/lib/i18n' and replace LABELS with const NAV_KEY: Record<string,string> = { index: 'home', pets: 'pets', walks: 'walks', leaderboard: 'leaderboard', settings: 'settings' }; then label = t(`Nav.${NAV_KEY[route.name]}`). In (tabs)/_layout.tsx, set options={{ title: t('Nav.home') }} and so on for each route.",
+  "files_to_touch": [
+   "apps/ios/src/components/raised-tab-bar.tsx",
+   "apps/ios/app/(tabs)/_layout.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "Nav.home",
+   "Nav.pets",
+   "Nav.walks",
+   "Nav.leaderboard",
+   "Nav.settings"
+  ]
+ },
+ {
+  "id": "SHELL-10",
+  "title": "No shared RouteHeader: page titles are 22pt or 18pt nav-bar style with hard-coded strings instead of web's 26/800 header",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/nav/route-header.tsx:369-384 (h1 26px extrabold tracking -0.5 ink, right action slot, subtitle 14/24 ink-2); used by settings, feed, friends, photos, achievements",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:39-41 and 130 (hard-coded '設定', 22/800); apps/ios/app/feed.tsx:45-62 and 136 (18/800); apps/ios/app/photos.tsx:160-169 and 303; apps/ios/app/friends/index.tsx:141-148 (hard-coded '好友', 18/800); apps/ios/app/family.tsx:164-167; accessibilityLabel=\"返回\" hard-coded in photos.tsx:161, friends/index.tsx:141, family.tsx:164, feed.tsx:47",
+  "current_ios": "Every screen hand-rolls its header. Titles are 22pt on tabs and 18pt on pushed screens. Two titles are hard-coded Chinese, and every back button has a hard-coded '返回' accessibility label.",
+  "target": "A single ui/RouteHeader({ title, subtitle?, action?, onBack? }). If onBack is set, the first row is a 40x40 back button (ArrowLeft 22, ink, accessibilityLabel t('Common.back')). Below it, a row with the title (type.h1 26/800/-0.5 ink, accessibilityRole 'header') and the action slot aligned right. Then an optional subtitle (14, lineHeight 24, ink2, marginTop 4). Bottom margin 24 by default.",
+  "fix_plan": "Create apps/ios/src/components/ui/RouteHeader.tsx and export it from ui/index.ts. Adopt it in settings.tsx (title t('Nav.settings'), action = the SHELL-12 'more' button), feed.tsx (title Home.feed.title, subtitle Feed.subtitle, action = the compose button, onBack), photos.tsx (title Photos.title, subtitle Photos.subtitle, onBack), friends/index.tsx (title t('Nav.friends'), action = the QR button, onBack) and family.tsx (Family.title, onBack). Remove the per-file header, backBtn and title styles.",
+  "files_to_touch": [
+   "apps/ios/src/components/ui/RouteHeader.tsx (new)",
+   "apps/ios/src/components/ui/index.ts",
+   "apps/ios/app/(tabs)/settings.tsx",
+   "apps/ios/app/feed.tsx",
+   "apps/ios/app/photos.tsx",
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/app/family.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "Nav.settings",
+   "Nav.friends",
+   "Common.back",
+   "Feed.subtitle",
+   "Photos.title",
+   "Family.title"
+  ]
+ },
+ {
+  "id": "SHELL-11",
+  "title": "No shared Dialog primitive; a dozen hand-rolled slide-up modals ignore Reduce Motion, and the Sheet primitive is unused with a hard-coded '取消'",
+  "category": "a11y",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/ui/dialog.tsx:63-115 (bottom sheet on mobile: black/50 backdrop tap-to-close, rounded top, sticky title row + X close aria-label Common.close); globals.css:128-137 (global reduced-motion kill switch); docs/design-system.md §5 (reduced-motion is a hard rule)",
+  "ios_ref": "apps/ios/src/components/ui/Sheet.tsx:595 (cancelLabel='取消'), 621-626 (animationType='slide' unconditional; Sheet has zero call sites); animationType=\"slide\" with no useReducedMotion in settings/family-section.tsx:310,363, app/family.tsx:317,370, delete-account-section.tsx:71, post-composer.tsx:140, photo-prompt-sheet.tsx:34, manual-walk-dialog.tsx:128, pet-pill.tsx:49, form-sheet.tsx:49, walk-tracking-view.tsx:216, receipt-scanner.tsx:84,107",
+  "current_ios": "Each surface re-implements its own backdrop, card and close affordance with differing radius and padding. Every slide animation plays even when the OS Reduce Motion setting is on.",
+  "target": "ui/Dialog({ open, onClose, title?, children }) built on a transparent Modal. Backdrop rgba(0,0,0,0.5); tapping it closes. The sheet is bottom-aligned with a card background, top corners at radius.xl, maxHeight 90%, and maxWidth CONTENT_MAX_WIDTH centred on iPad. A title row (16/600 ink) with an X button (accessibilityLabel t('Common.close')) and a hairline bottom border. Body padding 20, with a safe-area bottom inset. animationType = useReducedMotion() ? 'fade' : 'slide'. Sheet gets the same reduced-motion gate and defaults cancelLabel to t('Common.cancel').",
+  "fix_plan": "Add apps/ios/src/components/ui/Dialog.tsx and export it. Fix the Sheet.tsx default label and the motion gate. Migrate the hand-rolled transparent modals listed above to Dialog, starting with the family create/join dialogs, delete-account and post-composer. For non-transparent full-screen modals (form-sheet, walk-tracking-view, receipt-scanner), only gate animationType through useReducedMotion.",
+  "files_to_touch": [
+   "apps/ios/src/components/ui/Dialog.tsx (new)",
+   "apps/ios/src/components/ui/Sheet.tsx",
+   "apps/ios/src/components/ui/index.ts",
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/app/family.tsx",
+   "apps/ios/src/components/settings/delete-account-section.tsx",
+   "apps/ios/src/components/feed/post-composer.tsx",
+   "apps/ios/src/components/walks/photo-prompt-sheet.tsx",
+   "apps/ios/src/components/walks/manual-walk-dialog.tsx",
+   "apps/ios/src/components/walks/pet-pill.tsx",
+   "apps/ios/src/components/pets/form-sheet.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "Common.close",
+   "Common.cancel"
+  ]
+ },
+ {
+  "id": "SHELL-12",
+  "title": "Confirm dialogs: Alert.alert sites hard-code 取消/刪除/移除/失敗 and post-delete copy; no confirm() helper mirroring useConfirm",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/ui/confirm-provider.tsx:386-445 (confirm({title,message,confirmText,cancelText,danger}) → Promise<boolean>; ghost cancel + primary or danger confirm); call sites e.g. apps/web/src/app/app/feed/page.tsx:76-81 (title Common.delete, confirm Common.delete, cancel Common.cancel)",
+  "ios_ref": "apps/ios/app/family.tsx:89,99,114,124,140,151,311 ('取消', '失敗', '無法…'); apps/ios/app/friends/index.tsx:105,111-115,124,132 ('取消', '移除', '失敗'); apps/ios/src/components/feed/post-card.tsx:71-83 ('刪除貼文', '確定要刪除…', '取消', '刪除', '刪除失敗'); apps/ios/src/components/feed/post-menu.tsx:83 ('取消'); apps/ios/src/components/settings/family-section.tsx:96,120,146,304 ('失敗', '無法…')",
+  "current_ios": "Using the native Alert as the confirm surface is an acceptable iOS equivalent, and every danger confirm already uses style:'destructive'. The copy is inconsistent, though: about 20 hard-coded Chinese strings, and title and message semantics differ from web.",
+  "target": "A promise-based confirm() with web's API and i18n defaults, so every confirm reads the same as web in both locales.",
+  "fix_plan": "Create apps/ios/src/lib/confirm.ts: export function confirm({ title, message, confirmText = t('Common.confirm'), cancelText = t('Common.cancel'), danger }): Promise<boolean>. Implement it with Alert.alert(title ?? t('Common.confirm'), message, [{ text: cancelText, style: 'cancel', onPress: () => resolve(false) }, { text: confirmText, style: danger ? 'destructive' : 'default', onPress: () => resolve(true) }], { cancelable: true, onDismiss: () => resolve(false) }). Also export notifyError(msg?) as Alert.alert(t('Error.title'), msg). Migrate the call sites above. Post delete: title Common.delete, message = the first 80 chars of the post text, confirm Common.delete. Friend remove: confirm Common.delete or Friends.removeConfirm. Replace each '失敗' with t('Error.title').",
+  "files_to_touch": [
+   "apps/ios/src/lib/confirm.ts (new)",
+   "apps/ios/app/family.tsx",
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/src/components/feed/post-card.tsx",
+   "apps/ios/src/components/feed/post-menu.tsx",
+   "apps/ios/src/components/settings/family-section.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "Common.confirm",
+   "Common.cancel",
+   "Common.delete",
+   "Error.title",
+   "Friends.removeConfirm"
+  ]
+ },
+ {
+  "id": "SHELL-15",
+  "title": "EmptyState primitive does not match web (no card, emoji instead of icon tile) and most empty states are hand-rolled",
+  "category": "style",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/ui/empty-state.tsx:125-142 (dashed-border card, white/75 bg, rounded, py-12; 48px tinted tile with 24px lucide icon; title 16/600; description 14 muted max-w-sm; action); used by feed, friends(x2), photos(x2), walks(x2), leaderboards(x4), reminders",
+  "ios_ref": "apps/ios/src/components/ui/EmptyState.tsx:296-357 (free-floating 56pt emoji, h2 20/800 title, no container); only used by pets-empty-state.tsx and (tabs)/walks.tsx:85; hand-rolled empties in feed.tsx:69-73, friends/index.tsx:278-283, photos.tsx:~200",
+  "current_ios": "Empty states are plain emoji plus text, visually unlike the web's dashed placeholder cards, and each screen re-styles its own.",
+  "target": "Add an `icon?: LucideIcon` prop and a default 'card' look. Card: borderStyle 'dashed', borderWidth 1, borderColor hairline, backgroundColor 'rgba(255,255,255,0.75)', radius lg 14, paddingHorizontal 24, paddingVertical 48, centred, gap 12. Icon tile: 48px, radius md, brandTint background, brandDeep 24px icon. Title: 16/600 ink. Body: 14 ink2, maxWidth 384. Optional CTA uses Button primary. Keep the existing gradientHero and emoji mode for the pets and walks heroes (tone='hero').",
+  "fix_plan": "Extend EmptyState.tsx with icon and tone ('card' | 'hero'). The current behaviour becomes tone 'hero', used by pets-empty-state and walks. Migrate the feed.tsx empty (Newspaper icon, Feed.empty.title/subtitle), friends/index.tsx Empty (Users icon, Friends.emptyFriends.title/subtitle, Friends.emptyRequests), photos.tsx empty (Images icon, Photos.empty.title) and the leaderboard empties to tone='card' with the icons web uses.",
+  "files_to_touch": [
+   "apps/ios/src/components/ui/EmptyState.tsx",
+   "apps/ios/app/feed.tsx",
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/app/photos.tsx",
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium",
+  "i18n_keys_to_reuse": [
+   "Feed.empty.title",
+   "Feed.empty.subtitle",
+   "Friends.emptyFriends.title",
+   "Friends.emptyFriends.subtitle",
+   "Friends.emptyRequests",
+   "Photos.empty.title"
+  ]
+ },
+ {
+  "id": "SHELL-17",
+  "title": "Button primitive: default radius 14 matches neither web nor the design-system SoT; icon is wrapped in <Text>; press scale 0.99 vs SoT .97",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/ui/button.tsx:26-30 (rounded-lg = Tailwind 8px today); docs/design-system.md §4 (buttons = pill radius, active:scale-[.97])",
+  "ios_ref": "apps/ios/src/components/ui/Button.tsx:139 (br = pill ? radius.pill : radius.lg), 147 (icon rendered inside <Text>), 220 (scale 0.99)",
+  "current_ios": "Non-pill buttons use 14pt corners. Passing a lucide element as the icon nests an SVG view inside Text, so the colour is not applied and baseline layout is quirky. The press feedback is weaker than the SoT.",
+  "target": "Default to the SoT pill radius, keeping an opt-out prop `radius`. Render the icon in a View, not Text; callers pass the colour, or Button clones the element with color=v.fg. Pressed scale 0.97, skipped when useReducedMotion() returns true.",
+  "fix_plan": "In Button.tsx, change `pill = false` to `pill = true`, or add `shape: 'pill' | 'rounded'` defaulting to pill. Change line 147 to `<View>{isValidElement(icon) ? cloneElement(icon, { color: v.fg }) : <Text ...>{icon}</Text>}</View>`. Set pressed to transform scale 0.97, applied only when the motion hook allows it.",
+  "files_to_touch": [
+   "apps/ios/src/components/ui/Button.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "SHELL-18",
+  "title": "Tab semantics: bottom bar and Segmented tabs use accessibilityRole='button'; Segmented lives in the leaderboard folder although it is the ui/Tabs primitive",
+  "category": "a11y",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/ui/tabs.tsx:218-248 (role=tablist / role=tab / aria-selected); apps/web/src/components/nav/app-nav.tsx:211-213 (aria-current=page)",
+  "ios_ref": "apps/ios/src/components/raised-tab-bar.tsx:249, 273 (role 'button'); apps/ios/src/components/leaderboard/segmented.tsx:27 (role 'button'), imported by friends/index.tsx:39",
+  "current_ios": "VoiceOver announces the tabs as buttons rather than 'tab, 2 of 5'. The visuals already match web Tabs (bgAlt track radius 8, 32px segments, card-white active, brandDeep text, no sliding indicator).",
+  "target": "The bar row and the Segmented track get accessibilityRole='tablist'. Each item gets accessibilityRole='tab' with accessibilityState={{selected}}. Move segmented.tsx to components/ui/Tabs.tsx, keep a re-export, and import it from '@/components/ui' in leaderboard and friends.",
+  "fix_plan": "Change the roles in raised-tab-bar.tsx and segmented.tsx. Move the file and update the three imports (leaderboard.tsx:13, dog-leaderboard.tsx:19, human-leaderboard.tsx:17, friends/index.tsx:39).",
+  "files_to_touch": [
+   "apps/ios/src/components/raised-tab-bar.tsx",
+   "apps/ios/src/components/leaderboard/segmented.tsx",
+   "apps/ios/src/components/ui/Tabs.tsx (new)",
+   "apps/ios/src/components/ui/index.ts",
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/app/(tabs)/leaderboard.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SHELL-19",
+  "title": "No Input/Textarea/FieldLabel primitives: text fields diverge per screen (height 48/52, card vs bgAlt fill) with no focus state",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/ui/input.tsx:255-267 (h-10, white bg, 1px border, focus ring); textarea.tsx (min-h 88, p-3); select.tsx:289-304 (FieldLabel 12/500 muted)",
+  "ios_ref": "apps/ios/app/onboarding.tsx:296 (h52 card bg), app/family.tsx:441 and settings/family-section.tsx:458 (h48 bgAlt), plus separate input styles in comment-section.tsx:280, form-sheet.tsx:264, delete-account-section.tsx:162, manual-walk-dialog.tsx:259",
+  "current_ios": "Six separate TextInput style sets with different heights, fills and fonts, and no focus indication.",
+  "target": "ui/Input: height 44 (native floor), card background, 1px hairline border, radius md 12, paddingHorizontal 12, 15 ink text, placeholder ink3. On focus, the border turns brandDeep (2px). ui/Textarea uses minHeight 88 and padding 12. ui/FieldLabel is 12/600 ink2.",
+  "fix_plan": "Add apps/ios/src/components/ui/Input.tsx: a forwardRef TextInput with focused state driven by onFocus and onBlur. Export Input, Textarea and FieldLabel. Migrate onboarding.tsx and the family dialogs first, the shell scope, and let the other surfaces adopt it.",
+  "files_to_touch": [
+   "apps/ios/src/components/ui/Input.tsx (new)",
+   "apps/ios/src/components/ui/index.ts",
+   "apps/ios/app/onboarding.tsx",
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/app/family.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "SHELL-22",
+  "title": "Avatar fallback shows 1 grapheme vs web's 2-character initials",
+  "category": "style",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/ui/avatar.tsx:156-162 (single word → first 2 chars uppercased; multi-word → first+last initial), 181 (font 12/14/18 by size)",
+  "ios_ref": "apps/ios/src/components/ui/Avatar.tsx:25-29, 62",
+  "current_ios": "'Jabir Tsai' shows 'J' (web: 'JT'), and '芒果' shows '芒' (web: '芒果'). The iOS mango brandTint background is correct per the SoT; web's rose, sky and violet palette is off-brand and should not be copied.",
+  "target": "Port the initialsOf logic: split on whitespace; a single word takes Array.from(word).slice(0,2); multiple words take the first grapheme of the first and last words; uppercase the result. The font size steps by size (>48 → 18, >32 → 14, else 12) at weight 600. Keep the brandTint background with brandDeep text.",
+  "fix_plan": "Replace firstChar() in Avatar.tsx with a grapheme-safe initialsOf(). Keep fallbackChar for empty names.",
+  "files_to_touch": [
+   "apps/ios/src/components/ui/Avatar.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-8",
+  "title": "Bottom tab bar and Tabs.Screen titles hard-coded instead of Nav.* keys",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/nav/app-nav.tsx:43-52,89 (Nav.home/pets/walks/leaderboard/settings)",
+  "ios_ref": "apps/ios/src/components/raised-tab-bar.tsx:41-47,109,124,134,148; apps/ios/app/(tabs)/_layout.tsx:15-19",
+  "current_ios": "LABELS map is a zh-TW literal (首頁/我的寵物/遛狗/排行榜/設定), also used as accessibilityLabel; _layout titles are different literals ('寵物','排行'). English devices get a Chinese tab bar on every screen.",
+  "target": "Labels from Nav.* exactly like web.",
+  "fix_plan": "raised-tab-bar.tsx: replace LABELS with `const LABEL_KEYS = { index: 'Nav.home', pets: 'Nav.pets', walks: 'Nav.walks', leaderboard: 'Nav.leaderboard', settings: 'Nav.settings' }` and use t(LABEL_KEYS[route.name]) for text + accessibilityLabel; also accessibilityRole='tab' on items. (tabs)/_layout.tsx: options={{ title: t('Nav.home') }} etc.",
+  "files_to_touch": [
+   "apps/ios/src/components/raised-tab-bar.tsx",
+   "apps/ios/app/(tabs)/_layout.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Nav.home",
+   "Nav.pets",
+   "Nav.walks",
+   "Nav.leaderboard",
+   "Nav.settings"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SOCIAL-M1",
+  "title": "ui Button primitive (prerequisite for most SOCIAL fixes): icon slot is wrapped in <Text> and horizontal padding is a fixed 24 for every size",
+  "severity": "P2",
+  "category": "style",
+  "current_ios": "apps/ios/src/components/ui/Button.tsx:70 renders `<Text style={[styles.icon,{color:v.fg}]}>{icon}</Text>`, so a lucide SVG becomes an inline view inside Text. That gives baseline misalignment, and Text colour does not reach the SVG. No caller in apps/ios currently passes `icon`, so the path is untested. styles.base uses paddingHorizontal spacing.xl (24) for sm/md/lg, while web SIZES are sm px-3 / md px-4 / lg px-6 (button.tsx:27-31). sm minHeight is 36 vs web h-8 (keeping 36 as the native floor is fine). SOCIAL-6/8/10/11/12/15 all pass lucide icons via `icon` and use sm buttons in rows.",
+  "target": "Icon rendered as a sibling View inside the row (gap 8), with per-size padding matching web: sm 12, md 16, lg 24.",
+  "fix_plan": "In Button.tsx, replace the icon Text wrapper with `{icon != null ? (typeof icon === 'string' ? <Text style={[styles.icon,{color:v.fg}]}>{icon}</Text> : <View style={styles.iconBox}>{icon}</View>) : null}`, where iconBox is {alignItems:'center', justifyContent:'center'}. Add `const PADX: Record<ButtonSize, number> = { sm: 12, md: 16, lg: 24 }` and apply `paddingHorizontal: PADX[size]` alongside minHeight. Callers pass lucide icons with an explicit color (#fff for primary, colors.ink for secondary), because lucide-react-native does not inherit Text colour. Check existing callers (family.tsx, dog-leaderboard.tsx, human-leaderboard.tsx, family-section.tsx, EmptyState) for width regressions from the smaller md padding.",
+  "files_to_touch": [
+   "apps/ios/src/components/ui/Button.tsx"
+  ],
+  "web_ref": "apps/web/src/components/ui/button.tsx:27-31, 33-45",
+  "ios_ref": "apps/ios/src/components/ui/Button.tsx:66-80, 136-145",
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "verdict": "missed-by-auditor (verifier-found)"
+ }
+]

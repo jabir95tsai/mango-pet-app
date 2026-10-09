@@ -1,0 +1,346 @@
+[
+ {
+  "id": "SETTINGS-2",
+  "title": "Language switcher section (語言 / Language, 繁中|EN) is missing; the iOS locale is frozen at app start",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:212-218 (Globe + '語言 / Language' + LanguageSwitcher, placed after BlockedUsers and before Privacy & Data); apps/web/src/components/nav/language-switcher.tsx:8-36",
+  "ios_ref": "apps/ios/app/(tabs)/settings.tsx:95-97 (BlockedUsersSection is followed directly by ExportDataSection); apps/ios/src/lib/i18n.ts:41-42 (activeLocale is a const computed once from the device locale)",
+  "current_ios": "No language row. The app language can only follow the device language, and there is no in-app way to change it.",
+  "target": "A card row between Blocked users and Privacy & Data: Globe 20 brandDeep + the literal '語言 / Language' (15/500 ink, the same bilingual literal web hard-codes) on the left. On the right, a 2-option segmented toggle with no sliding indicator: a container with hairline border, radius.sm and 2pt padding, holding '繁中' and 'EN' buttons (12/500, radius 6, paddingHorizontal 12, paddingVertical 4). The selected option uses colors.ink background with white text; the other uses ink2 text.",
+  "fix_plan": "1) In apps/ios/src/lib/i18n.ts change `export const activeLocale` to `export let activeLocale`. Add `setAppLocale(l: Locale)`, which sets i18n.locale and activeLocale, persists to AsyncStorage key 'mango.locale.v1' and notifies subscribers. Add `loadPersistedLocale()`, awaited in app/_layout.tsx before the first render (behind the existing ready gate). Babel's CJS interop reads `_i18n.activeLocale` at the use site, so the live binding works. 2) Add a LocaleContext in app/_layout.tsx whose value is used as the `key` of the root navigator, so the whole tree remounts with the new strings. 3) After a switch, write users/{uid}.locale = new locale (auth-profile already writes `locale: activeLocale`) so server pushes follow it. 4) Add a LanguageSwitcher component in apps/ios/src/components/settings/language-switcher.tsx and render it in settings.tsx after BlockedUsersSection. Alternative if the remount approach is rejected: set ios.infoPlist.CFBundleLocalizations ['zh-Hant','en'] in app.json and make the toggle call Linking.openSettings() to use iOS per-app language (needs a native rebuild, no new dependency).",
+  "files_to_touch": [
+   "apps/ios/src/lib/i18n.ts",
+   "apps/ios/app/_layout.tsx",
+   "apps/ios/src/components/settings/language-switcher.tsx",
+   "apps/ios/app/(tabs)/settings.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-18",
+  "title": "Guest upgrade card layout and flow differ from web (no Sparkles row, no CTA-to-sheet, coarse errors, no conflict acknowledgement)",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/settings/page.tsx:115-126 (card border brand/40, bg brandTint/50; Sparkles 20 brandDeep + 'Guest.settings.title' 16/600; body 14 ink-2; primary Button 'Guest.upgradeCta' self-start); guest-upgrade.tsx:142-197 (dialog: ShieldCheck disc + 'Guest.upgrade.body'; Google white/bordered and Apple black buttons h-12; error mapping to errors.cancelled/network/generic; conflict view with conflictBody + btn-mango 'conflictAck')",
+  "ios_ref": "apps/ios/src/components/settings/guest-upgrade-section.tsx:50-77 (title and body without an icon, provider buttons inline, pill radius), 32-36 (Alert '✅' or the conflict Alert), 38-43 (every non-cancel error becomes generic), 60-62 (only the Google button shows the spinner)",
+  "current_ios": "Structurally different card. The upgrade flow is not reusable elsewhere, so there is no GuestLockedNotice and no shared upgrade sheet (needed by SETTINGS-3).",
+  "target": "Card as on web. The CTA opens a shared GuestUpgradeSheet with a ShieldCheck 20 disc (40x40 brandTint, radius.xl) + body; Google (white, hairline border, radius.lg, h48) and Apple (black) buttons, the pressed one showing a spinner and both disabled while pending; a red inline error mapped to Guest.upgrade.errors.network for 'auth/network-request-failed', otherwise generic. On 'switched', show conflictBody + primary 'conflictAck' to close.",
+  "fix_plan": "Create apps/ios/src/components/auth/guest-upgrade-sheet.tsx (Sheet primitive) and a GuestUpgradeProvider/useGuestUpgrade context mounted in app/_layout.tsx, so GuestLockedNotice and Settings both call openUpgrade(). Rewrite guest-upgrade-section.tsx as the web card: Sparkles + title row, body, <Button label={t('Guest.upgradeCta')} onPress={openUpgrade} style={{alignSelf:'flex-start'}}/>. Remove the '✅' alert; onUserChanged in auth-context already flips isGuest.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/guest-upgrade-section.tsx",
+   "apps/ios/src/components/auth/guest-upgrade-sheet.tsx",
+   "apps/ios/app/_layout.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Guest.settings.title",
+   "Guest.settings.body",
+   "Guest.upgradeCta",
+   "Guest.upgrade.title",
+   "Guest.upgrade.body",
+   "Guest.upgrade.withGoogle",
+   "Guest.upgrade.withApple",
+   "Guest.upgrade.conflictBody",
+   "Guest.upgrade.conflictAck",
+   "Guest.upgrade.errors.network",
+   "Guest.upgrade.errors.generic"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-19",
+  "title": "Cancelling Google bind shows a 'binding failed' error, because google-signin v13 returns {type:'cancelled'} instead of throwing",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/auth/guest-upgrade.tsx:68-83 (cancel maps to errors.cancelled and is not treated as a failure)",
+  "ios_ref": "apps/ios/src/lib/auth.ts:96-103 (buildGoogleCredential ignores the GoogleSignin.signIn() result, then getTokens() throws because no user is signed in); guest-upgrade-section.tsx:38-43 (only 'auth/canceled' and 'ERR_REQUEST_CANCELED' are treated as cancel); the installed @react-native-google-signin/google-signin is 13.3.1, whose signIn resolves {type:'cancelled'}",
+  "current_ios": "A guest who opens the Google sheet and backs out gets a '綁定失敗，請稍後再試' alert. The same pattern likely affects the sign-in screen if it shares buildGoogleCredential.",
+  "target": "Cancelling is silent, and real errors still alert.",
+  "fix_plan": "In buildGoogleCredential: `const res = await GoogleSignin.signIn(); if (isCancelledResponse(res)) { const e = new Error('cancelled'); (e as any).code = 'auth/canceled'; throw e; }`. Import isCancelledResponse from the package (available in v13). Optionally use res.data.idToken directly instead of getTokens(). Also treat statusCodes.SIGN_IN_CANCELLED as cancel in guest-upgrade-section.tsx.",
+  "files_to_touch": [
+   "apps/ios/src/lib/auth.ts",
+   "apps/ios/src/components/settings/guest-upgrade-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Guest.upgrade.errors.generic"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "SHELL-1",
+  "title": "Sign-in screen has no 'Continue as guest' entry (App Store review notes depend on it)",
+  "category": "missing-feature",
+  "severity": "P0",
+  "web_ref": "apps/web/src/components/auth/sign-in-buttons.tsx:260-271 (handleGuest), 305-324 (divider + guest button)",
+  "ios_ref": "apps/ios/app/(auth)/sign-in.tsx:52-88; apps/ios/src/lib/auth.ts:86-89 (signInAsGuest exists but nothing calls it)",
+  "current_ios": "Only the Google button and the native Apple button are offered. signInAsGuest() is implemented but never wired, so guest mode cannot be reached on iOS. GuestUpgradeSection in Settings is unreachable code. docs/features/ios-app-store-listing.md:142-143 tells App Review to tap 以訪客身分繼續, and that button does not exist.",
+  "target": "Below the provider buttons, add a divider row (1px hairline line, then Auth.guestDivider in 12px ink3, then another line). Under it, add a secondary outlined button (height 44, transparent fill, 1px hairline border, ink2 14/500 text Auth.continueAsGuest). It is disabled while any sign-in is pending and shows a spinner while the guest sign-in runs.",
+  "fix_plan": "In sign-in.tsx, extend the busy union to include \"guest\". Add a guest handler that calls run(\"guest\", signInAsGuest). Root _layout already routes after sign-in: a fresh anonymous user has no family and no onboarded flag, so they land on /onboarding, where create/join is guest-locked on web. When user.isAnonymous, either skip onboarding and go to /(tabs)/walks, or show the SHELL-2 GuestLockedNotice(feature=\"family\") in place of the create/join cards. Recommended: in _layout.tsx line 46, route anonymous users straight to /(tabs)/walks. Ship together with SHELL-2 so guests do not reach community write paths that rules reject.",
+  "files_to_touch": [
+   "apps/ios/app/(auth)/sign-in.tsx",
+   "apps/ios/app/_layout.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "Auth.guestDivider",
+   "Auth.continueAsGuest"
+  ]
+ },
+ {
+  "id": "SHELL-2",
+  "title": "No guest upgrade nudge banner, no shared upgrade sheet, no GuestLockedNotice gates",
+  "category": "missing-feature",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/auth/guest-upgrade-nudge.tsx:367-439 (mounted in apps/web/src/app/app/layout.tsx:436); apps/web/src/components/auth/guest-upgrade.tsx:480-491 (GuestUpgradeProvider), 524-639 (UpgradeAccountDialog), 646-677 (GuestLockedNotice used in feed/page.tsx:110, friends/page.tsx:136, family-section.tsx:205, post-card.tsx:143)",
+  "ios_ref": "apps/ios/src/components/settings/guest-upgrade-section.tsx:18-47 (only upgrade surface); apps/ios/app/(tabs)/settings.tsx:82-95 (family/prefs simply hidden for guests)",
+  "current_ios": "The only upgrade entry is the Settings card. Success shows Alert.alert(title, \"✅\") and the conflict path shows a plain Alert. There is no dismissible nudge banner and no app-wide openUpgrade(). The feed composer, reactions, friends and family have no locked notice: family is silently hidden, and feed and friends have no guest gate at all.",
+  "target": "Match web. (1) A GuestUpgradeProvider exposes openUpgrade() and renders one bottom dialog containing: a ShieldCheck tile (40px, radius md, brandTint background, brandDeep icon), the Guest.upgrade.body text, Google and Apple bind buttons, an inline error, and a conflict view showing Guest.upgrade.conflictBody with a primary Guest.upgrade.conflictAck button. (2) GuestUpgradeNudge: brandTint at 60% fill, brand at 40% border, radius lg. It has a 36px brand tile with a white Sparkles icon, Guest.nudge.title (14/600 ink), Guest.nudge.body (14 ink2), a primary 'cta' Button and a ghost 'dismiss' button, and an X in the top-right. It shows only when isAnonymous and the user has 1 or more personal pets, and stays hidden once dismissed. (3) GuestLockedNotice({feature}): Lock icon, Guest.locked.<feature> text and a primary Guest.upgradeCta button.",
+  "fix_plan": "Create apps/ios/src/components/auth/guest-upgrade.tsx. Move the run() logic out of settings/guest-upgrade-section.tsx into a provider mounted in app/_layout.tsx inside AuthProvider. On a 'linked' result, show nothing: onUserChanged already re-runs because isAnonymous flips. On 'switched', show the conflict view. Create guest-upgrade-nudge.tsx. Persist dismissal with AsyncStorage key 'mango.guestNudgeDismissed', reading and writing inside try/catch. Get the pet count from the existing iOS personal pets read in src/lib/pets-data.ts. Render the nudge at the top of the walks and home tab scroll content, because there is no shared layout wrapper. Gate the feed.tsx compose button, the post-card reaction and comment input, friends/index.tsx, and the settings FamilySection with GuestLockedNotice instead of hiding them. Make GuestUpgradeSection call openUpgrade().",
+  "files_to_touch": [
+   "apps/ios/src/components/auth/guest-upgrade.tsx (new)",
+   "apps/ios/src/components/auth/guest-upgrade-nudge.tsx (new)",
+   "apps/ios/src/components/settings/guest-upgrade-section.tsx",
+   "apps/ios/app/_layout.tsx",
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/app/(tabs)/index.tsx",
+   "apps/ios/app/feed.tsx",
+   "apps/ios/app/friends/index.tsx",
+   "apps/ios/app/(tabs)/settings.tsx",
+   "apps/ios/src/components/feed/post-card.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "Guest.nudge.title",
+   "Guest.nudge.body",
+   "Guest.nudge.cta",
+   "Guest.nudge.dismiss",
+   "Guest.upgrade.title",
+   "Guest.upgrade.body",
+   "Guest.upgrade.withGoogle",
+   "Guest.upgrade.withApple",
+   "Guest.upgrade.conflictBody",
+   "Guest.upgrade.conflictAck",
+   "Guest.upgrade.errors.generic",
+   "Guest.upgrade.errors.cancelled",
+   "Guest.upgrade.errors.network",
+   "Guest.locked.post",
+   "Guest.locked.reactions",
+   "Guest.locked.friends",
+   "Guest.locked.family",
+   "Guest.upgradeCta"
+  ]
+ },
+ {
+  "id": "SHELL-4",
+  "title": "Sign-in screen layout and copy diverge from the web landing (brand name, tagline, welcome card, Google icon, legal links)",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/page.tsx:48-94; apps/web/src/components/auth/sign-in-buttons.tsx:112-133 (GoogleIcon), 274-303",
+  "ios_ref": "apps/ios/app/(auth)/sign-in.tsx:43-91, 93-136",
+  "current_ios": "A 🥭 emoji in a 96px brandTint disc. 'Mango Pet' (28/800) and '陪牠走每一步' are hard-coded and match neither locale's App.name or App.tagline. There is no welcome card. The Google button is text-only with the hard-coded '使用 Google 登入'. The legal line is a hard-coded, non-tappable sentence.",
+  "target": "Order matches web. (1) Logo: 84px Image from apps/ios/assets/icon.png, radius sm 8, mango shadow. (2) App.name at 36/700 ink and App.tagline at 15 ink2, centred. (3) A white card (card background, hairline border, radius lg 14, shadows.card, padding 20) holding Auth.welcome (20/600 ink) and Auth.subtitle (14/22 ink2), then the buttons: Google is white with a hairline border, the multicolour Google 'G' SVG (20px) and Auth.signInWithGoogle; the Apple native button keeps its height, set to 48 to match web; then the guest block from SHELL-1. (4) A footer row with two tappable links, Common.privacy and Common.terms (12 ink3), opening `${SITE_URL}/privacy` and `${SITE_URL}/terms` the same way settings.tsx:114-119 does.",
+  "fix_plan": "Rewrite sign-in.tsx. Port the GoogleIcon paths from sign-in-buttons.tsx:115-130 into a react-native-svg <Svg viewBox=\"0 0 24 24\"> with the four <Path fill> elements (react-native-svg is already installed). Use Image with require('../../assets/icon.png'). Wrap the content in a ScrollView with maxWidth CONTENT_MAX_WIDTH, centred. Remove every hard-coded string. Facebook is intentionally omitted on iOS. The web language switcher is covered separately in SHELL-21.",
+  "files_to_touch": [
+   "apps/ios/app/(auth)/sign-in.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "App.name",
+   "App.tagline",
+   "Auth.welcome",
+   "Auth.subtitle",
+   "Auth.signInWithGoogle",
+   "Auth.signInWithApple",
+   "Common.privacy",
+   "Common.terms"
+  ]
+ },
+ {
+  "id": "SHELL-5",
+  "title": "Cancelling Google or Apple sign-in shows a '登入失敗' error alert with the raw native message; error codes are not mapped",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/auth/sign-in-buttons.tsx:195-218 (friendlyError: cancelled→Auth.errors.cancelled, network, generic), 342-344 (inline red error text)",
+  "ios_ref": "apps/ios/src/lib/auth.ts:29-38 and 94-101 (GoogleSignin.signIn() result ignored, then getTokens()); apps/ios/app/(auth)/sign-in.tsx:34-37",
+  "current_ios": "@react-native-google-signin v13.3.1 returns {type:'cancelled'} on cancel instead of throwing. The code ignores that result and calls getTokens(), which throws because no user is signed in, so a cancel surfaces as Alert('登入失敗', <native message>). Apple cancel throws ERR_REQUEST_CANCELED, which reaches the same Alert. The Firebase codes auth/account-exists-with-different-credential and auth/network-request-failed are shown raw. The same buildGoogleCredential path makes a Google cancel in the guest upgrade show errors.generic.",
+  "target": "A cancel is silent, or at most shows inline Auth.errors.cancelled. Other errors show inline, centred red text under the buttons (colors.danger, 14), mapped to: network-request-failed → Auth.errors.network; account-exists-with-different-credential or credential-already-in-use → Auth.errors.differentCredential; operation-not-allowed → Auth.errors.providerDisabled; anything else → Auth.errors.generic.",
+  "fix_plan": "In auth.ts, add class SignInCancelledError extends Error { code = 'auth/canceled' }. In signInWithGoogle and buildGoogleCredential, use const res = await GoogleSignin.signIn(); if (res.type !== 'success') throw new SignInCancelledError(); then use res.data.idToken, falling back to getTokens(). In sign-in.tsx, replace Alert.alert with const [error, setError] = useState<string|null>(null) and a friendlyError(code) helper: codes 'auth/canceled' and 'ERR_REQUEST_CANCELED' return null; the others map as listed above. guest-upgrade-section.tsx:39 already treats 'auth/canceled' as silent, so it starts working with no further change.",
+  "files_to_touch": [
+   "apps/ios/src/lib/auth.ts",
+   "apps/ios/app/(auth)/sign-in.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "Auth.errors.cancelled",
+   "Auth.errors.network",
+   "Auth.errors.differentCredential",
+   "Auth.errors.providerDisabled",
+   "Auth.errors.generic"
+  ]
+ },
+ {
+  "id": "SHELL-6",
+  "title": "Family invite deep link is lost when the user is signed out (no ?next= equivalent)",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/page.tsx:12-39 (getNextPath allowlists /join/); apps/web/src/components/auth/require-auth.tsx:690-695",
+  "ios_ref": "apps/ios/app/_layout.tsx:27-49",
+  "current_ios": "When the user is signed out and opens mangopet://join/123456, segments[0]==='join'. The root effect calls router.replace('/(auth)/sign-in'). After sign-in it replaces to /onboarding or /(tabs)/walks, so the code is dropped and joinFamilyByCode never runs.",
+  "target": "After sign-in, the user is sent back to /join/<code> and the auto-join runs, matching web.",
+  "fix_plan": "In RootNavigator, add const pendingJoinRef = useRef<string|null>(null). In the !user branch, before the replace, check segments[0]==='join'. If so, read the code from useGlobalSearchParams() or from segments, and store it in pendingJoinRef; also store it in AsyncStorage 'mango.pendingJoin' so it survives the Google or Apple app switch. In the decision block at lines 39-47, if a pending code exists, clear it and call router.replace(`/join/${code}`) instead of walks or onboarding.",
+  "files_to_touch": [
+   "apps/ios/app/_layout.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SHELL-7",
+  "title": "Join screen uses the legacy Join.* copy, emoji, flat button and bounces to the leaderboard; web uses JoinFamily.* title+hint, an icon tile and goes home",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/join/[code]/page.tsx:236-238 (replace('/app') on success), 250-289 (64px icon tile Loader2/Check/Users/AlertTriangle, h1 24/700, hint 14 muted, Button goToApp → /app)",
+  "ios_ref": "apps/ios/app/join/[code].tsx:354 and 388 (replace('/(tabs)/leaderboard')), 365-391 (one message line + emoji), 397-404 (flat colors.brand button)",
+  "current_ios": "A single line of text from the old Join.* namespace (the back button reads '返回排行榜'). Status is shown with emoji (🎉, 👌, ⚠️), there is no hint line, and the button is flat brand with white text instead of the mango gradient. On success it bounces to the leaderboard tab.",
+  "target": "Centred column, maxWidth CONTENT_MAX_WIDTH. A 64px tile (radius xl2 22, brandTint background, brandDeep 32px icon): an ActivityIndicator while joining, then lucide Check, Users or AlertTriangle. Title: JoinFamily.joining, joinedTitle, alreadyMemberTitle, invalidCodeTitle or errorTitle, at 24/700 ink. Hint: JoinFamily.joiningHint, joinedHint, alreadyMemberHint, or invalidCodeHint({code}), at 14 ink2; the error case uses Join.error. The ui/Button primary uses JoinFamily.goToApp. Success and the button both replace to '/(tabs)' (home), as on web.",
+  "fix_plan": "Rewrite the render in join/[code].tsx. Keep the status state machine but store raw in invalidCode for the {code} interpolation. Replace the emoji with lucide-react-native icons and the Pressable with <Button label={t('JoinFamily.goToApp')} pill />. Change both router.replace targets to '/(tabs)'. Note: after joining, use-walks-data and use-pets-data still read currentFamilyId themselves (review R08), so the home and walks scope may stay stale until R08 is fixed.",
+  "files_to_touch": [
+   "apps/ios/app/join/[code].tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "JoinFamily.joining",
+   "JoinFamily.joiningHint",
+   "JoinFamily.joinedTitle",
+   "JoinFamily.joinedHint",
+   "JoinFamily.alreadyMemberTitle",
+   "JoinFamily.alreadyMemberHint",
+   "JoinFamily.invalidCodeTitle",
+   "JoinFamily.invalidCodeHint",
+   "JoinFamily.errorTitle",
+   "JoinFamily.goToApp",
+   "Join.error"
+  ]
+ },
+ {
+  "id": "SHELL-9",
+  "title": "Onboarding visual structure differs: emoji instead of icon tiles, no per-card CTA button, flat primary button, hard-coded strings",
+  "category": "layout",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/onboarding/page.tsx:78-115 (PawPrint 56px tile header, h1 24/700, two OptionCards, subdued skip text), 140-166 (OptionCard: 40px icon tile Users/UserPlus + title 14/600 + desc 12 + Button sm)",
+  "ios_ref": "apps/ios/app/onboarding.tsx:211-228 (🥭 emoji, 👨‍👩‍👧/🔑 prefixed titles, whole card pressable), 242-247/262-267 (flat colors.brand primary, hard-coded '‹ 返回'), 186 (hard-coded '建立失敗，請稍後再試'), 202-204 (any join failure shows the invalid-code message)",
+  "current_ios": "The header is a 56pt mango emoji. The option cards have emoji in the title and no action button. The skip link is bold brandDeep. The primary CTA is a flat brand pill rather than the btn-mango gradient. The back link and the create error are hard-coded Chinese. A network failure on join is reported as an invalid code.",
+  "target": "Header: a 56px tile (radius xl2, brandTint background, brandDeep PawPrint 28px), then Onboarding.title (24/700 ink) and Onboarding.subtitle (14 ink2). OptionCard: a Card (radius lg, hairline border, shadows.card, padding 16) laid out as a row: 40px icon tile (radius md, brandTint background, brandDeep Users or UserPlus 20px), then a flex column with the title (14/600 ink) and description (12 ink3), then <Button size='sm' label={Onboarding.createAction or joinAction}>. Skip: centred text in 14 ink2 (not bold brand). Footer hint: 12 ink3. In the forms, use ui/Button primary (gradient, white text) and a back link reading Common.back. The join catch distinguishes a code-shape error (Family.joinDialog.errInvalidCode) from other failures (Error.title).",
+  "fix_plan": "Refactor onboarding.tsx: replace the emoji with lucide-react-native PawPrint, Users and UserPlus inside tiles; add an inner OptionCard component with an explicit Button. Replace styles.primary Pressables with <Button label=... loading={busy} size='lg' pill fullWidth />. Replace '‹ 返回' with ChevronLeft + t('Common.back'). Replace the hard-coded create error with t('Error.title'). In doJoin's catch, inspect the callable error code: invalid-argument or not-found means errInvalidCode, anything else means Error.title. Use Family.createDialog.instructions and Family.joinDialog.instructions as the helper text above each form, as the web dialogs do.",
+  "files_to_touch": [
+   "apps/ios/app/onboarding.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "Onboarding.title",
+   "Onboarding.subtitle",
+   "Onboarding.createTitle",
+   "Onboarding.createDescription",
+   "Onboarding.createAction",
+   "Onboarding.joinTitle",
+   "Onboarding.joinDescription",
+   "Onboarding.joinAction",
+   "Onboarding.skipAction",
+   "Onboarding.footerHint",
+   "Common.back",
+   "Family.createDialog.instructions",
+   "Family.joinDialog.instructions",
+   "Family.joinDialog.errInvalidCode",
+   "Error.title"
+  ]
+ },
+ {
+  "id": "SHELL-13",
+  "title": "Profile-bootstrap error screen renders a missing-key marker (t('Common.retry') is not in the catalog) and is unstyled with hard-coded copy",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/error.tsx:13-38 (Error.title / Error.retry); packages/shared-i18n zh-TW.json Error = {title, retry, home}; Common has no 'retry'",
+  "ios_ref": "apps/ios/app/_layout.tsx:51-71 (t('Common.retry') line 55; activeLocale ternary strings at 53 and 68; t('Push.status.checking') reused as the signing-out label at 65); apps/ios/src/components/settings/push-toggle.tsx:69 (also t('Common.retry'))",
+  "current_ios": "Common.retry exists in neither zh-TW nor en. i18n-js with enableFallback renders '[missing \"zh-TW.Common.retry\" translation]' on the retry button. The screen has raw Text and Pressables with padding 20, two hard-coded bilingual strings, and '檢查中...' as the sign-out busy label.",
+  "target": "A centred column (maxWidth CONTENT_MAX_WIDTH, padding 24): an AlertTriangle in a 64px brandTint tile, Error.title (20/800 ink), a body line (14 ink2), <Button primary label=Error.retry>, <Button ghost label=Auth.signOut loading={exiting}>, and an inline revoke-failure note (13 danger).",
+  "fix_plan": "Replace t('Common.retry') with t('Error.retry') in _layout.tsx and push-toggle.tsx. Move the two ternary strings into new catalog keys. Rebuild the block with ui/Button. Use the Button's loading prop instead of the Push.status.checking label.",
+  "files_to_touch": [
+   "apps/ios/app/_layout.tsx",
+   "apps/ios/src/components/settings/push-toggle.tsx",
+   "packages/shared-i18n/src/messages/zh-TW.json",
+   "packages/shared-i18n/src/messages/en.json"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "i18n_keys_to_reuse": [
+   "Error.title",
+   "Error.retry",
+   "Auth.signOut"
+  ],
+  "needs_new_i18n_keys": [
+   "Auth.profileError.body = 無法準備帳號資料，請確認連線後重試。 | Could not prepare your profile. Check your connection and try again.",
+   "Auth.profileError.revokeFailed = 尚未撤銷此裝置的通知，請確認連線後再次登出。 | Could not revoke this device's notifications. Check your connection and try signing out again."
+  ]
+ },
+ {
+  "id": "SHELL-21",
+  "title": "No way to choose the UI language (web has a 繁中/EN switcher on the landing page and in settings)",
+  "category": "missing-feature",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/nav/language-switcher.tsx:13-36; apps/web/src/app/page.tsx:49-51; apps/web/src/app/app/settings/page.tsx:217",
+  "ios_ref": "apps/ios/src/lib/i18n.ts:32-42 (locale detected once from the device); apps/ios/app.json (no locales / CFBundleLocalizations)",
+  "current_ios": "The locale follows the device language only. With no declared localizations, iOS may not offer a per-app Language option in Settings.",
+  "target": "Users can choose 繁中 or English for the app.",
+  "fix_plan": "Lowest cost, no new dependency: in app.json, add expo.ios.infoPlist.CFBundleLocalizations ['zh-Hant','en'] (and CFBundleDevelopmentRegion 'zh-Hant') so iOS exposes Settings → Mango Pet → Language, then confirm that expo-localization getLocales() returns the per-app choice. If it does not, add a settings row 'Settings → Language' that opens Linking.openSettings().",
+  "files_to_touch": [
+   "apps/ios/app.json",
+   "apps/ios/src/lib/i18n.ts"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "low"
+ },
+ {
+  "id": "XCUT-5",
+  "title": "Missing catalog key Common.retry renders '[missing \"zh-TW.Common.retry\" translation]'",
+  "category": "copy-i18n",
+  "severity": "P1",
+  "web_ref": "packages/shared-i18n/src/messages/zh-TW.json:56-60 (only Error.retry exists)",
+  "ios_ref": "apps/ios/app/_layout.tsx:55; apps/ios/src/components/settings/push-toggle.tsx:69",
+  "current_ios": "t('Common.retry') has no entry in either locale; i18n-js fallback also misses so the profile-error splash and push-toggle error show the raw missing-translation marker. _layout.tsx:65 also uses t('Push.status.checking') ('檢查中...') as the sign-out busy label.",
+  "target": "Use the existing Error.retry key; sign-out busy state uses a spinner instead of a mismatched string.",
+  "fix_plan": "Replace t('Common.retry') with t('Error.retry') at _layout.tsx:55 and push-toggle.tsx:69. At _layout.tsx:65 render <ActivityIndicator color={colors.brandDeep}/> when exiting instead of t('Push.status.checking'). Note for web handoff: apps/web/src/app/app/walks/page.tsx:504 and walk-tracking-view.tsx:1086 also call Common.retry (same missing key).",
+  "files_to_touch": [
+   "apps/ios/app/_layout.tsx",
+   "apps/ios/src/components/settings/push-toggle.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Error.retry",
+   "Auth.signOut"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ }
+]

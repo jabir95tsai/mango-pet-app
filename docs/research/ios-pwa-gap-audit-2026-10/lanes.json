@@ -1,0 +1,312 @@
+{
+ "A1": {
+  "ids": [
+   "SHELL-3",
+   "SHELL-10",
+   "SHELL-11",
+   "SHELL-12",
+   "SHELL-15",
+   "SHELL-17",
+   "SHELL-18",
+   "SHELL-19",
+   "SHELL-22",
+   "LEAD-15",
+   "XCUT-8",
+   "SOCIAL-M1"
+  ],
+  "prefixes": []
+ },
+ "A2": {
+  "ids": [
+   "SHELL-1",
+   "SHELL-2",
+   "SHELL-4",
+   "SHELL-5",
+   "SHELL-6",
+   "SHELL-7",
+   "SHELL-9",
+   "SHELL-13",
+   "SHELL-21",
+   "SETTINGS-2",
+   "SETTINGS-18",
+   "SETTINGS-19",
+   "XCUT-5"
+  ],
+  "prefixes": [
+   "SHELL-M"
+  ]
+ },
+ "A3": {
+  "ids": [
+   "XCUT-1",
+   "XCUT-2",
+   "XCUT-13",
+   "XCUT-14",
+   "WALKS-1",
+   "WALKS-12",
+   "PETS-21",
+   "HOME-13",
+   "FEED-5",
+   "SETTINGS-21",
+   "TRACK-25",
+   "SOCIAL-20",
+   "SETTINGS-25"
+  ],
+  "prefixes": [
+   "XCUT-M"
+  ]
+ },
+ "HOME": {
+  "ids": [
+   "HOME-1",
+   "HOME-2",
+   "HOME-3",
+   "HOME-4",
+   "HOME-5",
+   "HOME-6",
+   "HOME-7",
+   "HOME-8",
+   "HOME-9",
+   "HOME-10",
+   "HOME-11",
+   "HOME-14",
+   "HOME-15",
+   "HOME-16",
+   "HOME-17"
+  ],
+  "prefixes": [
+   "HOME-M"
+  ]
+ },
+ "FEED": {
+  "ids": [
+   "FEED-1",
+   "FEED-2",
+   "FEED-3",
+   "FEED-4",
+   "FEED-6",
+   "FEED-7",
+   "FEED-8",
+   "FEED-9",
+   "FEED-10",
+   "FEED-11",
+   "FEED-12",
+   "FEED-13",
+   "FEED-14",
+   "FEED-15",
+   "FEED-16",
+   "FEED-17",
+   "FEED-18",
+   "FEED-19",
+   "FEED-20",
+   "FEED-21",
+   "FEED-23",
+   "HOME-12",
+   "XCUT-9",
+   "XCUT-10"
+  ],
+  "prefixes": [
+   "FEED-M"
+  ]
+ },
+ "TRACK": {
+  "ids": [
+   "TRACK-1",
+   "TRACK-2",
+   "TRACK-3",
+   "TRACK-4",
+   "TRACK-5",
+   "TRACK-6",
+   "TRACK-7",
+   "TRACK-8",
+   "TRACK-9",
+   "TRACK-10",
+   "TRACK-11",
+   "TRACK-12",
+   "TRACK-13",
+   "TRACK-14",
+   "TRACK-15",
+   "TRACK-16",
+   "TRACK-17",
+   "TRACK-18",
+   "TRACK-19",
+   "TRACK-20",
+   "TRACK-21",
+   "TRACK-22",
+   "TRACK-23",
+   "XCUT-3",
+   "XCUT-4",
+   "WALKS-5",
+   "WALKS-8",
+   "WALKS-9",
+   "XCUT-7"
+  ],
+  "prefixes": [
+   "TRACK-M"
+  ]
+ },
+ "WALKS": {
+  "ids": [
+   "WALKS-2",
+   "WALKS-3",
+   "WALKS-4",
+   "WALKS-6",
+   "WALKS-7",
+   "WALKS-10",
+   "WALKS-11",
+   "WALKS-13",
+   "WALKS-14",
+   "WALKS-15",
+   "WALKS-16",
+   "WALKS-17",
+   "TRACK-24",
+   "XCUT-6"
+  ],
+  "prefixes": [
+   "WALKS-M"
+  ]
+ },
+ "PETSA": {
+  "ids": [
+   "PETS-4",
+   "PETS-5",
+   "PETS-6",
+   "PETS-7",
+   "PETS-8",
+   "PETS-14",
+   "PETS-15",
+   "PETS-16",
+   "PETS-17",
+   "PETS-18"
+  ],
+  "prefixes": []
+ },
+ "PETSB": {
+  "ids": [
+   "PETS-1",
+   "PETS-2",
+   "PETS-3",
+   "PETS-9",
+   "PETS-10",
+   "PETS-11",
+   "PETS-12",
+   "PETS-13",
+   "PETS-19",
+   "PETS-20",
+   "PETS-22",
+   "PETS-23",
+   "PETS-24",
+   "PETS-25",
+   "PETS-26",
+   "PETS-27",
+   "PETS-28",
+   "PETS-29"
+  ],
+  "prefixes": [
+   "PETS-M"
+  ]
+ },
+ "LEAD": {
+  "ids": [
+   "LEAD-3",
+   "LEAD-4",
+   "LEAD-5",
+   "LEAD-6",
+   "LEAD-7",
+   "LEAD-8",
+   "LEAD-9",
+   "LEAD-10",
+   "LEAD-11",
+   "LEAD-12",
+   "LEAD-13",
+   "LEAD-14",
+   "LEAD-16",
+   "XCUT-18"
+  ],
+  "prefixes": [
+   "LEAD-M"
+  ]
+ },
+ "SETTINGS": {
+  "ids": [
+   "SETTINGS-1",
+   "SETTINGS-3",
+   "SETTINGS-4",
+   "SETTINGS-5",
+   "SETTINGS-6",
+   "SETTINGS-7",
+   "SETTINGS-8",
+   "SETTINGS-9",
+   "SETTINGS-10",
+   "SETTINGS-11",
+   "SETTINGS-12",
+   "SETTINGS-13",
+   "SETTINGS-20",
+   "SETTINGS-22",
+   "SETTINGS-23",
+   "SETTINGS-24",
+   "LEAD-2",
+   "SHELL-16"
+  ],
+  "prefixes": [
+   "SETTINGS-M"
+  ]
+ },
+ "FAMACH": {
+  "ids": [
+   "SETTINGS-14",
+   "SETTINGS-15",
+   "SETTINGS-16",
+   "SETTINGS-17",
+   "SHELL-8",
+   "SHELL-14",
+   "SHELL-20",
+   "LEAD-1"
+  ],
+  "prefixes": []
+ },
+ "SOCIAL": {
+  "ids": [
+   "SOCIAL-1",
+   "SOCIAL-2",
+   "SOCIAL-3",
+   "SOCIAL-4",
+   "SOCIAL-5",
+   "SOCIAL-6",
+   "SOCIAL-7",
+   "SOCIAL-8",
+   "SOCIAL-9",
+   "SOCIAL-10",
+   "SOCIAL-11",
+   "SOCIAL-12",
+   "SOCIAL-13",
+   "SOCIAL-14",
+   "SOCIAL-15",
+   "SOCIAL-16",
+   "SOCIAL-17",
+   "SOCIAL-18",
+   "SOCIAL-19",
+   "SOCIAL-21",
+   "SOCIAL-22",
+   "FEED-22",
+   "XCUT-15",
+   "XCUT-11"
+  ],
+  "prefixes": [
+   "SOCIAL-M"
+  ],
+  "exclude": [
+   "SOCIAL-M1",
+   "SOCIAL-M2"
+  ]
+ },
+ "XC": {
+  "ids": [
+   "XCUT-16",
+   "XCUT-17",
+   "XCUT-12",
+   "SHELL-23"
+  ],
+  "prefixes": []
+ }
+}

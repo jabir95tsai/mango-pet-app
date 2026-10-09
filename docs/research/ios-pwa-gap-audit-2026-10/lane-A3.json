@@ -1,0 +1,282 @@
+[
+ {
+  "id": "HOME-13",
+  "title": "Wasteful home load: fetches up to 3×30 posts to show 10, runs scope/friends/blocked reads one after another, and makes an extra family doc read",
+  "category": "optimization",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/page.tsx:53-71 (pets/friends/blocked in parallel; listFeedPosts max=10)",
+  "ios_ref": "apps/ios/src/lib/feed-data.ts:26,56-67 (FEED_FETCH_MAX 30 even for home; awaits resolveCurrentFamilyId → listFriendUids → getBlockedUids one after another before Promise.all; getFamilyName extra read); apps/ios/src/lib/posts.ts:187-197 (3 queries × max)",
+  "current_ios": "Home reads up to ~90 post docs (mine/public/friends × 30) plus 3 sequential round-trips before the main batch, and a families/{id} read already covered by FamilyProvider. This costs more Firestore reads and first paint is slower than web.",
+  "target": "Web-equivalent cost: home passes the 10 limit, independent reads run in parallel, and the family name comes from context.",
+  "fix_plan": "In useFeedData: `const fetchMax = home ? HOME_FEED_LIMIT : FEED_FETCH_MAX`. Run `const [friendUids, blockedUids] = await Promise.all([listFriendUids(uid), getBlockedUids(uid).catch(() => [])])` in parallel with listPetsForScope and listWalksForScope (pets/walks don't depend on friends), then listFeedPosts(uid, friendUids, fetchMax, blockedUids). Remove getFamilyName in favor of useFamily().family?.name (HOME-1). Optional: memoize petNameById outside PostCard (already done) and keep posts.map, since 10 items inside a ScrollView is fine and FlatList isn't needed here.",
+  "files_to_touch": [
+   "apps/ios/src/lib/feed-data.ts"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified. feed-data.ts:26 FEED_FETCH_MAX=30 is used for home too (:62), and posts.ts:193-197 runs 3 queries × max, so up to 90 docs are read to show 10. resolveCurrentFamilyId (:56), listFriendUids (:58) and getBlockedUids (:59) are awaited one after another. resolveCurrentFamilyId (walk-data.ts:26) and getBlockedUids (user-prefs.ts:87) both read the same users/{uid} doc, so it is read twice per load. getFamilyName adds a families read that FamilyProvider already holds. Web page.tsx:53-71 runs pets/friends/blocked in parallel with listFeedPosts max=10."
+ },
+ {
+  "id": "SOCIAL-20",
+  "title": "Photos resolves family scope itself (resolveCurrentFamilyId) instead of consuming useFamily() — same pattern as R08",
+  "category": "behavior",
+  "severity": "P2",
+  "web_ref": "apps/web/src/app/app/photos/page.tsx:55, 68-94 (useFamily(); waits for familyLoading; refetches when family changes)",
+  "ios_ref": "apps/ios/app/photos.tsx:29, 81",
+  "current_ios": "Each load does an extra users/{uid} read and ignores FamilyProvider; if the family is switched while the screen is mounted (or the context holds a different active family) the gallery doesn't refresh / can disagree with the rest of the app.",
+  "target": "Use the shared family context and reload when family changes.",
+  "fix_plan": "`const { family, loading: familyLoading } = useFamily();` (from @/state/family-context). In load use `family?.familyId ?? null`; add `family?.familyId` to the useCallback deps; useEffect: `if (familyLoading) return; void load(false);`. Drop the resolveCurrentFamilyId import.",
+  "files_to_touch": [
+   "apps/ios/app/photos.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high",
+  "verdict": "confirmed",
+  "verdict_reason": "Verified: photos.tsx:29 imports resolveCurrentFamilyId and line 81 calls it per load, ignoring FamilyProvider (apps/ios/src/state/family-context.tsx exposes { family, loading }). Web photos/page.tsx:55, 73 and 91-94 uses useFamily, waits for familyLoading, and refetches on family change. This is the same pattern as R08. The plan is correct."
+ },
+ {
+  "id": "WALKS-1",
+  "title": "R08: walks data reads its own currentFamilyId instead of the family context, so the family scope goes stale after a switch",
+  "category": "ios-bug",
+  "severity": "P0",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:121 (useFamily), 189-210 (refresh keyed on [user, family], waits for familyLoading)",
+  "ios_ref": "apps/ios/src/lib/use-walks-data.ts:44-65; apps/ios/src/lib/walk-data.ts:23-33; apps/ios/app/(tabs)/walks.tsx:229,243",
+  "current_ios": "useWalksData calls resolveCurrentFamilyId(user.uid) itself, and `refresh` depends only on [user]. When the user switches family in Settings/Family (FamilyProvider.switchFamily), the mounted Walks tab keeps the old familyId, pets and walks. WalkTrackingView and ManualWalkDialog then receive the stale `familyId` (walks.tsx:229,243) and save new walks into the old family. Each refresh also reads users/{uid} twice (once in resolveCurrentFamilyId, once in getAutoPhotoShare), on top of FamilyProvider's own read. Nothing protects against a response for an older user/scope arriving after a newer one.",
+  "target": "Same as web: the scope comes from the family context (`family?.familyId ?? null`). Refetch whenever that changes, wait while familyLoading, and ignore results from a superseded scope.",
+  "fix_plan": "In use-walks-data.ts: `const { family, loading: familyLoading } = useFamily()` from '@/state/family-context'. Set `const familyId = family?.familyId ?? null` (drop the familyId useState and the resolveCurrentFamilyId call). Make `refresh` depend on [user?.uid, familyId] and return early while familyLoading. Add a scope ref `{uid, familyId}` captured at call time, and only call setPets/setWalks/setLoading if the ref still matches (mirrors web page.tsx:199/203). Load with Promise.allSettled([listPetsForScope, listWalksForScope, getAutoPhotoShare]) so one failure cannot reject the whole refresh (today a throw from resolveCurrentFamilyId becomes an unhandled rejection from `void refresh()`). Keep returning `familyId` from the hook so walks.tsx is unchanged. Optional: add `walkPrefs` to the user doc FamilyProvider already reads, or cache getAutoPhotoShare per uid, so users/{uid} is not read twice per refresh.",
+  "files_to_touch": [
+   "apps/ios/src/lib/use-walks-data.ts"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "WALKS-12",
+  "title": "iOS loads at most 50 walks while web loads all, so streak, week stats and 'View all' can diverge",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:194-197 (listWalks(familyId, null) / listPersonalWalks(uid, null) = no limit), 347-353 (streak from the full list), 569-571",
+  "ios_ref": "apps/ios/src/lib/walk-data.ts:17,72-89; apps/ios/src/lib/use-walks-data.ts:52,87-98",
+  "current_ios": "listWalksForScope caps at 50. For a family walking 2–3 times a day, 50 walks cover only about 17–25 days, so computeStreak on iOS stops at the oldest loaded walk and shows a shorter streak than web for the same family. 'View all' also shows only 50 on iOS against the full history on web.",
+  "target": "The streak and stats use the same data window as web. The list stays efficient.",
+  "fix_plan": "Option A (parity): call listWalksForScope(fam, uid, null) and make `max` nullable (skip .limit when null), matching web's withOptionalLimit. Then render the expanded 'View all' list with a capped .map (e.g. 50) plus a 'load more' step, or move the screen to a FlatList with the dial, week strip and header as ListHeaderComponent, so hundreds of rows are not mounted at once inside a ScrollView. Option B (cost-aware): keep 50 for the list and add a second stats query `where familyId==X, where startedAt >= now−90d, orderBy startedAt desc`. It uses the existing (familyId, startedAt) index; for personal mode use (walkerUid, familyId, startedAt). Get PM sign-off because web itself reads unbounded.",
+  "files_to_touch": [
+   "apps/ios/src/lib/walk-data.ts",
+   "apps/ios/src/lib/use-walks-data.ts",
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "FEED-5",
+  "title": "feed-data resolves family scope itself (R08): stale pets/scope after a family switch; serial awaits; unguarded rejection",
+  "category": "behavior",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/feed/page.tsx:27,35-62,70-73 (uses useFamily(); refresh deps [user, family]; waits for familyLoading; allSettled for pets/friends/blocked)",
+  "ios_ref": "apps/ios/src/lib/feed-data.ts:50-78 (resolveCurrentFamilyId at :56, deps [user, home] at :77)",
+  "current_ios": "useFeedData reads users/{uid}.currentFamilyId itself instead of consuming FamilyProvider. After switchFamily, the pets used for composer tagging (and home walk status) stay on the old family until a manual refresh. resolveCurrentFamilyId, listFriendUids and getBlockedUids run serially. A thrown resolveCurrentFamilyId rejects load(), causing an unhandled rejection from `void load(false)`, and the screen shows the 'no posts' empty state.",
+  "target": "Scope derived from family-context (re-load when family changes, wait for family loading); reads parallelized; failures degrade per-source like web allSettled.",
+  "fix_plan": "In feed-data.ts: const { family, loading: familyLoading } = useFamily(); const fam = family?.familyId ?? null. Drop resolveCurrentFamilyId and the familyId/familyName state, and return family?.name from context instead of calling getFamilyName. Make load's deps [user, home, fam]. In the effect, skip while familyLoading. Inside load, use Promise.allSettled([listPetsForScope(fam,uid), listFriendUids(uid), getBlockedUids(uid), listWalksForScope(fam,uid,50)]), then call listFeedPosts with the friends and blocked results. Wrap the body in try/catch and set an `error` flag. Optionally render the error in feed.tsx as EmptyState plus a retry; no new key is needed if Common.loading/Feed.empty are reused, but a dedicated message would need a new key.",
+  "files_to_touch": [
+   "apps/ios/src/lib/feed-data.ts",
+   "apps/ios/app/feed.tsx",
+   "apps/ios/app/(tabs)/index.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "TRACK-25",
+  "title": "R08: tracking view saves with familyId/pets resolved by useWalksData, not the family context → stale scope after a family switch",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/walks/page.tsx:121, 189-205, 396 (family from useFamily provider)",
+  "ios_ref": "apps/ios/src/lib/use-walks-data.ts:44-65 (resolveCurrentFamilyId inside refresh, deps [user] only); apps/ios/app/(tabs)/walks.tsx:224-236",
+  "current_ios": "familyId is read once per refresh keyed only on user; after switching family elsewhere the mounted Walks tab keeps the old familyId/pets and createWalk writes the walk into the previous family's scope.",
+  "target": "Consume the iOS family context (state/family-context) so scope changes refetch, and refuse to start/save while scope is unknown.",
+  "fix_plan": "In use-walks-data.ts read `const { currentFamilyId, loading: familyLoading } = useFamily()` (apps/ios/src/state/family-context.tsx) and include it in refresh deps; drop resolveCurrentFamilyId; ignore results from a stale request (requestId ref). In walk-tracking-view freeze familyId in the session snapshot (TRACK-11) so a switch mid-walk does not change the walk's scope.",
+  "files_to_touch": [
+   "apps/ios/src/lib/use-walks-data.ts",
+   "apps/ios/app/(tabs)/walks.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "SETTINGS-21",
+  "title": "Switching family in Settings does not reach the Walks/Pets data hooks (R08), and switchFamily errors are unhandled",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "apps/web/src/components/family/family-provider.tsx:102-110 (switchFamily refetches getFamily; every page consumes useFamily())",
+  "ios_ref": "apps/ios/src/state/family-context.tsx:74-81 (switchFamily sets family from the cached `families` array; failures propagate); apps/ios/src/components/settings/family-section.tsx:196 (onPress={() => switchFamily(...)}, rejection not caught, no busy state); apps/ios/src/lib/use-walks-data.ts:44-65 (resolveCurrentFamilyId read on its own, refreshed only on mount or manual refresh)",
+  "current_ios": "After tapping another family pill in Settings, the Walks tab (and Pets via use-pets-data) keeps showing the previous family's pets and walks until a manual refresh. A failed setCurrentFamily raises an unhandled rejection and gives no feedback.",
+  "target": "One source of truth: switching updates every consumer at once. The pill shows a busy state, and failures show the inline family error.",
+  "fix_plan": "R08: make use-walks-data.ts and use-pets-data.ts take familyId from useFamily() (wait for !loading, and depend on family?.familyId) instead of resolveCurrentFamilyId. In family-context.tsx switchFamily: `const next = await getFamily(familyId); setFamily(next ?? families.find(...) ?? null)` wrapped by the caller. In family-section.tsx: `setBusy(true); try { await switchFamily(id) } catch (e) { setError(t('Family.actionFailed')) } finally { setBusy(false) }`, and disable the pills while busy.",
+  "files_to_touch": [
+   "apps/ios/src/state/family-context.tsx",
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/src/lib/use-walks-data.ts",
+   "apps/ios/src/lib/use-pets-data.ts"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [
+   "Family.actionFailed = 操作失敗，請稍後再試 | Something went wrong. Please try again."
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "SETTINGS-25",
+  "title": "Photos preview fetches before the family is resolved (double fetch, possible personal-only flash)",
+  "category": "optimization",
+  "severity": "P2",
+  "web_ref": "apps/web/src/components/settings/photos-preview-section.tsx:26-49 (waits for familyLoading=false)",
+  "ios_ref": "apps/ios/src/components/settings/photos-preview-section.tsx:26-46 (ignores family loading)",
+  "current_ios": "On a cold start it queries with familyId null, then again once FamilyProvider resolves. That is two aggregator passes, and the first can briefly show personal-scope photos only.",
+  "target": "Fetch once, after the family has loaded.",
+  "fix_plan": "Read `loading: familyLoading` from useFamily(); add `if (!user || familyLoading) return;` and add familyLoading to the dependencies. Depend on family?.familyId rather than the family object identity.",
+  "files_to_touch": [
+   "apps/ios/src/components/settings/photos-preview-section.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "PETS-21",
+  "title": "Health records: no stale-request guard on pet switch, pull-to-refresh doesn't reload them, unbounded list",
+  "category": "optimization",
+  "severity": "P1",
+  "web_ref": "docs/research/project-review-2026-10-05.md R16 (pets-page-content.tsx:122-150 lacks a stale guard; slow pet-A request overwrites pet B)",
+  "ios_ref": "apps/ios/src/lib/use-health-records.ts:16-35 (no cancellation); apps/ios/app/(tabs)/pets.tsx:158-164 (onRefresh={refresh} doesn't bump healthKey), 94-97 (healthKey bumped after ANY form save → spinner flash); apps/ios/src/lib/health-data.ts:19-33 (no limit)",
+  "current_ios": "Switching pets quickly can show pet A's records and weight chart under pet B. Pull-to-refresh on the 健康 tab leaves records stale. Saving a reminder or expense also reloads health with a full spinner. All records are fetched with no limit and rendered via .map in the ScrollView.",
+  "target": "Records always belong to the active pet. Pull-to-refresh reloads them. Spinner only on first load per pet. Bounded fetch.",
+  "fix_plan": "use-health-records.ts: inside reload use `let cancelled=false` via a ref generation, and only setRecords if still current. Show the loading spinner only when records for this petId aren't loaded yet; otherwise do a silent refresh. pets.tsx: onRefresh={() => { refresh(); setHealthKey(k => k + 1); }} and bump healthKey only from the HealthForm onSaved. health-data.ts: add `.limit(100)` to the unfiltered query. If the weight chart needs more than 6 weights, keep the derived series from the first 100 records, which is enough for 6 points.",
+  "files_to_touch": [
+   "apps/ios/src/lib/use-health-records.ts",
+   "apps/ios/src/lib/health-data.ts",
+   "apps/ios/app/(tabs)/pets.tsx"
+  ],
+  "i18n_keys_to_reuse": [],
+  "needs_new_i18n_keys": [],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "medium"
+ },
+ {
+  "id": "XCUT-1",
+  "title": "R08: data hooks resolve family scope themselves, ignore FamilyContext; stale scope after switch/join/leave and personal-scope writes on load failure",
+  "category": "state-handling",
+  "severity": "P0",
+  "web_ref": "apps/web/src/components/family/family-provider.tsx:66-117 (single scope source; pages read useFamily().family)",
+  "ios_ref": "apps/ios/src/state/family-context.tsx:45-81; apps/ios/src/lib/use-walks-data.ts:44-65; apps/ios/src/lib/use-pets-data.ts:41-70; apps/ios/src/lib/feed-data.ts:50-82; apps/ios/app/photos.tsx:75-98; apps/ios/app/(tabs)/pets.tsx:133-146,257; apps/ios/app/(tabs)/walks.tsx:229,243",
+  "current_ios": "use-walks-data/use-pets-data/feed-data/photos.tsx each call resolveCurrentFamilyId(user.uid) and depend only on [user], so switching family (family-section/family.tsx switchFamily), joining (join/[code]), leaving, or onboarding create never reloads mounted tabs; they keep family A data and pass the stale familyId to WalkTrackingView/ManualWalkDialog/PetForm/ReminderForm/ExpenseForm. If resolveCurrentFamilyId throws (offline), load() rejects before setFamilyId, familyId stays at the initial null and pets=[] so Pets shows the empty state whose CTA creates the pet with familyId=null (personal) even for a family user. FamilyContext also disagrees with hooks: context falls back to list[0] when currentFamilyId points to a missing/left family (family-context.tsx:59-61) while resolveCurrentFamilyId returns the stale id; context catch (62-64) silently becomes personal mode; no error state; switchFamily has no error handling. Consumers that use the context (human-leaderboard.tsx:35,92, engagement-push-section, photos-preview-section) treat loading (family=null) as personal mode and flash the 'join family' empty CTA.",
+  "target": "One scope source: FamilyContext exposes familyId + status (loading/ready/error) + scopeVersion; every data hook and write path consumes it; unknown/error scope blocks writes and shows retry instead of personal empty state.",
+  "fix_plan": "1) family-context.tsx: add `familyId: string | null` (family?.familyId ?? null), `status: 'loading'|'ready'|'error'`, `scopeVersion: number`. In refresh(): compute activeId exactly like web (currentFamilyId ?? familyIds[0]); if the doc is missing fall back to list[0] AND use that id as familyId (so hooks and UI agree). On catch keep previous family/families, set status 'error' (do NOT switch to personal). Increment scopeVersion on every successful refresh and switch. switchFamily: try/await setCurrentFamily → setFamily(next) → scopeVersion++; on error rethrow so callers can Alert t('Error.title'). Gate initial load on auth initializing like web (authLoading). 2) use-walks-data.ts / use-pets-data.ts / feed-data.ts: replace `await resolveCurrentFamilyId(user.uid)` with `const { familyId, status, scopeVersion, family } = useFamily();` → `if (!user || status !== 'ready') return;` pass familyId into listPetsForScope/listWalksForScope/listRemindersForScope/listExpensesForScope; add `familyId, status, scopeVersion` to the useCallback deps; return `scopeReady: status === 'ready'` and stop returning a locally-stored familyId (return the context one). feed-data: use family?.name instead of getFamilyName(). 3) photos.tsx:81 same replacement (deps [user, familyId, status]). 4) Add a request-generation ref in each load (`const gen = ++genRef.current; ... if (gen !== genRef.current) return;`) so a slow A response cannot overwrite B. 5) Writes: in pets.tsx (empty-state CTA 136, header add 167, FAB 236), walks.tsx (CTA 207, manual 196) disable/route to retry when !scopeReady; PetForm/ReminderForm/ExpenseForm/ManualWalkDialog/WalkTrackingView receive the context familyId only. 6) human-leaderboard.tsx:51,92 and engagement-push-section: render ActivityIndicator while status==='loading' instead of the personal-mode CTA. 7) _layout.tsx:44 landing decision may keep its one-shot read (runs before tabs mount). Acceptance (from review): open all tabs, then switch family / add first pet / leave family — data and subsequent writes stay consistent; family read failure only offers retry.",
+  "files_to_touch": [
+   "apps/ios/src/state/family-context.tsx",
+   "apps/ios/src/lib/use-walks-data.ts",
+   "apps/ios/src/lib/use-pets-data.ts",
+   "apps/ios/src/lib/feed-data.ts",
+   "apps/ios/app/photos.tsx",
+   "apps/ios/app/(tabs)/pets.tsx",
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/app/(tabs)/index.tsx",
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx",
+   "apps/ios/src/components/settings/engagement-push-section.tsx",
+   "apps/ios/src/components/settings/family-section.tsx",
+   "apps/ios/app/family.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Error.title",
+   "Error.retry",
+   "Common.loading"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-2",
+  "title": "Tabs never refetch on focus and empty states have no pull-to-refresh; after adding the first pet, Walks/Home stay empty until app relaunch",
+  "category": "behavior",
+  "severity": "P0",
+  "web_ref": "Web routes remount on navigation (apps/web/src/app/app/walks/page.tsx, app/app/page.tsx re-run their effects on every visit)",
+  "ios_ref": "apps/ios/app/(tabs)/walks.tsx:82-94,108-114 (no RefreshControl anywhere); apps/ios/app/(tabs)/index.tsx:70-77; apps/ios/app/(tabs)/pets.tsx:133-146; apps/ios/src/lib/use-walks-data.ts:63-65 (load once on [user]); no useFocusEffect anywhere in apps/ios",
+  "current_ios": "Expo Router keeps tab screens mounted. use-walks-data/feed-data/use-pets-data load only on mount. Walks empty state CTA '去新增寵物' pushes to the Pets tab; after PetForm saves, returning to Walks still shows the 0-pet empty state (and the Walks tab has no pull-to-refresh at all), Home stays on the HomeEmptyState hero (no RefreshControl in that branch), and a walk saved on the Walks tab does not update Home's story ring status or Pets overview walk-days. Pets empty state also has no RefreshControl.",
+  "target": "Every tab shows current data when it regains focus, and every screen state (including empty states) supports pull-to-refresh, matching web's fresh-on-navigation behaviour.",
+  "fix_plan": "1) In walks.tsx, index.tsx, pets.tsx add `useFocusEffect(useCallback(() => { void refresh(); }, [refresh]))` (import from 'expo-router'; skip the very first focus via a ref because the mount effect already loaded; optionally throttle to >15s since last load). 2) Add a lightweight data revision to FamilyContext (or a tiny DataRevisionContext in src/state): `bump()` called in onSaved of PetForm/ReminderForm/ExpenseForm/HealthForm, WalkTrackingView.onSaved, ManualWalkDialog.onSaved, PostComposer.onPosted; hooks include `revision` in their load deps so cross-tab writes invalidate immediately. 3) walks.tsx: add `refreshControl={<RefreshControl refreshing={refreshing} onRefresh={data.refresh} tintColor={colors.brand} />}` to the ScrollView at 108 (add a `refreshing` flag to use-walks-data like use-pets-data's isRefresh pattern) and wrap the 0-pet EmptyState in a ScrollView with RefreshControl. 4) index.tsx:71-77 and pets.tsx:133-146: wrap HomeEmptyState / PetsEmptyState in ScrollView (contentContainerStyle flexGrow:1) with RefreshControl.",
+  "files_to_touch": [
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/app/(tabs)/index.tsx",
+   "apps/ios/app/(tabs)/pets.tsx",
+   "apps/ios/src/lib/use-walks-data.ts",
+   "apps/ios/src/lib/use-pets-data.ts",
+   "apps/ios/src/lib/feed-data.ts",
+   "apps/ios/src/state/family-context.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-13",
+  "title": "Data hooks swallow load errors into empty arrays; offline looks like 'no pets / no walks / no photos'; Photos ignores failedSources",
+  "category": "state-handling",
+  "severity": "P1",
+  "web_ref": "apps/web/src/app/app/photos/page.tsx:61,78,220-222 (failedSources → Photos.partialError banner)",
+  "ios_ref": "apps/ios/src/lib/use-walks-data.ts:50-58; apps/ios/src/lib/use-pets-data.ts:48-66; apps/ios/src/lib/feed-data.ts:55-75; apps/ios/app/photos.tsx:80-91; apps/ios/src/lib/use-health-records.ts:25-26",
+  "current_ios": "Each list call is `.catch(() => [])` and resolveCurrentFamilyId failures reject the whole load (unhandled promise via `void load()`); UI then renders the 0-pet empty states ('先新增一隻寵物', HomeEmptyState, PetsEmptyState) or '還沒有照片'. photos.tsx destructures only `assets` so partial source failures are invisible although Photos.partialError exists.",
+  "target": "Distinguish error from empty: error card with retry; partial banner on Photos.",
+  "fix_plan": "In each hook wrap the body in try/catch and keep `const [error, setError] = useState<unknown>(null)`; track per-source failures (Promise.allSettled) instead of `.catch(() => [])`; return `error`. Screens: when `error && pets.length === 0` render a centered card t('Error.title') + Button t('Error.retry') → refresh (instead of the empty state, which also prevents wrong-scope pet creation). photos.tsx: keep `failedSources` from listMyPhotoAssetsWithStatus and render a banner t('Photos.partialError') above the grid when non-empty; wrap load in try/catch → error card.",
+  "files_to_touch": [
+   "apps/ios/src/lib/use-walks-data.ts",
+   "apps/ios/src/lib/use-pets-data.ts",
+   "apps/ios/src/lib/feed-data.ts",
+   "apps/ios/app/photos.tsx",
+   "apps/ios/app/(tabs)/walks.tsx",
+   "apps/ios/app/(tabs)/pets.tsx",
+   "apps/ios/app/(tabs)/index.tsx",
+   "apps/ios/app/feed.tsx"
+  ],
+  "i18n_keys_to_reuse": [
+   "Error.title",
+   "Error.retry",
+   "Photos.partialError"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ },
+ {
+  "id": "XCUT-14",
+  "title": "Stale async responses: health records race on pet switch; leaderboard friend/scope reads without catch",
+  "category": "ios-bug",
+  "severity": "P1",
+  "web_ref": "docs/research/project-review-2026-10-05.md R16 (web pets-page-content stale guard requirement)",
+  "ios_ref": "apps/ios/src/lib/use-health-records.ts:16-35; apps/ios/src/components/leaderboard/dog-leaderboard.tsx:47-55; apps/ios/src/components/leaderboard/human-leaderboard.tsx:45-47; apps/ios/app/(tabs)/leaderboard.tsx:25",
+  "current_ios": "useHealthRecords has no cancellation: switching pet A→B quickly can resolve A after B and show A's weight chart/records under pet B. dog-leaderboard `listFriendUids(user.uid).then(...)` and the AsyncStorage `.getItem().then()` calls have no catch/unmount guard (unhandled rejection, setState after unmount); friendUids never refresh after adding a friend.",
+  "target": "Every async effect ignores stale/unmounted results.",
+  "fix_plan": "use-health-records.ts: inside the effect use `let active = true; listHealthRecords(petId).then(r => { if (active) setRecords(r) }).catch(() => { if (active) setError(...) }).finally(() => { if (active) setLoading(false) }); return () => { active = false }` (keep reload() for manual refresh with a generation ref). dog-leaderboard.tsx:53-55: same `active` guard + `.catch(() => {})`, and include `nonce` in deps so the refresh button re-reads friends. human/dog/leaderboard AsyncStorage reads: add `.catch(() => {})` and active guard.",
+  "files_to_touch": [
+   "apps/ios/src/lib/use-health-records.ts",
+   "apps/ios/src/components/leaderboard/dog-leaderboard.tsx",
+   "apps/ios/src/components/leaderboard/human-leaderboard.tsx",
+   "apps/ios/app/(tabs)/leaderboard.tsx"
+  ],
+  "needs_backend": false,
+  "needs_new_dependency": false,
+  "confidence": "high"
+ }
+]
