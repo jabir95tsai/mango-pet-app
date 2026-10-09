@@ -19,7 +19,7 @@ import { colors, radius, spacing } from "@/theme/theme";
 
 export function EngagementPushSection() {
   const { user } = useAuth();
-  const { family } = useFamily();
+  const { family, status: familyStatus } = useFamily();
   const [optOut, setOptOut] = useState<Set<EngagementPushType>>(new Set());
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +31,8 @@ export function EngagementPushSection() {
       .finally(() => setLoading(false));
   }, [user]);
 
-  const personalMode = !family;
+  // Only a RESOLVED scope without a family is personal mode (R08).
+  const personalMode = familyStatus === "ready" && !family;
 
   async function toggle(type: EngagementPushType, on: boolean) {
     if (!user) return;

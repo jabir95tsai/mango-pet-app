@@ -86,14 +86,24 @@ export default function PetsScreen() {
     hasMultiplePets,
     selectPet,
     refresh,
+    reloadAfterWrite,
+    scopeReady,
   } = data;
 
   function closeForm() {
     setForm(null);
   }
   function afterSave() {
-    refresh();
+    // Reload here + mark Home/Walks stale so they refetch on focus.
+    void reloadAfterWrite();
+  }
+  function afterHealthSave() {
+    void reloadAfterWrite(); // weight records sync pet.weightKg
     setHealthKey((k) => k + 1);
+  }
+  function onPullRefresh() {
+    void refresh();
+    setHealthKey((k) => k + 1); // health records reload silently too
   }
   function openTabFab() {
     // Expenses FAB is camera-first (拍收據); manual entry is the in-scanner
@@ -133,7 +143,14 @@ export default function PetsScreen() {
   if (pets.length === 0) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
-        <PetsEmptyState onAddPet={() => setForm({ kind: "pet" })} />
+        <PetsEmptyState
+          onAddPet={() => {
+            // Unknown scope (load / read failure) must never create a
+            // personal pet for a family user (R08) — retry instead.
+            if (scopeReady) setForm({ kind: "pet" });
+            else void refresh();
+          }}
+        />
         {form?.kind === "pet" ? (
           <PetForm
             familyId={familyId}
@@ -158,7 +175,7 @@ export default function PetsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={refresh}
+            onRefresh={onPullRefresh}
             tintColor={colors.brand}
           />
         }
@@ -218,7 +235,7 @@ export default function PetsScreen() {
                 petName={activePet.name}
                 reminders={reminders}
                 uid={uid}
-                onChanged={refresh}
+                onChanged={afterSave}
                 onEdit={(reminder) => setForm({ kind: "reminder", reminder })}
               />
             ) : activeTab === "expenses" ? (
@@ -298,7 +315,7 @@ export default function PetsScreen() {
           petId={activePet.petId}
           uid={uid}
           onClose={closeForm}
-          onSaved={afterSave}
+          onSaved={afterHealthSave}
         />
       ) : null}
     </SafeAreaView>

@@ -1,75 +1,81 @@
 /**
  * Pets-screen data hook — loads pets + reminders + expenses + walks for the
- * active scope (personal / family), picks the active pet, and exposes a
- * pull-to-refresh. Mirrors apps/web/src/app/app/pets/page.tsx data flow
- * (one-shot getDocs + Promise.all, NOT onSnapshot — the web page is also
- * one-shot; matches the shipped iOS walks pattern in use-walks-data).
+ * active scope (personal / family), picks the active pet, and exposes
+ * pull-to-refresh. Mirrors the web pets page data flow
+ * (apps/web/src/app/app/pets/page.tsx + pets-page-content.tsx refreshData:
+ * one-shot getDocs + Promise.allSettled, expenses/walks capped at 200, NOT
+ * onSnapshot).
  *
- * Active-pet selection is in-memory (web persists via localStorage; iOS would
- * need AsyncStorage which is already installed — a persistence upgrade is a
- * later polish, kept in-memory here for parity with use-walks-data).
+ * Scope comes from FamilyContext via useScopedData (R08): switching / joining /
+ * leaving a family reloads this hook, stale responses are dropped, read
+ * failures surface as `error` (data kept) instead of an empty list, and the tab
+ * refetches on focus when stale. Every write (PetForm / ReminderForm /
+ * ExpenseForm) must gate on `scopeReady` and use `familyId` from here, then call
+ * `reloadAfterWrite()`.
+ *
+ * Active-pet selection is in-memory (web persists via localStorage).
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Expense, Pet, Reminder, Walk } from "@mango/shared-types";
 
-import { useAuth } from "@/state/auth-context";
-import {
-  listPetsForScope,
-  listWalksForScope,
-  resolveCurrentFamilyId,
-} from "@/lib/walk-data";
+import { listPetsForScope, listWalksForScope } from "@/lib/walk-data";
 import { listExpensesForScope, listRemindersForScope } from "@/lib/pets-data";
+import { useScopedData, type ScopedFetcher } from "@/lib/use-family-scope";
+
+/** Same 200-walk window web's pets page pulls (listWalks(familyId, 200)). */
+const PETS_WALKS_LIMIT = 200;
 
 function petCreatedMs(p: Pet): number {
   const ts = p.createdAt as { toMillis?: () => number } | undefined;
   return ts?.toMillis?.() ?? 0;
 }
 
+type PetsPayload = {
+  pets: Pet[];
+  reminders: Reminder[];
+  expenses: Expense[];
+  walks: Walk[];
+};
+
+const EMPTY: PetsPayload = { pets: [], reminders: [], expenses: [], walks: [] };
+
+const fetchPetsScreen: ScopedFetcher<PetsPayload> = async (
+  { uid, familyId },
+  prev,
+) => {
+  const [petsR, remindersR, expensesR, walksR] = await Promise.allSettled([
+    listPetsForScope(familyId, uid),
+    listRemindersForScope(familyId, uid),
+    listExpensesForScope(familyId, uid),
+    listWalksForScope(familyId, uid, PETS_WALKS_LIMIT),
+  ]);
+  const firstError = [petsR, remindersR, expensesR, walksR].find(
+    (r): r is PromiseRejectedResult => r.status === "rejected",
+  )?.reason;
+  return {
+    data: {
+      pets: petsR.status === "fulfilled" ? petsR.value : (prev?.pets ?? []),
+      reminders:
+        remindersR.status === "fulfilled"
+          ? remindersR.value
+          : (prev?.reminders ?? []),
+      expenses:
+        expensesR.status === "fulfilled" ? expensesR.value : (prev?.expenses ?? []),
+      walks: walksR.status === "fulfilled" ? walksR.value : (prev?.walks ?? []),
+    },
+    error: firstError,
+  };
+};
+
 export type PetsData = ReturnType<typeof usePetsData>;
 
 export function usePetsData() {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [pets, setPets] = useState<Pet[]>([]);
-  const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [walks, setWalks] = useState<Walk[]>([]);
-  const [familyId, setFamilyId] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
-
-  const load = useCallback(
-    async (isRefresh: boolean) => {
-      if (!user) return;
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      try {
-        const fam = await resolveCurrentFamilyId(user.uid);
-        setFamilyId(fam);
-        const [petList, reminderList, expenseList, walkList] =
-          await Promise.all([
-            listPetsForScope(fam, user.uid).catch(() => [] as Pet[]),
-            listRemindersForScope(fam, user.uid).catch(() => [] as Reminder[]),
-            listExpensesForScope(fam, user.uid).catch(() => [] as Expense[]),
-            listWalksForScope(fam, user.uid, 200).catch(() => [] as Walk[]),
-          ]);
-        setPets(petList);
-        setReminders(reminderList);
-        setExpenses(expenseList);
-        setWalks(walkList);
-      } finally {
-        if (isRefresh) setRefreshing(false);
-        else setLoading(false);
-      }
-    },
-    [user],
-  );
-
-  useEffect(() => {
-    void load(false);
-  }, [load]);
-
-  const refresh = useCallback(() => load(true), [load]);
+  const scoped = useScopedData<PetsPayload>({
+    initial: EMPTY,
+    fetch: fetchPetsScreen,
+  });
+  const { pets, reminders, expenses, walks } = scoped.data;
 
   // Primary pet = earliest createdAt (same anchor web + cloud functions use;
   // listPetsForScope already orders createdAt asc, so pets[0], but sort to be
@@ -89,16 +95,28 @@ export function usePetsData() {
   }, [pets, selectedPetId, primaryPet]);
 
   return {
-    loading,
-    refreshing,
+    loading: scoped.loading,
+    refreshing: scoped.refreshing,
+    /** Scope read error or last load error (previous data kept). */
+    error: scoped.error,
+    /** Gate every write (add pet / reminder / expense / health) on this. */
+    scopeReady: scoped.scopeReady,
+    scopeStatus: scoped.scopeStatus,
     pets,
     reminders,
     expenses,
     walks,
-    familyId,
+    /** Active scope (null = personal). Only authoritative when scopeReady. */
+    familyId: scoped.familyId,
+    family: scoped.family,
     activePet,
     hasMultiplePets: pets.length > 1,
     selectPet: setSelectedPetId,
-    refresh,
+    /** Pull-to-refresh / retry (re-resolves a failed family scope first). */
+    refresh: scoped.refresh,
+    /** Silent reload. */
+    reload: scoped.reload,
+    /** After a write: reload here + mark other tabs stale. */
+    reloadAfterWrite: scoped.reloadAfterWrite,
   };
 }

@@ -45,6 +45,7 @@ export default function HomeScreen() {
     familyId,
     familyName,
     refresh,
+    reloadAfterPost,
     removePost,
     removeBlockedAuthor,
   } = useFeedData({ home: true });
@@ -134,7 +135,7 @@ export default function HomeScreen() {
         visible={composerOpen}
         pets={pets}
         onClose={() => setComposerOpen(false)}
-        onPosted={refresh}
+        onPosted={reloadAfterPost}
       />
 
       {lightbox ? (

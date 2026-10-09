@@ -30,8 +30,16 @@ import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 export default function FeedScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { loading, refreshing, pets, posts, refresh, removePost, removeBlockedAuthor } =
-    useFeedData({ home: false });
+  const {
+    loading,
+    refreshing,
+    pets,
+    posts,
+    refresh,
+    reloadAfterPost,
+    removePost,
+    removeBlockedAuthor,
+  } = useFeedData({ home: false });
   const [composerOpen, setComposerOpen] = useState(false);
   const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
 
@@ -97,7 +105,7 @@ export default function FeedScreen() {
         visible={composerOpen}
         pets={pets}
         onClose={() => setComposerOpen(false)}
-        onPosted={refresh}
+        onPosted={reloadAfterPost}
       />
 
       {lightbox ? (

@@ -1,98 +1,53 @@
 /**
- * Guest upgrade card (P5a) — shown only to anonymous users. Links a Google/Apple
- * credential onto the SAME uid (data preserved). On a pre-existing account it
- * "switches" (no merge). Mirrors web guest-upgrade.tsx (Google + Apple only).
+ * Guest upgrade card (SETTINGS-18) — 1:1 with the web settings entry
+ * (apps/web/src/app/app/settings/page.tsx "Persistent guest-upgrade entry"):
+ * Sparkles + Guest.settings.title, the body line and a primary
+ * Guest.upgradeCta button that opens the shared bind dialog
+ * (GuestUpgradeProvider in app/_layout.tsx). The link / conflict / error
+ * handling lives in the provider so the nudge banner and the locked notices
+ * behave identically. Render only for anonymous users (settings.tsx gates it).
  */
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Sparkles } from "lucide-react-native";
 
-import {
-  upgradeGuestWithApple,
-  upgradeGuestWithGoogle,
-  type GuestUpgradeResult,
-} from "@/lib/auth";
-import { isAppleSignInAvailable } from "@/lib/auth";
-import { t } from "@/lib/i18n";
+import { Button } from "@/components/ui";
+import { useGuestUpgrade } from "@/components/auth/guest-upgrade";
+import { withAlpha } from "@/components/auth/color";
+import { t, useLocale } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 
 export function GuestUpgradeSection() {
-  const [busy, setBusy] = useState(false);
-  const [appleOk, setAppleOk] = useState(true);
-
-  // best-effort apple availability (don't block render)
-  useEffect(() => {
-    isAppleSignInAvailable().then(setAppleOk).catch(() => setAppleOk(false));
-  }, []);
-
-  async function run(fn: () => Promise<GuestUpgradeResult>) {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const res = await fn();
-      if (res.status === "switched") {
-        Alert.alert(t("Guest.upgrade.title"), t("Guest.upgrade.conflictBody"));
-      } else {
-        Alert.alert(t("Guest.upgrade.title"), "✅");
-      }
-    } catch (e) {
-      const code = (e as { code?: string })?.code;
-      if (code === "auth/canceled" || code === "ERR_REQUEST_CANCELED") {
-        // user cancelled — silent
-      } else {
-        Alert.alert(t("Guest.upgrade.errors.generic"));
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  useLocale();
+  const { openUpgrade } = useGuestUpgrade();
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{t("Guest.settings.title")}</Text>
-      <Text style={styles.body}>{t("Guest.settings.body")}</Text>
-      <View style={styles.actions}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => run(upgradeGuestWithGoogle)}
-          disabled={busy}
-          style={[styles.btn, styles.google]}
-        >
-          {busy ? (
-            <ActivityIndicator color={colors.ink} />
-          ) : (
-            <Text style={styles.googleText}>{t("Guest.upgrade.withGoogle")}</Text>
-          )}
-        </Pressable>
-        {appleOk ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => run(upgradeGuestWithApple)}
-            disabled={busy}
-            style={[styles.btn, styles.apple]}
-          >
-            <Text style={styles.appleText}>{t("Guest.upgrade.withApple")}</Text>
-          </Pressable>
-        ) : null}
+      <View style={styles.titleRow}>
+        <Sparkles size={20} color={colors.brandDeep} strokeWidth={2} />
+        <Text style={styles.title}>{t("Guest.settings.title")}</Text>
       </View>
+      <Text style={styles.body}>{t("Guest.settings.body")}</Text>
+      <Button label={t("Guest.upgradeCta")} onPress={openUpgrade} style={styles.cta} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // web: flex flex-col gap-3 rounded-[var(--radius-xl)] border
+  // border-mango-brand/40 bg-mango-brand-tint/50 p-6
   card: {
-    backgroundColor: colors.brandTint,
-    borderRadius: radius.lg,
+    gap: spacing.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.brand,
+    borderColor: withAlpha(colors.brand, 0.4),
+    backgroundColor: withAlpha(colors.brandTint, 0.5),
     padding: spacing.lg,
-    gap: spacing.sm,
   },
-  title: { fontSize: 15, fontWeight: "800", color: colors.ink },
-  body: { fontSize: 12, color: colors.ink2, lineHeight: 18 },
-  actions: { gap: spacing.sm, marginTop: spacing.xs },
-  btn: { height: 48, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  google: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairline },
-  googleText: { fontSize: 15, fontWeight: "700", color: colors.ink },
-  apple: { backgroundColor: "#000" },
-  appleText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+  // web: flex items-center gap-3
+  titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  // web: font-semibold text-mango-ink
+  title: { flex: 1, fontSize: 16, fontWeight: "600", color: colors.ink },
+  // web: text-sm text-mango-ink-2
+  body: { fontSize: 14, lineHeight: 20, color: colors.ink2 },
+  // web: <Button className="self-start">
+  cta: { alignSelf: "flex-start" },
 });

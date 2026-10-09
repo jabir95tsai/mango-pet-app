@@ -204,6 +204,10 @@
     "linkHint": {
       "title": "Sign in with {email} first",
       "body": "This email is registered with {existing}. Sign in with {existing} and we'll automatically link {tried} to the same account."
+    },
+    "profileError": {
+      "body": "Could not prepare your profile. Check your connection and try again.",
+      "revokeFailed": "Could not revoke this device's notifications. Check your connection and try signing out again."
     }
   },
   "Guest": {
@@ -421,7 +425,8 @@
       "submit": "Join",
       "errInvalidCode": "The invite code must be 6 digits",
       "errAlready": "You're already a member of this family"
-    }
+    },
+    "actionFailed": "Something went wrong. Please try again."
   },
   "JoinFamily": {
     "joining": "Joining the family...",
@@ -649,7 +654,8 @@
       "title": "Danger zone",
       "subtitle": "Actions below cannot be undone. Make sure you understand the consequences first.",
       "deleteAction": "Delete my account"
-    }
+    },
+    "languageLabel": "語言 / Language"
   },
   "DeleteAccount": {
     "dialogTitle": "Confirm account deletion",
@@ -930,7 +936,8 @@
       "label": "Save to Photos",
       "saved": "Saved ✓",
       "failed": "Save failed"
-    }
+    },
+    "retry": "Retry"
   },
   "PhotoLightbox": {
     "close": "Close",

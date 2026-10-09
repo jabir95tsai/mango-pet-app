@@ -16,6 +16,8 @@ import { startPushSession, type PushStatus } from "@/lib/push";
 
 type AuthState = {
   user: FirebaseAuthTypes.User | null;
+  /** user?.isAnonymous — guest session (web useAuth().isGuest). */
+  isGuest: boolean;
   initializing: boolean;
   profileError: boolean;
   retryProfile: () => void;
@@ -24,6 +26,7 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState>({
   user: null,
+  isGuest: false,
   initializing: true,
   profileError: false,
   retryProfile: () => {},
@@ -72,7 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return startPushSession(user.uid, setPushStatus);
   }, [user]);
 
-  const value = useMemo(() => ({ user, initializing, profileError, retryProfile, pushStatus }), [user, initializing, profileError, retryProfile, pushStatus]);
+  const isGuest = !!user?.isAnonymous;
+  const value = useMemo(() => ({ user, isGuest, initializing, profileError, retryProfile, pushStatus }), [user, isGuest, initializing, profileError, retryProfile, pushStatus]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

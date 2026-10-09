@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 
 import { RaisedTabBar, type TabBarProps } from "@/components/raised-tab-bar";
+import { t } from "@/lib/i18n";
 
 export default function TabsLayout() {
   return (
@@ -12,11 +13,12 @@ export default function TabsLayout() {
         <RaisedTabBar {...(props as unknown as TabBarProps)} />
       )}
     >
-      <Tabs.Screen name="index" options={{ title: "首頁" }} />
-      <Tabs.Screen name="pets" options={{ title: "寵物" }} />
-      <Tabs.Screen name="walks" options={{ title: "遛狗" }} />
-      <Tabs.Screen name="leaderboard" options={{ title: "排行" }} />
-      <Tabs.Screen name="settings" options={{ title: "設定" }} />
+      {/* Titles = the same Nav.* strings the bar shows (web app-nav t(key)). */}
+      <Tabs.Screen name="index" options={{ title: t("Nav.home") }} />
+      <Tabs.Screen name="pets" options={{ title: t("Nav.pets") }} />
+      <Tabs.Screen name="walks" options={{ title: t("Nav.walks") }} />
+      <Tabs.Screen name="leaderboard" options={{ title: t("Nav.leaderboard") }} />
+      <Tabs.Screen name="settings" options={{ title: t("Nav.settings") }} />
     </Tabs>
   );
 }

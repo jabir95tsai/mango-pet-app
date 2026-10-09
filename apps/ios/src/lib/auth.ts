@@ -25,13 +25,73 @@ export function configureGoogleSignIn(): void {
   configured = true;
 }
 
-/** Google → Firebase credential sign-in. Resolves to the Firebase uid. */
-export async function signInWithGoogle(): Promise<string> {
+// ── Cancellation (SHELL-5 / SETTINGS-19) ─────────────────────────────
+// A user backing out of the Google / Apple sheet is NOT an error. Every
+// provider surfaces it differently:
+//   - @react-native-google-signin v13 RESOLVES `{ type: "cancelled" }` (older
+//     versions threw `statusCodes.SIGN_IN_CANCELLED`, "-5" on iOS =
+//     kGIDSignInErrorCodeCanceled);
+//   - expo-apple-authentication rejects with code "ERR_REQUEST_CANCELED"
+//     (some versions "ERR_CANCELED").
+// Both are normalised to SignInCancelledError (code "auth/canceled") so callers
+// can stay silent via isSignInCancelled().
+
+/** Thrown when the user dismissed the provider sheet. code = "auth/canceled". */
+export class SignInCancelledError extends Error {
+  readonly code = "auth/canceled";
+  constructor() {
+    super("Sign-in cancelled");
+    this.name = "SignInCancelledError";
+  }
+}
+
+const CANCEL_CODES = new Set([
+  "auth/canceled",
+  "auth/cancelled",
+  "ERR_REQUEST_CANCELED",
+  "ERR_CANCELED",
+  "SIGN_IN_CANCELLED",
+  "-5",
+  "12501",
+]);
+
+/** True when `err` means "the user backed out" (any provider) — show nothing. */
+export function isSignInCancelled(err: unknown): boolean {
+  if (err instanceof SignInCancelledError) return true;
+  const code = (err as { code?: unknown } | null | undefined)?.code;
+  if (code === undefined || code === null) return false;
+  return CANCEL_CODES.has(String(code));
+}
+
+/** Google sheet → idToken. Throws SignInCancelledError when dismissed. */
+async function getGoogleIdToken(): Promise<string> {
   configureGoogleSignIn();
   await GoogleSignin.hasPlayServices();
-  await GoogleSignin.signIn();
-  const { idToken } = await GoogleSignin.getTokens();
+  let response: unknown;
+  try {
+    response = await GoogleSignin.signIn();
+  } catch (err) {
+    if (isSignInCancelled(err)) throw new SignInCancelledError();
+    throw err;
+  }
+  // v13: { type: "success", data: User } | { type: "cancelled", data: null }.
+  const res = response as
+    | { type?: string; data?: { idToken?: string | null } | null }
+    | null
+    | undefined;
+  if (res && typeof res.type === "string" && res.type !== "success") {
+    throw new SignInCancelledError();
+  }
+  let idToken = res?.data?.idToken ?? null;
+  // Older SDKs resolve without the token on the response → ask for it.
+  if (!idToken) idToken = (await GoogleSignin.getTokens()).idToken ?? null;
   if (!idToken) throw new Error("Google sign-in returned no idToken");
+  return idToken;
+}
+
+/** Google → Firebase credential sign-in. Resolves to the Firebase uid. */
+export async function signInWithGoogle(): Promise<string> {
+  const idToken = await getGoogleIdToken();
   const credential = auth.GoogleAuthProvider.credential(idToken);
   const result = await signInCredential(credential);
   return result.user.uid;
@@ -93,11 +153,7 @@ export type GuestUpgradeResult =
   | { status: "switched"; uid: string };
 
 async function buildGoogleCredential() {
-  configureGoogleSignIn();
-  await GoogleSignin.hasPlayServices();
-  await GoogleSignin.signIn();
-  const { idToken } = await GoogleSignin.getTokens();
-  if (!idToken) throw new Error("Google sign-in returned no idToken");
+  const idToken = await getGoogleIdToken();
   return auth.GoogleAuthProvider.credential(idToken);
 }
 
@@ -107,13 +163,19 @@ async function buildAppleCredential() {
     Crypto.CryptoDigestAlgorithm.SHA256,
     rawNonce,
   );
-  const appleCredential = await AppleAuthentication.signInAsync({
-    requestedScopes: [
-      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-      AppleAuthentication.AppleAuthenticationScope.EMAIL,
-    ],
-    nonce: hashedNonce,
-  });
+  let appleCredential: AppleAuthentication.AppleAuthenticationCredential;
+  try {
+    appleCredential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      nonce: hashedNonce,
+    });
+  } catch (err) {
+    if (isSignInCancelled(err)) throw new SignInCancelledError();
+    throw err;
+  }
   const { identityToken } = appleCredential;
   if (!identityToken) throw new Error("Apple sign-in returned no identityToken");
   const fullName = [appleCredential.fullName?.givenName, appleCredential.fullName?.familyName]

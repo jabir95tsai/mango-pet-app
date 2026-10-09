@@ -1,111 +1,167 @@
 /**
- * Home + Feed data hook. One-shot getDocs + Promise.all (NO onSnapshot — same
- * as web home/feed, so there are no listeners to clean up). Resolves the active
- * scope (personal / family), then loads pets + friend uids + feed posts + recent
- * walks (for today's story-ring status) + the family name for the top bar.
+ * Home + Feed data hook. One-shot getDocs + Promise.allSettled (NO onSnapshot —
+ * same as web home/feed, so there are no listeners to clean up). Mirrors
+ * apps/web/src/app/app/page.tsx (home) and apps/web/src/app/app/feed/page.tsx:
+ *   - pets (composer tagging + stories) for the active scope,
+ *   - friend uids + blocked uids (in parallel) → listFeedPosts,
+ *   - home only: recent walks for today's story-ring status (web
+ *     useTodayWalkStatus pulls 50); the full feed screen does not need walks.
  *
- * `home` mode caps the feed at 10 (web home shows 10 + "view all" → /feed);
- * full feed passes no cap. Pull-to-refresh via `refresh()`.
+ * Scope + family name come from FamilyContext via useScopedData (R08 /
+ * HOME-13): no users/{uid} or families/{id} read of its own, reloads when the
+ * family changes, stale responses dropped, failures surface as `error`.
+ *
+ * `home` mode reads at most 10 posts per source (web home passes max=10) and
+ * shows 10 + "view all" → /feed; the full feed reads 30 per source (web feed).
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
-import firestore from "@react-native-firebase/firestore";
+import { useCallback, useMemo, useRef } from "react";
 import type { Pet, Post, Walk } from "@mango/shared-types";
 import { computeTodayWalkStatus, type WalkStatus } from "@mango/shared-business";
 
-import { useAuth } from "@/state/auth-context";
-import {
-  listPetsForScope,
-  listWalksForScope,
-  resolveCurrentFamilyId,
-} from "@/lib/walk-data";
+import { listPetsForScope, listWalksForScope } from "@/lib/walk-data";
 import { listFeedPosts } from "@/lib/posts";
 import { listFriendUids } from "@/lib/friends-read";
 import { getBlockedUids } from "@/lib/user-prefs";
+import { useScopedData, type ScopedFetcher } from "@/lib/use-family-scope";
 
 const HOME_FEED_LIMIT = 10;
 const FEED_FETCH_MAX = 30;
+/** Same window web's home useTodayWalkStatus reads for "today" filtering. */
+const HOME_WALKS_LIMIT = 50;
 
-async function getFamilyName(familyId: string | null): Promise<string | null> {
-  if (!familyId) return null;
-  try {
-    const snap = await firestore().collection("families").doc(familyId).get();
-    return (snap.data() as { name?: string } | undefined)?.name ?? null;
-  } catch {
-    return null;
-  }
-}
+/**
+ * Posts-only invalidation shared by the home + full-feed instances (both live
+ * in this module): a local delete/block on one screen makes the other refetch
+ * on its next focus without marking pets/walks screens stale.
+ */
+let postsRevision = 0;
+
+type FeedPayload = { pets: Pet[]; posts: Post[]; walks: Walk[] };
+
+const EMPTY: FeedPayload = { pets: [], posts: [], walks: [] };
 
 export type FeedData = ReturnType<typeof useFeedData>;
 
 export function useFeedData({ home }: { home: boolean }) {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [pets, setPets] = useState<Pet[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [walks, setWalks] = useState<Walk[]>([]);
-  const [familyId, setFamilyId] = useState<string | null>(null);
-  const [familyName, setFamilyName] = useState<string | null>(null);
+  const loadedPostsRevision = useRef(-1);
 
-  const load = useCallback(
-    async (isRefresh: boolean) => {
-      if (!user) return;
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      try {
-        const fam = await resolveCurrentFamilyId(user.uid);
-        setFamilyId(fam);
-        const friendUids = await listFriendUids(user.uid);
-        const blockedUids = await getBlockedUids(user.uid).catch(() => [] as string[]);
-        const [petList, postList, walkList, famName] = await Promise.all([
-          listPetsForScope(fam, user.uid).catch(() => [] as Pet[]),
-          listFeedPosts(user.uid, friendUids, FEED_FETCH_MAX, blockedUids).catch(
-            () => [] as Post[],
-          ),
-          listWalksForScope(fam, user.uid, 50).catch(() => [] as Walk[]),
-          getFamilyName(fam),
+  const fetchFeed = useCallback<ScopedFetcher<FeedPayload>>(
+    async ({ uid, familyId }, prev) => {
+      loadedPostsRevision.current = postsRevision;
+      const fetchMax = home ? HOME_FEED_LIMIT : FEED_FETCH_MAX;
+      const postsPromise = (async () => {
+        // Friends + blocked in parallel; each degrades to [] like web.
+        const [friendsR, blockedR] = await Promise.allSettled([
+          listFriendUids(uid),
+          getBlockedUids(uid),
         ]);
-        setPets(petList);
-        setPosts(home ? postList.slice(0, HOME_FEED_LIMIT) : postList);
-        setWalks(walkList);
-        setFamilyName(famName);
-      } finally {
-        if (isRefresh) setRefreshing(false);
-        else setLoading(false);
-      }
+        const friendUids = friendsR.status === "fulfilled" ? friendsR.value : [];
+        const blockedUids = blockedR.status === "fulfilled" ? blockedR.value : [];
+        const list = await listFeedPosts(uid, friendUids, fetchMax, blockedUids);
+        return home ? list.slice(0, HOME_FEED_LIMIT) : list;
+      })();
+      const [petsR, postsR, walksR] = await Promise.allSettled([
+        listPetsForScope(familyId, uid),
+        postsPromise,
+        home
+          ? listWalksForScope(familyId, uid, HOME_WALKS_LIMIT)
+          : Promise.resolve([] as Walk[]),
+      ]);
+      const error =
+        petsR.status === "rejected"
+          ? petsR.reason
+          : postsR.status === "rejected"
+            ? postsR.reason
+            : walksR.status === "rejected"
+              ? walksR.reason
+              : undefined;
+      return {
+        data: {
+          pets: petsR.status === "fulfilled" ? petsR.value : (prev?.pets ?? []),
+          posts: postsR.status === "fulfilled" ? postsR.value : (prev?.posts ?? []),
+          walks: walksR.status === "fulfilled" ? walksR.value : (prev?.walks ?? []),
+        },
+        error,
+      };
     },
-    [user, home],
+    [home],
   );
 
-  useEffect(() => {
-    void load(false);
-  }, [load]);
-
-  const refresh = useCallback(() => load(true), [load]);
+  const scoped = useScopedData<FeedPayload>({
+    initial: EMPTY,
+    fetch: fetchFeed,
+    variant: home ? "home" : "feed",
+    isStale: () => loadedPostsRevision.current !== postsRevision,
+  });
+  const { pets, posts, walks } = scoped.data;
+  const { mutate, reload } = scoped;
 
   const walkStatus = useMemo<Map<string, WalkStatus>>(
     () => computeTodayWalkStatus(pets, walks),
     [pets, walks],
   );
 
+  const bumpPosts = useCallback(() => {
+    postsRevision += 1;
+    loadedPostsRevision.current = postsRevision;
+  }, []);
+
+  /** Local optimistic removal after deletePost (avoids a full refetch). */
+  const removePost = useCallback(
+    (postId: string) => {
+      mutate((d) => ({ ...d, posts: d.posts.filter((p) => p.postId !== postId) }));
+      bumpPosts();
+    },
+    [mutate, bumpPosts],
+  );
+
+  /** Local optimistic removal after blockUser (ugc-moderation.md) — drops the
+   *  blocked author's other posts from the current view without a full
+   *  refetch (comments filter server-side on next comment-section mount since
+   *  listComments takes blockedUids too). */
+  const removeBlockedAuthor = useCallback(
+    (blockedUid: string) => {
+      mutate((d) => ({
+        ...d,
+        posts: d.posts.filter((p) => p.authorUid !== blockedUid),
+      }));
+      bumpPosts();
+    },
+    [mutate, bumpPosts],
+  );
+
+  /** After publishing a post: reload here; the other feed screen refetches on
+   *  its next focus (posts-only invalidation). */
+  const reloadAfterPost = useCallback(async () => {
+    postsRevision += 1;
+    await reload();
+  }, [reload]);
+
   return {
-    loading,
-    refreshing,
+    loading: scoped.loading,
+    refreshing: scoped.refreshing,
+    /** Scope read error or last load error (previous data kept). */
+    error: scoped.error,
+    scopeReady: scoped.scopeReady,
+    scopeStatus: scoped.scopeStatus,
     pets,
     posts,
     walkStatus,
-    familyId,
-    familyName,
+    /** Active scope (null = personal). Only authoritative when scopeReady. */
+    familyId: scoped.familyId,
+    /** Active family name from FamilyContext (null in personal mode). */
+    familyName: scoped.family?.name ?? null,
+    family: scoped.family,
     hasMoreThanHome: home && posts.length >= HOME_FEED_LIMIT,
-    refresh,
-    // local optimistic removal after deletePost (avoids a full refetch)
-    removePost: (postId: string) =>
-      setPosts((prev) => prev.filter((p) => p.postId !== postId)),
-    // local optimistic removal after blockUser (ugc-moderation.md) — drops
-    // the blocked author's other posts from the current view without a
-    // full refetch (comments filter server-side on next comment-section
-    // mount since listComments takes blockedUids too).
-    removeBlockedAuthor: (blockedUid: string) =>
-      setPosts((prev) => prev.filter((p) => p.authorUid !== blockedUid)),
+    /** Pull-to-refresh / retry (re-resolves a failed family scope first). */
+    refresh: scoped.refresh,
+    /** Silent reload. */
+    reload,
+    /** After a write that affects pets/walks too: reload + mark all tabs stale. */
+    reloadAfterWrite: scoped.reloadAfterWrite,
+    /** After PostComposer publishes (onPosted). */
+    reloadAfterPost,
+    removePost,
+    removeBlockedAuthor,
   };
 }

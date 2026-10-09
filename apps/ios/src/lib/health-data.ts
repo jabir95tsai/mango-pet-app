@@ -15,17 +15,27 @@ function recordsCol(petId: string) {
   return firestore().collection("pets").doc(petId).collection("healthRecords");
 }
 
-/** All records for a pet, newest first (optionally one type). */
+/**
+ * Default cap for the health timeline (PETS-21). Web `listRecords` reads every
+ * record; iOS caps at the newest 200 per pet — years of typical use, and the
+ * weight chart only needs the last 6 weight points. Pass `max: null` for the
+ * unbounded web behaviour.
+ */
+export const HEALTH_RECORDS_LIMIT = 200;
+
+/** Records for a pet, newest first (optionally one type), capped at `max`
+ *  (default HEALTH_RECORDS_LIMIT; null = no limit). */
 export async function listHealthRecords(
   petId: string,
-  filter?: { type?: HealthRecordType },
+  filter?: { type?: HealthRecordType; max?: number | null },
 ): Promise<HealthRecord[]> {
   const q = filter?.type
     ? recordsCol(petId)
         .where("type", "==", filter.type)
         .orderBy("recordedAt", "desc")
     : recordsCol(petId).orderBy("recordedAt", "desc");
-  const snap = await q.get();
+  const max = filter?.max === undefined ? HEALTH_RECORDS_LIMIT : filter.max;
+  const snap = await (max === null ? q : q.limit(max)).get();
   return snap.docs.map(
     (d) =>
       ({ ...(d.data() as object), recordId: d.id }) as unknown as HealthRecord,

@@ -3,7 +3,6 @@
  * Tones map to the mango accent tints. When `onPress` is set it becomes a
  * button (selectable filter chip); otherwise it's a static label.
  */
-import type { ReactNode } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
+import { renderIconSlot, type IconSlot } from "./icon-slot";
 import { colors, radius, spacing } from "@/theme/theme";
 
 export type PillTone =
@@ -30,7 +30,8 @@ type Props = {
   filled?: boolean;
   selected?: boolean;
   onPress?: () => void;
-  icon?: ReactNode;
+  /** Lucide component, element or emoji; rendered in a View (not inside Text). */
+  icon?: IconSlot;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 };
@@ -58,7 +59,9 @@ export function Pill({
   const on = filled || selected;
   const content = (
     <>
-      {icon != null ? <Text style={[styles.icon, { color: on ? t.fgOn : t.fg }]}>{icon}</Text> : null}
+      {icon != null ? (
+        <View style={styles.iconBox}>{renderIconSlot(icon, on ? t.fgOn : t.fg, 12)}</View>
+      ) : null}
       <Text style={[styles.label, { color: on ? t.fgOn : t.fg }]} numberOfLines={1}>
         {label}
       </Text>
@@ -98,6 +101,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   label: { fontSize: 12, fontWeight: "700" },
-  icon: { fontSize: 12 },
+  iconBox: { alignItems: "center", justifyContent: "center" },
   pressed: { opacity: 0.8 },
 });

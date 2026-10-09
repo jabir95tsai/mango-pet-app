@@ -5,6 +5,9 @@
 //  · raised centre "walks" disc: 62px, top -16, brand→brand-deep gradient,
 //    amber shadow + 5px cream (mango-bg) ring, white filled PawPrint + label.
 // Matches web exactly (incl. pets + centre both PawPrint — the web does this).
+// Labels come from the shared Nav.* catalog keys app-nav uses (t(key)).
+// a11y: the row is a tablist and every slot a tab with selected state (web
+// marks the active link aria-current="page"), so VoiceOver reads "tab, n of 5".
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,6 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 
+import { t } from "@/lib/i18n";
 import { colors } from "@/theme/theme";
 
 export type TabBarProps = {
@@ -38,13 +42,20 @@ const ICONS: Record<string, LucideIcon> = {
   leaderboard: Trophy,
   settings: Settings,
 };
-const LABELS: Record<string, string> = {
-  index: "首頁",
-  pets: "我的寵物",
-  walks: "遛狗",
-  leaderboard: "排行榜",
-  settings: "設定",
+// route name → web app-nav NavKey (Nav.<key> in the shared catalog).
+export const TAB_NAV_KEYS: Record<string, string> = {
+  index: "Nav.home",
+  pets: "Nav.pets",
+  walks: "Nav.walks",
+  leaderboard: "Nav.leaderboard",
+  settings: "Nav.settings",
 };
+
+/** Localised tab label for a (tabs) route name. */
+export function tabLabel(routeName: string): string {
+  const key = TAB_NAV_KEYS[routeName];
+  return key ? t(key) : routeName;
+}
 const CENTER_ROUTE = "walks";
 // Taller than the web px so the raised disc's real RN footprint (it pops up AND
 // extends down) clears the centre label below it. The cream ring is a real
@@ -97,16 +108,17 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
       </View>
 
       {/* tabs row */}
-      <View style={[styles.row, { height: BAR_H }]}>
+      <View accessibilityRole="tablist" style={[styles.row, { height: BAR_H }]}>
         {state.routes.map((route, index) => {
           const focused = state.index === index;
+          const label = tabLabel(route.name);
 
           if (route.name === CENTER_ROUTE) {
             return (
               <Pressable
                 key={route.key}
-                accessibilityRole="button"
-                accessibilityLabel={LABELS[route.name]}
+                accessibilityRole="tab"
+                accessibilityLabel={label}
                 accessibilityState={{ selected: focused }}
                 onPress={press(route, focused)}
                 style={styles.centerCell}
@@ -121,7 +133,9 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
                     <PawPrint size={26} color="#ffffff" fill="#ffffff" strokeWidth={2} />
                   </LinearGradient>
                 </View>
-                <Text style={styles.centerLabel}>{LABELS[route.name]}</Text>
+                <Text style={styles.centerLabel} numberOfLines={1}>
+                  {label}
+                </Text>
               </Pressable>
             );
           }
@@ -130,8 +144,8 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
           return (
             <Pressable
               key={route.key}
-              accessibilityRole="button"
-              accessibilityLabel={LABELS[route.name]}
+              accessibilityRole="tab"
+              accessibilityLabel={label}
               accessibilityState={{ selected: focused }}
               onPress={press(route, focused)}
               style={styles.tab}
@@ -145,7 +159,7 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
                 />
               ) : null}
               <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
-                {LABELS[route.name] ?? route.name}
+                {label}
               </Text>
               <View style={[styles.dot, focused && styles.dotActive]} />
             </Pressable>

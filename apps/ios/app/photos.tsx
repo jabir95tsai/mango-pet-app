@@ -5,7 +5,7 @@
  * (with per-photo save). Save uses PhotosKit (save-photo.ts, native-upgrade);
  * saved assets are recorded in users/{uid}/photoDownloadState.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -26,7 +26,7 @@ import type {
 } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
-import { resolveCurrentFamilyId } from "@/lib/walk-data";
+import { useFamilyScope } from "@/lib/use-family-scope";
 import {
   listDownloadedPhotoAssetIds,
   listMyPhotoAssetsWithStatus,
@@ -72,30 +72,44 @@ export default function PhotosScreen() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
+  // Scope from FamilyContext (SOCIAL-20 / R08): waits for it, reloads when
+  // the family changes, never reads users/{uid}.currentFamilyId itself.
+  const { familyId, scopeReady, status: scopeStatus } = useFamilyScope();
+  const loadGen = useRef(0);
+
   const load = useCallback(
     async (isRefresh: boolean) => {
-      if (!user) return;
+      if (!user || !scopeReady) return;
+      const gen = ++loadGen.current;
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
       try {
-        const fam = await resolveCurrentFamilyId(user.uid);
         const [{ assets: list }, dl] = await Promise.all([
-          listMyPhotoAssetsWithStatus(user.uid, fam),
+          listMyPhotoAssetsWithStatus(user.uid, familyId),
           listDownloadedPhotoAssetIds(user.uid),
         ]);
+        if (gen !== loadGen.current) return; // superseded (scope changed)
         setAssets(list);
         setDownloadedIds(dl);
+      } catch {
+        // Keep what is on screen; error/partial UI is XCUT-13 (photos lane).
       } finally {
-        if (isRefresh) setRefreshing(false);
-        else setLoading(false);
+        if (gen === loadGen.current) {
+          setRefreshing(false);
+          setLoading(false);
+        }
       }
     },
-    [user],
+    [user, familyId, scopeReady],
   );
 
   useEffect(() => {
+    if (scopeStatus === "error") {
+      setLoading(false);
+      return;
+    }
     void load(false);
-  }, [load]);
+  }, [load, scopeStatus]);
 
   const filtered = useMemo(
     () => (filter === "all" ? assets : assets.filter((a) => a.source === filter)),

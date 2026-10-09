@@ -11,7 +11,7 @@ import { Images } from "lucide-react-native";
 import type { GalleryPhotoAsset } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
-import { useFamily } from "@/state/family-context";
+import { useFamilyScope } from "@/lib/use-family-scope";
 import { listMyPhotoAssetsWithStatus } from "@/lib/photo-gallery";
 import { scoped } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
@@ -23,14 +23,22 @@ const PREVIEW = 3;
 export function PhotosPreviewSection() {
   const router = useRouter();
   const { user } = useAuth();
-  const { family } = useFamily();
+  // Fetch once the family scope is known (SETTINGS-25) — not with a
+  // provisional personal scope first — and again only when the family changes.
+  const { familyId, scopeReady, status: scopeStatus } = useFamilyScope();
   const [photos, setPhotos] = useState<GalleryPhotoAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const uid = user?.uid ?? null;
 
   useEffect(() => {
-    if (!user) return;
+    if (!uid) return;
+    if (scopeStatus === "error") {
+      setLoading(false);
+      return;
+    }
+    if (!scopeReady) return;
     let cancelled = false;
-    listMyPhotoAssetsWithStatus(user.uid, family?.familyId ?? null)
+    listMyPhotoAssetsWithStatus(uid, familyId)
       .then((r) => {
         if (!cancelled) setPhotos(r.assets.slice(0, PREVIEW));
       })
@@ -43,7 +51,7 @@ export function PhotosPreviewSection() {
     return () => {
       cancelled = true;
     };
-  }, [user, family]);
+  }, [uid, familyId, scopeReady, scopeStatus]);
 
   const open = () => router.push("/photos");
 

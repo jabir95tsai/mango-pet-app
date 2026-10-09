@@ -1,22 +1,36 @@
 /**
- * WalksHome data hook — loads pets + recent walks for the active scope and
- * derives today/week/streak stats. Mirrors apps/web/src/app/app/walks/page.tsx
- * (refresh + primaryPet + activePet + goalMin + todayProgress + streak + week
- * flags). Active-pet selection is in-memory for P1a (web persists via
- * localStorage; iOS persistence needs AsyncStorage = a new dep → deferred,
- * see ship note handoff).
+ * WalksHome data hook — loads pets + walks for the active scope and derives
+ * today/week/streak stats. Mirrors apps/web/src/app/app/walks/page.tsx
+ * (refresh keyed on [user, family], waits for the family scope, allSettled
+ * pets/walks, primaryPet + activePet + goalMin + todayProgress + streak + week
+ * flags).
+ *
+ * Scope comes from FamilyContext via useScopedData (R08): a family switch /
+ * join / leave reloads this hook, stale responses are dropped, a scope read
+ * failure is surfaced as `error` (never personal mode), and the tab refetches
+ * on focus when stale. Writers must gate on `scopeReady` and pass `familyId`.
+ *
+ * Walk history (WALKS-12): see listWalksForStats — stats always match web's
+ * full-history numbers; the list holds the newest 60 unless `walksComplete`.
+ * Call `loadAllWalks()` before showing the full "view all" list.
+ *
+ * Active-pet selection is in-memory (web persists via localStorage).
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { getPetWalkGoalMinutes } from "@mango/shared-business";
 import type { Pet, Walk } from "@mango/shared-types";
 
-import { useAuth } from "@/state/auth-context";
 import {
   getAutoPhotoShare,
   listPetsForScope,
   listWalksForScope,
-  resolveCurrentFamilyId,
+  listWalksForStats,
 } from "@/lib/walk-data";
+import {
+  scopeKeyOf,
+  useScopedData,
+  type ScopedFetcher,
+} from "@/lib/use-family-scope";
 import {
   computeStreak,
   getTodayProgress,
@@ -32,37 +46,82 @@ function petCreatedMs(p: Pet): number {
   return ts?.toMillis?.() ?? 0;
 }
 
+type WalksPayload = {
+  pets: Pet[];
+  walks: Walk[];
+  /** walks is the full history (not just the newest page). */
+  walksComplete: boolean;
+  autoPhotoShare: boolean;
+};
+
+const EMPTY: WalksPayload = {
+  pets: [],
+  walks: [],
+  walksComplete: false,
+  autoPhotoShare: true,
+};
+
+export type WalksData = ReturnType<typeof useWalksData>;
+
 export function useWalksData() {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [pets, setPets] = useState<Pet[]>([]);
-  const [walks, setWalks] = useState<Walk[]>([]);
-  const [familyId, setFamilyId] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
-  const [autoPhotoShare, setAutoPhotoShare] = useState(true);
+  /** Scope key for which the user asked for the full history ("view all"). */
+  const wantAllKeyRef = useRef<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const fam = await resolveCurrentFamilyId(user.uid);
-      setFamilyId(fam);
-      const [petList, walkList, auto] = await Promise.all([
-        listPetsForScope(fam, user.uid).catch(() => [] as Pet[]),
-        listWalksForScope(fam, user.uid).catch(() => [] as Walk[]),
-        getAutoPhotoShare(user.uid),
+  const fetchWalksHome = useCallback<ScopedFetcher<WalksPayload>>(
+    async ({ uid, familyId }, prev) => {
+      const wantAll = wantAllKeyRef.current === scopeKeyOf(uid, familyId);
+      const [petsR, walksR, autoR] = await Promise.allSettled([
+        listPetsForScope(familyId, uid),
+        wantAll
+          ? listWalksForScope(familyId, uid, null).then((walks) => ({
+              walks,
+              complete: true,
+            }))
+          : listWalksForStats(familyId, uid),
+        // Best-effort, default ON (web: only an explicit false disables).
+        getAutoPhotoShare(uid),
       ]);
-      setPets(petList);
-      setWalks(walkList);
-      setAutoPhotoShare(auto);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+      const error =
+        petsR.status === "rejected"
+          ? petsR.reason
+          : walksR.status === "rejected"
+            ? walksR.reason
+            : undefined;
+      return {
+        data: {
+          pets: petsR.status === "fulfilled" ? petsR.value : (prev?.pets ?? []),
+          walks:
+            walksR.status === "fulfilled" ? walksR.value.walks : (prev?.walks ?? []),
+          walksComplete:
+            walksR.status === "fulfilled"
+              ? walksR.value.complete
+              : (prev?.walksComplete ?? false),
+          autoPhotoShare:
+            autoR.status === "fulfilled"
+              ? autoR.value
+              : (prev?.autoPhotoShare ?? true),
+        },
+        error,
+      };
+    },
+    [],
+  );
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const scoped = useScopedData<WalksPayload>({
+    initial: EMPTY,
+    fetch: fetchWalksHome,
+  });
+  const { pets, walks, walksComplete, autoPhotoShare } = scoped.data;
+  const { reload } = scoped;
+
+  /** Load the full walk history for "view all" (no-op when already complete). */
+  const { uid: scopeUid, scopeReady, familyId } = scoped;
+  const loadAllWalks = useCallback(async () => {
+    if (walksComplete || !scopeUid || !scopeReady) return;
+    wantAllKeyRef.current = scopeKeyOf(scopeUid, familyId);
+    await reload();
+  }, [walksComplete, reload, scopeUid, scopeReady, familyId]);
 
   // Primary pet = earliest createdAt (same anchor web + cloud functions use).
   const primaryPet = useMemo<Pet | null>(() => {
@@ -103,13 +162,25 @@ export function useWalksData() {
   const weekKm = useMemo(() => getWeekKm(walks), [walks]);
   const weekCount = useMemo(() => getWeekWalkCount(walks), [walks]);
   const weeklyAvgMin = useMemo(() => getWeeklyAvgMinutes(walks), [walks]);
-  const todayIdx = useMemo(() => todayIdxLocal(), []);
+  // Recomputed on every (focus) reload so it rolls over after midnight.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const todayIdx = useMemo(() => todayIdxLocal(), [walks]);
 
   return {
-    loading,
+    loading: scoped.loading,
+    /** Pull-to-refresh in flight. */
+    refreshing: scoped.refreshing,
+    /** Scope read error or last load error (data kept). */
+    error: scoped.error,
+    /** Gate every write (start walk / manual log) on this. */
+    scopeReady: scoped.scopeReady,
+    scopeStatus: scoped.scopeStatus,
     pets,
     walks,
-    familyId,
+    walksComplete,
+    /** Active scope (null = personal). Only authoritative when scopeReady. */
+    familyId: scoped.familyId,
+    family: scoped.family,
     activePet,
     hasMultiplePets: pets.length > 1,
     selectPet: setSelectedPetId,
@@ -122,6 +193,12 @@ export function useWalksData() {
     weeklyAvgMin,
     autoPhotoShare,
     todayIdx,
-    refresh,
+    /** Pull-to-refresh / retry (re-resolves a failed family scope first). */
+    refresh: scoped.refresh,
+    /** Silent reload. */
+    reload,
+    /** After saving a walk: reload here + mark other tabs stale. */
+    reloadAfterWrite: scoped.reloadAfterWrite,
+    loadAllWalks,
   };
 }

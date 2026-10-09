@@ -43,7 +43,15 @@ import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 export default function FamilyScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { family, families, loading, refresh, switchFamily } = useFamily();
+  const {
+    family,
+    families,
+    loading,
+    status: familyStatus,
+    refresh,
+    switchFamily,
+    switchingFamilyId,
+  } = useFamily();
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -69,6 +77,15 @@ export default function FamilyScreen() {
   }, [family, loadMembers]);
 
   const inviteUrl = family ? `${SITE_URL}/join/${family.inviteCode}` : "";
+
+  /** switchFamily rejects when the write fails — surface it (SETTINGS-21). */
+  async function onSwitchFamily(familyId: string) {
+    try {
+      await switchFamily(familyId);
+    } catch {
+      Alert.alert(t("Error.title"), t("Family.actionFailed"));
+    }
+  }
 
   async function copyCode() {
     if (!family) return;
@@ -174,7 +191,13 @@ export default function FamilyScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {!family ? (
+          {!family && familyStatus === "error" ? (
+            // Scope read failed: NOT personal mode — offer a retry only (R08).
+            <View style={styles.personalCard}>
+              <Text style={styles.personalMode}>{t("Error.title")}</Text>
+              <Button label={t("Error.retry")} onPress={() => void refresh()} size="lg" />
+            </View>
+          ) : !family ? (
             <View style={styles.personalCard}>
               <Text style={styles.personalMode}>{t("Family.personalMode")}</Text>
               <Text style={styles.personalInfo}>{t("Family.personalInfo")}</Text>
@@ -192,7 +215,14 @@ export default function FamilyScreen() {
                     return (
                       <Pressable
                         key={f.familyId}
-                        onPress={() => switchFamily(f.familyId)}
+                        onPress={() => void onSwitchFamily(f.familyId)}
+                        disabled={switchingFamilyId !== null}
+                        accessibilityRole="button"
+                        accessibilityState={{
+                          selected: on,
+                          busy: switchingFamilyId === f.familyId,
+                          disabled: switchingFamilyId !== null,
+                        }}
                         style={[styles.switchPill, on && styles.switchPillOn]}
                       >
                         <Text style={[styles.switchText, on && styles.switchTextOn]}>{f.name}</Text>

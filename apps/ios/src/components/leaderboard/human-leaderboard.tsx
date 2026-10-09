@@ -32,7 +32,8 @@ const PERIODS: { value: LeaderboardPeriod; label: string }[] = [
 
 export function HumanLeaderboard({ onCreateFamily }: { onCreateFamily: () => void }) {
   const { user } = useAuth();
-  const { family } = useFamily();
+  const { family, status: familyStatus, refresh: retryFamily } = useFamily();
+  const hasFamily = family !== null;
   const [period, setPeriod] = useState<LeaderboardPeriod>("weekly");
   const [scope, setScope] = useState<Scope>("all");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
@@ -42,13 +43,19 @@ export function HumanLeaderboard({ onCreateFamily }: { onCreateFamily: () => voi
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(SCOPE_KEY).then((v) => {
-      if (v === "all" || v === "family") setScope(v);
-    });
+    let active = true;
+    AsyncStorage.getItem(SCOPE_KEY)
+      .then((v) => {
+        if (active && (v === "all" || v === "family")) setScope(v);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    if (!family) return; // personal mode: no listener
+    if (!hasFamily) return; // personal mode / scope unknown: no listener
     setLoading(true);
     const unsub = subscribeLeaderboard(
       period,
@@ -59,7 +66,7 @@ export function HumanLeaderboard({ onCreateFamily }: { onCreateFamily: () => voi
       () => setLoading(false),
     );
     return unsub;
-  }, [period, nonce, family]);
+  }, [period, nonce, hasFamily]);
 
   useEffect(
     () => () => {
@@ -87,6 +94,24 @@ export function HumanLeaderboard({ onCreateFamily }: { onCreateFamily: () => voi
     setRefreshing(true);
     setNonce((n) => n + 1);
     refreshTimer.current = setTimeout(() => setRefreshing(false), 800);
+  }
+
+  // Scope unknown ≠ personal mode (R08): never flash the "create family" CTA
+  // while the family is loading or failed to load.
+  if (!family && familyStatus === "loading") {
+    return <ActivityIndicator color={colors.brand} style={styles.loader} />;
+  }
+  if (!family && familyStatus === "error") {
+    return (
+      <View style={styles.empty}>
+        <Text style={styles.emptyTitle}>{t("Error.title")}</Text>
+        <Button
+          label={t("Error.retry")}
+          onPress={() => void retryFamily()}
+          style={styles.cta}
+        />
+      </View>
+    );
   }
 
   if (!family) {

@@ -65,10 +65,14 @@ export default function WalksScreen() {
     weeklyAvgMin,
     autoPhotoShare,
     todayIdx,
+    scopeReady,
+    walksComplete,
+    loadAllWalks,
   } = data;
 
   function handleStartWalking() {
-    if (pets.length === 0) return;
+    // Never start a walk while the family scope is unknown (R08).
+    if (pets.length === 0 || !scopeReady) return;
     const id = newWalkId();
     setPendingWalkId(id);
     if (autoPhotoShare) {
@@ -167,7 +171,11 @@ export default function WalksScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ expanded: showAllWalks }}
-                onPress={() => setShowAllWalks((v) => !v)}
+                onPress={() => {
+                  // "View all" needs the full history (WALKS-12).
+                  if (!showAllWalks && !walksComplete) void loadAllWalks();
+                  setShowAllWalks((v) => !v);
+                }}
                 hitSlop={8}
               >
                 <Text style={styles.toggleAll}>
@@ -193,7 +201,7 @@ export default function WalksScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="手動補登遛狗"
-          disabled={pets.length === 0}
+          disabled={pets.length === 0 || !scopeReady}
           onPress={() => setManualOpen(true)}
           style={({ pressed }) => [styles.manualBtn, pressed && styles.pressed]}
         >
@@ -233,7 +241,7 @@ export default function WalksScreen() {
         todayMinBefore={todayProgress.minutes}
         weeklyAvgMin={weeklyAvgMin}
         onClose={() => setSessionOpen(false)}
-        onSaved={data.refresh}
+        onSaved={data.reloadAfterWrite}
       />
 
       <ManualWalkDialog
@@ -242,7 +250,7 @@ export default function WalksScreen() {
         streakDays={streakDays}
         familyId={familyId}
         onClose={() => setManualOpen(false)}
-        onSaved={data.refresh}
+        onSaved={data.reloadAfterWrite}
       />
     </SafeAreaView>
   );
