@@ -18,6 +18,8 @@ import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
 import type { ExpenseCategory, ExtractedReceipt } from "@mango/shared-types";
 
+import { t } from "@/lib/i18n";
+
 const AI_APP_NAME = "ai-receipt";
 const MODEL = "gemini-2.5-flash";
 
@@ -113,7 +115,7 @@ export async function extractReceipt(
   try {
     parsed = JSON.parse(stripFences(text)) as Record<string, unknown>;
   } catch {
-    throw new Error("AI 回傳的結果無法解析，請手動輸入。");
+    throw new Error(t("PetsPage.scanner.failed"));
   }
 
   const amountNum = Number(parsed.amount);

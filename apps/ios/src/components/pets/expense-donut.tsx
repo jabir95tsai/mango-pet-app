@@ -12,6 +12,7 @@ import type { ExpenseCategory } from "@mango/shared-types";
 import { CATEGORY_COLOR } from "@/lib/expense-ui";
 import { groupThousands } from "@/lib/format";
 import { scoped } from "@/lib/i18n";
+import { colors } from "@/theme/theme";
 
 const tPP = scoped("PetsPage");
 
@@ -66,7 +67,12 @@ export function ExpenseDonut({
   }, [segments, total, cx, cy, r, ir]);
 
   return (
-    <View style={[styles.wrap, { width: size, height: size }]}>
+    <View
+      style={[styles.wrap, { width: size, height: size }]}
+      // Decorative (web aria-hidden): the legend beside it carries the data.
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {arcs.map((a) => (
           <Path key={a.category} d={a.d} fill={CATEGORY_COLOR[a.category]} />
@@ -77,12 +83,21 @@ export function ExpenseDonut({
           textAnchor="middle"
           fontSize={9.5}
           fontWeight="700"
-          fill="#9a8a74"
+          letterSpacing={0.5}
+          fill={colors.ink3}
         >
           {tPP("expenses.donutLabel")}
         </SvgText>
-        <SvgText x={cx} y={cy + 13} textAnchor="middle" fontSize={17} fontWeight="800" fill="#231b14">
-          <TSpan fontSize={9.5} fontWeight="600" fill="#9a8a74">{"NT$ "}</TSpan>
+        <SvgText
+          x={cx}
+          y={cy + 13}
+          textAnchor="middle"
+          fontSize={17}
+          fontWeight="800"
+          letterSpacing={-0.4}
+          fill={colors.ink}
+        >
+          <TSpan fontSize={9.5} fontWeight="600" fill={colors.ink3}>{"NT$ "}</TSpan>
           <TSpan>{groupThousands(total)}</TSpan>
         </SvgText>
       </Svg>

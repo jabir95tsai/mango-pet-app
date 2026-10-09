@@ -1,42 +1,43 @@
 /**
- * Weight trend chart — hand-rolled react-native-svg area + line over the last
- * N weight points (default 6), mirroring web's hand-rolled SVG. Width is
- * measured via onLayout so it fills the card. S3 polish: gradient area fill,
- * faint top/baseline gridlines, min/max kg y-hints, and first/last date labels
- * on the x-axis. Guards:
- *  - <2 points → "需要 2 筆以上" message (no chart).
- *  - all weights equal → yScale would divide by zero; we pad the range so the
- *    line renders flat in the middle instead of NaN.
+ * Weight trend chart — 1:1 with apps/web/src/components/pets/
+ * pet-weight-trend-chart.tsx: a bare area + line + dot chart (leaf-deep
+ * stroke, leaf-tint gradient fill, default 70pt tall, no axes / labels) over
+ * the most recent 6 weight readings. Width is measured via onLayout so it fills
+ * the card (web stretches a 300-wide viewBox; measuring keeps the dots round).
+ *
+ * Pure chart: renders nothing for < 2 points — the caller (PetHealthBody)
+ * owns the card header, the "資料不足" placeholder and the current/delta
+ * footer, like web's PetHealthBody. All-equal weights draw a flat mid line.
  */
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
+import { View, type LayoutChangeEvent } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
 
 import type { WeightPoint } from "@/lib/health-data";
-import { scoped } from "@/lib/i18n";
+import { LEAF_DEEP } from "@/lib/expense-ui";
 import { colors } from "@/theme/theme";
 
-const tPP = scoped("PetsPage");
-
-// 1:1 with apps/web/src/components/pets/pet-weight-trend-chart.tsx — a bare
-// area+line+dots chart (leaf-deep stroke, leaf-tint fill, ~80px tall, no
-// gridlines/axes/labels). The latest-kg + range head lives above it.
-const HEIGHT = 80;
 const PAD = 6;
-const LEAF_DEEP = "#3f8a3a";
 
 export function WeightChart({
   points,
   max = 6,
+  height = 70,
 }: {
   points: WeightPoint[];
+  /** Most recent N readings to plot (web: 6). */
   max?: number;
+  /** Pixel height of the chart area (web default 70). */
+  height?: number;
 }) {
   const [width, setWidth] = useState(0);
-  const data = useMemo(() => points.slice(-max), [points, max]);
+  // Most recent N readings, ascending so the line goes left → right.
+  const data = useMemo(
+    () => [...points].sort((a, b) => a.date - b.date).slice(-max),
+    [points, max],
+  );
 
-  const onLayout = (e: LayoutChangeEvent) =>
-    setWidth(e.nativeEvent.layout.width);
+  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
   const geom = useMemo(() => {
     if (data.length < 2 || width <= 0) return null;
@@ -45,43 +46,36 @@ export function WeightChart({
     const hi = Math.max(...kgs);
     const range = hi - lo;
     const top = PAD;
-    const bot = HEIGHT - PAD;
+    const bot = height - PAD;
     const n = data.length;
     const x = (i: number) => (n === 1 ? width / 2 : (i / (n - 1)) * width);
-    const y = (kg: number) => (range === 0 ? HEIGHT / 2 : bot - ((kg - lo) / range) * (bot - top));
+    const y = (kg: number) =>
+      range === 0 ? height / 2 : bot - ((kg - lo) / range) * (bot - top);
     const pts = data.map((p, i) => ({ x: x(i), y: y(p.kg) }));
     const line = `M ${pts.map((p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" L ")}`;
-    const area = `${line} L ${width} ${HEIGHT} L 0 ${HEIGHT} Z`;
+    const area = `${line} L ${width} ${height} L 0 ${height} Z`;
     return { pts, line, area };
-  }, [data, width]);
+  }, [data, width, height]);
 
-  if (data.length < 2) {
-    return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyText}>
-          {tPP("health.weightTrendInsufficient")}
-        </Text>
-      </View>
-    );
-  }
-
-  const latest = data[data.length - 1].kg;
+  if (data.length < 2) return null;
 
   return (
-    <View onLayout={onLayout}>
-      <View style={styles.head}>
-        <Text style={styles.latest}>{`${latest} ${tPP("kgUnit")}`}</Text>
-        <Text style={styles.range}>{tPP("health.weightTrendRange")}</Text>
-      </View>
+    <View
+      onLayout={onLayout}
+      style={{ height }}
+      // Decorative (web aria-hidden); the card footer states the numbers.
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
       {geom ? (
-        <Svg width={width} height={HEIGHT}>
+        <Svg width={width} height={height}>
           <Defs>
-            <LinearGradient id="weightArea" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#e7f2dc" stopOpacity={1} />
-              <Stop offset="1" stopColor="#e7f2dc" stopOpacity={0} />
+            <LinearGradient id="petWeightFill" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={colors.leafTint} stopOpacity={1} />
+              <Stop offset="1" stopColor={colors.leafTint} stopOpacity={0} />
             </LinearGradient>
           </Defs>
-          <Path d={geom.area} fill="url(#weightArea)" />
+          <Path d={geom.area} fill="url(#petWeightFill)" />
           <Path
             d={geom.line}
             stroke={LEAF_DEEP}
@@ -91,25 +85,18 @@ export function WeightChart({
             strokeLinecap="round"
           />
           {geom.pts.map((p, i) => (
-            <Circle key={i} cx={p.x} cy={p.y} r={2.4} fill="#ffffff" stroke={LEAF_DEEP} strokeWidth={1.6} />
+            <Circle
+              key={i}
+              cx={p.x}
+              cy={p.y}
+              r={2.4}
+              fill={colors.card}
+              stroke={LEAF_DEEP}
+              strokeWidth={1.6}
+            />
           ))}
         </Svg>
-      ) : (
-        <View style={{ height: HEIGHT }} />
-      )}
+      ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  head: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  latest: { fontSize: 20, fontWeight: "800", color: colors.ink },
-  range: { fontSize: 11, color: colors.ink3 },
-  empty: { paddingVertical: 28, alignItems: "center" },
-  emptyText: { fontSize: 12, color: colors.ink3, textAlign: "center" },
-});

@@ -37,7 +37,10 @@
     "moreReactions": "更多表情",
     "pickReaction": "選擇表情",
     "yourReaction": "你的回應：{emoji}（再點一次取消）",
-    "reactionCount": "{count} 個回應"
+    "reactionCount": "{count} 個回應",
+    "publishFailed": "發布失敗，請再試一次",
+    "uploadAllFailed": "照片上傳全部失敗，貼文已取消。",
+    "uploadPartialFailed": "{failed}/{total} 張照片上傳失敗，貼文已建立但缺少部分照片"
   },
   "Comments": {
     "toggle": "留言",
@@ -51,7 +54,8 @@
     "deleteTitle": "刪除留言",
     "delete": "刪除",
     "deleteFailed": "刪除失敗，請再試一次",
-    "tooLong": "留言最多 {max} 字"
+    "tooLong": "留言最多 {max} 字",
+    "emptyText": "留言不能是空白"
   },
   "Error": {
     "title": "出了點狀況",
@@ -123,7 +127,8 @@
     "empty": {
       "title": "尚無動態",
       "subtitle": "發第一篇貼文，或等好友的公開動態。"
-    }
+    },
+    "deleteConfirm": "確定要刪除這篇貼文嗎？此動作無法復原。"
   },
   "Restaurant": {
     "title": "餐廳",
@@ -917,7 +922,12 @@
       "training": "訓練",
       "insurance": "保險",
       "other": "其他"
-    }
+    },
+    "aiPrefill": {
+      "notice": "AI 已自動填入欄位，{editable}，請確認後儲存",
+      "editable": "所有欄位都可手動編輯"
+    },
+    "addItem": "新增品項"
   },
   "Common": {
     "loading": "載入中...",
@@ -937,7 +947,26 @@
       "saved": "已存 ✓",
       "failed": "存取失敗"
     },
-    "retry": "重試"
+    "retry": "重試",
+    "time": {
+      "lessThanMinute": "少於 1 分鐘",
+      "minute": "1 分鐘",
+      "minutes": "{n} 分鐘",
+      "aboutHour": "大約 1 小時",
+      "aboutHours": "大約 {n} 小時",
+      "day": "1 天",
+      "days": "{n} 天",
+      "aboutMonth": "大約 1 個月",
+      "aboutMonths": "大約 {n} 個月",
+      "months": "{n} 個月",
+      "aboutYear": "大約 1 年",
+      "aboutYears": "大約 {n} 年",
+      "overYear": "超過 1 年",
+      "overYears": "超過 {n} 年",
+      "almostYears": "將近 {n} 年",
+      "inPast": "{time}前",
+      "inFuture": "{time}內"
+    }
   },
   "PhotoLightbox": {
     "close": "關閉",
@@ -1083,14 +1112,17 @@
       "empty": "本月還沒有開銷",
       "addCta": "新增開銷",
       "filterEmpty": "此分類本月無項目",
-      "manualEntry": "手動輸入開銷"
+      "manualEntry": "手動輸入開銷",
+      "paidBy": "{name} 付"
     },
     "health": {
       "weightTrend": "體重趨勢",
       "weightTrendRange": "近 6 個月",
       "weightTrendInsufficient": "資料不足，需 ≥ 2 次體重記錄",
       "empty": "還沒有健康紀錄",
-      "addCta": "新增紀錄"
+      "addCta": "新增紀錄",
+      "weightRecordTitle": "定期量測",
+      "feedingRecordTitle": "餵食紀錄"
     },
     "empty": {
       "title": "還沒有寵物",
@@ -1103,6 +1135,18 @@
       "reminders": "新增提醒",
       "expenses": "拍收據",
       "health": "新增健康紀錄"
+    },
+    "scanner": {
+      "hint": "拍張收據照片，AI 自動抓出金額、商家、日期、類別。",
+      "takePhoto": "拍照",
+      "pickFromLibrary": "從相簿選",
+      "startScan": "開始辨識",
+      "scanning": "AI 辨識中...",
+      "failed": "AI 辨識失敗，請手動輸入。",
+      "imageFailed": "圖片處理失敗",
+      "cameraDeniedTitle": "需要相機權限",
+      "cameraDeniedBody": "需要相機權限才能拍收據。你也可以從相簿選照片，或直接手動輸入。",
+      "openSettings": "前往設定"
     }
   },
   "Join": {
@@ -1137,5 +1181,19 @@
     "reportFailed": "檢舉失敗，請再試一次",
     "blockedUsersTitle": "已封鎖的使用者",
     "blockedUsersEmpty": "目前沒有封鎖任何人"
+  },
+  "Ios": {
+    "post": {
+      "libraryPermissionTitle": "需要相簿權限",
+      "libraryPermissionBody": "請到「設定」開啟相簿存取權限。",
+      "pickFailed": "無法讀取照片，請再試一次",
+      "pickFromLibrary": "從相簿選擇"
+    },
+    "walks": {
+      "cameraPermissionTitle": "需要相機權限",
+      "cameraPermissionBody": "開啟相機才能拍遛狗照片；不拍照也能完成這次遛狗。",
+      "cameraAllow": "允許相機",
+      "openSettings": "前往設定"
+    }
   }
 }

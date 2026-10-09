@@ -1,37 +1,85 @@
 /**
- * Reusable full-screen camera capture (expo-camera, P1c). Shutter → returns the
+ * Reusable full-screen camera capture (expo-camera, P1c) — the native stand-in
+ * for web's `<input type="file" capture="environment">`. Shutter → returns the
  * captured local URI via onCaptured; cancel / permission-denied → onCancel so
  * the caller can proceed WITHOUT a photo (spec: camera refusal must not block
  * completing the walk). Compression happens later in the upload helpers.
  *
- * No new dep — expo-camera was installed by the P1c backend prereq.
+ * Presentation:
+ *  - "overlay" (default): an absolute-fill layer inside the caller's own
+ *    modal (post composer, in-walk photos inside the tracking view).
+ *  - "modal": its own full-screen RN Modal, for callers that are a plain
+ *    screen (the walk START photo flow) so the tab bar is covered too.
+ *    `onDismissed` fires once the modal has fully gone, so the caller can
+ *    present the next modal without the iOS "present while dismissing" race.
  */
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { X } from "lucide-react-native";
+import { Camera, X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
+import { Button } from "@/components/ui/Button";
+import { t } from "@/lib/i18n";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { colors, radius, spacing } from "@/theme/theme";
 
 type Props = {
   visible: boolean;
   onCaptured: (uri: string) => void;
   onCancel: () => void;
+  presentation?: "overlay" | "modal";
+  /** "modal" only — the modal has fully disappeared. */
+  onDismissed?: () => void;
 };
 
-export function CameraCaptureModal({ visible, onCaptured, onCancel }: Props) {
+export function CameraCaptureModal({
+  visible,
+  onCaptured,
+  onCancel,
+  presentation = "overlay",
+  onDismissed,
+}: Props) {
+  const reduceMotion = useReducedMotion();
+
+  if (presentation === "modal") {
+    return (
+      <Modal
+        visible={visible}
+        animationType={reduceMotion ? "none" : "slide"}
+        presentationStyle="fullScreen"
+        onRequestClose={onCancel}
+        onDismiss={onDismissed}
+      >
+        {/* Kept mounted through the dismiss animation (RN renders the
+            modal's children until onDismiss). */}
+        <CameraBody onCaptured={onCaptured} onCancel={onCancel} />
+      </Modal>
+    );
+  }
+
+  if (!visible) return null;
+  return <CameraBody onCaptured={onCaptured} onCancel={onCancel} />;
+}
+
+function CameraBody({
+  onCaptured,
+  onCancel,
+}: {
+  onCaptured: (uri: string) => void;
+  onCancel: () => void;
+}) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
   const [busy, setBusy] = useState(false);
-
-  if (!visible) return null;
 
   // Permission still loading.
   if (!permission) {
@@ -42,23 +90,43 @@ export function CameraCaptureModal({ visible, onCaptured, onCancel }: Props) {
     );
   }
 
-  // Not yet granted → ask; if blocked, let the user skip (fallback).
+  // Not yet granted → ask; if blocked, offer Settings and let the user skip.
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.permBox}>
-        <Text style={styles.permEmoji}>📷</Text>
-        <Text style={styles.permTitle}>需要相機權限</Text>
-        <Text style={styles.permBody}>
-          開啟相機才能拍遛狗照片；不拍照也能完成這次遛狗。
+        <View style={styles.permIcon}>
+          <Camera size={32} color={colors.brandDeep} strokeWidth={2} />
+        </View>
+        <Text style={styles.permTitle} accessibilityRole="header">
+          {t("Ios.walks.cameraPermissionTitle")}
         </Text>
-        {permission.canAskAgain ? (
-          <Pressable style={styles.primaryBtn} onPress={() => void requestPermission()}>
-            <Text style={styles.primaryText}>允許相機</Text>
+        <Text style={styles.permBody}>{t("Ios.walks.cameraPermissionBody")}</Text>
+        <View style={styles.permActions}>
+          {permission.canAskAgain ? (
+            <Button
+              label={t("Ios.walks.cameraAllow")}
+              pill
+              size="lg"
+              fullWidth
+              onPress={() => void requestPermission()}
+            />
+          ) : (
+            <Button
+              label={t("Ios.walks.openSettings")}
+              pill
+              size="lg"
+              fullWidth
+              onPress={() => void Linking.openSettings()}
+            />
+          )}
+          <Pressable
+            accessibilityRole="button"
+            onPress={onCancel}
+            style={({ pressed }) => [styles.skipBtn, pressed && styles.pressed]}
+          >
+            <Text style={styles.skipText}>{t("WalksPhotoPrompt.skip")}</Text>
           </Pressable>
-        ) : null}
-        <Pressable style={styles.secondaryBtn} onPress={onCancel}>
-          <Text style={styles.secondaryText}>略過</Text>
-        </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
@@ -84,8 +152,9 @@ export function CameraCaptureModal({ visible, onCaptured, onCancel }: Props) {
         <View style={styles.topRow}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="關閉相機"
+            accessibilityLabel={t("Common.close")}
             onPress={onCancel}
+            hitSlop={2}
             style={styles.closeBtn}
           >
             <X size={20} color="#ffffff" strokeWidth={2} />
@@ -94,7 +163,8 @@ export function CameraCaptureModal({ visible, onCaptured, onCancel }: Props) {
         <View style={styles.bottomRow}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="拍照"
+            accessibilityLabel={t("WalksPhotoPrompt.take")}
+            accessibilityState={{ busy, disabled: busy }}
             disabled={busy}
             onPress={handleShutter}
             style={({ pressed }) => [styles.shutter, pressed && styles.pressed]}
@@ -108,18 +178,23 @@ export function CameraCaptureModal({ visible, onCaptured, onCancel }: Props) {
 }
 
 const styles = StyleSheet.create({
-  fill: { ...StyleSheet.absoluteFillObject, backgroundColor: "#000", zIndex: 100 },
+  fill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+    zIndex: 100,
+    alignItems: "stretch",
+    justifyContent: "center",
+  },
   controls: { flex: 1, justifyContent: "space-between" },
   topRow: { flexDirection: "row", justifyContent: "flex-end", padding: spacing.lg },
   closeBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radius.pill,
     backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center",
     justifyContent: "center",
   },
-  closeText: { color: "#fff", fontSize: 18, fontWeight: "700" },
   bottomRow: { alignItems: "center", paddingBottom: spacing.xxl },
   shutter: {
     width: 76,
@@ -138,7 +213,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   pressed: { opacity: 0.7 },
-  fillCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
   permBox: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.bg,
@@ -148,19 +222,27 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.xl,
   },
-  permEmoji: { fontSize: 56 },
-  permTitle: { fontSize: 20, fontWeight: "800", color: colors.ink },
-  permBody: { fontSize: 14, color: colors.ink2, textAlign: "center", lineHeight: 20 },
-  primaryBtn: {
-    marginTop: spacing.sm,
-    height: 48,
-    paddingHorizontal: spacing.xxl,
+  permIcon: {
+    width: 64,
+    height: 64,
     borderRadius: radius.pill,
-    backgroundColor: colors.brand,
+    backgroundColor: colors.brandTint,
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { fontSize: 16, fontWeight: "800", color: colors.card },
-  secondaryBtn: { height: 44, alignItems: "center", justifyContent: "center" },
-  secondaryText: { fontSize: 14, fontWeight: "600", color: colors.ink3 },
+  permTitle: { fontSize: 20, fontWeight: "700", color: colors.ink, textAlign: "center" },
+  permBody: { fontSize: 14, color: colors.ink2, textAlign: "center", lineHeight: 20 },
+  permActions: {
+    width: "100%",
+    maxWidth: 320,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  skipBtn: {
+    height: 44,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  skipText: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
 });

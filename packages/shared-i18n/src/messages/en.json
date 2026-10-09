@@ -37,7 +37,10 @@
     "moreReactions": "More reactions",
     "pickReaction": "Pick a reaction",
     "yourReaction": "Your reaction: {emoji} (tap again to remove)",
-    "reactionCount": "{count} reactions"
+    "reactionCount": "{count} reactions",
+    "publishFailed": "Couldn't publish. Try again.",
+    "uploadAllFailed": "All photo uploads failed, so the post was cancelled.",
+    "uploadPartialFailed": "{failed} of {total} photos failed to upload. The post was created without them."
   },
   "Comments": {
     "toggle": "Comment",
@@ -51,7 +54,8 @@
     "deleteTitle": "Delete comment",
     "delete": "Delete",
     "deleteFailed": "Couldn't delete. Try again.",
-    "tooLong": "Comments are limited to {max} characters"
+    "tooLong": "Comments are limited to {max} characters",
+    "emptyText": "Comment can't be empty"
   },
   "Error": {
     "title": "Something went wrong",
@@ -123,7 +127,8 @@
     "empty": {
       "title": "No posts yet",
       "subtitle": "Share the first post, or wait for friends' public posts."
-    }
+    },
+    "deleteConfirm": "Delete this post? This can't be undone."
   },
   "Restaurant": {
     "title": "Restaurant",
@@ -917,7 +922,12 @@
       "training": "Training",
       "insurance": "Insurance",
       "other": "Other"
-    }
+    },
+    "aiPrefill": {
+      "notice": "AI filled in these fields — {editable}. Please check before saving.",
+      "editable": "every field can be edited"
+    },
+    "addItem": "Add item"
   },
   "Common": {
     "loading": "Loading...",
@@ -937,7 +947,26 @@
       "saved": "Saved ✓",
       "failed": "Save failed"
     },
-    "retry": "Retry"
+    "retry": "Retry",
+    "time": {
+      "lessThanMinute": "less than a minute",
+      "minute": "1 minute",
+      "minutes": "{n} minutes",
+      "aboutHour": "about 1 hour",
+      "aboutHours": "about {n} hours",
+      "day": "1 day",
+      "days": "{n} days",
+      "aboutMonth": "about 1 month",
+      "aboutMonths": "about {n} months",
+      "months": "{n} months",
+      "aboutYear": "about 1 year",
+      "aboutYears": "about {n} years",
+      "overYear": "over 1 year",
+      "overYears": "over {n} years",
+      "almostYears": "almost {n} years",
+      "inPast": "{time} ago",
+      "inFuture": "in {time}"
+    }
   },
   "PhotoLightbox": {
     "close": "Close",
@@ -1083,14 +1112,17 @@
       "empty": "No expenses this month",
       "addCta": "Add expense",
       "filterEmpty": "No items in this category this month",
-      "manualEntry": "Enter manually"
+      "manualEntry": "Enter manually",
+      "paidBy": "paid by {name}"
     },
     "health": {
       "weightTrend": "Weight trend",
       "weightTrendRange": "Last 6 months",
       "weightTrendInsufficient": "Need at least 2 weight records",
       "empty": "No health records yet",
-      "addCta": "Add record"
+      "addCta": "Add record",
+      "weightRecordTitle": "Routine weigh-in",
+      "feedingRecordTitle": "Feeding log"
     },
     "empty": {
       "title": "No pets yet",
@@ -1103,6 +1135,18 @@
       "reminders": "Add reminder",
       "expenses": "Scan receipt",
       "health": "Add health record"
+    },
+    "scanner": {
+      "hint": "Snap a receipt and AI fills in the amount, store, date and category.",
+      "takePhoto": "Take photo",
+      "pickFromLibrary": "Choose from library",
+      "startScan": "Read receipt",
+      "scanning": "Reading receipt…",
+      "failed": "Couldn't read the receipt. Please enter it manually.",
+      "imageFailed": "Couldn't process the photo",
+      "cameraDeniedTitle": "Camera access needed",
+      "cameraDeniedBody": "Allow camera access to scan receipts, or choose a photo from your library or enter the expense manually.",
+      "openSettings": "Open Settings"
     }
   },
   "Join": {
@@ -1137,5 +1181,19 @@
     "reportFailed": "Couldn't submit — try again",
     "blockedUsersTitle": "Blocked users",
     "blockedUsersEmpty": "You haven't blocked anyone"
+  },
+  "Ios": {
+    "post": {
+      "libraryPermissionTitle": "Photo library access needed",
+      "libraryPermissionBody": "Turn on photo library access in Settings.",
+      "pickFailed": "Couldn't load the photos. Try again.",
+      "pickFromLibrary": "Choose from library"
+    },
+    "walks": {
+      "cameraPermissionTitle": "Camera access needed",
+      "cameraPermissionBody": "Allow camera access to take walk photos. You can still finish this walk without a photo.",
+      "cameraAllow": "Allow camera",
+      "openSettings": "Open Settings"
+    }
   }
 }

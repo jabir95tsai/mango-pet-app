@@ -1,90 +1,108 @@
 /**
- * Post card (P3a) — mirrors web post-card. Author header (avatar / name /
- * relative time / visibility icon), tagged-pet chips, photo grid (1 / 2 / 2+),
- * emoji reactions, a comment badge that lazy-mounts the comment section, and an
- * author-only delete (confirm). Photo tap opens the lightbox via `onOpenPhotos`
- * — wired in P3b; until then photos render non-interactively.
+ * Post card — 1:1 with web apps/web/src/components/feed/post-card.tsx:
+ *
+ *  - header: avatar 40 · name (14/600) · lucide visibility icon (Globe /
+ *    Users / Lock, 12) + localized relative time (12, ink3) · author-only
+ *    Trash2 delete (confirm: title Common.delete, message = first 80 chars) or
+ *    the ⋯ report/block menu (hidden for guests)
+ *  - text (14, relaxed leading, pre-wrap)
+ *  - photo grid: 1 → full width, 2+ → 2 columns, square cells, the whole grid
+ *    clipped as one 8pt-rounded block; tap opens the lightbox (`onOpenPhotos`)
+ *  - actions: reactions + comment pill (36pt, bgAlt, MessageCircle 16 + count)
+ *    in a left-aligned wrap row; the pill lazy-mounts CommentSection
+ *  - guests (anonymous) get GuestLockedNotice("reactions") in place of the
+ *    reactions / comments row, like web — they can still read the post
+ *
+ * Memoised: in the feed FlatList the card only re-renders when its post (or a
+ * handler) changes. Tagged-pet chips were dropped for web parity (FEED-23);
+ * `petNameById` is still accepted so existing callers compile.
  */
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
-  Alert,
   Image,
   Pressable,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
+  type LayoutChangeEvent,
 } from "react-native";
-import { MessageCircle, Trash2 } from "lucide-react-native";
+import { Globe, Lock, MessageCircle, Trash2, Users, type LucideIcon } from "lucide-react-native";
 import type { Post, Visibility } from "@mango/shared-types";
 
+import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { deletePost } from "@/lib/posts";
 import { relativeTime } from "@/lib/format";
+import { alertError, confirm } from "@/lib/confirm";
+import { t } from "@/lib/i18n";
+import { useAuth } from "@/state/auth-context";
 import { colors, radius, shadows, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 import { UserAvatar } from "./user-avatar";
 import { EmojiReactions } from "./emoji-reactions";
 import { CommentSection } from "./comment-section";
 import { PostMenu } from "./post-menu";
 
-const VISIBILITY_ICON: Record<Visibility, string> = {
-  public: "🌍",
-  friends: "👥",
-  private: "🔒",
+const VISIBILITY_ICON: Record<Visibility, LucideIcon> = {
+  public: Globe,
+  friends: Users,
+  private: Lock,
 };
 
-export function PostCard({
-  post,
-  currentUid,
-  petNameById,
-  onOpenPhotos,
-  onDeleted,
-  onBlocked,
-}: {
+/** Page gutter each feed column uses (Screen / feed list padding). */
+const PAGE_PAD = spacing.lg;
+/** Card inner padding (web p-4). */
+const CARD_PAD = spacing.lg;
+/** Card border (web `border`, 1px each side). */
+const CARD_BORDER = 1;
+
+export type PostCardProps = {
   post: Post;
   currentUid: string;
+  /** @deprecated Tagged-pet chips were removed for web parity; ignored. */
   petNameById?: Record<string, string>;
   onOpenPhotos?: (urls: string[], index: number) => void;
-  onDeleted?: () => void;
+  /** Called after the post was deleted (receives its postId). */
+  onDeleted?: (postId: string) => void;
   /** Bubbles up so the feed can drop the blocked author's other posts from
    *  the current view without a full refetch (ugc-moderation.md). */
   onBlocked?: (blockedUid: string) => void;
-}) {
+};
+
+function PostCardImpl({ post, currentUid, onOpenPhotos, onDeleted, onBlocked }: PostCardProps) {
+  const { isGuest } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
-  // Cards render inside a CONTENT_MAX_WIDTH-capped column (Screen / each
-  // feed screen's scroll style) — on iPad the raw window width is much
-  // wider than the card actually renders at, which would overflow the photo
-  // grid past the card edge. Match the same cap here. iPad QA pass.
+  // Cards render inside a CONTENT_MAX_WIDTH-capped column — on iPad the raw
+  // window is much wider than the card, so cap like the screens do.
   const width = Math.min(windowWidth, CONTENT_MAX_WIDTH);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(post.commentCount ?? 0);
   const [deleting, setDeleting] = useState(false);
 
-  const isAuthor = post.authorUid === currentUid;
+  const isMine = post.authorUid === currentUid;
   const photos = post.photoURLs ?? [];
-  // Card inner content width ≈ screen - horizontal page padding (16) - card pad (16) ×2
-  const contentW = Math.max(0, width - spacing.lg * 2 - spacing.lg * 2);
-  const taggedNames = petNameById
-    ? post.petIds.map((id) => petNameById[id]).filter(Boolean)
-    : [];
+  // First-frame estimate only — PhotoGrid measures its real width on layout
+  // (an over-estimate would wrap the 2-column grid to one photo per row).
+  const contentW = Math.max(0, width - PAGE_PAD * 2 - CARD_PAD * 2 - CARD_BORDER * 2);
+  const VIcon = VISIBILITY_ICON[post.visibility] ?? Globe;
 
-  function confirmDelete() {
-    Alert.alert("刪除貼文", "確定要刪除這篇貼文嗎？此動作無法復原。", [
-      { text: "取消", style: "cancel" },
-      {
-        text: "刪除",
-        style: "destructive",
-        onPress: async () => {
-          setDeleting(true);
-          try {
-            await deletePost(post.postId);
-            onDeleted?.();
-          } catch {
-            setDeleting(false);
-            Alert.alert("刪除失敗", "請稍後再試。");
-          }
-        },
-      },
-    ]);
+  async function handleDelete() {
+    if (deleting) return;
+    const ok = await confirm({
+      title: t("Common.delete"),
+      message: post.text ? post.text.slice(0, 80) : t("Feed.deleteConfirm"),
+      confirmLabel: t("Common.delete"),
+      cancelLabel: t("Common.cancel"),
+      destructive: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await deletePost(post.postId);
+      onDeleted?.(post.postId);
+    } catch {
+      setDeleting(false);
+      alertError(t("Comments.deleteFailed"));
+    }
   }
 
   return (
@@ -95,20 +113,25 @@ export function PostCard({
           <Text style={styles.authorName} numberOfLines={1}>
             {post.authorName}
           </Text>
-          <Text style={styles.meta}>
-            {relativeTime(post.createdAt)} · {VISIBILITY_ICON[post.visibility]}
-          </Text>
+          <View style={styles.metaRow}>
+            <VIcon size={12} color={colors.ink3} strokeWidth={2} />
+            <Text style={styles.meta}>{relativeTime(post.createdAt)}</Text>
+          </View>
         </View>
-        {isAuthor ? (
+        {isMine ? (
           <Pressable
-            accessibilityLabel="刪除貼文"
-            onPress={confirmDelete}
-            hitSlop={8}
-            style={styles.menuBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t("Common.delete")}
+            onPress={() => void handleDelete()}
+            disabled={deleting}
+            hitSlop={4}
+            style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
           >
-            <Trash2 size={16} color={colors.ink3} strokeWidth={2} />
+            {({ pressed }) => (
+              <Trash2 size={16} color={pressed ? colors.danger : colors.ink2} strokeWidth={2} />
+            )}
           </Pressable>
-        ) : (
+        ) : !isGuest ? (
           <PostMenu
             currentUid={currentUid}
             targetType="post"
@@ -118,62 +141,59 @@ export function PostCard({
             targetAuthorName={post.authorName}
             onBlocked={onBlocked}
           />
-        )}
+        ) : null}
       </View>
 
       {post.text ? <Text style={styles.body}>{post.text}</Text> : null}
 
-      {taggedNames.length > 0 ? (
-        <View style={styles.tagRow}>
-          {taggedNames.map((n, i) => (
-            <View key={`${n}-${i}`} style={styles.tag}>
-              <Text style={styles.tagText}>🐾 {n}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
       {photos.length > 0 ? (
-        <PhotoGrid
-          photos={photos}
-          contentW={contentW}
-          onOpenPhotos={onOpenPhotos}
-        />
+        <PhotoGrid photos={photos} contentW={contentW} onOpenPhotos={onOpenPhotos} />
       ) : null}
 
-      <View style={styles.actions}>
-        <EmojiReactions
-          postId={post.postId}
-          uid={currentUid}
-          initialCounts={post.reactionCounts}
-        />
-        {/* Comment toggle — 💬 icon only (web is a MessageCircle icon, no
-            「留言」label); the count shows only when there are comments. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="留言"
-          onPress={() => setCommentsOpen((v) => !v)}
-          style={({ pressed }) => [styles.commentBtn, pressed && styles.pressed]}
-        >
-          <MessageCircle size={18} color={colors.ink2} strokeWidth={2} />
-          {commentCount > 0 ? (
-            <Text style={styles.commentCount}>{commentCount}</Text>
+      {/* Reactions + comments need a real identity — guests get the upgrade
+          nudge instead (they can still read the post). Spec guest-login §C. */}
+      {isGuest ? (
+        <GuestLockedNotice feature="reactions" />
+      ) : (
+        <>
+          <View style={styles.actions}>
+            <EmojiReactions
+              postId={post.postId}
+              uid={currentUid}
+              initialCounts={post.reactionCounts}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("Comments.toggle")}
+              accessibilityValue={commentCount > 0 ? { text: String(commentCount) } : undefined}
+              accessibilityState={{ expanded: commentsOpen }}
+              onPress={() => setCommentsOpen((v) => !v)}
+              hitSlop={4}
+              style={({ pressed }) => [styles.commentBtn, pressed && styles.commentBtnPressed]}
+            >
+              <MessageCircle size={16} color={colors.ink2} strokeWidth={2} />
+              {commentCount > 0 ? (
+                <Text style={styles.commentCount}>{commentCount}</Text>
+              ) : null}
+            </Pressable>
+          </View>
+
+          {commentsOpen ? (
+            <CommentSection
+              postId={post.postId}
+              postAuthorUid={post.authorUid}
+              currentUid={currentUid}
+              onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
+              onBlocked={onBlocked}
+            />
           ) : null}
-        </Pressable>
-      </View>
-
-      {commentsOpen ? (
-        <CommentSection
-          postId={post.postId}
-          postAuthorUid={post.authorUid}
-          currentUid={currentUid}
-          onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
-          onBlocked={onBlocked}
-        />
-      ) : null}
+        </>
+      )}
     </View>
   );
 }
+
+export const PostCard = memo(PostCardImpl);
 
 function PhotoGrid({
   photos,
@@ -184,29 +204,33 @@ function PhotoGrid({
   contentW: number;
   onOpenPhotos?: (urls: string[], index: number) => void;
 }) {
+  // The grid stretches to the card's content box; measure it so the cells
+  // always fit (iPad column cap, card border, any caller's page padding).
+  const [measuredW, setMeasuredW] = useState(0);
+  const gridW = measuredW > 0 ? measuredW : contentW;
   const single = photos.length === 1;
-  const gap = spacing.sm; // web photo grid gap-2
-  const cellW = single ? contentW : Math.floor((contentW - gap) / 2);
-  const cellH = cellW; // web cells are all aspect-square
+  const gap = spacing.sm; // web grid gap-2
+  const cell = single ? gridW : Math.max(0, Math.floor((gridW - gap) / 2)); // aspect-square
+
+  function onLayout(e: LayoutChangeEvent) {
+    const w = Math.floor(e.nativeEvent.layout.width);
+    if (w > 0 && w !== measuredW) setMeasuredW(w);
+  }
 
   return (
-    <View style={[styles.grid, { gap }]}>
+    <View style={[styles.grid, { gap }]} onLayout={onLayout}>
       {photos.map((uri, i) => {
-        const cell = (
+        const img = (
           <Image
             source={{ uri }}
-            style={{
-              width: cellW,
-              height: cellH,
-              borderRadius: radius.md,
-              backgroundColor: colors.bgAlt,
-            }}
+            style={[styles.cellImg, { width: cell, height: cell }]}
+            accessibilityIgnoresInvertColors
           />
         );
         if (!onOpenPhotos) {
           return (
-            <View key={`${uri}-${i}`} style={{ width: cellW, height: cellH }}>
-              {cell}
+            <View key={`${uri}-${i}`} style={{ width: cell, height: cell }}>
+              {img}
             </View>
           );
         }
@@ -214,11 +238,11 @@ function PhotoGrid({
           <Pressable
             key={`${uri}-${i}`}
             accessibilityRole="imagebutton"
-            accessibilityLabel={`照片 ${i + 1}`}
+            accessibilityLabel={t("PhotoLightbox.counter", { current: i + 1, total: photos.length })}
             onPress={() => onOpenPhotos(photos, i)}
-            style={{ width: cellW, height: cellH }}
+            style={({ pressed }) => [{ width: cell, height: cell }, pressed && styles.cellPressed]}
           >
-            {cell}
+            {img}
           </Pressable>
         );
       })}
@@ -227,52 +251,62 @@ function PhotoGrid({
 }
 
 const styles = StyleSheet.create({
+  // web flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white p-4 shadow-sm
   card: {
     backgroundColor: colors.card,
-    // web post-card uses Tailwind rounded-lg (8px) + shadow-sm, not the mango vars.
     borderRadius: radius.sm,
-    padding: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    padding: CARD_PAD,
+    borderWidth: 1,
     borderColor: colors.hairline,
     gap: spacing.md,
     ...shadows.card,
   },
   deleting: { opacity: 0.5 },
-  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  headerText: { flex: 1 },
+  // web header flex items-center gap-3
+  header: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  headerText: { flex: 1, minWidth: 0 },
   authorName: { fontSize: 14, fontWeight: "600", color: colors.ink },
-  meta: { fontSize: 12, color: colors.ink3, marginTop: 1 },
-  menuBtn: { paddingHorizontal: spacing.sm, paddingVertical: 2 },
-  menuText: { fontSize: 20, color: colors.ink3, fontWeight: "800" },
-  body: { fontSize: 15, color: colors.ink, lineHeight: 21 },
-  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  tag: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-    backgroundColor: colors.leafTint,
-  },
-  tagText: { fontSize: 12, fontWeight: "700", color: "#3f7a39" },
-  grid: { flexDirection: "row", flexWrap: "wrap" },
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.xs,
-  },
-  commentBtn: {
-    flexDirection: "row",
-    minHeight: 44,
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: colors.bgAlt,
-    borderWidth: 1,
-    borderColor: colors.hairline,
+  // web text-xs text-zinc-500 flex items-center gap-1
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 1 },
+  meta: { fontSize: 12, color: colors.ink3 },
+  // web rounded-lg p-2 hover:bg-red-50 hover:text-red-600 (Trash2 size-4)
+  deleteBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
   },
-  commentIcon: { fontSize: 16 },
-  commentCount: { fontSize: 12, fontWeight: "600", color: colors.ink2 },
-  pressed: { opacity: 0.7 },
+  deleteBtnPressed: { backgroundColor: colors.peachTint },
+  // web text-sm whitespace-pre-wrap leading-relaxed
+  body: { fontSize: 14, lineHeight: 23, color: colors.ink },
+  // web grid gap-2 overflow-hidden rounded-lg
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    borderRadius: radius.sm,
+    overflow: "hidden",
+  },
+  cellImg: { backgroundColor: colors.bgAlt },
+  cellPressed: { opacity: 0.9 },
+  // web flex flex-wrap items-center gap-2
+  actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm },
+  // web inline-flex h-9 items-center gap-1.5 rounded-full bg-zinc-100 px-3 text-sm text-zinc-600
+  commentBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    backgroundColor: colors.bgAlt,
+  },
+  commentBtnPressed: { backgroundColor: colors.hairline },
+  // web text-xs font-medium tabular-nums
+  commentCount: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: colors.ink2,
+    fontVariant: ["tabular-nums"],
+  },
 });

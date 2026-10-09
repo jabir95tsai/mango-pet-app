@@ -30,6 +30,34 @@ import {
   FRIEND_POST_VISIBILITIES,
 } from "@mango/shared-business";
 import { uploadPostPhoto } from "./photos";
+import { t } from "./i18n";
+
+/**
+ * Error thrown by createPost when SOME photos failed to upload but the post
+ * doc was kept (it still has text or at least one photo). `partial` carries
+ * the new postId — mirrors web createPost's `err.partial` marker so the
+ * composer treats it as success-with-warning (refresh + close) instead of
+ * leaving the draft open (tapping publish again would duplicate the post).
+ */
+export type PartialPostError = Error & { partial: string };
+
+/** `code` of the error createPost throws when every photo failed and the
+ *  (text-less) post was rolled back. Its message is already localized and
+ *  safe to show; any other failure is a raw Firestore / Storage error. */
+export const POST_UPLOAD_ALL_FAILED = "post/upload-all-failed";
+
+export function isPostUploadAllFailed(err: unknown): err is Error {
+  return (
+    err instanceof Error &&
+    (err as Error & { code?: unknown }).code === POST_UPLOAD_ALL_FAILED
+  );
+}
+
+export function isPartialPostError(err: unknown): err is PartialPostError {
+  if (!(err instanceof Error)) return false;
+  const partial = (err as Error & { partial?: unknown }).partial;
+  return typeof partial === "string" && partial.length > 0;
+}
 
 function emptyReactionCounts(): Record<ReactionEmoji, number> {
   return REACTION_EMOJIS.reduce(
@@ -63,7 +91,8 @@ export type CreatePostInput = {
  *  3. orphan rollback — if ALL uploads failed AND there's no text, delete the
  *     empty doc and throw
  *  4. otherwise patch the succeeded photoURLs; if some failed, throw a
- *     partial-failure error (doc kept)
+ *     partial-failure error (doc kept) carrying `.partial = postId`
+ *     (see isPartialPostError)
  * Returns the new postId.
  */
 export async function createPost(input: CreatePostInput): Promise<string> {
@@ -104,7 +133,9 @@ export async function createPost(input: CreatePostInput): Promise<string> {
   // Orphan rollback — nothing useful made it to the server.
   if (allFailed && textIsEmpty) {
     await ref.delete();
-    throw new Error("照片上傳全部失敗，貼文已取消。");
+    const err = new Error(t("Post.uploadAllFailed")) as Error & { code: string };
+    err.code = POST_UPLOAD_ALL_FAILED;
+    throw err;
   }
 
   if (photoURLs.length > 0) {
@@ -113,10 +144,12 @@ export async function createPost(input: CreatePostInput): Promise<string> {
 
   if (failures > 0) {
     // Partial failure — doc kept (still has text or some photos); surface so
-    // the UI can tell the user.
-    throw new Error(
-      `${failures}/${expected} 張照片上傳失敗，貼文已建立但缺少部分照片`,
-    );
+    // the UI can tell the user AND know the post exists (web `.partial`).
+    const err = new Error(
+      t("Post.uploadPartialFailed", { failed: failures, total: expected }),
+    ) as PartialPostError;
+    err.partial = ref.id;
+    throw err;
   }
 
   return ref.id;
@@ -262,9 +295,9 @@ export async function createComment(
   args: CreateCommentArgs,
 ): Promise<{ commentId: string }> {
   const text = args.text.trim();
-  if (!text) throw new Error("留言不能是空白");
+  if (!text) throw new Error(t("Comments.emptyText"));
   if (text.length > COMMENT_MAX_LEN) {
-    throw new Error(`留言最多 ${COMMENT_MAX_LEN} 字`);
+    throw new Error(t("Comments.tooLong", { max: COMMENT_MAX_LEN }));
   }
   const ref = await postsCol().doc(args.postId).collection("comments").add({
     authorUid: args.authorUid,
@@ -329,6 +362,9 @@ export type CreateReportArgs = {
   /** Required (and equal to targetId) when targetType === "comment". */
   postId?: string;
   reason: ReportReason;
+  /** Optional free-text context (web post-menu textarea, ≤300 chars). Only
+   *  written when non-empty — same field web writes. */
+  note?: string;
 };
 
 export async function createReport(args: CreateReportArgs): Promise<void> {
@@ -341,6 +377,7 @@ export async function createReport(args: CreateReportArgs): Promise<void> {
       targetAuthorUid: args.targetAuthorUid,
       ...(args.postId ? { postId: args.postId } : {}),
       reason: args.reason,
+      ...(args.note ? { note: args.note } : {}),
       status: "open",
       createdAt: firestore.FieldValue.serverTimestamp(),
     });
