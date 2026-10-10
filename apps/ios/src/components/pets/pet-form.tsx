@@ -1,42 +1,65 @@
 /**
- * Pet add/edit form — avatar picker (expo-image-picker → IMAGE_PRESETS.avatar
- * compress on upload) + name/species(+other)/breed/gender/weight/birthday/bio +
- * walk-goal stepper (clamp 5–120 step 5). Writes via pets-write
- * (createPet / updatePet). Mirrors web pet-form-dialog.
+ * Pet add/edit form — 1:1 with apps/web/src/components/pets/pet-form-dialog.tsx:
+ *  - 96pt round avatar button (photo, else a Camera glyph on brandTint with an
+ *    amber ring) + "tap to add a photo" caption; picked via the system photo
+ *    picker (PHPicker — no library permission needed) and compressed to
+ *    IMAGE_PRESETS.avatar on upload;
+ *  - name → species / gender → (speciesOther) → breed → weight (placeholder
+ *    8.5) / birthday → daily walk-goal stepper (PetEdit.walkGoal.*, clamp
+ *    WALK_GOAL_MIN..MAX = 5–180, step 5, + hint) → bio;
+ *  - title Common.edit when editing, Pet.addPet when adding;
+ *  - a failed save shows the real error (web shows err.message) and the sheet
+ *    stays open.
+ * Edit mode adds the destructive "Delete {name}" row (web detail-mode button +
+ * handleDeletePet confirm copy), deleting through pets-write deletePet — the
+ * same client path as web.
+ *
+ * Writes via pets-write (createPet / updatePet / deletePet).
  */
 import { useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Camera } from "lucide-react-native";
 import {
   getPetWalkGoalMinutes,
+  WALK_GOAL_MAX_MINUTES,
   WALK_GOAL_MIN_MINUTES,
   WALK_GOAL_STEP_MINUTES,
 } from "@mango/shared-business";
 import type { Gender, Pet, PetInput, Species } from "@mango/shared-types";
 
-import { createPet, updatePet } from "@/lib/pets-write";
-import { scoped } from "@/lib/i18n";
+import { alertError, confirm } from "@/lib/confirm";
+import { createPet, deletePet, updatePet } from "@/lib/pets-write";
+import { t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 import {
   FormSheet,
-  DateField,
+  OptionalDateField,
   SelectField,
   StepperField,
   TextField,
 } from "./form-sheet";
-import { PetAvatar } from "./pet-avatar";
 
-const tPet = scoped("Pet");
-const tC = scoped("Common");
-
-// Spec caps the stepper at 120 (data layer clamps reads to [5,180]).
-const WALK_GOAL_FORM_MAX = 120;
 const SPECIES: Species[] = ["dog", "cat", "other"];
 const GENDERS: Gender[] = ["unknown", "male", "female"];
+
+/** Pet.gender.* keys: web labels the "unknown" option `gender.unspecified`. */
+function genderLabel(g: Gender): string {
+  return t(`Pet.gender.${g === "unknown" ? "unspecified" : g}`);
+}
 
 function tsToDate(ts: unknown): Date | null {
   const d = ts as { toDate?: () => Date } | undefined;
   return d?.toDate ? d.toDate() : null;
+}
+
+/** Local midnight of the picked day (web fromLocalDateInput of a date input). */
+function dayOf(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function errorMessage(err: unknown): string | undefined {
+  return err instanceof Error && err.message ? err.message : undefined;
 }
 
 export function PetForm({
@@ -45,12 +68,15 @@ export function PetForm({
   pet,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   familyId: string | null;
   uid: string;
   pet?: Pet;
   onClose: () => void;
   onSaved: () => void;
+  /** Edit mode: called after the pet was deleted (before onClose). */
+  onDeleted?: () => void;
 }) {
   const editing = !!pet;
   const [name, setName] = useState(pet?.name ?? "");
@@ -67,30 +93,33 @@ export function PetForm({
   const [bio, setBio] = useState(pet?.bio ?? "");
   const [goal, setGoal] = useState(getPetWalkGoalMinutes(pet ?? null));
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [photoBroken, setPhotoBroken] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const busy = saving || deleting;
 
   const valid = name.trim().length > 0;
+  const previewUri = avatarUri ?? (!photoBroken ? (pet?.photoURL ?? null) : null);
 
   async function pickAvatar() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(tPet("fields.photo"));
-      return;
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (!res.canceled && res.assets[0]) setAvatarUri(res.assets[0].uri);
+    } catch {
+      alertError(t("Pet.imageError"));
     }
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-    if (!res.canceled && res.assets[0]) setAvatarUri(res.assets[0].uri);
   }
 
   async function save() {
-    if (!valid) return;
+    if (!valid || busy) return;
     setSaving(true);
     try {
-      const w = parseFloat(weight);
+      const w = parseFloat(weight.replace(/,/g, "."));
       const input: PetInput = {
         name: name.trim(),
         species,
@@ -100,7 +129,8 @@ export function PetForm({
         gender,
         weightKg: Number.isFinite(w) && w > 0 ? w : undefined,
         bio: bio.trim() || undefined,
-        birthday: birthday ?? undefined,
+        birthday: birthday ? dayOf(birthday) : undefined,
+        // Web always writes 'manual' on save (the user reviewed the value).
         walkGoal: { minutes: goal, source: "manual" },
       };
       if (editing && pet) {
@@ -110,129 +140,197 @@ export function PetForm({
       }
       onSaved();
       onClose();
-    } catch {
-      Alert.alert(tPet("imageError"));
+    } catch (err) {
+      alertError(errorMessage(err) ?? t("Family.actionFailed"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!pet || busy) return;
+    const ok = await confirm({
+      title: `${t("Common.delete")}: ${pet.name}`,
+      message: t("PetsPage.deletePetBody"),
+      confirmLabel: t("Common.delete"),
+      cancelLabel: t("Common.cancel"),
+      destructive: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await deletePet(pet.petId);
+      onDeleted?.();
+      onSaved();
+      onClose();
+    } catch (err) {
+      alertError(errorMessage(err) ?? t("Family.actionFailed"));
+    } finally {
+      setDeleting(false);
     }
   }
 
   return (
     <FormSheet
       visible
-      title={editing ? tPet("petDetail") : tPet("addPet")}
+      title={editing ? t("Common.edit") : t("Pet.addPet")}
       onCancel={onClose}
       onSave={save}
-      saving={saving}
+      saving={busy}
       saveDisabled={!valid}
     >
-      {/* Avatar */}
-      <Pressable onPress={pickAvatar} style={styles.avatarRow} accessibilityRole="button">
-        {avatarUri ? (
-          <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
-        ) : (
-          <PetAvatar name={name || "🐾"} photoURL={pet?.photoURL} size={72} />
-        )}
-        <Text style={styles.avatarHint}>{tPet("fields.photo")}</Text>
-      </Pressable>
+      {/* Avatar (web size-24 rounded-full ring-2 + Camera size-8) */}
+      <View style={styles.avatarCol}>
+        <Pressable
+          onPress={pickAvatar}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel={t("Pet.fields.photo")}
+          style={({ pressed }) => [styles.avatarBtn, pressed && styles.pressed]}
+        >
+          {previewUri ? (
+            <Image
+              source={{ uri: previewUri }}
+              style={styles.avatarImg}
+              onError={() => {
+                if (!avatarUri) setPhotoBroken(true);
+              }}
+              accessibilityIgnoresInvertColors
+            />
+          ) : (
+            <Camera size={32} color={colors.brandDeep} strokeWidth={2} />
+          )}
+        </Pressable>
+        {!previewUri ? <Text style={styles.avatarHint}>{t("Pet.fields.photo")}</Text> : null}
+      </View>
 
       <TextField
-        label={tPet("fields.name")}
+        label={t("Pet.fields.name")}
         value={name}
         onChangeText={setName}
-        placeholder={tPet("fields.namePlaceholder")}
+        placeholder={t("Pet.fields.namePlaceholder")}
         autoFocus={!editing}
       />
       <SelectField
-        label={tPet("fields.species")}
+        label={t("Pet.fields.species")}
         value={species}
         onChange={setSpecies}
-        options={SPECIES.map((s) => ({ value: s, label: tPet(`species.${s}`) }))}
+        options={SPECIES.map((s) => ({ value: s, label: t(`Pet.species.${s}`) }))}
+      />
+      <SelectField
+        label={t("Pet.fields.gender")}
+        value={gender}
+        onChange={setGender}
+        options={GENDERS.map((g) => ({ value: g, label: genderLabel(g) }))}
       />
       {species === "other" ? (
         <TextField
-          label={tPet("fields.speciesOther")}
+          label={t("Pet.fields.speciesOther")}
           value={speciesOther}
           onChangeText={setSpeciesOther}
-          placeholder={tPet("fields.speciesOtherPlaceholder")}
+          placeholder={t("Pet.fields.speciesOtherPlaceholder")}
         />
       ) : null}
       <TextField
-        label={tPet("fields.breed")}
+        label={t("Pet.fields.breed")}
         value={breed}
         onChangeText={setBreed}
-        placeholder={tPet("fields.breedPlaceholder")}
-      />
-      <SelectField
-        label={tPet("fields.gender")}
-        value={gender}
-        onChange={setGender}
-        options={GENDERS.map((g) => ({ value: g, label: tPet(`gender.${g}`) }))}
+        placeholder={t("Pet.fields.breedPlaceholder")}
       />
       <TextField
-        label={tPet("fields.weight")}
+        label={t("Pet.fields.weight")}
         value={weight}
         onChangeText={setWeight}
         keyboardType="decimal-pad"
+        placeholder="8.5"
+      />
+      <OptionalDateField
+        label={t("Pet.fields.birthday")}
+        value={birthday}
+        onChange={setBirthday}
+        maximumDate={new Date()}
+        // Web never deletes a saved birthday (an emptied date input is
+        // dropped from the update), so only an unsaved one can be cleared.
+        clearable={!(editing && pet?.birthday)}
+        initialDate={() => {
+          const d = new Date();
+          d.setFullYear(d.getFullYear() - 1);
+          return d;
+        }}
       />
 
-      {/* Optional birthday */}
-      {birthday ? (
-        <View>
-          <DateField
-            label={tPet("fields.birthday")}
-            value={birthday}
-            onChange={setBirthday}
-          />
-          <Pressable onPress={() => setBirthday(null)} hitSlop={6}>
-            <Text style={styles.clearBirthday}>✕ {tC("delete")}</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <Pressable
-          onPress={() => {
-            const d = new Date();
-            d.setFullYear(d.getFullYear() - 1);
-            setBirthday(d);
-          }}
-          style={styles.addBirthday}
-          accessibilityRole="button"
-        >
-          <Text style={styles.addBirthdayText}>＋ {tPet("fields.birthday")}</Text>
-        </Pressable>
-      )}
-
       <StepperField
-        label="每日散步目標"
+        label={t("PetEdit.walkGoal.label")}
         value={goal}
         onChange={setGoal}
         min={WALK_GOAL_MIN_MINUTES}
-        max={WALK_GOAL_FORM_MAX}
+        max={WALK_GOAL_MAX_MINUTES}
         step={WALK_GOAL_STEP_MINUTES}
-        unit="分"
+        unit={t("PetEdit.walkGoal.unit")}
+        hint={t("PetEdit.walkGoal.hint")}
       />
       <TextField
-        label={tPet("fields.bio")}
+        label={t("Pet.fields.bio")}
         value={bio}
         onChangeText={setBio}
-        placeholder={tPet("fields.bioPlaceholder")}
+        placeholder={t("Pet.fields.bioPlaceholder")}
         multiline
       />
+
+      {editing && pet ? (
+        <Pressable
+          onPress={handleDelete}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy, busy: deleting }}
+          style={({ pressed }) => [
+            styles.deleteBtn,
+            pressed && styles.deleteBtnPressed,
+            busy && styles.deleteBtnBusy,
+          ]}
+        >
+          <Text style={styles.deleteText} numberOfLines={1}>
+            {t("Common.delete")} {pet.name}
+          </Text>
+        </Pressable>
+      ) : null}
     </FormSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  avatarRow: { alignItems: "center", gap: spacing.xs, paddingVertical: spacing.sm },
-  avatarImg: { width: 72, height: 72, borderRadius: 24, backgroundColor: colors.brandTint },
-  avatarHint: { fontSize: 12, color: colors.brandDeep, fontWeight: "700" },
-  addBirthday: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.cardSoft,
-    borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  // web flex-col items-center gap-2
+  avatarCol: { alignItems: "center", gap: spacing.sm },
+  avatarBtn: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    overflow: "hidden",
+    backgroundColor: colors.brandTint,
+    borderWidth: 2,
+    borderColor: colors.amber,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  addBirthdayText: { fontSize: 14, fontWeight: "700", color: colors.ink2 },
-  clearBirthday: { color: colors.ink3, fontSize: 13, marginTop: 4, alignSelf: "flex-end" },
+  avatarImg: { width: "100%", height: "100%" },
+  // web text-xs text-zinc-500 → mango ink3
+  avatarHint: { fontSize: 12, color: colors.ink3 },
+  pressed: { opacity: 0.85 },
+  // web mt-8 w-full rounded-xl border hairline bg-card px-4 py-3 text-sm
+  // font-medium text-red-600
+  deleteBtn: {
+    marginTop: spacing.lg,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  deleteBtnPressed: { backgroundColor: colors.peachTint },
+  deleteBtnBusy: { opacity: 0.6 },
+  deleteText: { fontSize: 14, fontWeight: "500", color: colors.danger },
 });

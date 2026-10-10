@@ -6,9 +6,11 @@
  * No Cloud Functions — rules permit owner/family writes.
  */
 import firestore from "@react-native-firebase/firestore";
+import storage from "@react-native-firebase/storage";
 import type { PetInput } from "@mango/shared-types";
 
 import { uploadPetAvatar } from "./photos";
+import { petAvatarPath } from "./storage-paths";
 import { clean, deleteField, serverTimestamp, tsFromDate } from "./write-utils";
 
 const col = () => firestore().collection("pets");
@@ -87,9 +89,25 @@ export async function updatePet(
   }
 }
 
+/**
+ * Delete a pet — same client path as web deletePet (apps/web/src/lib/firebase/
+ * pets.ts): read the doc, best-effort delete the avatar object at
+ * petAvatarPath(ownerUid, petId, <ext guessed from the URL>), then delete the
+ * Firestore doc. Storage cleanup never blocks the delete: another family
+ * member has no write access to the uploader's path (permission-denied), and
+ * an orphan image costs virtually nothing. Health records / post photos are
+ * kept (web copy: PetsPage.deletePetBody).
+ */
 export async function deletePet(petId: string): Promise<void> {
-  // Storage avatar cleanup is best-effort on web; here we just drop the doc
-  // (orphan avatar objects are negligible + swept later). Keeps delete simple
-  // and avoids a permission-denied on cross-member deletes.
+  try {
+    const snap = await refOf(petId).get();
+    const data = snap.data() as { ownerUid?: string; photoURL?: string } | undefined;
+    if (data?.photoURL && data.ownerUid) {
+      const guessedExt = data.photoURL.split("?")[0].split(".").pop() ?? "jpg";
+      await storage().ref(petAvatarPath(data.ownerUid, petId, guessedExt)).delete();
+    }
+  } catch (err) {
+    console.warn("[deletePet] storage cleanup failed (continuing):", err);
+  }
   await refOf(petId).delete();
 }
