@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   // Rounded overlay instead of overflow:hidden so the card shadow survives.
   glow: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: radius.sm,
     backgroundColor: withAlpha(colors.brand, 0.18),
   },

@@ -6,13 +6,7 @@
     "orientation": "portrait",
     "scheme": "mangopet",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#fbf1dd"
-    },
     "ios": {
       "bundleIdentifier": "com.mangopet.app",
       "supportsTablet": true,
@@ -30,6 +24,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#fbf1dd"
+        }
+      ],
       "expo-apple-authentication",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",

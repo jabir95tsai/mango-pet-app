@@ -161,7 +161,7 @@ export async function getLifetimeStats(uid: string): Promise<LifetimeStats | nul
     .collection("stats")
     .doc("lifetime")
     .get();
-  return snap.exists ? (snap.data() as LifetimeStats) : null;
+  return snap.exists() ? (snap.data() as LifetimeStats) : null;
 }
 
 /** users/{uid}/achievements — one doc per earned badge (id = achievement id). */

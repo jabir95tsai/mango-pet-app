@@ -1,3 +1,4 @@
+import "@/lib/rnfb-setup";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Stack, usePathname, useRouter, useSegments } from "expo-router";

@@ -4,7 +4,7 @@
  * (expo-sharing). The iOS take on web's Blob-download. Same callable + payload
  * (UserDataExport) as web.
  */
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 
 import { exportUserData } from "./account";

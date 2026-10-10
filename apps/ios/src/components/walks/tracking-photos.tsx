@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   thumbUploading: { opacity: 0.5 },
   thumbFailed: { borderColor: colors.danger },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",

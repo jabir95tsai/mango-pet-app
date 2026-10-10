@@ -25,7 +25,7 @@ export async function ensureUserProfile(user: FirebaseAuthTypes.User): Promise<v
     assertCurrent();
     const previous = snapshot.data() ?? {};
     const upgrading = previous.isGuest === true && !isGuest;
-    const displayName = !snapshot.exists || !previous.displayName || upgrading
+    const displayName = !snapshot.exists() || !previous.displayName || upgrading
       ? desiredName : previous.displayName;
     const data: Record<string, unknown> = {
       uid,
@@ -34,7 +34,7 @@ export async function ensureUserProfile(user: FirebaseAuthTypes.User): Promise<v
       authProvider: isGuest ? "anonymous" : (user.providerData[0]?.providerId?.split(".")[0] ?? "apple"),
       ...(!isGuest ? { displayNameLower: String(displayName).trim().toLowerCase() } : {}),
     };
-    if (!snapshot.exists) {
+    if (!snapshot.exists()) {
       Object.assign(data, {
         photoURL, locale: activeLocale,
         createdAt: firestore.FieldValue.serverTimestamp(),

@@ -20,7 +20,7 @@ function client(uid,guest=false) {
  const h=harness();h.authState.currentUser=h.user(uid,{isAnonymous:guest,email:guest?null:`${uid}@example.test`,providerData:guest?[]:[{providerId:'google.com',uid}]});
  const app=initializeApp({projectId,apiKey:'emulator-only'},uid);apps.push(app);
  const db=sdk.getFirestore(app);sdk.connectFirestoreEmulator(db,'127.0.0.1',emulatorPort,{mockUserToken:{sub:uid,firebase:{sign_in_provider:guest?'anonymous':'password'}}});
- function snap(value){return{exists:value.exists(),data:()=>value.data()};}
+ function snap(value){return{exists:()=>value.exists(),data:()=>value.data()};}
  function ref(raw){return{raw,path:raw.path,collection:name=>({doc:id=>ref(sdk.doc(raw,name,id))}),get:async()=>snap(await sdk.getDoc(raw)),set:(data,options)=>sdk.setDoc(raw,data,options)};}
  const native=()=>({collection:name=>({doc:id=>ref(sdk.doc(db,name,id))}),
  runTransaction:fn=>sdk.runTransaction(db,tx=>fn({get:async r=>snap(await tx.get(r.raw)),set:(r,d,o)=>tx.set(r.raw,d,o),update:(r,d)=>tx.update(r.raw,d)})),

@@ -253,7 +253,7 @@ export async function getMyReaction(
   uid: string,
 ): Promise<ReactionEmoji | null> {
   const snap = await reactionDoc(postId, uid).get();
-  return snap.exists ? ((snap.data()?.emoji as ReactionEmoji) ?? null) : null;
+  return snap.exists() ? ((snap.data()?.emoji as ReactionEmoji) ?? null) : null;
 }
 
 /** Atomically set/clear the reaction and its counts. Pass `null` to remove. */
@@ -267,8 +267,8 @@ export async function setReaction(
   await firestore().runTransaction(async (tx) => {
     const post = await tx.get(postRef);
     const reaction = await tx.get(reactionRef);
-    if (!post.exists) throw new Error("Post no longer exists.");
-    const current = reaction.exists ? reaction.data()!.emoji as ReactionEmoji : null;
+    if (!post.exists()) throw new Error("Post no longer exists.");
+    const current = reaction.exists() ? reaction.data()!.emoji as ReactionEmoji : null;
     if (current === emoji) return;
     const changes = Object.fromEntries(REACTION_EMOJIS.map((key) => [
       `reactionCounts.${key}`, firestore.FieldValue.increment((emoji === key ? 1 : 0) - (current === key ? 1 : 0)),

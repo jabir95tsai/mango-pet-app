@@ -103,7 +103,7 @@ export async function getUserProfile(
   uid: string,
 ): Promise<PublicUserProfile | null> {
   const snap = await firestore().collection("users").doc(uid).get();
-  if (!snap.exists) return null;
+  if (!snap.exists()) return null;
   const data = snap.data() as {
     displayName?: string;
     photoURL?: string | null;

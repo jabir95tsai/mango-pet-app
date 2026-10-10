@@ -39,7 +39,7 @@ function harness() {
     }
     map.set(ref.path, value);
   };
-  const snapshot = ref => ({ exists: docs.has(ref.path), data: () => structuredClone(docs.get(ref.path)) });
+  const snapshot = ref => ({ exists: () => docs.has(ref.path), data: () => structuredClone(docs.get(ref.path)) });
   const ref = path => ({ path, collection: name => ({ doc: id => ref(`${path}/${name}/${id}`) }), get: async () => snapshot(ref(path)), set: async data => {if(state.failWrite) throw Error('permission-denied'); update(docs,ref(path),data);} });
   const commit = writes => {
     if (state.failWrite) throw Error('permission-denied');

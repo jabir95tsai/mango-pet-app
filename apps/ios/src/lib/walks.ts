@@ -120,7 +120,7 @@ export async function createWalk(input: CreateWalkInput): Promise<string> {
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    if (!snap.exists) {
+    if (!snap.exists()) {
       tx.set(ref, data);
       return;
     }

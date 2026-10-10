@@ -10,7 +10,7 @@
  * `ensureAddPermission()` and pass `skipPermission`; a denial throws a
  * `PhotoPermissionError` so screens can offer iOS Settings.
  */
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";

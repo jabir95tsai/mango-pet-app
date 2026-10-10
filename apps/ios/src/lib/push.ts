@@ -54,7 +54,7 @@ async function register(uid: string, enable = false): Promise<PushStatus> {
   assertCurrent(uid);
   const profile = await userRef(uid).get();
   assertCurrent(uid);
-  if (!profile.exists) throw new Error("Profile is not ready");
+  if (!profile.exists()) throw new Error("Profile is not ready");
   if (!enable && profile.data()?.pushPrefs?.globalDisabled) return publish(uid, "disabled");
   let previous = await storedRegistration();
   if (previous && previous.uid !== uid) {
@@ -78,7 +78,7 @@ async function register(uid: string, enable = false): Promise<PushStatus> {
     const currentProfile = await tx.get(userRef(uid));
     const snapshot = await tx.get(contactRef(uid));
     assertCurrent(uid);
-    if (!currentProfile.exists) throw new Error("Profile is not ready");
+    if (!currentProfile.exists()) throw new Error("Profile is not ready");
     // Another device may have switched the global preference off since getToken.
     if (!enable && currentProfile.data()?.pushPrefs?.globalDisabled) return false;
     const storedTokens: unknown = snapshot.data()?.fcmTokens;

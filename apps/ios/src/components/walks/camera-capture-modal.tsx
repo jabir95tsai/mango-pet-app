@@ -179,7 +179,7 @@ function CameraBody({
 
 const styles = StyleSheet.create({
   fill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "#000",
     zIndex: 100,
     alignItems: "stretch",
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.7 },
   permBox: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.bg,
     zIndex: 100,
     alignItems: "center",

@@ -11,7 +11,7 @@ import type { Family, FamilyMember } from "@mango/shared-types";
 
 export async function getFamily(familyId: string): Promise<Family | null> {
   const snap = await firestore().collection("families").doc(familyId).get();
-  if (!snap.exists) return null;
+  if (!snap.exists()) return null;
   return { ...(snap.data() as Family), familyId: snap.id };
 }
 
@@ -40,7 +40,7 @@ async function getFamilyIfReadable(familyId: string): Promise<Family | null> {
 /** All families the user belongs to (users/{uid}.familyIds → fan out). */
 export async function listMyFamilies(uid: string): Promise<Family[]> {
   const userSnap = await firestore().collection("users").doc(uid).get();
-  if (!userSnap.exists) return [];
+  if (!userSnap.exists()) return [];
   const ids = (userSnap.data() as { familyIds?: string[] }).familyIds ?? [];
   if (ids.length === 0) return [];
   const families = await Promise.all(ids.map((id) => getFamilyIfReadable(id)));
@@ -97,7 +97,7 @@ export async function listFamilyMembers(family: Family): Promise<FamilyMember[]>
     family.memberUids.map(async (uid) => {
       try {
         const snap = await db.collection("users").doc(uid).get();
-        if (!snap.exists) return null;
+        if (!snap.exists()) return null;
         const d = snap.data() as {
           displayName?: string;
           photoURL?: string | null;

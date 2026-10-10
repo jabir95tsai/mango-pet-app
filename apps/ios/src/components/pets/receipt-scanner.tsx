@@ -236,7 +236,7 @@ export function ReceiptScanner({
     }, SAVE_FEEDBACK_MS);
   }
 
-  let content: JSX.Element;
+  let content: ReactNode;
   if (shot) {
     content = (
       <LightShell onClose={close}>

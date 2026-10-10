@@ -36,7 +36,7 @@ export async function sendFriendRequest(
     .collection("friends")
     .doc(from.uid)
     .get();
-  if (existing.exists) throw new Error(t("Friends.alreadyFriends"));
+  if (existing.exists()) throw new Error(t("Friends.alreadyFriends"));
   await db
     .collection("users")
     .doc(toUid)

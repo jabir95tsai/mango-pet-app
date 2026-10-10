@@ -26,9 +26,7 @@ import {
   Text,
   TextInput,
   View,
-  type NativeSyntheticEvent,
   type StyleProp,
-  type TextInputFocusEventData,
   type TextInputProps,
   type TextStyle,
   type ViewStyle,
@@ -82,15 +80,18 @@ function splitStyle(style: StyleProp<TextStyle>): { outer: ViewStyle; inner: Tex
   return { outer: outer as ViewStyle, inner: inner as TextStyle };
 }
 
+type FocusEvent = Parameters<NonNullable<TextInputProps["onFocus"]>>[0];
+type BlurEvent = Parameters<NonNullable<TextInputProps["onBlur"]>>[0];
+
 function useFocusRing(props: TextInputProps) {
   const [focused, setFocused] = useState(false);
   return {
     focused,
-    onFocus: (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+    onFocus: (e: FocusEvent) => {
       setFocused(true);
       props.onFocus?.(e);
     },
-    onBlur: (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+    onBlur: (e: BlurEvent) => {
       setFocused(false);
       props.onBlur?.(e);
     },
