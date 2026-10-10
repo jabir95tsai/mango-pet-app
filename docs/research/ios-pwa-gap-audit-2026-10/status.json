@@ -577,85 +577,85 @@
   "lane": "LEAD",
   "severity": "P1",
   "title": "Human board 家庭內 scope drops family members who haven't walked and never shows the 'only you' hint",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-4": {
   "lane": "LEAD",
   "severity": "P1",
   "title": "Human board flashes the personal-mode 'join a family' empty state while the family context is still loading",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-5": {
   "lane": "LEAD",
   "severity": "P1",
   "title": "Leaderboard empty states don't match web EmptyState (no dashed card, no lucide icon disc, personal mode loses the page title, friends CTA uses the wrong button variant)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-6": {
   "lane": "LEAD",
   "severity": "P1",
   "title": "Board header typography and vertical rhythm smaller and tighter than web RouteHeader",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-7": {
   "lane": "LEAD",
   "severity": "P1",
   "title": "Row glow is invisible on the user's own (highlighted) row and starts at full intensity instead of pulsing",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-8": {
   "lane": "LEAD",
   "severity": "P1",
   "title": "Manual refresh doesn't refetch friends (dog board) or members (human board); friend fetch not cancelled / not reset on sign-out",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-9": {
   "lane": "LEAD",
   "severity": "P1",
   "title": "Realtime leaderboard listeners stay live while the tab is unfocused / app backgrounded (tabs never unmount)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-10": {
   "lane": "LEAD",
   "severity": "P2",
   "title": "Row card shadow is clipped (overflow:hidden on the same view as shadows.card)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-11": {
   "lane": "LEAD",
   "severity": "P2",
   "title": "Dog row avatar is a rounded square; web dog row uses the round Avatar",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-12": {
   "lane": "LEAD",
   "severity": "P2",
   "title": "Up to 100 rows rendered via .map inside a ScrollView; no native pull-to-refresh",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-13": {
   "lane": "LEAD",
   "severity": "P2",
   "title": "Listener errors are indistinguishable from 'computing' (offline/permission error shows 排行榜計算中)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-14": {
   "lane": "LEAD",
   "severity": "P2",
   "title": "Persisted dimension/scope restore after first render causes a double subscribe and a wrong-board flash",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "LEAD-15": {
   "lane": "A1",
@@ -668,8 +668,8 @@
   "lane": "LEAD",
   "severity": "P2",
   "title": "Dog rows use the human-board i18n keys for walk count / score unit",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "TRACK-1": {
   "lane": "TRACK",
@@ -1515,8 +1515,8 @@
   "lane": "LEAD",
   "severity": "P2",
   "title": "Leaderboard onSnapshot listeners stay live while the tab is not focused",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit LEAD (2026-10-10)"
  },
  "XCUT-19": {
   "lane": "UNASSIGNED",

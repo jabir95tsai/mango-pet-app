@@ -8,11 +8,12 @@
  * Web has no per-row「·我」text — the highlight bg carries "mine" on the
  * human board, and the dog board uses the「我的狗」pill instead.
  */
-import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { memo, useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 
+import { Avatar } from "@/components/ui/Avatar";
 import { UserAvatar } from "@/components/feed/user-avatar";
-import { PetAvatar } from "@/components/pets/pet-avatar";
+import { withAlpha } from "@/components/auth/color";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { groupThousands } from "@/lib/format";
 import { t } from "@/lib/i18n";
@@ -20,7 +21,7 @@ import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
-export function LeaderboardRow({
+function LeaderboardRowBase({
   rank,
   name,
   breed,
@@ -60,13 +61,29 @@ export function LeaderboardRow({
       glow.setValue(0);
       return;
     }
-    glow.setValue(1);
-    Animated.timing(glow, { toValue: 0, duration: 1500, useNativeDriver: false }).start();
+    // Mango pulse: ramp in ~300ms, fade out ~1200ms (visible on "me" rows too).
+    glow.setValue(0);
+    Animated.sequence([
+      Animated.timing(glow, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(glow, {
+        toValue: 0,
+        duration: 1200,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, [isGlowing, reduceMotion, glow]);
 
   // Meta order mirrors web: walks · distance · 🔥streak · 飼主owner.
   const meta: string[] = [
-    t("Leaderboard.unitWalks", { count: walkCount }),
+    isDog
+      ? t("Leaderboard.dog.walkCount", { count: walkCount })
+      : t("Leaderboard.unitWalks", { count: walkCount }),
     `${distanceKm.toFixed(1)} km`,
   ];
   if (streakDays > 0) meta.push(`🔥 ${streakDays}`);
@@ -88,7 +105,7 @@ export function LeaderboardRow({
       </View>
 
       {isDog ? (
-        <PetAvatar name={name} photoURL={photoURL ?? undefined} size={36} />
+        <Avatar name={name} photoURL={photoURL} size={36} shape="circle" fallbackChar="🐾" />
       ) : (
         <UserAvatar name={name} photoURL={photoURL} size={36} />
       )}
@@ -118,7 +135,9 @@ export function LeaderboardRow({
 
       <View style={styles.scoreCol}>
         <Text style={styles.score}>{groupThousands(score)}</Text>
-        <Text style={styles.scoreUnit}>{t("Leaderboard.unitScore")}</Text>
+        <Text style={styles.scoreUnit}>
+          {isDog ? t("Leaderboard.dog.scoreUnit") : t("Leaderboard.unitScore")}
+        </Text>
       </View>
     </View>
   );
@@ -133,7 +152,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radius.sm,
-    overflow: "hidden",
     backgroundColor: colors.card,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.bellTint,
@@ -144,9 +162,11 @@ const styles = StyleSheet.create({
     borderColor: colors.brand,
     backgroundColor: colors.brandTint,
   },
+  // Rounded overlay instead of overflow:hidden so the card shadow survives.
   glow: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.brandTint,
+    borderRadius: radius.sm,
+    backgroundColor: withAlpha(colors.brand, 0.18),
   },
   rankCol: { width: 32, alignItems: "center" },
   medal: { fontSize: 18 },
@@ -174,3 +194,5 @@ const styles = StyleSheet.create({
   score: { fontSize: 18, fontWeight: "700", color: colors.brandDeep, fontVariant: ["tabular-nums"] },
   scoreUnit: { fontSize: 10, color: colors.ink3, marginTop: -2 },
 });
+
+export const LeaderboardRow = memo(LeaderboardRowBase);
