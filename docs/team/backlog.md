@@ -30,6 +30,27 @@ P3 = 也許永遠不做的「想法」。
 
 ## Inbox（未分類）
 
+### 2026-10-10 iOS Expo SDK 57 + Liquid Glass tab bar — 待 dev-client 真機驗
+- **發現於**：2026-10-10、iOS UI/UX session
+- **類型**：驗收 / 技術債
+- **觀察**：branch `ios-expo-57-liquid-glass`（main 之上 2 個 commit，未 merge / 未 push）。Expo 52→57、RN 0.86、RNFB 21→25（`snap.exists` → `exists()` 14 處）、iOS 26 玻璃 tab bar。tsc / expo-doctor / 28 測試 / Metro 打包 / web build 都過，**未 native build、未上機**。驗收清單見 [`ios-liquid-glass.md`](../features/ios-liquid-glass.md)「待 user」。main 也已在本機 fast-forward 併入 `ios-pwa-fidelity-2026-10`（未 push）。
+- **建議交付給**：user（EAS dev-device build + 冒煙）→ iOS Backend（若 native build 失敗）
+- **優先級提示**：P1（會影響 App Store 送審的 build 基底）
+
+### RN Firebase v26：iOS 改 modular API
+- **發現於**：2026-10-10、iOS UI/UX session（SDK 57 升級時刻意停在 RNFB 25.1）
+- **類型**：技術債
+- **觀察**：v26 移除 namespaced API（`firestore()`、`firestore.FieldValue`、`firebase.functions()`、`Firebase*Types`），iOS 約 25 檔在用。目前用 `src/lib/rnfb-setup.ts` 靜音 deprecation 警告。改 modular（`getFirestore()`、`doc()`、`getDoc()`…）後才能升 v26+。
+- **建議交付給**：iOS Backend
+- **優先級提示**：P2
+
+### Web 版 Liquid Glass（導覽層）
+- **發現於**：2026-10-10、iOS UI/UX session（user 選「iOS 先做，Web 之後」）
+- **類型**：設計
+- **觀察**：iOS tab bar 已玻璃化（design-system §4）。Web 做法：`backdrop-filter: blur()` 毛玻璃為基準，Chromium 再用 SVG `feDisplacementMap` 加折射（Safari/iOS PWA 不支援 SVG backdrop-filter → 只會是毛玻璃）；必須 `prefers-reduced-motion` / `prefers-reduced-transparency` 降級。
+- **建議交付給**：UI/UX（web）
+- **優先級提示**：P2
+
 ### 2026-10-10 iOS ↔ PWA 介面對齊 + 功能優化（code done，待 review + 實機）
 - **進度 / 證據**：[`ios-pwa-parity-2026-10.md`](../features/ios-pwa-parity-2026-10.md)；盤點 222 項，完成 215 項（branch `ios-pwa-fidelity-2026-10`，`64c4863`..`66eb9ec`，**未 merge / 未 push**），每批 typecheck + i18n key 檢查通過、未實機。
 - **剩餘**：R11 語意 3 項 + App 內 QR 掃描交 PM；第二輪 code review；merge 後 EAS 實機批次驗收。

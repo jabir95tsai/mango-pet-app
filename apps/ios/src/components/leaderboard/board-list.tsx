@@ -10,6 +10,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View, type ListRenderItem } from "react-native";
 
+import { useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { colors, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 import { RefreshIconButton } from "./refresh-icon-button";
 
@@ -68,8 +69,10 @@ export function BoardList<T>({
   refreshing: boolean;
   onRefresh?: () => void;
 }) {
+  const tabBarInsets = useTabBarScrollInsets();
   return (
     <FlatList
+      {...tabBarInsets}
       data={data}
       keyExtractor={keyExtractor}
       renderItem={renderItem}

@@ -21,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { AlertTriangle, ChevronRight, Trophy, Users } from "lucide-react-native";
 
+import { useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { signOut } from "@/lib/auth";
 import { SITE_URL } from "@/lib/config";
 import { getUserPrefs, type UserPrefs } from "@/lib/user-prefs";
@@ -46,6 +47,7 @@ import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 const FOCUS_STALE_MS = 60_000;
 
 export default function SettingsScreen() {
+  const tabBarInsets = useTabBarScrollInsets();
   const { user, isGuest } = useAuth();
   const { refresh: refreshFamily } = useFamily();
   const router = useRouter();
@@ -108,6 +110,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView edges={["top"]} style={styles.flex}>
       <ScrollView
+        {...tabBarInsets}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={

@@ -37,6 +37,7 @@ import type {
   Reminder,
 } from "@mango/shared-types";
 
+import { useTabBarOverlap, useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { usePetsData } from "@/lib/use-pets-data";
 import { useAuth } from "@/state/auth-context";
 import { t } from "@/lib/i18n";
@@ -75,6 +76,8 @@ type FormState =
 const STICKY_TABS_INDEX = 2;
 
 export default function PetsScreen() {
+  const tabBarInsets = useTabBarScrollInsets();
+  const tabBarOverlap = useTabBarOverlap();
   const { user } = useAuth();
   const data = usePetsData();
   const reduceMotion = useReducedMotion();
@@ -190,6 +193,7 @@ export default function PetsScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <ScrollView
+          {...tabBarInsets}
           contentContainerStyle={styles.errorWrap}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} tintColor={colors.brand} />
@@ -218,6 +222,7 @@ export default function PetsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView
+        {...tabBarInsets}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[STICKY_TABS_INDEX]}
@@ -306,7 +311,7 @@ export default function PetsScreen() {
       {/* Per-tab add FAB (web: 56pt, right-5, Plus 22) */}
       <Pressable
         onPress={openTabFab}
-        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+        style={({ pressed }) => [styles.fab, { bottom: 20 + tabBarOverlap }, pressed && styles.fabPressed]}
         accessibilityRole="button"
         accessibilityLabel={t(`PetsPage.fab.${activeTab}`)}
       >

@@ -28,6 +28,7 @@ import { useRouter } from "expo-router";
 import { Footprints, Hand, Plus } from "lucide-react-native";
 import type { Walk } from "@mango/shared-types";
 
+import { useTabBarOverlap, useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { useWalksData } from "@/lib/use-walks-data";
 import { WalksDial } from "@/components/walks/walks-dial";
 import { WalksWeekStrip } from "@/components/walks/walks-week-strip";
@@ -55,6 +56,8 @@ const RECENT_LIMIT = 5;
 const CONFETTI_MS = 4000;
 
 export default function WalksScreen() {
+  const tabBarInsets = useTabBarScrollInsets();
+  const tabBarOverlap = useTabBarOverlap();
   const router = useRouter();
   const data = useWalksData();
   // Tracking session: start (guest-gated photo prompt), recap, local-draft
@@ -136,6 +139,7 @@ export default function WalksScreen() {
     // 0 pets → no dial (web short circuit): recovery notice + EmptyState.
     content = (
       <ScrollView
+        {...tabBarInsets}
         contentContainerStyle={[styles.scroll, styles.scrollEmpty]}
         refreshControl={refreshControl}
       >
@@ -166,6 +170,7 @@ export default function WalksScreen() {
 
     content = (
       <ScrollView
+        {...tabBarInsets}
         contentContainerStyle={[styles.scroll, styles.scrollWithCta]}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
@@ -291,7 +296,7 @@ export default function WalksScreen() {
 
       {/* Sticky CTA — floats above the bottom tab bar */}
       {!sessionOpen && !noPets ? (
-        <View style={styles.ctaDock}>
+        <View style={[styles.ctaDock, { bottom: 32 + tabBarOverlap }]}>
           <View style={styles.ctaInner}>
             <WalksStartCta onPress={session.startWalking} disabled={pets.length === 0} />
           </View>

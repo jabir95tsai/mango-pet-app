@@ -59,6 +59,7 @@
 - **卡片**：`bg-mango-card`/`card-soft` + `1px hairline` + `--radius-lg/xl` + 暖色柔光 shadow。
 - **Tabs**：**簡單 toggle（active/inactive 切換），不做滑動 indicator。**（codify：web 的 `pet-tabs` / `ui/Tabs` 都是 toggle；先前 session 加的 Reanimated 滑動 indicator 已退掉，**不要再加**。）
 - **頭像**：沿用 `Avatar` 元件（無 src → initials fallback）。
+- **Liquid Glass（玻璃材質）**：**只用在浮在內容上方的導覽層**（目前 = iOS 底部 tab bar）；卡片 / 列表 / 頁首 / 主鈕一律維持實心 mango。iOS 用原生 `expo-glass-effect`，iOS < 26 退回原本實心 bar；減少透明度 / 動態由系統玻璃自行處理。Web 版尚未做（backlog）。詳 [`features/ios-liquid-glass.md`](features/ios-liquid-glass.md)。（user 2026-10-10 拍板）
 
 ## 5. 動效 / Motion
 

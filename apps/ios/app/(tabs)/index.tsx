@@ -27,6 +27,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { AlertCircle, ChevronRight } from "lucide-react-native";
 
+import { useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { useFeedData } from "@/lib/feed-data";
 import { resolveUserDisplayName, resolveUserPhotoURL } from "@/lib/auth-profile";
 import { useAuth } from "@/state/auth-context";
@@ -46,6 +47,7 @@ import { t } from "@/lib/i18n";
 import { colors, radius, shadows, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 export default function HomeScreen() {
+  const tabBarInsets = useTabBarScrollInsets();
   const router = useRouter();
   const { user, isGuest } = useAuth();
   const { openUpgrade } = useGuestUpgrade();
@@ -95,7 +97,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView edges={["top"]} style={styles.flex}>
         {topBar}
-        <ScrollView contentContainerStyle={[styles.scroll, styles.padded]} refreshControl={refreshControl}>
+        <ScrollView {...tabBarInsets} contentContainerStyle={[styles.scroll, styles.padded]} refreshControl={refreshControl}>
           <EmptyState
             icon={AlertCircle}
             title={t("Error.title")}
@@ -112,7 +114,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView edges={["top"]} style={styles.flex}>
         {topBar}
-        <ScrollView contentContainerStyle={[styles.scroll, styles.padded]} refreshControl={refreshControl}>
+        <ScrollView {...tabBarInsets} contentContainerStyle={[styles.scroll, styles.padded]} refreshControl={refreshControl}>
           <HomeEmptyState
             onAddPet={() => router.push("/(tabs)/pets")}
             // web → /onboarding; on iOS the family screen hosts create + join.
@@ -127,6 +129,7 @@ export default function HomeScreen() {
     <SafeAreaView edges={["top"]} style={styles.flex}>
       {topBar}
       <ScrollView
+        {...tabBarInsets}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}

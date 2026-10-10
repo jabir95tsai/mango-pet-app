@@ -1,5 +1,7 @@
 # iOS Apple Glass 設計系統（mango liquid glass）
 
+> ⛔ **SUPERSEDED 2026-10-10** → [`ios-liquid-glass.md`](./ios-liquid-glass.md)：改用 Expo SDK 57 原生 `expo-glass-effect`（iOS 26 Liquid Glass），只套導覽層（tab bar）。本檔的 expo-blur 全 surface 方案與 `ios-glass-blur` branch 不再接續。
+
 狀態：**DEFERRED — 上架後再做**（iOS PM 2026-08-26，user 拍板：先衝 App Store 上架，Glass redesign 排 v1.1）。spec 本身仍 READY-FOR-DEV，未來要撿回直接照下面走；目前 `expo-blur` 未裝、0 surface 套用，維持「1:1 對齊 web」的既有 fidelity 視覺送審。
 > **2026-09-27 拆分合併**：P-glass-0/1 原型（`expo-blur` dep + 8 個 `Glass*` primitives + theme `glass*` tokens + `useReduceTransparency`）**停在 branch `ios-glass-blur`，未進 main**（v1.1 撿回從那裡接）。同 branch 上的 PWA 1:1 對齊工作（tab bar / 開始遛狗 CTA / leaderboard / settings）已經由 branch `ios-pwa-align` 單獨合進 main。
 規格作者：iOS PM session
