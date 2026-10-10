@@ -1,6 +1,6 @@
 # iOS ↔ PWA 介面對齊 + 功能優化（2026-10）
 
-狀態：**CODE DONE（215 / 222 項；3 項待 PM、1 項待 PM、3 項接受差異）— 待第二輪 review + 實機驗收**（iOS UI/UX + iOS Feature Builder，2026-10-08 ~ 10-10）
+狀態：**CODE DONE + REVIEWED（215 / 222 項；4 項待 PM、3 項接受差異）— 待 merge + 實機驗收**（iOS UI/UX + iOS Feature Builder，2026-10-08 ~ 10-10）
 user 需求：「讓 iOS app 的介面按照 PWA 的介面實作，並優化功能」
 branch：`ios-pwa-fidelity-2026-10`（**未 merge、未 push**）；`ios-pwa-fidelity-2026-10-wip` 已被吸收（TRACK / PETSB 半成品已完成並 commit），可刪除
 worktree：`C:\Users\jabir\Hacker_J\mango_pet_app-ios-pwa`（node_modules 為 junction，拆除前先 `cmd /c rmdir`，見 memory reference_worktree_isolation_technique）
@@ -42,7 +42,7 @@ worktree：`C:\Users\jabir\Hacker_J\mango_pet_app-ios-pwa`（node_modules 為 ju
 | SHELL-23 | 不適用 | 重點 tab 回頂（相關畫面非 tab） |
 
 另外：
-- **第二輪 review 尚未做**（建議：對 `a640d33..HEAD` 跑一次 code review，重點看 TRACK 的 session/草稿/重試狀態機、leaderboard listener gating、photos 批次儲存）。
+- **第二輪 review 已做**（2026-10-10，9 項全修：commit `3317d4a` — 0 寵物誤顯示錯誤、「稍後再儲存」遺失備註/照片、被殺 app 的背景定位在啟動時就處理、排行榜/設定重複讀取、好友搜尋誤標、Reduce Motion、重複 helper）。
 - **未實機 / simulator 驗證**：Windows 環境無 iOS simulator；本輪只有 TypeScript 靜態檢查 + i18n key 存在性檢查。
 
 ## 4. 需要決策 / 交接（不在本輪範圍）
@@ -62,5 +62,5 @@ worktree：`C:\Users\jabir\Hacker_J\mango_pet_app-ios-pwa`（node_modules 為 ju
 ## 5. 如何接續
 
 1. 在 worktree `C:\Users\jabir\Hacker_J\mango_pet_app-ios-pwa`（branch `ios-pwa-fidelity-2026-10`）繼續。
-2. 第二輪 review → 修正 → `npm run typecheck -w apps/ios` + `node docs/research/ios-pwa-gap-audit-2026-10/tools/check-keys.js .`。
+2. 有改動就跑 `npm run typecheck -w apps/ios` + `node docs/research/ios-pwa-gap-audit-2026-10/tools/check-keys.js .`。
 3. merge 進 main（user 確認後）→ iOS PM 發一顆 EAS build 實機批次驗收（README 規則 5），重點：遛狗追蹤全流程（含 app 被殺後復原、離線儲存）、tab bar 上方 CTA/FAB 位置、成就頁、匯入精靈、照片批次儲存。
