@@ -30,10 +30,10 @@ P3 = 也許永遠不做的「想法」。
 
 ## Inbox（未分類）
 
-### 2026-10-10 iOS ↔ PWA 介面對齊 + 功能優化（進行中，約 35%）
-- **進度 / 證據**：[`ios-pwa-parity-2026-10.md`](../features/ios-pwa-parity-2026-10.md)；盤點 220 項，已完成 77 項（commit `64c4863`、`41c1f94`，branch `ios-pwa-fidelity-2026-10`，**未 merge / 未 push**），typecheck 通過、未實機。
-- **剩餘**：143 項（P0 12）— TRACK（遛狗追蹤，最優先）、WALKS、PETSB（pets.tsx 接上開銷編輯/刪除）、HOME、SETTINGS（成就入口、語言切換）、FAMACH（成就頁、匯入精靈）、LEAD、SOCIAL。半成品在 `ios-pwa-fidelity-2026-10-wip`（不能 typecheck）。
-- **接手**：iOS UI/UX / iOS Feature Builder；R11 語意交 Cross-platform PM；web `updateExpense` 忽略 items 交 Web Bug Hunter。
+### 2026-10-10 iOS ↔ PWA 介面對齊 + 功能優化（code done，待 review + 實機）
+- **進度 / 證據**：[`ios-pwa-parity-2026-10.md`](../features/ios-pwa-parity-2026-10.md)；盤點 222 項，完成 215 項（branch `ios-pwa-fidelity-2026-10`，`64c4863`..`66eb9ec`，**未 merge / 未 push**），每批 typecheck + i18n key 檢查通過、未實機。
+- **剩餘**：R11 語意 3 項 + App 內 QR 掃描交 PM；第二輪 code review；merge 後 EAS 實機批次驗收。
+- **交接**：web 可改用的新 i18n key、web 總覽提醒卡 no-op、web `updateExpense` 忽略 items、iOS 推播點擊路由 — 見 feature doc §4。
 
 ### 2026-10-08 R15 反應計數型別回歸
 - **Backend 修復**：原唯讀 audit 只比 JS 數值，漏掉 2 篇公開貼文的 double 計數。已交易式改為同值整數，重跑零變更；87 篇重新掃描 double 為 0。
