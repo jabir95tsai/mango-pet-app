@@ -7,6 +7,14 @@
  *
  * `score` is computed with the SHARED formula (@mango/shared-business) so iOS
  * and web produce identical scores — the leaderboard sums these stored values.
+ *
+ * Idempotency (TRACK-9, web apps/web/src/lib/firebase/walks.ts createWalk):
+ * a tracked walk carries a pre-minted id and may be retried after an uncertain
+ * acknowledgement (timeout, app backgrounded, recovered local draft). A plain
+ * `set()` retry would be an UPDATE touching createdAt/score/…, which
+ * firestore.rules (walks update: notes/photoURLs only) rejects — so the walk
+ * would look "unsaved" forever. Like web we create-if-missing in a
+ * transaction and treat an existing doc from the SAME session as success.
  */
 import firestore from "@react-native-firebase/firestore";
 import { computeWalkScore, type ScorablePet } from "@mango/shared-business";
@@ -17,6 +25,9 @@ export type CreateWalkInput = {
   scorePet: ScorablePet | null;
   /** Current streak (days) — feeds the score formula. */
   streakDays: number;
+  /** Precomputed score (frozen at stop / stored in a local draft). When set,
+   *  it is written as-is and `scorePet` / `streakDays` are ignored. */
+  score?: number;
   /** `null` = personal mode → NOT on the leaderboard (trigger short-circuits). */
   familyId: string | null;
   walkerUid: string;
@@ -47,9 +58,32 @@ export function newWalkId(): string {
   return firestore().collection("walks").doc().id;
 }
 
+/** The shared score formula for a walk input (honours a precomputed score). */
+export function walkScoreOf(input: CreateWalkInput): number {
+  if (typeof input.score === "number" && Number.isFinite(input.score)) return input.score;
+  return computeWalkScore({
+    distanceKm: input.distanceKm,
+    durationMin: input.durationMin,
+    pet: input.scorePet,
+    streakDays: input.streakDays,
+  });
+}
+
+type TimestampLike = { toMillis?: () => number } | null | undefined;
+
+function millisOf(value: unknown): number | null {
+  const ts = value as TimestampLike;
+  return ts && typeof ts.toMillis === "function" ? ts.toMillis() : null;
+}
+
 /**
  * Persist a completed walk. Returns the new `walkId`. The doc shape mirrors
  * the web `createWalk` write so the same triggers/feed consume it unchanged.
+ *
+ * With a pre-minted `walkId` the write is create-if-missing (transaction):
+ * a retry after the first write already landed resolves successfully without
+ * touching the stored doc; a doc from a DIFFERENT session under the same id
+ * is rejected (web parity).
  */
 export async function createWalk(input: CreateWalkInput): Promise<string> {
   const db = firestore();
@@ -57,14 +91,7 @@ export async function createWalk(input: CreateWalkInput): Promise<string> {
     ? db.collection("walks").doc(input.walkId)
     : db.collection("walks").doc();
 
-  const score = computeWalkScore({
-    distanceKm: input.distanceKm,
-    durationMin: input.durationMin,
-    pet: input.scorePet,
-    streakDays: input.streakDays,
-  });
-
-  await ref.set({
+  const data = {
     walkId: ref.id,
     familyId: input.familyId, // null = personal (no leaderboard)
     walkerUid: input.walkerUid,
@@ -79,11 +106,51 @@ export async function createWalk(input: CreateWalkInput): Promise<string> {
     durationMin: input.durationMin,
     path: input.path ?? [],
     isManual: input.isManual,
-    score,
+    score: walkScoreOf(input),
     notes: input.notes ?? null,
     photoURLs: input.photoURLs ?? [],
     createdAt: firestore.FieldValue.serverTimestamp(),
+  };
+
+  if (!input.walkId) {
+    // Manual entries mint their own id and are never retried on the same id.
+    await ref.set(data);
+    return ref.id;
+  }
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      tx.set(ref, data);
+      return;
+    }
+    const saved = snap.data() ?? {};
+    if (
+      saved.walkerUid !== input.walkerUid ||
+      saved.petId !== input.petId ||
+      (saved.familyId ?? null) !== input.familyId ||
+      millisOf(saved.startedAt) !== input.startedAt.getTime() ||
+      millisOf(saved.endedAt) !== input.endedAt.getTime()
+    ) {
+      throw new Error("Walk ID is already used by another session.");
+    }
+    // Same session already persisted (lost ack) → success, no write.
   });
 
   return ref.id;
+}
+
+/**
+ * Recap edits after the core save (web updateWalkDetails). Only `notes` and
+ * `photoURLs` change — the only keys firestore.rules lets the walker update —
+ * so the walk is never re-created and its score/timestamps never move.
+ */
+export async function updateWalkDetails(
+  walkId: string,
+  details: { notes: string; photoURLs: string[] },
+): Promise<void> {
+  await firestore().collection("walks").doc(walkId).update({
+    notes: details.notes,
+    photoURLs: details.photoURLs,
+  });
 }

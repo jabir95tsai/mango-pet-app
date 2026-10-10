@@ -25,10 +25,12 @@ import { WalksStreakChip } from "@/components/walks/walks-streak-chip";
 import { WalksStartCta } from "@/components/walks/walks-start-cta";
 import { PetPill } from "@/components/walks/pet-pill";
 import { WalkRow } from "@/components/walks/walk-row";
-import { WalkTrackingView } from "@/components/walks/walk-tracking-view";
 import { ManualWalkDialog } from "@/components/walks/manual-walk-dialog";
-import { PhotoShareFlow } from "@/components/walks/photo-share-flow";
-import { newWalkId } from "@/lib/walks";
+import {
+  useWalkSessionController,
+  WalkSessionOverlays,
+} from "@/components/walks/tracking-session-controller";
+import { WalkDraftRecoveryNotice } from "@/components/walks/walk-draft-recovery";
 import { Screen } from "@/components/ui/Screen";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { colors, radius, spacing } from "@/theme/theme";
@@ -40,13 +42,12 @@ export default function WalksScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const data = useWalksData();
-  const [sessionOpen, setSessionOpen] = useState(false);
+  // Tracking session: start (guest-gated photo prompt), recap, local-draft
+  // and killed-app recovery — see tracking-session-controller.tsx.
+  const session = useWalkSessionController(data);
+  const { sessionOpen } = session;
   const [manualOpen, setManualOpen] = useState(false);
   const [showAllWalks, setShowAllWalks] = useState(false);
-  // Pre-minted id so a START auto-share post + the walk doc + the END post all
-  // cross-link to the same walks/{walkId} (mirrors web mintWalkId).
-  const [pendingWalkId, setPendingWalkId] = useState("");
-  const [startShareOpen, setStartShareOpen] = useState(false);
 
   const {
     loading,
@@ -71,21 +72,20 @@ export default function WalksScreen() {
   } = data;
 
   function handleStartWalking() {
-    // Never start a walk while the family scope is unknown (R08).
-    if (pets.length === 0 || !scopeReady) return;
-    const id = newWalkId();
-    setPendingWalkId(id);
-    if (autoPhotoShare) {
-      setStartShareOpen(true); // prompt → optional photo → then tracking
-    } else {
-      setSessionOpen(true);
-    }
+    // Gated on pets + scopeReady (R08); guests skip the photo prompt.
+    session.startWalking();
   }
 
   // 0 pets → empty state (no dial), same gate as web.
   if (!loading && pets.length === 0) {
     return (
       <Screen scroll={false} padded={false}>
+        {/* Stopped walks still waiting for their server save (web page.tsx:525) */}
+        <WalkDraftRecoveryNotice
+          recovery={session.drafts}
+          uid={session.uid}
+          style={styles.recoveryEmpty}
+        />
         <EmptyState
           emoji="🐾"
           title="先新增一隻寵物"
@@ -93,6 +93,8 @@ export default function WalksScreen() {
           ctaLabel="去新增寵物"
           onPressCta={() => router.push("/(tabs)/pets")}
         />
+        {/* A recovered in-progress walk can still be finished with 0 pets */}
+        <WalkSessionOverlays session={session} data={data} />
       </Screen>
     );
   }
@@ -116,6 +118,9 @@ export default function WalksScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Stopped walks still waiting for their server save (web recoveryNotice) */}
+        <WalkDraftRecoveryNotice recovery={session.drafts} uid={session.uid} />
+
         {/* Top bar */}
         <View style={styles.topBar}>
           <Text style={styles.h1}>遛狗</Text>
@@ -216,33 +221,9 @@ export default function WalksScreen() {
         </View>
       ) : null}
 
-      {/* START auto-photo-share: prompt → optional photo → then tracking */}
-      <PhotoShareFlow
-        visible={startShareOpen}
-        phase="start"
-        pet={activePet}
-        pets={pets}
-        walkId={pendingWalkId}
-        onDone={() => {
-          setStartShareOpen(false);
-          setSessionOpen(true);
-        }}
-      />
-
-      <WalkTrackingView
-        visible={sessionOpen}
-        pet={activePet}
-        pets={pets}
-        streakDays={streakDays}
-        familyId={familyId}
-        walkId={pendingWalkId}
-        autoPhotoShare={autoPhotoShare}
-        goalMin={goalMin}
-        todayMinBefore={todayProgress.minutes}
-        weeklyAvgMin={weeklyAvgMin}
-        onClose={() => setSessionOpen(false)}
-        onSaved={data.reloadAfterWrite}
-      />
+      {/* START photo prompt (guest-gated) + tracking overlay. Tracked saves
+          refresh the home only when the overlay closes (TRACK-11). */}
+      <WalkSessionOverlays session={session} data={data} />
 
       <ManualWalkDialog
         visible={manualOpen}
@@ -289,5 +270,6 @@ const styles = StyleSheet.create({
   },
   manualText: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
   ctaDock: { position: "absolute", left: 0, right: 0, paddingHorizontal: spacing.lg },
+  recoveryEmpty: { marginHorizontal: spacing.lg, marginTop: spacing.sm },
   pressed: { opacity: 0.85 },
 });

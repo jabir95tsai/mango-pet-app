@@ -52,9 +52,39 @@ export async function uploadWalkPhoto(
   sessionId: string,
   idx: number,
 ): Promise<string> {
+  const { url } = await uploadWalkPhotoWithPath(uri, walkerUid, sessionId, idx);
+  return url;
+}
+
+/**
+ * Same as {@link uploadWalkPhoto} but also returns the Storage object path so
+ * the in-walk thumbnail's X can delete it again (web handlePhotoDelete keeps
+ * `storagePath` per slot). `ts` defaults to now (web walkPhotoPath ts).
+ */
+export async function uploadWalkPhotoWithPath(
+  uri: string,
+  walkerUid: string,
+  sessionId: string,
+  idx: number,
+  ts: number = Date.now(),
+): Promise<{ url: string; path: string }> {
   const compressed = await compressImage(uri);
-  const path = walkPhotoPath(walkerUid, sessionId, idx, Date.now(), "jpg");
-  return uploadJpeg(compressed, path);
+  const path = walkPhotoPath(walkerUid, sessionId, idx, ts, "jpg");
+  const url = await uploadJpeg(compressed, path);
+  return { url, path };
+}
+
+/**
+ * Best-effort delete of an uploaded object (web firebase/storage deleteImage):
+ * an already-missing object counts as success. Storage rules allow the owner
+ * to delete under users/{uid}/walks/**.
+ */
+export async function deleteStorageObject(path: string): Promise<void> {
+  try {
+    await storage().ref(path).delete();
+  } catch (err) {
+    if ((err as { code?: string }).code !== "storage/object-not-found") throw err;
+  }
 }
 
 /**

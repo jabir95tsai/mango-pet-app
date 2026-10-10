@@ -1147,7 +1147,8 @@
       "cameraDeniedTitle": "需要相機權限",
       "cameraDeniedBody": "需要相機權限才能拍收據。你也可以從相簿選照片，或直接手動輸入。",
       "openSettings": "前往設定"
-    }
+    },
+    "deletePetBody": "刪除後相關的健康紀錄與貼文照片仍會保留，但寵物本身會被移除。"
   },
   "Join": {
     "joining": "加入家庭中…",
@@ -1193,7 +1194,16 @@
       "cameraPermissionTitle": "需要相機權限",
       "cameraPermissionBody": "開啟相機才能拍遛狗照片；不拍照也能完成這次遛狗。",
       "cameraAllow": "允許相機",
-      "openSettings": "前往設定"
+      "openSettings": "前往設定",
+      "backgroundOn": "鎖定螢幕時也會持續記錄路線",
+      "starting": "正在取得你的位置…",
+      "locationNeededTitle": "需要定位權限",
+      "locationNeededBody": "請在「設定」中允許 Mango Pet 使用定位，才能記錄遛狗的時間與路線。",
+      "startFailed": "無法開始記錄，請確認定位已開啟後再試一次。",
+      "resumeActiveTitle": "有一趟散步還沒結束",
+      "resumeActiveBody": "App 關閉前有一趟散步仍在記錄。要繼續散步，還是結束並儲存？",
+      "resumeActiveContinue": "繼續散步",
+      "saveLater": "稍後再儲存（紀錄會保留在遛狗頁）"
     }
   }
 }

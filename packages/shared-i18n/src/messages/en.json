@@ -1147,7 +1147,8 @@
       "cameraDeniedTitle": "Camera access needed",
       "cameraDeniedBody": "Allow camera access to scan receipts, or choose a photo from your library or enter the expense manually.",
       "openSettings": "Open Settings"
-    }
+    },
+    "deletePetBody": "Related health records and post photos are kept, but the pet itself will be removed."
   },
   "Join": {
     "joining": "Joining family…",
@@ -1193,7 +1194,16 @@
       "cameraPermissionTitle": "Camera access needed",
       "cameraPermissionBody": "Allow camera access to take walk photos. You can still finish this walk without a photo.",
       "cameraAllow": "Allow camera",
-      "openSettings": "Open Settings"
+      "openSettings": "Open Settings",
+      "backgroundOn": "Keeps recording while your screen is locked",
+      "starting": "Getting your location…",
+      "locationNeededTitle": "Location access needed",
+      "locationNeededBody": "Allow Mango Pet to use your location in Settings to record the time and route of your walk.",
+      "startFailed": "Couldn't start recording. Check that Location Services are on and try again.",
+      "resumeActiveTitle": "You have a walk in progress",
+      "resumeActiveBody": "A walk was still recording when the app closed. Continue it, or end and save it?",
+      "resumeActiveContinue": "Continue walk",
+      "saveLater": "Save later (kept on the Walks page)"
     }
   }
 }

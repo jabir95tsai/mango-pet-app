@@ -304,8 +304,8 @@
   "lane": "TRACK",
   "severity": "P1",
   "title": "No pending-walk draft recovery banner (web walk-drafts), and R16 session identity not persisted",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "WALKS-6": {
   "lane": "WALKS",
@@ -325,15 +325,15 @@
   "lane": "TRACK",
   "severity": "P1",
   "title": "Guests get the auto-photo-share prompt; web skips it because guests cannot post",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "WALKS-9": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "Refreshing right after a save double-counts today's minutes on the done/recap screen",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "WALKS-10": {
   "lane": "WALKS",
@@ -675,162 +675,162 @@
   "lane": "TRACK",
   "severity": "P0",
   "title": "Stop/save flow is a pre-save summary with unconfirmed 捨棄 and auto-close; web saves immediately and shows a post-save recap with retry/discard-draft + back/leaderboard CTAs",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-2": {
   "lane": "TRACK",
   "severity": "P0",
   "title": "Manual pause / resume missing (service + UI)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-3": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "No confirmation before stopping a walk",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-4": {
   "lane": "TRACK",
   "severity": "P0",
   "title": "Tracking screen layout differs: header/pill, distance style, extra path-points line, round peach stop button vs full-width red stop",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-5": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "Live today-progress bar (stored + current session vs goal) missing during tracking",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-6": {
   "lane": "TRACK",
   "severity": "P0",
   "title": "R16: start failure (and pre-permission state) still shows '● 記錄中'; start() result ignored; reset during pending start leaks location updates",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-7": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "R16: active walk session identity not persisted — app kill/relaunch loses the walk and can leave background location running with no UI",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-8": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "No local draft / recovery for stopped-but-unsaved walks; offline save leaves the UI stuck on a spinner",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-9": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "iOS createWalk is not idempotent: retry on a pre-minted id uses set() which rules reject as an update",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-10": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "endedAt is taken at save time (not stop time); missing startedAt silently fabricated",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-11": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "Done screen recomputes from live props after onSaved refresh → today minutes double-count (goal-hit/percent jump)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-12": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "3-hour runaway auto-stop + notice missing",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-13": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "GPS status hints (weak signal / retrying / background gap) never shown during tracking",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-14": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "In-walk photo control: emoji dashed tile vs web pill button with counter; thumbnails lack upload/failed overlays, delete X, and save-to-album",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-15": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "Photo still uploading when the walk is saved is dropped from walk.photoURLs (orphaned in Storage)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-16": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "Done screen lacks the '本次紀錄 (n)' photo grid + lightbox",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-17": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "Done-screen visuals differ: emoji trophy on invisible circle, solid tint bg (no gradient / no missed backdrop), 3 separate tiles incl. extra km/h, noPath condition",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-18": {
   "lane": "TRACK",
   "severity": "P2",
   "title": "Notes input always expanded; web uses a collapsible '加備註' disclosure",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-19": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "END/START auto-photo prompt: no guest gate, no 1s post-save delay, and END flow closes the whole view instead of returning to the recap",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-20": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "PhotoPromptSheet styling: flat brand button with INK text + emoji, sheet radius, no iPad width cap, slide ignores reduced motion",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-21": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "R20: hard-coded (and divergent) Chinese strings across tracking view, prompt sheet, share flow, camera modal",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-22": {
   "lane": "TRACK",
   "severity": "P2",
   "title": "Location-denied screen has no 'Open Settings' action and uses emoji",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-23": {
   "lane": "TRACK",
   "severity": "P2",
   "title": "Confetti: hard-coded 320pt width, reduced-motion shows static slivers (web hides), streak pop + overlay motion ignore reduced motion",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "TRACK-24": {
   "lane": "WALKS",
@@ -1410,15 +1410,15 @@
   "lane": "TRACK",
   "severity": "P1",
   "title": "R16: native tracking start failure (position_unavailable) still shows the '● 記錄中' recording screen",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "XCUT-4": {
   "lane": "TRACK",
   "severity": "P1",
   "title": "R16: walk session identity not persisted, no draft recovery, one-tap discard without confirm",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "XCUT-5": {
   "lane": "A2",
@@ -1438,8 +1438,8 @@
   "lane": "TRACK",
   "severity": "P1",
   "title": "R20: walk-tracking-view (tracking + done recap) hard-codes ~30 zh strings that map to Walks.core/Walks.celebration keys",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit TRACK (2026-10-10) — WIP lane finished + i18n"
  },
  "XCUT-8": {
   "lane": "A1",
