@@ -1032,22 +1032,22 @@
   "lane": "PETSB",
   "severity": "P0",
   "title": "R08: Pets scope reads currentFamilyId itself; stale family after switch leads to writes into the wrong family",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "covered by foundation useScopedData (FamilyContext scope + focus refresh)"
  },
  "PETS-2": {
   "lane": "PETSB",
   "severity": "P1",
   "title": "Pets tab never refetches on focus; data goes stale after walks/reminders change elsewhere",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "covered by foundation useScopedData (FamilyContext scope + focus refresh)"
  },
  "PETS-3": {
   "lane": "PETSB",
   "severity": "P1",
   "title": "A load failure renders as the 0-pet empty state, with no error or retry",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-4": {
   "lane": "PETSA",
@@ -1095,22 +1095,22 @@
   "lane": "PETSB",
   "severity": "P1",
   "title": "Reminders tab is missing the summary row ('本月 X 條 · 已完成 Y' + sort hint)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-11": {
   "lane": "PETSB",
   "severity": "P1",
   "title": "Overview stat 'next reminder' shows '-1 天前' when overdue (shared-business carries the bug web already fixed)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-12": {
   "lane": "PETSB",
   "severity": "P1",
   "title": "Overview 'upcoming' reminder card shows check/trash buttons that do nothing",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-13": {
   "lane": "PETSB",
@@ -1158,15 +1158,15 @@
   "lane": "PETSB",
   "severity": "P1",
   "title": "Reminder edit always resets the notified flag, which can cause duplicate pushes",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-20": {
   "lane": "PETSB",
   "severity": "P2",
   "title": "Reminder form differs from web: field order, defaults (notify 0 vs 60, +1h vs +24h), no linked-pet picker, edit title",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-21": {
   "lane": "A3",
@@ -1179,57 +1179,57 @@
   "lane": "PETSB",
   "severity": "P1",
   "title": "No way to delete a pet on iOS",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-23": {
   "lane": "PETSB",
   "severity": "P1",
   "title": "Pet form: walk-goal max 120 vs web 180 (silently clamps), missing hint, misleading error copy, edit title",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-24": {
   "lane": "PETSB",
   "severity": "P1",
   "title": "0-pet empty hero differs: mango gradient disc with emoji vs web radial tint disc with tilted white paw card and + badge",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-25": {
   "lane": "PETSB",
   "severity": "P1",
   "title": "Pet switcher renders inline (pushes the tabs down) instead of a floating 240px panel; no active-row highlight or outside-tap dismiss",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-26": {
   "lane": "PETSB",
   "severity": "P1",
   "title": "FAB sits far above the tab bar and the + is oversized",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-27": {
   "lane": "PETSB",
   "severity": "P2",
   "title": "Text glyphs instead of lucide icons in header, top bar, switcher, stepper and birthday controls",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-28": {
   "lane": "PETSB",
   "severity": "P2",
   "title": "Tab pill bar is not sticky while scrolling",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "PETS-29": {
   "lane": "PETSB",
   "severity": "P2",
   "title": "Overview polish: section header weight and spacing, stat label uppercase, avatar paw overlay",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit PETSB (2026-10-10)"
  },
  "SHELL-1": {
   "lane": "A2",

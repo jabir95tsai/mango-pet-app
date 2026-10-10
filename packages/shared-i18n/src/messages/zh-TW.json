@@ -1094,7 +1094,12 @@
       "subRecent": "最新一次紀錄",
       "subKeepGoing": "繼續加油",
       "noReminder": "沒有待辦",
-      "noWeight": "新增體重紀錄"
+      "noWeight": "新增體重紀錄",
+      "hoursAhead": "小時後",
+      "daysAhead": "天後",
+      "hoursAgo": "小時前",
+      "daysAgo": "天前",
+      "walkDaysUnit": "天 · 本月"
     },
     "viewAll": "全部",
     "switcher": {

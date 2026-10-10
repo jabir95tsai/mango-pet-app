@@ -25,6 +25,7 @@ import {
 } from "lucide-react-native";
 import type { Reminder } from "@mango/shared-types";
 
+import { relativeTimeFromMillis } from "@/lib/format";
 import { scoped } from "@/lib/i18n";
 import { colors, radius, shadows, spacing } from "@/theme/theme";
 
@@ -44,29 +45,14 @@ function toneForTitle(title: string): Tone {
   return { bg: colors.brandTint, fg: colors.brandDeep, Icon: Bell };
 }
 
-/** date-fns zh-TW formatDistanceToNow(addSuffix) lookalike: future → 「內」,
- *  past → 「前」, with 「大約」on the hour/month/year buckets. */
+/** web formatDistanceToNow(trigger, { addSuffix: true }) in the active
+ *  locale — the shared relativeTime matches date-fns output byte-for-byte. */
 function relativeDue(ts: { toMillis?: () => number } | undefined): {
   text: string;
   overdue: boolean;
 } {
-  const delta = (ts?.toMillis?.() ?? 0) - Date.now();
-  const overdue = delta < 0;
-  const abs = Math.abs(delta);
-  const suffix = overdue ? "前" : "內";
-  let core: string;
-  if (abs < 60 * 60_000) {
-    core = `${Math.max(1, Math.round(abs / 60_000))} 分鐘`;
-  } else if (abs < 24 * 3_600_000) {
-    core = `大約 ${Math.max(1, Math.round(abs / 3_600_000))} 小時`;
-  } else if (abs < 30 * 86_400_000) {
-    core = `${Math.max(1, Math.round(abs / 86_400_000))} 天`;
-  } else if (abs < 365 * 86_400_000) {
-    core = `大約 ${Math.max(1, Math.round(abs / (30 * 86_400_000)))} 個月`;
-  } else {
-    core = `大約 ${Math.max(1, Math.round(abs / (365 * 86_400_000)))} 年`;
-  }
-  return { text: core + suffix, overdue };
+  const millis = ts?.toMillis?.() ?? 0;
+  return { text: relativeTimeFromMillis(millis), overdue: millis < Date.now() };
 }
 
 export function PetReminderCard({

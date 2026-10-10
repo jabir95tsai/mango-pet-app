@@ -1,16 +1,23 @@
 /**
- * Pets tab — iOS parity of apps/web/src/app/app/pets/page.tsx. Shell (list/
- * switcher/header + 4-tab pill) + all four tab bodies (overview / reminders /
- * expenses / health) + per-tab "+" FAB that opens the matching form. Pet
- * add/edit via the header pencil, switcher, and empty-state CTA.
+ * Pets tab — iOS parity of apps/web/src/app/app/pets/page.tsx. Shell (top bar
+ * + pet header with a floating switcher + sticky 4-tab pill) + all four tab
+ * bodies (overview / reminders / expenses / health) + per-tab "+" FAB that
+ * opens the matching form. Pet add/edit/delete via the header pencil, the
+ * switcher, the top-bar pill and the empty-state CTA.
  *
- * Data: usePetsData (one-shot + pull-to-refresh, personal/family scope). Writes
- * go directly to Firestore (forms own the write calls); a save refreshes the
- * list. All copy via the shared i18n catalog (@/lib/i18n).
+ * Data: usePetsData (family-scoped, refetch on focus when stale, pull-to-
+ * refresh). A failed first load shows an error + retry, never the add-first-
+ * pet state. Writes go directly to Firestore (forms own the write calls) and
+ * gate on `scopeReady`; a save reloads here and marks other tabs stale.
+ *
+ * Layout: the bottom tab bar is in-flow (the screen ends at its top edge), so
+ * the FAB sits 20pt above it — the raised centre disc only overlaps the
+ * middle of the bar, never the right-aligned FAB.
  */
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,9 +25,12 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { AlertCircle, Plus } from "lucide-react-native";
 import { fromLocalDateInput } from "@mango/shared-business";
 import type {
+  Expense,
   ExpenseSource,
   ExtractedReceipt,
   Pet,
@@ -29,7 +39,8 @@ import type {
 
 import { usePetsData } from "@/lib/use-pets-data";
 import { useAuth } from "@/state/auth-context";
-import { scoped } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PetHeader } from "@/components/pets/pet-header";
 import { PetSwitcher } from "@/components/pets/pet-switcher";
 import { PetTabs, type PetTabKey } from "@/components/pets/pet-tabs";
@@ -43,17 +54,14 @@ import { ReminderForm } from "@/components/pets/reminder-form";
 import { ExpenseForm, type ExpenseFormInitial } from "@/components/pets/expense-form";
 import { HealthForm } from "@/components/pets/health-form";
 import { ReceiptScanner } from "@/components/pets/receipt-scanner";
-import { LinearGradient } from "expo-linear-gradient";
-import { Plus } from "lucide-react-native";
 import { colors, mangoGradient, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
-
-const tPP = scoped("PetsPage");
 
 type FormState =
   | { kind: "pet"; pet?: Pet }
   | { kind: "reminder"; reminder?: Reminder }
   | {
       kind: "expense";
+      expense?: Expense;
       initial?: ExpenseFormInitial;
       source?: ExpenseSource;
       items?: string[];
@@ -62,14 +70,17 @@ type FormState =
   | { kind: "health" }
   | null;
 
+/** Index of the tabs wrapper among the ScrollView children (sticky). */
+const STICKY_TABS_INDEX = 2;
+
 export default function PetsScreen() {
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const data = usePetsData();
   const [activeTab, setActiveTab] = useState<PetTabKey>("overview");
-  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [switcherAnchor, setSwitcherAnchor] = useState<{ x: number; y: number } | null>(null);
   const [form, setForm] = useState<FormState>(null);
   const [healthKey, setHealthKey] = useState(0);
+  const headerRef = useRef<View>(null);
 
   const uid = user?.uid ?? "";
   const displayName = user?.displayName ?? undefined;
@@ -77,6 +88,7 @@ export default function PetsScreen() {
   const {
     loading,
     refreshing,
+    error,
     pets,
     reminders,
     expenses,
@@ -90,12 +102,21 @@ export default function PetsScreen() {
     scopeReady,
   } = data;
 
+  const afterSave = useCallback(() => {
+    // Reload here + mark Home/Walks stale so they refetch on focus.
+    void reloadAfterWrite();
+  }, [reloadAfterWrite]);
+
   function closeForm() {
     setForm(null);
   }
-  function afterSave() {
-    // Reload here + mark Home/Walks stale so they refetch on focus.
-    void reloadAfterWrite();
+  /** Never open a write form while the family scope is unknown (R08). */
+  function openForm(next: Exclude<FormState, null>) {
+    if (!scopeReady) {
+      void refresh();
+      return;
+    }
+    setForm(next);
   }
   function afterHealthSave() {
     void reloadAfterWrite(); // weight records sync pet.weightKg
@@ -108,9 +129,18 @@ export default function PetsScreen() {
   function openTabFab() {
     // Expenses FAB is camera-first (拍收據); manual entry is the in-scanner
     // fallback. Other tabs open their form directly.
-    if (activeTab === "expenses") setForm({ kind: "scanner" });
-    else if (activeTab === "health") setForm({ kind: "health" });
-    else setForm({ kind: "reminder" }); // overview + reminders → new reminder
+    if (activeTab === "expenses") openForm({ kind: "scanner" });
+    else if (activeTab === "health") openForm({ kind: "health" });
+    else openForm({ kind: "reminder" }); // overview + reminders → new reminder
+  }
+  function toggleSwitcher() {
+    if (switcherAnchor) {
+      setSwitcherAnchor(null);
+      return;
+    }
+    // Web: absolute left-0, top = header bottom + 4 — measured in window
+    // coordinates so the panel floats over the (sticky) tabs.
+    headerRef.current?.measureInWindow((x, y, _w, h) => setSwitcherAnchor({ x, y: y + h + 4 }));
   }
 
   /** AI receipt → expense-form prefill (spentAt string → local Date). */
@@ -128,6 +158,19 @@ export default function PetsScreen() {
     });
   }
 
+  const petForm =
+    form?.kind === "pet" ? (
+      <PetForm
+        familyId={familyId}
+        uid={uid}
+        pet={form.pet}
+        onClose={closeForm}
+        onSaved={afterSave}
+        // usePetsData falls back to the primary pet once the deleted one is gone.
+        onDeleted={() => setSwitcherAnchor(null)}
+      />
+    ) : null;
+
   // Initial load → spinner.
   if (loading && pets.length === 0) {
     return (
@@ -139,27 +182,32 @@ export default function PetsScreen() {
     );
   }
 
+  // Failed read with nothing to show → error + retry (never the 0-pet hero).
+  if (error && pets.length === 0) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <ScrollView
+          contentContainerStyle={styles.errorWrap}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} tintColor={colors.brand} />
+          }
+        >
+          <EmptyState
+            icon={AlertCircle}
+            title={t("Error.title")}
+            action={{ label: t("Error.retry"), onPress: () => void refresh() }}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   // 0 pets → empty state, no tabs.
   if (pets.length === 0) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
-        <PetsEmptyState
-          onAddPet={() => {
-            // Unknown scope (load / read failure) must never create a
-            // personal pet for a family user (R08) — retry instead.
-            if (scopeReady) setForm({ kind: "pet" });
-            else void refresh();
-          }}
-        />
-        {form?.kind === "pet" ? (
-          <PetForm
-            familyId={familyId}
-            uid={uid}
-            pet={form.pet}
-            onClose={closeForm}
-            onSaved={afterSave}
-          />
-        ) : null}
+        <PetsEmptyState onAddPet={() => openForm({ kind: "pet" })} />
+        {petForm}
       </SafeAreaView>
     );
   }
@@ -167,67 +215,60 @@ export default function PetsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingBottom: insets.bottom + 96 },
-        ]}
+        contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[STICKY_TABS_INDEX]}
+        onScrollBeginDrag={() => setSwitcherAnchor(null)}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onPullRefresh}
-            tintColor={colors.brand}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} tintColor={colors.brand} />
         }
       >
-        {/* Title row — h1 + brand-tint「＋寵物」pill (web PetsTopBar). */}
+        {/* [0] Title row — h1 + brand-tint「＋ 新增寵物」pill (web PetsTopBar). */}
         <View style={styles.topBar}>
-          <Text style={styles.h1}>{tPP("title.list")}</Text>
+          <Text style={styles.h1} accessibilityRole="header">
+            {t("PetsPage.title.list")}
+          </Text>
           <Pressable
-            onPress={() => setForm({ kind: "pet" })}
+            onPress={() => openForm({ kind: "pet" })}
             accessibilityRole="button"
-            accessibilityLabel={tPP("addPet")}
+            accessibilityLabel={t("PetsPage.addPet")}
             style={({ pressed }) => [styles.addPetBtn, pressed && styles.addPetPressed]}
           >
-            <Text style={styles.addPetText}>＋ {tPP("addPet")}</Text>
+            <Plus size={16} color={colors.brandDeep} strokeWidth={2.5} />
+            <Text style={styles.addPetText}>{t("PetsPage.addPet")}</Text>
           </Pressable>
         </View>
 
-        {activePet ? (
-          <>
+        {/* [1] Pet header (the switcher floats under it) */}
+        <View ref={headerRef} collapsable={false}>
+          {activePet ? (
             <PetHeader
               pet={activePet}
               multi={hasMultiplePets}
-              switcherOpen={switcherOpen}
-              onToggleSwitcher={() => setSwitcherOpen((v) => !v)}
-              onEdit={() => setForm({ kind: "pet", pet: activePet })}
+              switcherOpen={switcherAnchor !== null}
+              onToggleSwitcher={toggleSwitcher}
+              onEdit={() => openForm({ kind: "pet", pet: activePet })}
             />
+          ) : null}
+        </View>
 
-            {switcherOpen && hasMultiplePets ? (
-              <PetSwitcher
-                pets={pets}
-                activePetId={activePet.petId}
-                onSelect={(petId) => {
-                  selectPet(petId);
-                  setSwitcherOpen(false);
-                }}
-                onAddPet={() => {
-                  setSwitcherOpen(false);
-                  setForm({ kind: "pet" });
-                }}
-              />
-            ) : null}
+        {/* [2] Sticky tab pill bar */}
+        <View style={styles.tabsWrap}>
+          <PetTabs active={activeTab} onChange={setActiveTab} />
+        </View>
 
-            <View style={styles.tabsWrap}>
-              <PetTabs active={activeTab} onChange={setActiveTab} />
-            </View>
-
-            {activeTab === "overview" ? (
+        {/* [3] Active tab body */}
+        <View>
+          {activePet ? (
+            activeTab === "overview" ? (
               <PetOverviewBody
                 pet={activePet}
                 reminders={reminders}
                 expenses={expenses}
                 walks={walks}
+                uid={uid}
+                onChanged={afterSave}
+                onEditReminder={(reminder) => openForm({ kind: "reminder", reminder })}
               />
             ) : activeTab === "reminders" ? (
               <PetRemindersBody
@@ -236,27 +277,36 @@ export default function PetsScreen() {
                 reminders={reminders}
                 uid={uid}
                 onChanged={afterSave}
-                onEdit={(reminder) => setForm({ kind: "reminder", reminder })}
+                onEdit={(reminder) => openForm({ kind: "reminder", reminder })}
+                onAdd={() => openForm({ kind: "reminder" })}
               />
             ) : activeTab === "expenses" ? (
-              <PetExpensesBody petId={activePet.petId} expenses={expenses} />
+              <PetExpensesBody
+                petId={activePet.petId}
+                expenses={expenses}
+                onEdit={(expense) => openForm({ kind: "expense", expense })}
+                onAdd={() => openForm({ kind: "expense", source: "manual" })}
+                onChanged={afterSave}
+              />
             ) : (
-              <PetHealthBody petId={activePet.petId} reloadKey={healthKey} />
-            )}
-          </>
-        ) : null}
+              <PetHealthBody
+                petId={activePet.petId}
+                reloadKey={healthKey}
+                petWeightKg={activePet.weightKg ?? null}
+                onAdd={() => openForm({ kind: "health" })}
+                onChanged={afterSave}
+              />
+            )
+          ) : null}
+        </View>
       </ScrollView>
 
-      {/* Per-tab add FAB */}
+      {/* Per-tab add FAB (web: 56pt, right-5, Plus 22) */}
       <Pressable
         onPress={openTabFab}
-        style={({ pressed }) => [
-          styles.fab,
-          { bottom: insets.bottom + 76 },
-          pressed && styles.fabPressed,
-        ]}
+        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
         accessibilityRole="button"
-        accessibilityLabel={tPP(`fab.${activeTab}`)}
+        accessibilityLabel={t(`PetsPage.fab.${activeTab}`)}
       >
         <LinearGradient
           colors={mangoGradient.colors}
@@ -265,25 +315,50 @@ export default function PetsScreen() {
           end={mangoGradient.end}
           style={styles.fabFill}
         >
-          <Plus size={28} color="#ffffff" strokeWidth={2.5} />
+          <Plus size={22} color="#ffffff" strokeWidth={2.5} />
         </LinearGradient>
       </Pressable>
 
-      {/* Forms (mounted only while open → fresh state per open) */}
-      {form?.kind === "pet" ? (
-        <PetForm
-          familyId={familyId}
-          uid={uid}
-          pet={form.pet}
-          onClose={closeForm}
-          onSaved={afterSave}
-        />
+      {/* Floating pet switcher — outside taps close it (web click-outside). */}
+      {hasMultiplePets && activePet ? (
+        <Modal
+          visible={switcherAnchor !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSwitcherAnchor(null)}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSwitcherAnchor(null)}
+            accessibilityRole="button"
+            accessibilityLabel={t("Common.close")}
+          />
+          {switcherAnchor ? (
+            <PetSwitcher
+              pets={pets}
+              activePetId={activePet.petId}
+              style={[styles.switcher, { left: switcherAnchor.x, top: switcherAnchor.y }]}
+              onSelect={(petId) => {
+                selectPet(petId);
+                setSwitcherAnchor(null);
+              }}
+              onAddPet={() => {
+                setSwitcherAnchor(null);
+                openForm({ kind: "pet" });
+              }}
+            />
+          ) : null}
+        </Modal>
       ) : null}
+
+      {/* Forms (mounted only while open → fresh state per open) */}
+      {petForm}
       {form?.kind === "reminder" && activePet ? (
         <ReminderForm
           familyId={familyId}
           uid={uid}
           petId={activePet.petId}
+          pets={pets}
           reminder={form.reminder}
           onClose={closeForm}
           onSaved={afterSave}
@@ -303,6 +378,8 @@ export default function PetsScreen() {
           displayName={displayName}
           petId={activePet.petId}
           petName={activePet.name}
+          pets={pets}
+          expense={form.expense}
           initial={form.initial}
           source={form.source}
           items={form.items}
@@ -325,7 +402,23 @@ export default function PetsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
+  errorWrap: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: spacing.lg,
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
+  },
+  // Bottom pad clears the FAB: 56 + 20 + 20.
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: 96,
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
+  },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -339,21 +432,27 @@ const styles = StyleSheet.create({
     color: colors.ink,
     letterSpacing: -0.5,
   },
+  // web: h-[34px] rounded-full bg-brand-tint pl-2 pr-3 gap-1 Plus 16
   addPetBtn: {
     height: 34,
     flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.brandTint,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.md,
   },
   addPetText: { fontSize: 14, fontWeight: "700", color: colors.brandDeep },
   addPetPressed: { opacity: 0.85 },
-  tabsWrap: { marginVertical: spacing.sm },
+  // Sticky: opaque bg so cards scroll underneath (web pt-3.5 pb-2.5).
+  tabsWrap: { backgroundColor: colors.bg, paddingTop: 14, paddingBottom: 10 },
+  switcher: { position: "absolute" },
   fab: {
     position: "absolute",
-    right: spacing.lg,
+    right: 20,
+    bottom: 20,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -366,5 +465,4 @@ const styles = StyleSheet.create({
   },
   fabFill: { flex: 1, alignItems: "center", justifyContent: "center" },
   fabPressed: { opacity: 0.95 },
-  fabPlus: { fontSize: 30, fontWeight: "800", color: "#ffffff", marginTop: -2 },
 });

@@ -1,15 +1,25 @@
 /**
  * Pet switcher dropdown — list of pets (34px avatar + name + breed/weight +
- * check on active) with an "新增寵物" row at the bottom. Rendered inline under
- * the header (not a modal) when the header chevron is tapped and there are ≥2
- * pets. Mirrors web pet-switcher-dropdown.
+ * check on active) with an "新增寵物" row at the bottom. A floating 240pt
+ * panel (radius 18, padding 6, hairline, elevated shadow) the screen anchors
+ * under the header — it overlays the tabs instead of pushing them down; the
+ * screen also renders the outside-tap backdrop. Mirrors web
+ * pet-switcher-dropdown (active row brand-tint, radius 12).
  */
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Check } from "lucide-react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
+import { Check, Plus } from "lucide-react-native";
 import type { Pet } from "@mango/shared-types";
 
 import { scoped } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
 import { PetAvatar } from "./pet-avatar";
 
 const tPP = scoped("PetsPage");
@@ -28,14 +38,16 @@ export function PetSwitcher({
   activePetId,
   onSelect,
   onAddPet,
+  style,
 }: {
   pets: Pet[];
   activePetId: string | null;
   onSelect: (petId: string) => void;
   onAddPet?: () => void;
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, style]} accessibilityViewIsModal>
       <ScrollView
         style={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -48,7 +60,11 @@ export function PetSwitcher({
             <Pressable
               key={pet.petId}
               onPress={() => onSelect(pet.petId)}
-              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.row,
+                active && styles.rowActive,
+                pressed && !active && styles.rowPressed,
+              ]}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
             >
@@ -71,11 +87,11 @@ export function PetSwitcher({
       <View style={styles.divider} />
       <Pressable
         onPress={onAddPet}
-        style={({ pressed }) => [styles.addRow, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         accessibilityRole="button"
       >
         <View style={styles.addIcon}>
-          <Text style={styles.addIconText}>＋</Text>
+          <Plus size={18} color={colors.brandDeep} strokeWidth={2.5} />
         </View>
         <Text style={styles.addText}>{tPP("switcher.addPet")}</Text>
       </Pressable>
@@ -84,53 +100,39 @@ export function PetSwitcher({
 }
 
 const styles = StyleSheet.create({
+  // web: absolute w-60 rounded-[18px] border bg-card p-1.5 shadow-elevated
   card: {
+    width: 240,
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.hairline,
-    paddingVertical: spacing.xs,
-    marginTop: spacing.xs,
-    shadowColor: colors.paw,
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    padding: 6,
+    ...shadows.elevated,
   },
   scroll: { maxHeight: 240 },
+  // web: gap-2.5 rounded-xl p-2
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    gap: 10,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    minHeight: 44,
   },
-  rowBody: { flex: 1, gap: 1 },
-  rowName: { fontSize: 15, fontWeight: "700", color: colors.ink },
-  rowSub: { fontSize: 12, color: colors.ink3 },
-  check: { fontSize: 16, fontWeight: "800", color: colors.brandDeep },
-  divider: {
-    height: 1,
-    backgroundColor: colors.hairline,
-    marginVertical: spacing.xs,
-    marginHorizontal: spacing.md,
-  },
-  addRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
+  rowActive: { backgroundColor: colors.brandTint },
+  rowPressed: { backgroundColor: colors.bgAlt },
+  rowBody: { flex: 1, minWidth: 0, gap: 1 },
+  rowName: { fontSize: 14, fontWeight: "700", color: colors.ink },
+  rowSub: { fontSize: 11, color: colors.ink3 },
+  divider: { height: 1, backgroundColor: colors.hairline, marginVertical: 4, marginHorizontal: 4 },
   addIcon: {
     width: 34,
     height: 34,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     backgroundColor: colors.brandTint,
     alignItems: "center",
     justifyContent: "center",
   },
-  addIconText: { fontSize: 18, fontWeight: "800", color: colors.brandDeep },
-  addText: { fontSize: 15, fontWeight: "700", color: colors.brandDeep },
-  pressed: { opacity: 0.6 },
+  addText: { fontSize: 14, fontWeight: "700", color: colors.brandDeep },
 });

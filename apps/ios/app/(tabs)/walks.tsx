@@ -23,7 +23,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Footprints, Hand, Plus } from "lucide-react-native";
 import type { Walk } from "@mango/shared-types";
@@ -55,7 +55,6 @@ const RECENT_LIMIT = 5;
 const CONFETTI_MS = 4000;
 
 export default function WalksScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const data = useWalksData();
   // Tracking session: start (guest-gated photo prompt), recap, local-draft
@@ -167,7 +166,7 @@ export default function WalksScreen() {
 
     content = (
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 140 }]}
+        contentContainerStyle={[styles.scroll, styles.scrollWithCta]}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
       >
@@ -292,7 +291,7 @@ export default function WalksScreen() {
 
       {/* Sticky CTA — floats above the bottom tab bar */}
       {!sessionOpen && !noPets ? (
-        <View style={[styles.ctaDock, { bottom: insets.bottom + 76 }]}>
+        <View style={styles.ctaDock}>
           <View style={styles.ctaInner}>
             <WalksStartCta onPress={session.startWalking} disabled={pets.length === 0} />
           </View>
@@ -326,6 +325,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
   },
+  // 62pt CTA + 32 above the bar + 24 breathing room.
+  scrollWithCta: { paddingBottom: 118 },
   scrollEmpty: { flexGrow: 1, justifyContent: "center", paddingBottom: spacing.xxl },
   flex: { flex: 1 },
   // web: mb-3 flex items-center gap-2.5
@@ -364,6 +365,8 @@ const styles = StyleSheet.create({
   manualBtn: { alignSelf: "center", marginTop: spacing.xl },
   manualText: { color: colors.ink2 },
   confetti: { position: "absolute", top: 0, left: 0, right: 0, height: 240 },
-  ctaDock: { position: "absolute", left: 0, right: 0, paddingHorizontal: spacing.lg },
+  // The tab bar is in-flow (this screen ends at its top edge). Web sits the
+  // CTA 32px above its nav so the raised centre disc (20pt here) stays clear.
+  ctaDock: { position: "absolute", left: 0, right: 0, bottom: 32, paddingHorizontal: spacing.lg },
   ctaInner: { width: "100%", maxWidth: CONTENT_MAX_WIDTH - spacing.lg * 2, alignSelf: "center" },
 });

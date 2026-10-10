@@ -1094,7 +1094,12 @@
       "subRecent": "Latest reading",
       "subKeepGoing": "Keep it up",
       "noReminder": "All caught up",
-      "noWeight": "Add a weight record"
+      "noWeight": "Add a weight record",
+      "hoursAhead": "hrs left",
+      "daysAhead": "days left",
+      "hoursAgo": "hrs ago",
+      "daysAgo": "days ago",
+      "walkDaysUnit": "days · this month"
     },
     "viewAll": "View all",
     "switcher": {

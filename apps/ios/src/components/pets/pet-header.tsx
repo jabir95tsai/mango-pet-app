@@ -6,11 +6,11 @@
  * - species label falls back breed → speciesOther → localized species
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Pencil } from "lucide-react-native";
+import { ChevronDown, Pencil } from "lucide-react-native";
 import { formatAge } from "@mango/shared-business";
 import type { Pet } from "@mango/shared-types";
 
-import { scoped } from "@/lib/i18n";
+import { scoped, t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 import { PetAvatar } from "./pet-avatar";
 
@@ -57,14 +57,16 @@ export function PetHeader({
           style={styles.nameRow}
           accessibilityRole={multi ? "button" : undefined}
           accessibilityState={multi ? { expanded: switcherOpen } : undefined}
+          accessibilityLabel={multi ? t("Walks.page.petPicker.openLabel", { pet: pet.name }) : undefined}
         >
           <Text style={styles.name} numberOfLines={1}>
             {pet.name}
           </Text>
           {multi ? (
-            <Text style={[styles.chevron, switcherOpen && styles.chevronOpen]}>
-              ⌄
-            </Text>
+            // Static flip (no transition → nothing to gate for reduced motion)
+            <View style={[styles.chevron, switcherOpen && styles.chevronOpen]}>
+              <ChevronDown size={14} color={colors.ink2} strokeWidth={2.2} />
+            </View>
           ) : null}
         </Pressable>
         <View style={styles.chips}>
@@ -80,7 +82,7 @@ export function PetHeader({
         hitSlop={8}
         style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
         accessibilityRole="button"
-        accessibilityLabel={tPet("petDetail")}
+        accessibilityLabel={t("Common.edit")}
       >
         <Pencil size={16} color={colors.ink2} strokeWidth={2} />
       </Pressable>
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     flexShrink: 1,
   },
-  chevron: { fontSize: 18, fontWeight: "800", color: colors.ink3, marginTop: -4 },
+  chevron: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
   chevronOpen: { transform: [{ rotate: "180deg" }] },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
   chip: {

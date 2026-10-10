@@ -1,25 +1,27 @@
 /**
- * Reminders tab body — active reminders for this pet (soonest-first), each
- * rendered via the shared PetReminderCard (icon square + repeat/due chips +
- * check / edit / trash actions), 1:1 with web pet-reminders-body. Complete /
- * delete write directly via the reminders-write layer; edit opens the form
- * (owned by the screen).
+ * Reminders tab body — 1:1 with web pet-reminders-body: a summary row
+ * ("本月 X 條 · 已完成 Y" + sort hint) above this pet's active reminders
+ * (soonest first) rendered with the shared PetReminderCard; an empty card
+ * (Bell disc + copy + brand-tint "新增提醒" pill) when there is nothing active
+ * and nothing done this month.
+ *
+ * "Done this month" is derived from the reminders the screen already loads
+ * (listRemindersForScope keeps done ones), so no extra query. Web only counts
+ * the last 24 h in family mode — iOS counts the real calendar month (PM note).
  */
 import { useMemo } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Bell, Plus } from "lucide-react-native";
+import { startOfMonth } from "@mango/shared-business";
 import type { Reminder } from "@mango/shared-types";
 
-import { completeReminder, deleteReminder } from "@/lib/reminders-write";
-import { scoped } from "@/lib/i18n";
-import { colors, spacing } from "@/theme/theme";
+import { t } from "@/lib/i18n";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
 import { PetReminderCard } from "./pet-reminder-card";
+import { useReminderActions } from "./use-reminder-actions";
 
-const tPP = scoped("PetsPage");
-const tRem = scoped("Reminder");
-const tC = scoped("Common");
-
-function ms(ts: { toMillis?: () => number } | undefined): number {
-  return ts?.toMillis?.() ?? 0;
+function ms(ts: unknown): number {
+  return (ts as { toMillis?: () => number } | undefined)?.toMillis?.() ?? 0;
 }
 
 export function PetRemindersBody({
@@ -29,6 +31,7 @@ export function PetRemindersBody({
   uid,
   onChanged,
   onEdit,
+  onAdd,
 }: {
   petId: string;
   petName?: string;
@@ -36,61 +39,64 @@ export function PetRemindersBody({
   uid: string;
   onChanged: () => void;
   onEdit: (reminder: Reminder) => void;
+  /** Empty-state CTA (new reminder). */
+  onAdd?: () => void;
 }) {
-  const list = useMemo(
-    () =>
-      reminders
-        .filter((r) => r.petId === petId && !r.done)
-        .sort((a, b) => ms(a.triggerAt) - ms(b.triggerAt)),
-    [reminders, petId],
-  );
+  const { complete, remove } = useReminderActions(uid, onChanged);
 
-  async function complete(r: Reminder) {
-    try {
-      await completeReminder(r, uid);
-      onChanged();
-    } catch {
-      Alert.alert(tRem("errors.saveFailed"));
-    }
-  }
+  const { active, totalThisMonth, doneCount } = useMemo(() => {
+    const monthStart = startOfMonth().getTime();
+    const petActive = reminders
+      .filter((r) => r.petId === petId && !r.done)
+      .sort((a, b) => ms(a.triggerAt) - ms(b.triggerAt));
+    const petDone = reminders.filter(
+      (r) => r.petId === petId && r.done && ms(r.doneAt) >= monthStart,
+    );
+    // Web: reminders triggering this month + anything already done this
+    // month, so completing one never shrinks the total mid-month.
+    const total = new Set<string>();
+    petActive.filter((r) => ms(r.triggerAt) >= monthStart).forEach((r) => total.add(r.reminderId));
+    petDone.forEach((r) => total.add(r.reminderId));
+    return { active: petActive, totalThisMonth: total.size, doneCount: petDone.length };
+  }, [reminders, petId]);
 
-  function confirmDelete(r: Reminder) {
-    Alert.alert(r.title, "", [
-      { text: tC("cancel"), style: "cancel" },
-      {
-        text: tC("delete"),
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteReminder(r.reminderId);
-            onChanged();
-          } catch {
-            Alert.alert(tRem("errors.saveFailed"));
-          }
-        },
-      },
-    ]);
-  }
-
-  if (list.length === 0) {
+  if (active.length === 0 && doneCount === 0) {
     return (
-      <View style={styles.emptyBox}>
-        <Text style={styles.emptyEmoji}>🔔</Text>
-        <Text style={styles.emptyText}>{tPP("reminders.empty")}</Text>
+      <View style={styles.emptyCard}>
+        <View style={styles.emptyDisc}>
+          <Bell size={24} color={colors.brandDeep} strokeWidth={1.8} />
+        </View>
+        <Text style={styles.emptyText}>{t("PetsPage.reminders.empty")}</Text>
+        {onAdd ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onAdd}
+            style={({ pressed }) => [styles.addPill, pressed && styles.pressed]}
+          >
+            <Plus size={16} color={colors.brandDeep} strokeWidth={2.5} />
+            <Text style={styles.addPillText}>{t("PetsPage.reminders.addCta")}</Text>
+          </Pressable>
+        ) : null}
       </View>
     );
   }
 
   return (
     <View style={styles.list}>
-      {list.map((r) => (
+      <View style={styles.summary}>
+        <Text style={styles.summaryText}>
+          {t("PetsPage.reminders.summary", { total: totalThisMonth, done: doneCount })}
+        </Text>
+        <Text style={styles.sortHint}>{t("PetsPage.reminders.sortHint")}</Text>
+      </View>
+      {active.map((r) => (
         <PetReminderCard
           key={r.reminderId}
           reminder={r}
           petName={petName}
-          onComplete={() => complete(r)}
+          onComplete={() => void complete(r)}
           onEdit={() => onEdit(r)}
-          onDelete={() => confirmDelete(r)}
+          onDelete={() => void remove(r)}
         />
       ))}
     </View>
@@ -98,8 +104,50 @@ export function PetRemindersBody({
 }
 
 const styles = StyleSheet.create({
-  list: { gap: spacing.sm },
-  emptyBox: { alignItems: "center", paddingVertical: spacing.xxl, gap: spacing.sm },
-  emptyEmoji: { fontSize: 40 },
-  emptyText: { fontSize: 14, color: colors.ink3 },
+  // web: flex flex-col gap-2.5 pt-2
+  list: { gap: 10, paddingTop: spacing.sm },
+  // web: flex items-baseline justify-between px-1 pb-1
+  summary: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.xs,
+  },
+  summaryText: { fontSize: 12, fontWeight: "600", color: colors.ink2 },
+  sortHint: { fontSize: 12, color: colors.ink3 },
+  // web: rounded-[18px] border bg-card px-6 py-10 gap-3 shadow-card
+  emptyCard: {
+    marginTop: spacing.sm,
+    alignItems: "center",
+    gap: spacing.md,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: 40,
+    ...shadows.card,
+  },
+  emptyDisc: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.brandTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: { fontSize: 14, color: colors.ink2, textAlign: "center" },
+  // web: h-9 rounded-full bg-brand-tint px-3 text-sm bold brand-deep gap-1
+  addPill: {
+    height: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.brandTint,
+    paddingHorizontal: spacing.md,
+  },
+  addPillText: { fontSize: 14, fontWeight: "700", color: colors.brandDeep },
+  pressed: { opacity: 0.85 },
 });

@@ -1,27 +1,46 @@
 /**
  * Overview tab body — 2×2 StatGrid (next reminder / month spend / weight /
  * walk days) + an "即將到期" upcoming-reminder card + a "最近開銷" recent-
- * expense card. The two cards reuse the shared PetReminderCard /
- * PetExpenseCard (read-only here — no action handlers), and empty states are
- * white rounded cards, all 1:1 with web pet-overview-body. Month math comes
- * from @mango/shared-business.
+ * expense card, 1:1 with web pet-overview-body. The upcoming card is fully
+ * actionable here (complete / edit / confirm-delete — web's buttons are dead,
+ * flagged to web PM). Overdue reminders read "N 小時前 / N 天前" with no minus
+ * (web dayDiffFromNow fix). Month math comes from @mango/shared-business.
  */
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Bell, Cookie, PawPrint, Scale, type LucideIcon } from "lucide-react-native";
-import { dayDiffFromNow, startOfMonth } from "@mango/shared-business";
+import { startOfMonth } from "@mango/shared-business";
 import type { Expense, Pet, Reminder, Walk } from "@mango/shared-types";
 
 import { groupThousands } from "@/lib/format";
-import { scoped } from "@/lib/i18n";
+import { scoped, t } from "@/lib/i18n";
 import { colors, radius, shadows, spacing } from "@/theme/theme";
 import { PetReminderCard } from "./pet-reminder-card";
 import { PetExpenseCard } from "./pet-expense-card";
+import { useReminderActions } from "./use-reminder-actions";
 
 const tPP = scoped("PetsPage");
 
 function ms(ts: { toMillis?: () => number } | undefined): number {
   return ts?.toMillis?.() ?? 0;
+}
+
+/** web dayDiffFromNow: hours under a day, else ceil(days); overdue = "ago". */
+function dueStat(ts: { toMillis?: () => number } | undefined): { value: string; unit: string } {
+  const diff = ms(ts) - Date.now();
+  const past = diff < 0;
+  const abs = Math.abs(diff);
+  const hours = abs / 3_600_000;
+  if (hours < 24) {
+    return {
+      value: `${Math.max(1, Math.round(hours))}`,
+      unit: t(past ? "PetsPage.stat.hoursAgo" : "PetsPage.stat.hoursAhead"),
+    };
+  }
+  return {
+    value: `${Math.ceil(abs / 86_400_000)}`,
+    unit: t(past ? "PetsPage.stat.daysAgo" : "PetsPage.stat.daysAhead"),
+  };
 }
 
 type StatTone = "brand" | "leaf" | "cookie";
@@ -88,12 +107,20 @@ export function PetOverviewBody({
   reminders,
   expenses,
   walks,
+  uid,
+  onChanged,
+  onEditReminder,
 }: {
   pet: Pet;
   reminders: Reminder[];
   expenses: Expense[];
   walks: Walk[];
+  uid: string;
+  /** After a reminder was completed / deleted (reload data). */
+  onChanged: () => void;
+  onEditReminder: (reminder: Reminder) => void;
 }) {
+  const { complete, remove } = useReminderActions(uid, onChanged);
   const petReminders = useMemo(
     () =>
       reminders
@@ -131,7 +158,7 @@ export function PetOverviewBody({
     return days.size;
   }, [walks, pet.petId]);
 
-  const reminderStat = nextR ? dayDiffFromNow(nextR.triggerAt) : null;
+  const reminderStat = nextR ? dueStat(nextR.triggerAt) : null;
 
   return (
     <View style={styles.wrap}>
@@ -168,21 +195,24 @@ export function PetOverviewBody({
           Icon={PawPrint}
           label={tPP("stat.walkDays")}
           value={`${walkDays}`}
-          unit="天 · 本月"
+          unit={t("PetsPage.stat.walkDaysUnit")}
           sub={tPP("stat.subKeepGoing")}
           tone="brand"
           subTone="muted"
         />
       </View>
 
-      {/* Upcoming reminder (read-only — actions are no-ops, same as web) */}
-      <Text style={styles.sectionTitle}>{tPP("overview.upcoming")}</Text>
+      {/* Upcoming reminder — actionable (web's buttons are no-ops) */}
+      <Text style={styles.sectionTitle} accessibilityRole="header">
+        {tPP("overview.upcoming")}
+      </Text>
       {nextR ? (
         <PetReminderCard
           reminder={nextR}
           petName={pet.name}
-          onComplete={() => {}}
-          onDelete={() => {}}
+          onComplete={() => void complete(nextR)}
+          onEdit={() => onEditReminder(nextR)}
+          onDelete={() => void remove(nextR)}
         />
       ) : (
         <View style={styles.emptyCard}>
@@ -191,7 +221,7 @@ export function PetOverviewBody({
       )}
 
       {/* Recent expense */}
-      <Text style={[styles.sectionTitle, styles.sectionGap]}>
+      <Text style={styles.sectionTitle} accessibilityRole="header">
         {tPP("overview.recentExpense")}
       </Text>
       {recentE ? (
@@ -206,7 +236,7 @@ export function PetOverviewBody({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.md },
+  wrap: {},
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   tile: {
     flexGrow: 1,
@@ -234,18 +264,21 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.ink3,
     letterSpacing: 0.3,
+    textTransform: "uppercase",
   },
   tileValueRow: { flexDirection: "row", alignItems: "baseline", gap: 3 },
   tileValue: { fontSize: 26, fontWeight: "800", letterSpacing: -0.7, color: colors.ink },
   tileUnit: { fontSize: 12, fontWeight: "600", color: colors.ink2 },
   tileSub: { fontSize: 12, fontWeight: "500", marginTop: -2 },
+  // web: text-sm font-bold mt-5 mb-2
   sectionTitle: {
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "700",
     color: colors.ink,
     paddingHorizontal: spacing.xs,
+    marginTop: 20,
+    marginBottom: spacing.sm,
   },
-  sectionGap: { marginTop: spacing.sm },
   emptyCard: {
     backgroundColor: colors.card,
     borderRadius: radius.xl,
