@@ -8,6 +8,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { UserAvatar } from "@/components/feed/user-avatar";
 import { t } from "@/lib/i18n";
+import { Plus } from "lucide-react-native";
+
 import { colors } from "@/theme/theme";
 
 const SIZE = 64;
@@ -29,9 +31,9 @@ export function YourStoryAvatar({
       style={styles.wrap}
     >
       <View style={styles.ring}>
-        <UserAvatar name={name} photoURL={photoURL} size={SIZE - 8} />
+        <UserAvatar name={name} photoURL={photoURL} size={SIZE - 6} />
         <View style={styles.plus}>
-          <Text style={styles.plusText}>＋</Text>
+          <Plus size={14} color="#ffffff" strokeWidth={2.6} />
         </View>
       </View>
       <Text style={styles.label} numberOfLines={1}>
@@ -42,7 +44,7 @@ export function YourStoryAvatar({
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: "center", width: SIZE + 12 },
+  wrap: { alignItems: "center", width: 68 },
   ring: {
     width: SIZE,
     height: SIZE,
@@ -50,6 +52,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderStyle: "dashed",
     borderColor: colors.brand,
+    backgroundColor: colors.bgAlt,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -62,10 +65,9 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     backgroundColor: colors.brand,
     borderWidth: 2,
-    borderColor: colors.card,
+    borderColor: colors.bg,
     alignItems: "center",
     justifyContent: "center",
   },
-  plusText: { color: colors.card, fontSize: 13, fontWeight: "900", lineHeight: 15 },
-  label: { marginTop: 4, fontSize: 11, fontWeight: "600", color: colors.ink2 },
+  label: { marginTop: 6, fontSize: 11, fontWeight: "700", color: colors.ink2 },
 });

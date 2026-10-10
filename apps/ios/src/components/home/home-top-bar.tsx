@@ -10,7 +10,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Bell, Home } from "lucide-react-native";
 
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 export function HomeTopBar({
   familyName,
@@ -29,14 +29,14 @@ export function HomeTopBar({
       </Text>
       {label ? (
         <View style={styles.pill}>
-          <Home size={13} color={colors.ink2} strokeWidth={2} />
+          <Home size={11} color={colors.brandDeep} strokeWidth={2.4} />
           <Text style={styles.pillLabel} numberOfLines={1}>
             {label}
           </Text>
         </View>
       ) : null}
       <View style={styles.spacer} />
-      <View style={styles.bell} accessibilityLabel="通知" accessibilityRole="button">
+      <View style={styles.bell} accessibilityLabel={t("Home.notifications")} accessibilityRole="button">
         <Bell size={18} color={colors.ink2} strokeWidth={1.8} />
       </View>
     </View>
@@ -51,6 +51,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,
     paddingBottom: spacing.xs,
+    // iPad: aligned with the centred content column.
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
   },
   brand: {
     fontSize: 24,
@@ -70,8 +74,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  pillIcon: { fontSize: 11 },
-  pillLabel: { flexShrink: 1, fontSize: 12.5, fontWeight: "700", color: colors.ink2 },
+  pillLabel: { flexShrink: 1, maxWidth: 140, fontSize: 12.5, fontWeight: "700", color: colors.ink2 },
   spacer: { flex: 1 },
   bell: {
     width: 40,
@@ -83,5 +86,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  bellIcon: { fontSize: 18 },
 });

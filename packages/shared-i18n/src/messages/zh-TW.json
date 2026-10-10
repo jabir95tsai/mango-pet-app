@@ -1072,7 +1072,8 @@
       "body": "一起紀錄 {petName} 的散步、開銷與健康",
       "bodyGeneric": "一起紀錄寵物的散步、開銷與健康",
       "cta": "邀請"
-    }
+    },
+    "notifications": "通知"
   },
   "PetsPage": {
     "kgUnit": "公斤",

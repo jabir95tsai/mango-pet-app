@@ -1072,7 +1072,8 @@
       "body": "Track {petName}'s walks, expenses & health together",
       "bodyGeneric": "Track your pet's walks, expenses & health together",
       "cta": "Invite"
-    }
+    },
+    "notifications": "Notifications"
   },
   "PetsPage": {
     "kgUnit": "kg",

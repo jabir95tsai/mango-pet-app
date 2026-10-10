@@ -65,3 +65,17 @@ export async function ensureUserProfile(user: FirebaseAuthTypes.User): Promise<v
   if (appleName && !user.displayName) await user.updateProfile({ displayName: appleName });
   if (appleId && appleName) await AsyncStorage.removeItem(`apple-name:${appleId}`);
 }
+
+/** web resolveUserPhotoURL — top-level photo, else the first provider's. */
+export function resolveUserPhotoURL(user: FirebaseAuthTypes.User | null | undefined): string | null {
+  if (!user) return null;
+  if (user.photoURL) return user.photoURL;
+  return user.providerData.find((p) => p?.photoURL)?.photoURL ?? null;
+}
+
+/** web resolveUserDisplayName — top-level name, else the first provider's. */
+export function resolveUserDisplayName(user: FirebaseAuthTypes.User | null | undefined): string | null {
+  if (!user) return null;
+  if (user.displayName) return user.displayName;
+  return user.providerData.find((p) => p?.displayName)?.displayName ?? null;
+}

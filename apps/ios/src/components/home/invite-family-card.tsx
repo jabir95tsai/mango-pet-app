@@ -1,15 +1,16 @@
 /**
- * Invite-family card (P3a) — personal-mode upsell shown above the feed when the
- * user has no family. Gradient card + Users glyph + "邀請家人加入" copy + CTA.
- * The full family invite/share flow is P4; until then the CTA routes to the
- * settings tab (the future family-management home). Mirrors
- * apps/web/src/components/home/invite-family-card.tsx.
+ * Invite-family card — personal-mode upsell between the stories and the feed,
+ * 1:1 with apps/web/src/components/home/invite-family-card.tsx: the WHOLE card
+ * is the link (radius 18, hairline, shadow-card, brand-tint → card-soft
+ * 135° gradient, px 16 / py 14): a 44pt white tile (radius 14) with Users 20,
+ * title 14/800 + body 12.5/500, and a brand-deep "invite" pill (36pt).
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Users } from "lucide-react-native";
 
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 export function InviteFamilyCard({
   petName,
@@ -22,55 +23,70 @@ export function InviteFamilyCard({
     ? t("Home.inviteFamily.body", { petName })
     : t("Home.inviteFamily.bodyGeneric");
   return (
-    <LinearGradient
-      colors={[colors.brandTint, colors.cardSoft]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.card}
+    <Pressable
+      accessibilityRole="button"
+      onPress={onInvite}
+      style={({ pressed }) => [styles.shadow, pressed && styles.pressed]}
     >
-      <View style={styles.iconWrap}>
-        <Text style={styles.icon}>👨‍👩‍👧</Text>
-      </View>
-      <View style={styles.text}>
-        <Text style={styles.title}>{t("Home.inviteFamily.title")}</Text>
-        <Text style={styles.body} numberOfLines={2}>
-          {body}
-        </Text>
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onInvite}
-        style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
+      <LinearGradient
+        colors={[colors.brandTint, colors.cardSoft]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.card}
       >
-        <Text style={styles.ctaText}>{t("Home.inviteFamily.cta")}</Text>
-      </Pressable>
-    </LinearGradient>
+        <View style={styles.tile}>
+          <Users size={20} color={colors.brandDeep} strokeWidth={1.8} />
+        </View>
+        <View style={styles.text}>
+          <Text style={styles.title}>{t("Home.inviteFamily.title")}</Text>
+          <Text style={styles.body}>{body}</Text>
+        </View>
+        <View style={styles.cta}>
+          <Text style={styles.ctaText}>{t("Home.inviteFamily.cta")}</Text>
+        </View>
+      </LinearGradient>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  shadow: { marginTop: spacing.md, borderRadius: radius.xl, ...shadows.card },
+  pressed: { opacity: 0.9 },
   card: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    marginHorizontal: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.hairline,
+    overflow: "hidden",
   },
-  iconWrap: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.card,
-    alignItems: "center", justifyContent: "center",
+  tile: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.lg,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.card,
   },
-  icon: { fontSize: 22 },
-  text: { flex: 1 },
-  title: { fontSize: 15, fontWeight: "800", color: colors.ink },
-  body: { fontSize: 12, color: colors.ink2, marginTop: 2 },
+  text: { flex: 1, minWidth: 0 },
+  title: { fontSize: 14, fontWeight: "800", letterSpacing: -0.1, color: colors.ink },
+  body: { marginTop: 2, fontSize: 12.5, fontWeight: "500", color: colors.ink2 },
+  // web: h-9 rounded-full bg-brand-deep px-3.5 text-[13px] font-extrabold white
   cta: {
-    minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill,
-    backgroundColor: colors.brand, alignItems: "center", justifyContent: "center",
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: colors.brandDeep,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.brandDeep,
+    shadowOpacity: 0.5,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 8 },
   },
-  ctaText: { fontSize: 13, fontWeight: "800", color: colors.card },
-  pressed: { opacity: 0.85 },
+  ctaText: { fontSize: 13, fontWeight: "800", color: "#ffffff" },
 });

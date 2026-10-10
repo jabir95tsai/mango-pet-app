@@ -3,78 +3,78 @@
   "lane": "HOME",
   "severity": "P0",
   "title": "Home data never reloads after family switch / pet add / post elsewhere (no family-context dependency, no focus refresh)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "covered by foundation useScopedData (FamilyContext + focus refresh); index adds pull-to-refresh on every variant"
  },
  "HOME-2": {
   "lane": "HOME",
   "severity": "P1",
   "title": "Load failure is silent: an offline/failed load shows the 0-pet welcome hero or an empty feed, and can raise an unhandled rejection",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-3": {
   "lane": "HOME",
   "severity": "P1",
   "title": "0-pet variant drops the HomeTopBar and is not scrollable or refreshable",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-4": {
   "lane": "HOME",
   "severity": "P1",
   "title": "Empty-state hero differs: emoji gradient disc instead of a PawPrint tile on a radial halo with confetti; CTA has no Plus icon; wrong section order",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-5": {
   "lane": "HOME",
   "severity": "P1",
   "title": "Missing secondary '加入家庭' outlined CTA in the 0-pet hero",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-6": {
   "lane": "HOME",
   "severity": "P1",
   "title": "3-step strip uses emojis and › arrows instead of numbered badge cards",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-7": {
   "lane": "HOME",
   "severity": "P1",
   "title": "'No posts' hint is a static centered box; web is a tappable composer row with a PenSquare icon",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-8": {
   "lane": "HOME",
   "severity": "P1",
   "title": "Missing the full-width '查看更多動態' CTA under the feed",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-9": {
   "lane": "HOME",
   "severity": "P1",
   "title": "Guest upgrade nudge banner missing on iOS Home",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-10": {
   "lane": "HOME",
   "severity": "P1",
   "title": "Guests can open the composer and see reactions, comments and the report/block menu on Home; all of these writes are rejected by rules",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-11": {
   "lane": "HOME",
   "severity": "P1",
   "title": "InviteFamilyCard: emoji instead of lucide Users, only the CTA is tappable, wrong radius/shadow/CTA color",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-12": {
   "lane": "FEED",
@@ -94,29 +94,29 @@
   "lane": "HOME",
   "severity": "P2",
   "title": "FeedSectionHeader typography and chevron differ, and the 'view all' link is hidden when there are no posts",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-15": {
   "lane": "HOME",
   "severity": "P2",
   "title": "YourStoryAvatar: text '＋' glyph instead of lucide Plus; missing bgAlt fill; plus-disc ring uses white instead of page bg; label weight",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-16": {
   "lane": "HOME",
   "severity": "P2",
   "title": "PetStoryAvatar: the label doesn't encode status (web: pending bold ink, done semibold ink2); item width and ring padding differ",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-17": {
   "lane": "HOME",
   "severity": "P2",
   "title": "HomeTopBar pill: icon size/color differ, and the user-label fallback shows an email prefix or English 'Friend' where web shows no pill",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "SOCIAL-1": {
   "lane": "SOCIAL",
@@ -1529,15 +1529,15 @@
   "lane": "HOME",
   "severity": "P2",
   "title": "iPad: HomeTopBar is not capped to CONTENT_MAX_WIDTH, so the title and bell sit at the screen edges while the content is a centered 480pt column",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit HOME (2026-10-10)"
  },
  "HOME-M2": {
   "lane": "HOME",
   "severity": "P2",
   "title": "iOS-only tagged-pet chips on Home posts (🐾 emoji + hard-coded color) that the web PostCard does not render",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "chips already removed in FEED lane (FEED-23; PM can still decide to make it a 2-platform feature)"
  },
  "SOCIAL-M1": {
   "lane": "A1",

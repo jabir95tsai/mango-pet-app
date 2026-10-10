@@ -20,9 +20,11 @@ import { t } from "@/lib/i18n";
 import { colors } from "@/theme/theme";
 
 const SIZE = 64;
-const STROKE = 3;
+// web: size-16 ring, p-[2.5px] gradient → p-[2px] cream pad → 54 avatar
+const STROKE = 2.5;
 const R = (SIZE - STROKE) / 2;
-const INNER = SIZE - 12;
+const PAD = SIZE - STROKE * 2;
+const INNER = 54;
 
 const STATUS_HINT: Record<WalkStatus, string> = {
   done: "Home.stories.doneWalk",
@@ -57,10 +59,11 @@ export function PetStoryAvatar({
     return () => loop.stop();
   }, [status, reduceMotion, pulse]);
 
+  // web conic stops: done brand→leaf→leaf-tint→brand; tracking brand→cookie→brand
   const ringStops =
     status === "tracking"
-      ? [colors.brand, colors.cookie]
-      : [colors.brand, colors.leaf];
+      ? [colors.brand, colors.cookie, colors.brand]
+      : [colors.brand, colors.leaf, colors.leafTint, colors.brand];
 
   return (
     <Pressable
@@ -79,8 +82,9 @@ export function PetStoryAvatar({
             {status !== "pending" ? (
               <Defs>
                 <LinearGradient id={`ring-${status}`} x1="0" y1="0" x2="1" y2="1">
-                  <Stop offset="0" stopColor={ringStops[0]} />
-                  <Stop offset="1" stopColor={ringStops[1]} />
+                  {ringStops.map((c, i) => (
+                    <Stop key={i} offset={i / (ringStops.length - 1)} stopColor={c} />
+                  ))}
                 </LinearGradient>
               </Defs>
             ) : null}
@@ -94,11 +98,12 @@ export function PetStoryAvatar({
             />
           </Svg>
         </Animated.View>
+        <View style={styles.pad} />
         <View style={styles.avatarHole}>
           <PetAvatar name={name} photoURL={photoURL} size={INNER} />
         </View>
       </View>
-      <Text style={styles.label} numberOfLines={1}>
+      <Text style={[styles.label, status === "done" ? styles.labelDone : styles.labelTodo]} numberOfLines={1}>
         {name}
       </Text>
     </Pressable>
@@ -106,13 +111,21 @@ export function PetStoryAvatar({
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: "center", width: SIZE + 12 },
+  wrap: { alignItems: "center", width: 68 },
   ring: {
     width: SIZE,
     height: SIZE,
     borderRadius: SIZE / 2,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Cream pad between ring and avatar so the ring floats on any surface.
+  pad: {
+    position: "absolute",
+    width: PAD,
+    height: PAD,
+    borderRadius: PAD / 2,
+    backgroundColor: colors.bg,
   },
   avatarHole: {
     position: "absolute",
@@ -121,5 +134,8 @@ const styles = StyleSheet.create({
     borderRadius: INNER / 2,
     overflow: "hidden",
   },
-  label: { marginTop: 4, fontSize: 11, fontWeight: "600", color: colors.ink2 },
+  // web: max-w-[68px] text-[11.5px] tracking-[-0.1px]; done 600 ink-2, else 700 ink
+  label: { marginTop: 6, maxWidth: 68, fontSize: 11.5, letterSpacing: -0.1 },
+  labelDone: { fontWeight: "600", color: colors.ink2 },
+  labelTodo: { fontWeight: "700", color: colors.ink },
 });
