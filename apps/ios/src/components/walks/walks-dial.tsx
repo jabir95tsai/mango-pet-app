@@ -12,7 +12,7 @@ import { memo, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Check } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Circle, G } from "react-native-svg";
+import Svg, { Circle, Defs, G, RadialGradient, Stop } from "react-native-svg";
 import Reanimated, {
   Easing,
   useAnimatedProps,
@@ -21,6 +21,7 @@ import Reanimated, {
 } from "react-native-reanimated";
 
 import { WalksPetWalking } from "./walks-pet-walking";
+import { t } from "@/lib/i18n";
 import { colors } from "@/theme/theme";
 
 const SIZE = 232;
@@ -54,7 +55,18 @@ function WalksDialBase({ percent, complete, doneMin, goalMin }: Props) {
 
   return (
     <View style={styles.wrap} accessibilityRole="progressbar" accessibilityLabel={`${Math.round(doneMin)} / ${goalMin}`}>
-      {complete ? <View style={styles.glow} pointerEvents="none" /> : null}
+      {/* web: radial-gradient(circle, rgba(95,168,88,.18) 0%, transparent 65%) */}
+      {complete ? (
+        <Svg width={GLOW} height={GLOW} style={styles.glow} pointerEvents="none">
+          <Defs>
+            <RadialGradient id="dialGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor="#5fa858" stopOpacity={0.18} />
+              <Stop offset="65%" stopColor="#5fa858" stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={GLOW / 2} cy={GLOW / 2} r={GLOW / 2} fill="url(#dialGlow)" />
+        </Svg>
+      ) : null}
 
       <Svg width={SIZE} height={SIZE} style={StyleSheet.absoluteFill}>
         <G rotation={-90} originX={CENTER} originY={CENTER}>
@@ -87,8 +99,11 @@ function WalksDialBase({ percent, complete, doneMin, goalMin }: Props) {
 
       {/* Goal-hit check badge */}
       {complete ? (
-        <View style={styles.checkBadge}>
-          <Check size={18} color="#ffffff" strokeWidth={3} />
+        // web: 38px leaf badge + 4px white ring OUTSIDE (46 overall), Check 20
+        <View style={styles.checkRing}>
+          <View style={styles.checkBadge}>
+            <Check size={20} color="#ffffff" strokeWidth={3} />
+          </View>
         </View>
       ) : null}
 
@@ -96,7 +111,7 @@ function WalksDialBase({ percent, complete, doneMin, goalMin }: Props) {
       <View style={styles.pillWrap} pointerEvents="none">
         <View style={styles.pill}>
           <Text style={styles.pillDone}>{Math.round(doneMin)}</Text>
-          <Text style={styles.pillGoal}>{` / ${goalMin} 分`}</Text>
+          <Text style={styles.pillGoal}>{` ${t("Walks.page.dialGoal", { goal: goalMin })}`}</Text>
         </View>
       </View>
     </View>
@@ -106,6 +121,7 @@ function WalksDialBase({ percent, complete, doneMin, goalMin }: Props) {
 export const WalksDial = memo(WalksDialBase);
 
 const DISC = SIZE - 28 * 2; // inset-7
+const GLOW = SIZE + 20;
 
 const styles = StyleSheet.create({
   wrap: {
@@ -115,15 +131,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  glow: {
-    position: "absolute",
-    top: -10,
-    left: -10,
-    right: -10,
-    bottom: -10,
-    borderRadius: (SIZE + 20) / 2,
-    backgroundColor: "rgba(95,168,88,0.10)",
-  },
+  glow: { position: "absolute", top: -10, left: -10 },
   disc: {
     position: "absolute",
     top: 28,
@@ -134,25 +142,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  checkBadge: {
+  checkRing: {
     position: "absolute",
-    right: 18,
-    bottom: 18,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.leaf,
+    right: 14,
+    bottom: 14,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 4,
-    borderColor: "#ffffff",
     shadowColor: "#3f8a3a",
     shadowOpacity: 0.55,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
-  checkMark: { color: "#ffffff", fontSize: 18, fontWeight: "900" },
+  checkBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.leaf,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   pillWrap: { position: "absolute", bottom: -6, left: 0, right: 0, alignItems: "center" },
   pill: {
     flexDirection: "row",

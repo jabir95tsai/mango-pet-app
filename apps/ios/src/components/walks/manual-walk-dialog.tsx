@@ -1,83 +1,108 @@
 /**
- * Manual walk log — parity of web manual-walk-dialog. Pet + duration (+ optional
- * distance + notes), NO GPS → writes via createWalk with isManual:true and no
- * path. Score uses @mango/shared-business (same formula as GPS walks) so the
- * leaderboard stays consistent.
+ * Manual walk log — 1:1 with apps/web/src/components/walks/manual-walk-dialog.tsx
+ * on the shared Dialog (keyboard-safe bottom sheet, reduced motion):
  *
- * P1b note: web also exposes start/end datetime pickers. iOS date pickers need
- * @react-native-community/datetimepicker (a new native dep → branch+gate), so
- * P1b derives startedAt = now − duration, endedAt = now. Explicit date entry is
- * a follow-up (see ship note). zh-TW strings inline (shared-i18n pending).
+ *   Pet → Start / End (default now−1h / now; duration re-derived whenever the
+ *   times change) → Distance (km) | Duration (min) → Notes → error →
+ *   Cancel (ghost) / Save (primary mango button).
+ *
+ * Validation is web's: pet, distance > 0 and duration > 0 are required, and
+ * the end must be after the start. NO GPS → createWalk with isManual: true and
+ * no path; the score comes from @mango/shared-business like tracked walks.
+ * iOS difference: the two time pickers stack (the inline spinner needs the
+ * full width) instead of web's two-column grid.
  */
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { computeWalkScore } from "@mango/shared-business";
+import { StyleSheet, View } from "react-native";
 import type { Pet } from "@mango/shared-types";
 
+import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
+import { Field, Input, Textarea } from "@/components/ui/Input";
+import { DateField, SelectField } from "@/components/pets/form-sheet";
+import { t } from "@/lib/i18n";
 import { createWalk } from "@/lib/walks";
 import { useAuth } from "@/state/auth-context";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, spacing } from "@/theme/theme";
 
 type Props = {
   visible: boolean;
   pets: Pet[];
   streakDays: number;
   familyId: string | null;
+  /** Pre-selected pet (the walks home's active pet). */
+  defaultPetId?: string | null;
   onClose: () => void;
   onSaved: () => void;
 };
+
+/** Minute precision, like web's datetime-local input. */
+function toMinute(d: Date): Date {
+  const out = new Date(d);
+  out.setSeconds(0, 0);
+  return out;
+}
+
+function parseNumber(v: string): number {
+  return Number(v.trim().replace(/,/g, "."));
+}
 
 export function ManualWalkDialog({
   visible,
   pets,
   streakDays,
   familyId,
+  defaultPetId,
   onClose,
   onSaved,
 }: Props) {
   const { user } = useAuth();
   const [petId, setPetId] = useState("");
-  const [duration, setDuration] = useState("30");
+  const [startedAt, setStartedAt] = useState(() => toMinute(new Date(Date.now() - 3_600_000)));
+  const [endedAt, setEndedAt] = useState(() => toMinute(new Date()));
   const [distance, setDistance] = useState("");
+  const [duration, setDuration] = useState("60");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
-    setPetId(pets[0]?.petId ?? "");
-    setDuration("30");
+    const end = toMinute(new Date());
+    const start = new Date(end.getTime() - 3_600_000);
+    const fallback = pets[0]?.petId ?? "";
+    setPetId(defaultPetId && pets.some((p) => p.petId === defaultPetId) ? defaultPetId : fallback);
+    setStartedAt(start);
+    setEndedAt(end);
     setDistance("");
+    setDuration(String(Math.max(1, Math.round((end.getTime() - start.getTime()) / 60_000))));
     setNotes("");
     setError(null);
-  }, [visible, pets]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  // Web: re-compute the duration whenever the user changes start / end.
+  function changeTimes(start: Date, end: Date) {
+    setStartedAt(start);
+    setEndedAt(end);
+    const ms = end.getTime() - start.getTime();
+    if (ms > 0) setDuration(String(Math.round(ms / 60_000)));
+  }
 
   async function handleSave() {
-    const durNum = Number(duration);
-    const distNum = distance.trim() === "" ? 0 : Number(distance);
-    if (!petId || !Number.isFinite(durNum) || durNum <= 0) {
-      setError("請選擇寵物並填寫時長");
+    if (saving || !user) return;
+    const distNum = parseNumber(distance);
+    const durNum = parseNumber(duration);
+    if (!petId || !Number.isFinite(distNum) || distNum <= 0 || !Number.isFinite(durNum) || durNum <= 0) {
+      setError(t("Walks.manual.errRequired"));
       return;
     }
-    if (!Number.isFinite(distNum) || distNum < 0) {
-      setError("距離格式不正確");
+    if (endedAt.getTime() <= startedAt.getTime()) {
+      setError(t("Walks.manual.errEndAfterStart"));
       return;
     }
-    if (!user) return;
 
     const pet = pets.find((p) => p.petId === petId) ?? null;
-    const endedAt = new Date();
-    const startedAt = new Date(endedAt.getTime() - durNum * 60_000);
-
     setSaving(true);
     setError(null);
     try {
@@ -101,197 +126,104 @@ export function ManualWalkDialog({
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "存檔失敗");
+      if (__DEV__) console.warn("[manual-walk] save failed", err);
+      setError(t("Walks.core.saveFailed"));
     } finally {
       setSaving(false);
     }
   }
 
-  // Live score preview so the user sees manual logs are scored too.
-  const previewScore = (() => {
-    const durNum = Number(duration);
-    const distNum = distance.trim() === "" ? 0 : Number(distance);
-    if (!Number.isFinite(durNum) || durNum <= 0) return null;
-    const pet = pets.find((p) => p.petId === petId) ?? null;
-    return computeWalkScore({
-      distanceKm: Number.isFinite(distNum) ? distNum : 0,
-      durationMin: durNum,
-      pet,
-      streakDays,
-    });
-  })();
+  const now = new Date();
 
   return (
-    <Modal
+    <Dialog
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
+      onClose={onClose}
+      title={t("Walks.manual.title")}
+      dismissible={!saving}
+      footer={
+        <View style={styles.actions}>
+          <Button label={t("Common.cancel")} variant="ghost" onPress={onClose} disabled={saving} />
+          <Button label={t("Common.save")} onPress={handleSave} loading={saving} disabled={saving} />
+        </View>
+      }
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <SafeAreaView edges={["bottom"]} style={styles.sheetWrap}>
-          <Pressable style={styles.sheet}>
-            <Text style={styles.title}>手動補登遛狗</Text>
+      {pets.length > 0 ? (
+        <SelectField
+          label={t("Walks.manual.pet")}
+          value={petId}
+          onChange={setPetId}
+          options={pets.map((p) => ({ value: p.petId, label: p.name }))}
+        />
+      ) : (
+        <Field label={t("Walks.manual.pet")} hint={t("Walks.manual.noPet")}>
+          {null}
+        </Field>
+      )}
 
-            <Text style={styles.label}>寵物</Text>
-            <View style={styles.petRow}>
-              {pets.map((p) => {
-                const selected = p.petId === petId;
-                return (
-                  <Pressable
-                    key={p.petId}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    onPress={() => setPetId(p.petId)}
-                    style={[styles.petChip, selected && styles.petChipOn]}
-                  >
-                    <Text
-                      style={[styles.petChipText, selected && styles.petChipTextOn]}
-                    >
-                      {p.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+      <DateField
+        label={t("Walks.manual.start")}
+        value={startedAt}
+        mode="datetime"
+        maximumDate={now}
+        onChange={(d) => changeTimes(toMinute(d), endedAt)}
+      />
+      <DateField
+        label={t("Walks.manual.end")}
+        value={endedAt}
+        mode="datetime"
+        maximumDate={now}
+        onChange={(d) => changeTimes(startedAt, toMinute(d))}
+      />
 
-            <View style={styles.fieldRow}>
-              <View style={styles.field}>
-                <Text style={styles.label}>時長（分鐘）</Text>
-                <TextInput
-                  style={styles.input}
-                  value={duration}
-                  onChangeText={setDuration}
-                  keyboardType="number-pad"
-                  placeholder="30"
-                  placeholderTextColor={colors.ink3}
-                />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.label}>距離（km，選填）</Text>
-                <TextInput
-                  style={styles.input}
-                  value={distance}
-                  onChangeText={setDistance}
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                  placeholderTextColor={colors.ink3}
-                />
-              </View>
-            </View>
+      <View style={styles.row}>
+        <Field label={t("Walks.manual.distance")} style={styles.col}>
+          <Input
+            value={distance}
+            onChangeText={setDistance}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+            accessibilityLabel={t("Walks.manual.distance")}
+          />
+        </Field>
+        <Field label={t("Walks.manual.duration")} style={styles.col}>
+          <Input
+            value={duration}
+            onChangeText={setDuration}
+            keyboardType="number-pad"
+            accessibilityLabel={t("Walks.manual.duration")}
+          />
+        </Field>
+      </View>
 
-            <Text style={styles.label}>備註（選填）</Text>
-            <TextInput
-              style={[styles.input, styles.notes]}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="今天走去公園…"
-              placeholderTextColor={colors.ink3}
-              multiline
-              maxLength={300}
-            />
+      <Field label={t("Walks.manual.notes")}>
+        <Textarea
+          value={notes}
+          onChangeText={setNotes}
+          maxLength={500}
+          accessibilityLabel={t("Walks.manual.notes")}
+        />
+      </Field>
 
-            {previewScore !== null ? (
-              <Text style={styles.score}>{`預估分數 +${previewScore}`}</Text>
-            ) : null}
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <View style={styles.actions}>
-              <Pressable
-                onPress={onClose}
-                disabled={saving}
-                style={styles.cancelBtn}
-              >
-                <Text style={styles.cancelText}>取消</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={handleSave}
-                disabled={saving}
-                style={({ pressed }) => [
-                  styles.saveBtn,
-                  pressed && styles.pressed,
-                  saving && styles.disabled,
-                ]}
-              >
-                {saving ? (
-                  <ActivityIndicator color={colors.card} />
-                ) : (
-                  <Text style={styles.saveText}>儲存</Text>
-                )}
-              </Pressable>
-            </View>
-          </Pressable>
-        </SafeAreaView>
-      </Pressable>
-    </Modal>
+      {error ? (
+        <Field style={styles.errorWrap} error={error}>
+          {null}
+        </Field>
+      ) : null}
+    </Dialog>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "flex-end",
-  },
-  sheetWrap: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-  },
-  sheet: { padding: spacing.lg, gap: spacing.sm },
-  title: { fontSize: 18, fontWeight: "800", color: colors.ink, marginBottom: spacing.xs },
-  label: { fontSize: 12, fontWeight: "700", color: colors.ink2 },
-  petRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  petChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.bgAlt,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-  petChipOn: { backgroundColor: colors.brandTint, borderColor: colors.brand },
-  petChipText: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
-  petChipTextOn: { color: colors.brandDeep, fontWeight: "800" },
-  fieldRow: { flexDirection: "row", gap: spacing.md },
-  field: { flex: 1, gap: 4 },
-  input: {
-    backgroundColor: colors.bgAlt,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 15,
-    color: colors.ink,
-  },
-  notes: { minHeight: 64, textAlignVertical: "top" },
-  score: { fontSize: 13, fontWeight: "700", color: colors.leaf },
-  error: { fontSize: 13, color: colors.cookie },
+  row: { flexDirection: "row", gap: spacing.md },
+  col: { flex: 1 },
+  errorWrap: { marginTop: -spacing.xs },
+  // web: flex justify-end gap-2
   actions: {
     flexDirection: "row",
-    gap: spacing.md,
     justifyContent: "flex-end",
-    marginTop: spacing.sm,
+    gap: spacing.sm,
+    borderTopWidth: 0,
+    backgroundColor: colors.card,
   },
-  cancelBtn: {
-    height: 48,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelText: { fontSize: 15, fontWeight: "600", color: colors.ink2 },
-  saveBtn: {
-    height: 48,
-    paddingHorizontal: spacing.xxl,
-    borderRadius: radius.pill,
-    backgroundColor: colors.brand,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveText: { fontSize: 15, fontWeight: "800", color: colors.card },
-  pressed: { opacity: 0.85 },
-  disabled: { opacity: 0.6 },
 });

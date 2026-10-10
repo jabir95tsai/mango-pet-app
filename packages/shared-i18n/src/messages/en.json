@@ -745,7 +745,9 @@
       "end": "End time",
       "distance": "Distance (km)",
       "duration": "Duration (min)",
-      "notes": "Notes (optional)"
+      "notes": "Notes (optional)",
+      "errRequired": "Please fill in the pet, distance and duration",
+      "errEndAfterStart": "The end time must be after the start time"
     },
     "core": {
       "todayGoalGap": "{min} more min today",
@@ -842,7 +844,8 @@
         "manageLink": "Manage pets",
         "goalChip": "{n} min/day",
         "openLabel": "Switch pet (currently: {pet})"
-      }
+      },
+      "dialGoal": "/ {goal} min"
     }
   },
   "WalksPhotoPrompt": {

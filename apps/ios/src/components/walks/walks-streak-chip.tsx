@@ -17,6 +17,7 @@ import Reanimated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { t } from "@/lib/i18n";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { colors } from "@/theme/theme";
 
@@ -73,7 +74,7 @@ export function WalksStreakChip({ streakDays }: { streakDays: number }) {
   if (tier === "muted") {
     return (
       <View style={styles.muted}>
-        <Text style={styles.mutedText}>{`${streakDays} 天`}</Text>
+        <Text style={styles.mutedText}>{t("Walks.streak.labelShort", { days: streakDays })}</Text>
       </View>
     );
   }
@@ -85,12 +86,16 @@ export function WalksStreakChip({ streakDays }: { streakDays: number }) {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.chip, isLeaf ? styles.shadowLeaf : styles.shadowBrand]}
+      accessible
+      accessibilityLabel={t("Walks.streak.labelShort", { days: streakDays })}
+      // web: title tooltip on the leaf (7+ day) tier
+      accessibilityHint={isLeaf ? t("Walks.streak.weekTooltip") : undefined}
     >
       <Reanimated.View style={flameStyle} accessibilityElementsHidden importantForAccessibility="no">
         <Flame />
       </Reanimated.View>
       <Text style={[styles.text, { color: isLeaf ? "#3f8a3a" : colors.brandDeep }]}>
-        {`${streakDays} 天`}
+        {t("Walks.streak.labelShort", { days: streakDays })}
       </Text>
     </LinearGradient>
   );

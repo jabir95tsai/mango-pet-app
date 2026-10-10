@@ -14,9 +14,13 @@
  * full-history numbers; the list holds the newest 60 unless `walksComplete`.
  * Call `loadAllWalks()` before showing the full "view all" list.
  *
- * Active-pet selection is in-memory (web persists via localStorage).
+ * Active-pet selection persists under the web localStorage key
+ * (`mango.walks.lastPetId`, AsyncStorage). Day-dependent stats recompute when
+ * the app returns to the foreground on a new day (WALKS-2).
  */
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppState } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getPetWalkGoalMinutes } from "@mango/shared-business";
 import type { Pet, Walk } from "@mango/shared-types";
 
@@ -63,8 +67,42 @@ const EMPTY: WalksPayload = {
 
 export type WalksData = ReturnType<typeof useWalksData>;
 
+/** Same key as web walks/page.tsx. */
+const LAST_PET_KEY = "mango.walks.lastPetId";
+
+/** Local calendar day — bumps the day-dependent stats after midnight. */
+function useDayKey(): string {
+  const [dayKey, setDayKey] = useState(() => new Date().toDateString());
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") setDayKey(new Date().toDateString());
+    });
+    return () => sub.remove();
+  }, []);
+  return dayKey;
+}
+
 export function useWalksData() {
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
+  const dayKey = useDayKey();
+
+  useEffect(() => {
+    let alive = true;
+    AsyncStorage.getItem(LAST_PET_KEY)
+      .then((v) => {
+        // A pick made before storage answered wins.
+        if (alive && v) setSelectedPetId((cur) => cur ?? v);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const selectPet = useCallback((petId: string) => {
+    setSelectedPetId(petId);
+    AsyncStorage.setItem(LAST_PET_KEY, petId).catch(() => {});
+  }, []);
   /** Scope key for which the user asked for the full history ("view all"). */
   const wantAllKeyRef = useRef<string | null>(null);
 
@@ -139,9 +177,11 @@ export function useWalksData() {
   }, [pets, selectedPetId, primaryPet]);
 
   const goalMin = useMemo(() => getPetWalkGoalMinutes(activePet), [activePet]);
+  /* eslint-disable react-hooks/exhaustive-deps -- dayKey re-runs the
+     date-relative helpers after midnight */
   const todayProgress = useMemo(
     () => getTodayProgress(walks, goalMin),
-    [walks, goalMin],
+    [walks, goalMin, dayKey],
   );
   const streakDays = useMemo(
     () =>
@@ -153,18 +193,17 @@ export function useWalksData() {
           })
           .filter((d): d is Date => d !== null),
       ),
-    [walks],
+    [walks, dayKey],
   );
   const weekDayFlags = useMemo(
     () => getWeekDayDoneFlags(walks, goalMin),
-    [walks, goalMin],
+    [walks, goalMin, dayKey],
   );
-  const weekKm = useMemo(() => getWeekKm(walks), [walks]);
-  const weekCount = useMemo(() => getWeekWalkCount(walks), [walks]);
-  const weeklyAvgMin = useMemo(() => getWeeklyAvgMinutes(walks), [walks]);
-  // Recomputed on every (focus) reload so it rolls over after midnight.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const todayIdx = useMemo(() => todayIdxLocal(), [walks]);
+  const weekKm = useMemo(() => getWeekKm(walks), [walks, dayKey]);
+  const weekCount = useMemo(() => getWeekWalkCount(walks), [walks, dayKey]);
+  const weeklyAvgMin = useMemo(() => getWeeklyAvgMinutes(walks), [walks, dayKey]);
+  const todayIdx = useMemo(() => todayIdxLocal(), [walks, dayKey]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   return {
     loading: scoped.loading,
@@ -183,7 +222,7 @@ export function useWalksData() {
     family: scoped.family,
     activePet,
     hasMultiplePets: pets.length > 1,
-    selectPet: setSelectedPetId,
+    selectPet,
     goalMin,
     todayProgress,
     streakDays,

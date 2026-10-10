@@ -24,6 +24,7 @@ import Reanimated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { t } from "@/lib/i18n";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { mangoGradient } from "@/theme/theme";
 
@@ -66,7 +67,7 @@ export function WalksStartCta({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="開始遛狗"
+      accessibilityLabel={t("Walks.core.startWalking")}
       disabled={disabled}
       onPress={onPress}
       onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
@@ -94,30 +95,31 @@ export function WalksStartCta({
           </Reanimated.View>
         ) : null}
         <View style={styles.badge}>
-          <Play size={20} color="#ffffff" fill="#ffffff" />
+          <Play size={22} color="#ffffff" fill="#ffffff" />
         </View>
-        <Text style={styles.label}>開始遛狗</Text>
+        <Text style={styles.label}>{t("Walks.core.startWalking")}</Text>
       </LinearGradient>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  // web v2: h-[62px] rounded-[31px], shadow 0 12px 26px -8px rgba(243,152,0,.6)
   shadow: {
-    borderRadius: 27,
+    borderRadius: 31,
     shadowColor: "#f39800",
-    shadowOpacity: 0.5,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.6,
+    shadowRadius: 13,
+    shadowOffset: { width: 0, height: 12 },
     elevation: 8,
   },
   pill: {
-    height: 54,
-    borderRadius: 27,
+    height: 62,
+    borderRadius: 31,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 12,
     overflow: "hidden",
   },
   sweep: {
@@ -127,14 +129,14 @@ const styles = StyleSheet.create({
     width: BAND_W,
   },
   badge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.22)",
     alignItems: "center",
     justifyContent: "center",
   },
-  label: { fontSize: 18, fontWeight: "800", letterSpacing: 0.5, color: "#ffffff" },
+  label: { fontSize: 19, fontWeight: "800", letterSpacing: 0.5, color: "#ffffff" },
   pressed: { transform: [{ scale: 0.97 }] },
   disabled: { opacity: 0.6 },
 });

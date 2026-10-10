@@ -1,16 +1,27 @@
 /**
- * Active-pet pill + multi-pet picker sheet. Single pet → static pill. Multiple
- * pets → tappable pill opening a bottom sheet listing each pet with its daily
- * goal chip; selecting switches the dial's goal. Mirrors web pet-picker-dropdown
- * (per-pet-walk-goal). Selection is in-memory for P1a (persistence = follow-up).
+ * Active-pet pill + picker — 1:1 with the web walks page pill
+ * (apps/web/src/app/app/walks/page.tsx) and pet-picker-dropdown.tsx.
+ *
+ * Single pet → static pill. Multiple pets → the pill (ChevronDown, flipped
+ * while open) opens a floating 256pt panel anchored under it (card, radius 18,
+ * padding 6, hairline, elevated shadow). Rows: 34pt pet avatar, name 14/700,
+ * goal chip (active: white + brand-deep, else bg-alt + ink-2), Check on the
+ * active row (brand-tint, radius 12). A hairline divider and a "manage pets"
+ * row (Settings tile) route to the Pets tab. Tapping outside closes it.
+ * The selection itself is persisted by useWalksData (web localStorage key).
  */
-import { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useRef, useState } from "react";
+import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { useRouter } from "expo-router";
+import { Check, ChevronDown, Settings } from "lucide-react-native";
 import { getPetWalkGoalMinutes } from "@mango/shared-business";
 import type { Pet } from "@mango/shared-types";
 
-import { colors, radius, spacing } from "@/theme/theme";
+import { Avatar } from "@/components/ui/Avatar";
+import { t } from "@/lib/i18n";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
+
+const PANEL_W = 256;
 
 type Props = {
   activePet: Pet;
@@ -20,70 +31,114 @@ type Props = {
 };
 
 export function PetPill({ activePet, pets, hasMultiplePets, onSelect }: Props) {
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const { width: winW } = useWindowDimensions();
+  const pillRef = useRef<View>(null);
+  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  const open = anchor !== null;
+
+  function openPanel() {
+    pillRef.current?.measureInWindow((x, y, _w, h) => {
+      // Keep the panel on screen (web: absolute left-0 under the pill).
+      const left = Math.max(spacing.sm, Math.min(x, winW - PANEL_W - spacing.sm));
+      setAnchor({ x: left, y: y + h + 4 });
+    });
+  }
+
+  const close = () => setAnchor(null);
 
   return (
     <>
       <Pressable
+        ref={pillRef}
         accessibilityRole={hasMultiplePets ? "button" : "text"}
         accessibilityLabel={
-          hasMultiplePets ? `切換寵物，目前 ${activePet.name}` : activePet.name
+          hasMultiplePets
+            ? t("Walks.page.petPicker.openLabel", { pet: activePet.name })
+            : activePet.name
         }
+        accessibilityState={hasMultiplePets ? { expanded: open } : undefined}
         disabled={!hasMultiplePets}
-        onPress={() => setOpen(true)}
+        onPress={openPanel}
         style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarEmoji}>🐶</Text>
-        </View>
+        <Avatar
+          name={activePet.name}
+          photoURL={activePet.photoURL}
+          size={22}
+          variant="pet"
+          fallbackChar="🐾"
+          style={styles.pillAvatar}
+        />
         <Text style={styles.name} numberOfLines={1}>
           {activePet.name}
         </Text>
-        {hasMultiplePets ? <Text style={styles.chevron}>⌄</Text> : null}
+        {hasMultiplePets ? (
+          <View style={open ? styles.chevronOpen : undefined}>
+            <ChevronDown size={12} color={colors.ink3} strokeWidth={2.5} />
+          </View>
+        ) : null}
       </Pressable>
 
       {hasMultiplePets ? (
-        <Modal
-          visible={open}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setOpen(false)}
-        >
-          <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-            <SafeAreaView edges={["bottom"]} style={styles.sheetWrap}>
-              <Pressable style={styles.sheet}>
-                <Text style={styles.sheetTitle}>選擇寵物</Text>
-                {pets.map((p) => {
-                  const goal = getPetWalkGoalMinutes(p);
-                  const selected = p.petId === activePet.petId;
-                  return (
-                    <Pressable
-                      key={p.petId}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                      onPress={() => {
-                        onSelect(p.petId);
-                        setOpen(false);
-                      }}
-                      style={({ pressed }) => [
-                        styles.row,
-                        selected && styles.rowSelected,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <View style={styles.avatar}>
-                        <Text style={styles.avatarEmoji}>🐶</Text>
+        <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={close}
+            accessibilityLabel={t("Common.close")}
+            accessibilityRole="button"
+          />
+          {anchor ? (
+            <View style={[styles.panel, { left: anchor.x, top: anchor.y }]} accessibilityViewIsModal>
+              {pets.map((p) => {
+                const goal = getPetWalkGoalMinutes(p);
+                const selected = p.petId === activePet.petId;
+                return (
+                  <Pressable
+                    key={p.petId}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => {
+                      onSelect(p.petId);
+                      close();
+                    }}
+                    style={({ pressed }) => [
+                      styles.row,
+                      selected && styles.rowSelected,
+                      pressed && !selected && styles.rowPressed,
+                    ]}
+                  >
+                    <Avatar name={p.name} photoURL={p.photoURL} size={34} variant="pet" fallbackChar="🐾" />
+                    <View style={styles.rowBody}>
+                      <Text style={styles.rowName} numberOfLines={1}>
+                        {p.name}
+                      </Text>
+                      <View style={[styles.goalChip, selected && styles.goalChipActive]}>
+                        <Text style={[styles.goalChipText, selected && styles.goalChipTextActive]}>
+                          {t("Walks.page.petPicker.goalChip", { n: goal })}
+                        </Text>
                       </View>
-                      <Text style={styles.rowName}>{p.name}</Text>
-                      <View style={styles.goalChip}>
-                        <Text style={styles.goalChipText}>{`${goal} 分`}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
+                    </View>
+                    {selected ? <Check size={16} color={colors.brandDeep} strokeWidth={2.5} /> : null}
+                  </Pressable>
+                );
+              })}
+              <View style={styles.divider} />
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => {
+                  close();
+                  router.push("/(tabs)/pets");
+                }}
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+              >
+                <View style={styles.manageTile}>
+                  <Settings size={18} color={colors.ink2} strokeWidth={2} />
+                </View>
+                <Text style={styles.manageText}>{t("Walks.page.petPicker.manageLink")}</Text>
               </Pressable>
-            </SafeAreaView>
-          </Pressable>
+            </View>
+          ) : null}
         </Modal>
       ) : null}
     </>
@@ -91,6 +146,7 @@ export function PetPill({ activePet, pets, hasMultiplePets, onSelect }: Props) {
 }
 
 const styles = StyleSheet.create({
+  // web: rounded-full border bg-card pl-1 pr-2.5 py-1 gap-1.5
   pill: {
     flexDirection: "row",
     alignItems: "center",
@@ -103,42 +159,50 @@ const styles = StyleSheet.create({
     paddingRight: 10,
     paddingVertical: 4,
   },
-  avatar: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.pill,
-    backgroundColor: colors.amber,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarEmoji: { fontSize: 14 },
-  name: { fontSize: 13, fontWeight: "700", color: colors.ink, maxWidth: 110 },
-  chevron: { fontSize: 14, color: colors.ink3, marginTop: -4 },
+  pillAvatar: { backgroundColor: "#f7c168" },
+  name: { fontSize: 13, fontWeight: "600", color: colors.ink, maxWidth: 104 },
+  chevronOpen: { transform: [{ rotate: "180deg" }] },
   pressed: { opacity: 0.7 },
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
-  sheetWrap: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl },
-  sheet: { padding: spacing.lg, gap: spacing.xs },
-  sheetTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: colors.ink,
-    marginBottom: spacing.sm,
+  panel: {
+    position: "absolute",
+    width: PANEL_W,
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: 6,
+    ...shadows.elevated,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.md,
+    gap: 10,
     paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     borderRadius: radius.md,
+    minHeight: 44,
   },
   rowSelected: { backgroundColor: colors.brandTint },
-  rowName: { flex: 1, fontSize: 15, fontWeight: "600", color: colors.ink },
+  rowPressed: { backgroundColor: colors.bgAlt },
+  rowBody: { flex: 1, minWidth: 0, alignItems: "flex-start", gap: 2 },
+  rowName: { fontSize: 14, fontWeight: "700", color: colors.ink },
   goalChip: {
     backgroundColor: colors.bgAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
     borderRadius: radius.pill,
   },
-  goalChipText: { fontSize: 12, fontWeight: "700", color: colors.ink2 },
+  goalChipActive: { backgroundColor: colors.card },
+  goalChipText: { fontSize: 10, fontWeight: "600", color: colors.ink2 },
+  goalChipTextActive: { color: colors.brandDeep },
+  divider: { height: 1, backgroundColor: colors.hairline, marginVertical: 4, marginHorizontal: 4 },
+  manageTile: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.md,
+    backgroundColor: colors.bgAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  manageText: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
 });

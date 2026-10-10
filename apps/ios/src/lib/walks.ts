@@ -154,3 +154,11 @@ export async function updateWalkDetails(
     photoURLs: details.photoURLs,
   });
 }
+
+/**
+ * Delete a walk (web deleteWalk). Rules allow the personal owner or any
+ * member of the walk's family; the leaderboard trigger re-aggregates.
+ */
+export async function deleteWalk(walkId: string): Promise<void> {
+  await firestore().collection("walks").doc(walkId).delete();
+}

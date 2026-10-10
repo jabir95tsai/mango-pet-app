@@ -283,22 +283,22 @@
   "lane": "WALKS",
   "severity": "P0",
   "title": "Walks tab never refetches on focus: a newly added pet or walk does not show up, and no pull-to-refresh",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-3": {
   "lane": "WALKS",
   "severity": "P0",
   "title": "Recent-walk row is the old WalkCard layout: no delete, no walker line, no photo thumbnail, wrong icons and time format",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-4": {
   "lane": "WALKS",
   "severity": "P1",
   "title": "R20: walks home and its child components hard-code zh-TW copy, and several strings differ from web",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-5": {
   "lane": "TRACK",
@@ -311,15 +311,15 @@
   "lane": "WALKS",
   "severity": "P1",
   "title": "Pet picker differs from web (content, icons, manage link) and the selection is not persisted",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-7": {
   "lane": "WALKS",
   "severity": "P1",
   "title": "Manual walk dialog: no start/end time pickers, different validation, hard-coded copy, flat brand Save button, no keyboard avoidance",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-8": {
   "lane": "TRACK",
@@ -339,15 +339,15 @@
   "lane": "WALKS",
   "severity": "P1",
   "title": "Empty states use emoji and plain text instead of the web EmptyState with a Footprints icon",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-11": {
   "lane": "WALKS",
   "severity": "P1",
   "title": "Walks tab has no iPad content-width cap",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-12": {
   "lane": "A3",
@@ -360,36 +360,36 @@
   "lane": "WALKS",
   "severity": "P2",
   "title": "Manual-log button uses an emoji instead of the lucide Hand ghost button",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-14": {
   "lane": "WALKS",
   "severity": "P2",
   "title": "Start CTA is smaller than the web v2 pill (54 vs 62 tall)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-15": {
   "lane": "WALKS",
   "severity": "P2",
   "title": "Week-strip details: 22 radius (web 16), dashed today border (web solid), halo drawn inside the circle",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-16": {
   "lane": "WALKS",
   "severity": "P2",
   "title": "No goal-hit confetti on the walks home",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-17": {
   "lane": "WALKS",
   "severity": "P2",
   "title": "Dial and hero polish: flat glow, check badge ring drawn inside, hero weight 800 vs 700, dial bottom spacing",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "WALKS-18": {
   "lane": "UNASSIGNED",
@@ -836,8 +836,8 @@
   "lane": "WALKS",
   "severity": "P2",
   "title": "Walks-home goal-hit 'paper' confetti (ConfettiCanvas, 4s auto-hide) has no iOS counterpart",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "TRACK-25": {
   "lane": "A3",
@@ -1431,8 +1431,8 @@
   "lane": "WALKS",
   "severity": "P1",
   "title": "R20: Walks tab + walk components hard-code zh-TW instead of the web's Walks.* keys",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit WALKS (2026-10-10)"
  },
  "XCUT-7": {
   "lane": "TRACK",

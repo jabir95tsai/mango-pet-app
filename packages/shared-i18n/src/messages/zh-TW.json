@@ -745,7 +745,9 @@
       "end": "結束時間",
       "distance": "距離 (km)",
       "duration": "時長 (分鐘)",
-      "notes": "備註 (選填)"
+      "notes": "備註 (選填)",
+      "errRequired": "請填寫寵物、距離、時長",
+      "errEndAfterStart": "結束時間需晚於開始時間"
     },
     "core": {
       "todayGoalGap": "今天還差 {min} 分鐘",
@@ -842,7 +844,8 @@
         "manageLink": "管理寵物",
         "goalChip": "{n} 分/天",
         "openLabel": "切換寵物（目前：{pet}）"
-      }
+      },
+      "dialGoal": "/ {goal} 分"
     }
   },
   "WalksPhotoPrompt": {
