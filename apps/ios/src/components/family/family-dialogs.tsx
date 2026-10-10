@@ -8,7 +8,7 @@
  *    Family.defaultName), inline error, Cancel (ghost) / Submit.
  *  - Join: instructions, a digits-only 6-char code (placeholder 123456,
  *    submit disabled until 6 digits), alreadyMember → errAlready, other
- *    failures show the server message (web), Cancel / Submit.
+ *    failures mapped to localized copy by callable code, Cancel / Submit.
  *
  * Both hand the new familyId to `onDone` so the caller can chain the import
  * wizard before refreshing.
@@ -25,6 +25,20 @@ import { colors, spacing } from "@/theme/theme";
 
 function messageOf(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
+}
+
+/** Callable error code without the optional "functions/" prefix. */
+function callableCode(err: unknown): string {
+  const code = (err as { code?: unknown } | null | undefined)?.code;
+  return typeof code === "string" ? code.replace(/^functions\//, "") : "";
+}
+
+/** Join failures in the user's language (server messages are not localized). */
+function joinErrorOf(err: unknown): string {
+  const c = callableCode(err);
+  if (c === "invalid-argument" || c === "not-found") return t("Family.joinDialog.errInvalidCode");
+  if (c === "permission-denied") return t("Guest.locked.family");
+  return t("Join.error");
 }
 
 export function CreateFamilyDialog({
@@ -138,7 +152,7 @@ export function JoinFamilyDialog({
       await onDone(res.familyId);
       onClose();
     } catch (err) {
-      setError(messageOf(err, t("Join.error")));
+      setError(joinErrorOf(err));
     } finally {
       setBusy(false);
     }

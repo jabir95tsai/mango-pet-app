@@ -1,35 +1,30 @@
 /**
  * First-login onboarding — 1:1 with web apps/web/src/app/onboarding/page.tsx
  * (SHELL-9): PawPrint header, two option cards (create / join a family, each
- * opening the same dialog web uses — family-section CreateFamilyDialog /
- * JoinFamilyDialog) and a quiet "personal mode" skip.
+ * opening the shared CreateFamilyDialog / JoinFamilyDialog, then the import
+ * wizard like web) and a quiet "personal mode" skip.
  *
  * The root navigator lands brand-new (non-guest, no family, not yet
  * onboarded) users here. Completing any path sets the onboarded flag and goes
  * to the walks tab (web router.replace("/app/walks")). Guests can't create or
  * join a family (server-rejected), so they see the GuestLockedNotice instead.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ArrowRight, PawPrint, UserPlus, Users, type LucideIcon } from "lucide-react-native";
 
-import { Button, Dialog, Field, Input } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { useAuth } from "@/state/auth-context";
 import { useFamily } from "@/state/family-context";
-import { createFamily, joinFamilyByCode } from "@/lib/families-write";
+import { CreateFamilyDialog, JoinFamilyDialog } from "@/components/family/family-dialogs";
+import { ImportWizardSheet } from "@/components/family/import-wizard-sheet";
 import { ONBOARDED_KEY } from "@/lib/onboarding";
 import { t, useLocale } from "@/lib/i18n";
 import { colors, radius, shadows, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
-
-/** Callable error code without the optional "functions/" prefix. */
-function callableCode(err: unknown): string {
-  const code = (err as { code?: unknown } | null | undefined)?.code;
-  return typeof code === "string" ? code.replace(/^functions\//, "") : "";
-}
 
 export default function OnboardingScreen() {
   useLocale();
@@ -41,6 +36,7 @@ export default function OnboardingScreen() {
   // True from a successful create/join until we navigate away, so the
   // refreshed family doesn't flash the "already in a family" fallback.
   const [completing, setCompleting] = useState(false);
+  const [pendingImportFamilyId, setPendingImportFamilyId] = useState<string | null>(null);
 
   async function finish() {
     try {
@@ -55,15 +51,9 @@ export default function OnboardingScreen() {
     setCompleting(true);
     // refresh() so the new scope is live before anything reads it (web).
     await refresh();
-    // ── SHELL-8 HOOK POINT — personal-data import wizard ───────────────
-    // Web (onboarding/page.tsx) stores `newFamilyId` as pendingImportFamilyId
-    // here and renders <ImportWizardDialog familyId onComplete onClose>,
-    // which moves the user's personal pets / records into the new family
-    // (or short-circuits when there is nothing to import). The import lane
-    // should open its wizard for `newFamilyId` at this point and call
-    // handleImportComplete() from the wizard's onComplete AND onClose.
-    void newFamilyId;
-    await handleImportComplete();
+    // Web: offer to move personal-mode data into the new family (the wizard
+    // closes itself when there is nothing to import), then finish.
+    setPendingImportFamilyId(newFamilyId);
   }
 
   async function handleImportComplete() {
@@ -141,13 +131,22 @@ export default function OnboardingScreen() {
       <CreateFamilyDialog
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreated={handleCreatedOrJoined}
+        onDone={handleCreatedOrJoined}
       />
       <JoinFamilyDialog
         open={showJoin}
         onClose={() => setShowJoin(false)}
-        onJoined={handleCreatedOrJoined}
+        onDone={handleCreatedOrJoined}
       />
+      {pendingImportFamilyId ? (
+        <ImportWizardSheet
+          familyId={pendingImportFamilyId}
+          onClose={() => {
+            setPendingImportFamilyId(null);
+            void handleImportComplete();
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -184,174 +183,6 @@ function OptionCard({
         fullWidth
       />
     </View>
-  );
-}
-
-// ── Dialogs — 1:1 with web family-section CreateFamilyDialog / JoinFamilyDialog.
-
-function CreateFamilyDialog({
-  open,
-  onClose,
-  onCreated,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onCreated: (familyId: string) => Promise<void> | void;
-}) {
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setName("");
-      setError(null);
-    }
-  }, [open]);
-
-  async function submit() {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await createFamily(name.trim() || t("Family.defaultName"));
-      await onCreated(res.familyId);
-      onClose();
-    } catch (err) {
-      setError(
-        callableCode(err) === "permission-denied" ? t("Guest.locked.family") : t("Error.title"),
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Dialog
-      visible={open}
-      onClose={onClose}
-      title={t("Family.createDialog.title")}
-      description={t("Family.createDialog.instructions")}
-      dismissible={!busy}
-      contentStyle={styles.dialogBody}
-      footer={
-        <View style={styles.dialogActions}>
-          <Button
-            variant="ghost"
-            label={t("Common.cancel")}
-            onPress={onClose}
-            disabled={busy}
-          />
-          <Button label={t("Family.createDialog.submit")} onPress={submit} loading={busy} />
-        </View>
-      }
-    >
-      <Field label={t("Family.createDialog.nameLabel")}>
-        <Input
-          value={name}
-          error={error}
-          onChangeText={setName}
-          placeholder={t("Family.createDialog.namePlaceholder")}
-          maxLength={40}
-          autoFocus
-          returnKeyType="done"
-          onSubmitEditing={submit}
-          accessibilityLabel={t("Family.createDialog.nameLabel")}
-        />
-      </Field>
-    </Dialog>
-  );
-}
-
-function JoinFamilyDialog({
-  open,
-  onClose,
-  onJoined,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onJoined: (familyId: string) => Promise<void> | void;
-}) {
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setCode("");
-      setError(null);
-    }
-  }, [open]);
-
-  async function submit() {
-    if (busy) return;
-    const trimmed = code.trim();
-    if (!/^\d{6}$/.test(trimmed)) {
-      setError(t("Family.joinDialog.errInvalidCode"));
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await joinFamilyByCode(trimmed);
-      if (res.alreadyMember) {
-        setError(t("Family.joinDialog.errAlready"));
-        return;
-      }
-      await onJoined(res.familyId);
-      onClose();
-    } catch (err) {
-      const c = callableCode(err);
-      setError(
-        c === "invalid-argument" || c === "not-found"
-          ? t("Family.joinDialog.errInvalidCode")
-          : c === "permission-denied"
-            ? t("Guest.locked.family")
-            : t("Join.error"),
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Dialog
-      visible={open}
-      onClose={onClose}
-      title={t("Family.joinDialog.title")}
-      description={t("Family.joinDialog.instructions")}
-      dismissible={!busy}
-      contentStyle={styles.dialogBody}
-      footer={
-        <View style={styles.dialogActions}>
-          <Button
-            variant="ghost"
-            label={t("Common.cancel")}
-            onPress={onClose}
-            disabled={busy}
-          />
-          <Button
-            label={t("Family.joinDialog.submit")}
-            onPress={submit}
-            loading={busy}
-            disabled={code.length !== 6}
-          />
-        </View>
-      }
-    >
-      <Input
-        value={code}
-        onChangeText={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
-        placeholder="123456"
-        keyboardType="number-pad"
-        textContentType="oneTimeCode"
-        maxLength={6}
-        autoFocus
-        error={error}
-        accessibilityLabel={t("Family.inviteCode")}
-        style={styles.codeInput}
-      />
-    </Dialog>
   );
 }
 

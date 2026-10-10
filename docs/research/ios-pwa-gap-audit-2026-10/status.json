@@ -1284,8 +1284,8 @@
   "lane": "FAMACH",
   "severity": "P1",
   "title": "Onboarding create/join skips the 'move personal data into the family' import wizard",
-  "state": "skipped",
-  "note": "[A2] Another lane does the personal-data import wizard. A clearly marked SHELL-8 HOOK POINT is in app/onboarding.tsx handleCreatedOrJoined(newFamilyId): open the wizard there and call handleImportComplete() from its onComplete and onClose. "
+  "state": "done",
+  "note": "onboarding create/join now opens the shared ImportWizardSheet (2026-10-10)"
  },
  "SHELL-9": {
   "lane": "A2",
