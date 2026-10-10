@@ -52,7 +52,7 @@ export default function HomeScreen() {
   const {
     loading,
     refreshing,
-    error,
+    petsUnknown,
     pets,
     posts,
     walkStatus,
@@ -89,8 +89,9 @@ export default function HomeScreen() {
     );
   }
 
-  // Failed read with nothing cached → error + retry, never the 0-pet hero.
-  if (error && pets.length === 0) {
+  // Pets could not be read → error + retry, never the 0-pet hero. (A failed
+  // posts / walks read alone must not hide a genuine 0-pet onboarding.)
+  if (petsUnknown && pets.length === 0) {
     return (
       <SafeAreaView edges={["top"]} style={styles.flex}>
         {topBar}

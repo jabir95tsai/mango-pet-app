@@ -43,6 +43,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { SITE_URL } from "@/lib/config";
 import { t } from "@/lib/i18n";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { colors, mangoGradient, radius, shadows, spacing, type, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -57,6 +58,7 @@ function messageOf(e: unknown): string {
 export default function FriendsScreen() {
   const router = useRouter();
   const { user, isGuest } = useAuth();
+  const reduceMotion = useReducedMotion();
   const uid = user?.uid ?? null;
   const [tab, setTab] = useState<Tab>("friends");
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -118,13 +120,12 @@ export default function FriendsScreen() {
     [],
   );
 
-  const excludeUids = useMemo(() => {
-    const s = new Set<string>();
-    friends.forEach((f) => s.add(f.uid));
-    requests.forEach((r) => s.add(r.fromUid));
-    if (uid) s.add(uid);
-    return s;
-  }, [friends, requests, uid]);
+  const friendUids = useMemo(() => new Set(friends.map((f) => f.uid)), [friends]);
+  // Someone who already asked YOU is not a friend yet — offer "accept".
+  const incomingByUid = useMemo(
+    () => new Map(requests.map((r) => [r.fromUid, r] as const)),
+    [requests],
+  );
 
   const runSearch = useCallback(async () => {
     if (!q.trim() || searching) return;
@@ -386,7 +387,8 @@ export default function FriendsScreen() {
                 {searching ? <ActivityIndicator color={colors.brand} style={styles.loader} /> : null}
                 <View style={styles.list}>
                   {results.map((u) => {
-                    const already = excludeUids.has(u.uid);
+                    const already = friendUids.has(u.uid);
+                    const incoming = already ? undefined : incomingByUid.get(u.uid);
                     const sent = sentTo.has(u.uid);
                     return (
                       <View key={u.uid} style={styles.row}>
@@ -397,20 +399,30 @@ export default function FriendsScreen() {
                           </Text>
                           {u.city ? <Text style={styles.rowSub}>{u.city}</Text> : null}
                         </View>
-                        <Button
-                          size="sm"
-                          variant={already || sent ? "ghost" : "primary"}
-                          disabled={already || sent}
-                          label={
-                            already
-                              ? t("Friends.alreadyFriends")
-                              : sent
-                                ? t("Friends.requestSent")
-                                : t("Friends.addFriend")
-                          }
-                          icon={already || sent ? undefined : <UserPlus size={14} color="#ffffff" strokeWidth={2} />}
-                          onPress={() => void send(u)}
-                        />
+                        {incoming ? (
+                          <Button
+                            size="sm"
+                            label={t("Friends.accept")}
+                            icon={<Check size={14} color="#ffffff" strokeWidth={2.2} />}
+                            onPress={() => void accept(incoming)}
+                            disabled={busy === incoming.requestId}
+                          />
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant={already || sent ? "ghost" : "primary"}
+                            disabled={already || sent}
+                            label={
+                              already
+                                ? t("Friends.alreadyFriends")
+                                : sent
+                                  ? t("Friends.requestSent")
+                                  : t("Friends.addFriend")
+                            }
+                            icon={already || sent ? undefined : <UserPlus size={14} color="#ffffff" strokeWidth={2} />}
+                            onPress={() => void send(u)}
+                          />
+                        )}
                       </View>
                     );
                   })}
@@ -425,7 +437,12 @@ export default function FriendsScreen() {
       </ScrollView>
 
       {!isGuest ? (
-        <Modal visible={qrOpen} transparent animationType="fade" onRequestClose={() => setQrOpen(false)}>
+        <Modal
+          visible={qrOpen}
+          transparent
+          animationType={reduceMotion ? "none" : "fade"}
+          onRequestClose={() => setQrOpen(false)}
+        >
           <Pressable style={styles.modalBackdrop} onPress={() => setQrOpen(false)}>
             <Pressable style={styles.qrSheet} accessibilityViewIsModal>
               <Text style={styles.qrTitle} accessibilityRole="header">

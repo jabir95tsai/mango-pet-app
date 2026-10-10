@@ -55,9 +55,11 @@ import {
   discardWalkDraft,
   onWalkRetryHint,
   removeWalkDraft,
+  SAVE_TIMEOUT_MS,
   storeWalkDraft,
   wasWalkDraftDiscarded,
   WalkDraftDiscardedError,
+  withTimeout,
 } from "@/lib/walk-drafts";
 import {
   emptyTrackingState,
@@ -74,8 +76,6 @@ import { createWalk, updateWalkDetails, type CreateWalkInput } from "@/lib/walks
 import { useAuth } from "@/state/auth-context";
 import { colors } from "@/theme/theme";
 
-/** An unacknowledged write is reported as failed (retryable) after this. */
-const SAVE_TIMEOUT_MS = 20_000;
 /** Web: the END photo prompt lands 1s after the save, after the celebration. */
 const END_PROMPT_DELAY_MS = 1000;
 
@@ -122,22 +122,6 @@ type SessionContext = {
 };
 
 let tokenSeq = 0;
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error("timeout")), ms);
-    promise.then(
-      (v) => {
-        clearTimeout(id);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(id);
-        reject(e);
-      },
-    );
-  });
-}
 
 function identityOf(ctx: SessionContext): WalkSessionIdentity {
   return {
@@ -625,16 +609,44 @@ export function WalkTrackingView({
 
   // iOS-only exit (the full-screen modal has no browser back): once the walk
   // is in a local draft, an unreachable server must not trap the user — the
-  // walks home lists the draft and retries it (web recoveryNotice).
-  function handleSaveLater() {
-    if (!drafted || savedRef.current || savePromiseRef.current) return;
-    onCloseRef.current();
+  // walks home lists the draft and retries it (web recoveryNotice). The draft
+  // was written at stop, so first fold in what changed since (notes typed,
+  // photos that finished uploading) — otherwise the recovered walk would lose
+  // them and the uploaded photos would be orphaned in Storage.
+  async function handleSaveLater() {
+    const context = ctxRef.current;
+    const input = stoppedInputRef.current;
+    if (
+      !drafted ||
+      !input ||
+      !isCurrent(context) ||
+      savedRef.current ||
+      savePromiseRef.current ||
+      slotsRef.current.some((s) => s.status === "uploading")
+    ) {
+      return;
+    }
+    const details = detailsRef.current;
+    const latest: CreateWalkInput = {
+      ...input,
+      notes: details.notes || null,
+      photoURLs: details.photoURLs,
+    };
+    try {
+      await storeWalkDraft({ ...latest, scorePet: null, walkId: context.walkId, score: latest.score ?? 0 });
+      stoppedInputRef.current = latest;
+    } catch {
+      // Could not update the draft — stay so nothing is silently dropped.
+      if (isCurrent(context)) setSaveError(t("Walks.core.saveFailed"));
+      return;
+    }
+    if (isCurrent(context)) onCloseRef.current();
   }
 
   function handleRequestClose() {
     if (phase === "done") {
       if (savedRef.current) void handleBackToWalking();
-      else if (saveErrorRef.current) handleSaveLater();
+      else if (saveErrorRef.current) void handleSaveLater();
       return;
     }
     if (state.status === "tracking") void handleStop();
@@ -745,7 +757,13 @@ export function WalkTrackingView({
         onDiscard={() => {
           void handleDiscard();
         }}
-        onSaveLater={drafted ? handleSaveLater : undefined}
+        onSaveLater={
+          drafted
+            ? () => {
+                void handleSaveLater();
+              }
+            : undefined
+        }
         onBack={() => {
           void handleBackToWalking();
         }}

@@ -6,7 +6,9 @@
  *    (no wrong-board flash, no double subscribe); a read failure still
  *    renders with the defaults.
  *  - Tabs never unmount, so the boards' onSnapshot listeners are gated on
- *    `active` = this tab focused AND the app in the foreground.
+ *    `active` = app in the foreground AND this tab focused — with a grace
+ *    period after leaving the tab: a fresh listener re-reads the whole board,
+ *    so quick tab switches keep the existing one (delta updates only).
  *  - Each board is a virtualized FlatList whose header carries the toggle.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -30,6 +32,9 @@ import { t } from "@/lib/i18n";
 import { colors, spacing } from "@/theme/theme";
 
 const DIMENSION_KEY = "mango.leaderboard.dimension";
+/** Keep listening this long after the tab loses focus (cheap delta updates
+ *  vs. a full re-read when the user comes straight back). */
+const BLUR_GRACE_MS = 2 * 60_000;
 type Dimension = "human" | "dog";
 
 type Prefs = { dimension: Dimension; humanScope: HumanScope; dogScope: DogScope };
@@ -41,7 +46,7 @@ export default function LeaderboardScreen() {
   const [dimension, setDimension] = useState<Dimension>(DEFAULTS.dimension);
   const [focused, setFocused] = useState(true);
   const [foreground, setForeground] = useState(AppState.currentState === "active");
-  const focusedRef = useRef(true);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -68,18 +73,24 @@ export default function LeaderboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      focusedRef.current = true;
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+      blurTimer.current = null;
       setFocused(true);
       return () => {
-        focusedRef.current = false;
-        setFocused(false);
+        blurTimer.current = setTimeout(() => {
+          blurTimer.current = null;
+          setFocused(false);
+        }, BLUR_GRACE_MS);
       };
     }, []),
   );
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => setForeground(s === "active"));
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+    };
   }, []);
 
   function changeDimension(next: Dimension) {

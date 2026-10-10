@@ -25,31 +25,15 @@ import {
   listWalkDrafts,
   onWalkRetryHint,
   removeWalkDraft,
+  SAVE_TIMEOUT_MS,
   wasWalkDraftDiscarded,
+  withTimeout,
   type WalkDraft,
 } from "@/lib/walk-drafts";
 import { createWalk } from "@/lib/walks";
 import { colors, radius, spacing } from "@/theme/theme";
 
-const SAVE_TIMEOUT_MS = 20_000;
-
 type RecoveryError = "saveFailed" | "discardDraftFailed" | null;
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error("timeout")), ms);
-    promise.then(
-      (v) => {
-        clearTimeout(id);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(id);
-        reject(e);
-      },
-    );
-  });
-}
 
 /** Locale-aware "date time" for a draft row (web `startedAt.toLocaleString()`). */
 export function formatDraftTime(d: Date): string {

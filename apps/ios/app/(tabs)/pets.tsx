@@ -40,6 +40,7 @@ import type {
 import { usePetsData } from "@/lib/use-pets-data";
 import { useAuth } from "@/state/auth-context";
 import { t } from "@/lib/i18n";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PetHeader } from "@/components/pets/pet-header";
 import { PetSwitcher } from "@/components/pets/pet-switcher";
@@ -76,6 +77,7 @@ const STICKY_TABS_INDEX = 2;
 export default function PetsScreen() {
   const { user } = useAuth();
   const data = usePetsData();
+  const reduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<PetTabKey>("overview");
   const [switcherAnchor, setSwitcherAnchor] = useState<{ x: number; y: number } | null>(null);
   const [form, setForm] = useState<FormState>(null);
@@ -88,7 +90,7 @@ export default function PetsScreen() {
   const {
     loading,
     refreshing,
-    error,
+    petsUnknown,
     pets,
     reminders,
     expenses,
@@ -182,8 +184,9 @@ export default function PetsScreen() {
     );
   }
 
-  // Failed read with nothing to show → error + retry (never the 0-pet hero).
-  if (error && pets.length === 0) {
+  // Pets could not be read → error + retry (never the 0-pet hero). A failed
+  // reminders / expenses / walks read alone does not count.
+  if (petsUnknown && pets.length === 0) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <ScrollView
@@ -218,7 +221,6 @@ export default function PetsScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[STICKY_TABS_INDEX]}
-        onScrollBeginDrag={() => setSwitcherAnchor(null)}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} tintColor={colors.brand} />
         }
@@ -324,7 +326,7 @@ export default function PetsScreen() {
         <Modal
           visible={switcherAnchor !== null}
           transparent
-          animationType="fade"
+          animationType={reduceMotion ? "none" : "fade"}
           onRequestClose={() => setSwitcherAnchor(null)}
         >
           <Pressable

@@ -38,6 +38,27 @@ function discardedKey(uid: string, walkId: string): string {
   return `${DISCARDED_PREFIX}${uid}.${walkId}`;
 }
 
+/** An unacknowledged walk write is reported as failed (retryable) after
+ *  this — shared by the tracking recap and the walks-home draft recovery. */
+export const SAVE_TIMEOUT_MS = 20_000;
+
+/** Reject with "timeout" when `promise` has not settled within `ms`. */
+export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error("timeout")), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(id);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(id);
+        reject(e);
+      },
+    );
+  });
+}
+
 /** Thrown by storeWalkDraft when the walk was discarded on this device. */
 export class WalkDraftDiscardedError extends Error {
   constructor() {

@@ -260,7 +260,7 @@ export function TrackingDonePanel({
                   variant="ghost"
                   pill
                   onPress={onSaveLater}
-                  disabled={saving || discarding}
+                  disabled={saving || discarding || uploading}
                 />
               ) : null}
               <Text style={styles.status} accessibilityLiveRegion="polite">

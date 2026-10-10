@@ -36,9 +36,15 @@ const HOME_WALKS_LIMIT = 50;
  */
 let postsRevision = 0;
 
-type FeedPayload = { pets: Pet[]; posts: Post[]; walks: Walk[] };
+type FeedPayload = {
+  pets: Pet[];
+  posts: Post[];
+  walks: Walk[];
+  /** The pets read itself failed (0 pets is then unknown, not "no pets"). */
+  petsFailed: boolean;
+};
 
-const EMPTY: FeedPayload = { pets: [], posts: [], walks: [] };
+const EMPTY: FeedPayload = { pets: [], posts: [], walks: [], petsFailed: false };
 
 export type FeedData = ReturnType<typeof useFeedData>;
 
@@ -80,6 +86,7 @@ export function useFeedData({ home }: { home: boolean }) {
           pets: petsR.status === "fulfilled" ? petsR.value : (prev?.pets ?? []),
           posts: postsR.status === "fulfilled" ? postsR.value : (prev?.posts ?? []),
           walks: walksR.status === "fulfilled" ? walksR.value : (prev?.walks ?? []),
+          petsFailed: petsR.status === "rejected",
         },
         error,
       };
@@ -93,7 +100,7 @@ export function useFeedData({ home }: { home: boolean }) {
     variant: home ? "home" : "feed",
     isStale: () => loadedPostsRevision.current !== postsRevision,
   });
-  const { pets, posts, walks } = scoped.data;
+  const { pets, posts, walks, petsFailed } = scoped.data;
   const { mutate, reload } = scoped;
 
   const walkStatus = useMemo<Map<string, WalkStatus>>(
@@ -142,6 +149,10 @@ export function useFeedData({ home }: { home: boolean }) {
     refreshing: scoped.refreshing,
     /** Scope read error or last load error (previous data kept). */
     error: scoped.error,
+    /** Pets could not be read (scope error or pets query failure) — a 0-pet
+     *  screen must show retry, not the add-first-pet hero. Partial failures
+     *  of posts / walks do NOT set this. */
+    petsUnknown: scoped.scopeStatus === "error" || petsFailed,
     scopeReady: scoped.scopeReady,
     scopeStatus: scoped.scopeStatus,
     pets,

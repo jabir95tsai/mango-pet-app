@@ -44,6 +44,7 @@ import { Button } from "@/components/ui/Button";
 import { confirm } from "@/lib/confirm";
 import { SITE_URL } from "@/lib/config";
 import { t } from "@/lib/i18n";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { colors, radius, spacing } from "@/theme/theme";
 import { SettingsCard, SettingsIconDisc, settingsText } from "./settings-card";
 
@@ -61,6 +62,7 @@ export function FamilySection({
   showQr?: boolean;
 }) {
   const { user, isGuest } = useAuth();
+  const reduceMotion = useReducedMotion();
   const {
     family,
     families,
@@ -458,7 +460,12 @@ export function FamilySection({
       ) : null}
 
       {showQr && family ? (
-        <Modal visible={qrOpen} transparent animationType="fade" onRequestClose={() => setQrOpen(false)}>
+        <Modal
+          visible={qrOpen}
+          transparent
+          animationType={reduceMotion ? "none" : "fade"}
+          onRequestClose={() => setQrOpen(false)}
+        >
           <Pressable style={styles.qrBackdrop} onPress={() => setQrOpen(false)}>
             <Pressable style={styles.qrSheet} accessibilityViewIsModal>
               <Text style={styles.qrTitle}>{family.name}</Text>

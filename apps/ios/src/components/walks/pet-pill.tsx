@@ -19,6 +19,7 @@ import type { Pet } from "@mango/shared-types";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { t } from "@/lib/i18n";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 const PANEL_W = 256;
@@ -32,6 +33,7 @@ type Props = {
 
 export function PetPill({ activePet, pets, hasMultiplePets, onSelect }: Props) {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const { width: winW } = useWindowDimensions();
   const pillRef = useRef<View>(null);
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
@@ -81,7 +83,7 @@ export function PetPill({ activePet, pets, hasMultiplePets, onSelect }: Props) {
       </Pressable>
 
       {hasMultiplePets ? (
-        <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+        <Modal visible={open} transparent animationType={reduceMotion ? "none" : "fade"} onRequestClose={close}>
           <Pressable
             style={StyleSheet.absoluteFill}
             onPress={close}

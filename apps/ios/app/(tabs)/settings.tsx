@@ -10,9 +10,10 @@
  * user; leaderboard visibility, blocked users and the friends disc stay
  * hidden for guests.
  *
- * One users/{uid} read feeds every pref section; it re-runs on tab focus
- * (the tab stays mounted, web remounts per navigation) and on
- * pull-to-refresh, which also refreshes the family scope.
+ * One users/{uid} read feeds every pref section. The tab stays mounted (web
+ * remounts per navigation), so a focus refreshes prefs + photos + members
+ * only when they are older than FOCUS_STALE_MS (the photo preview alone is
+ * 4 source queries); pull-to-refresh always refreshes, incl. the family.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -41,6 +42,9 @@ import { SettingsCard, SettingsIconDisc } from "@/components/settings/settings-c
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
+/** Skip focus refreshes for data younger than this (Firestore read cost). */
+const FOCUS_STALE_MS = 60_000;
+
 export default function SettingsScreen() {
   const { user, isGuest } = useAuth();
   const { refresh: refreshFamily } = useFamily();
@@ -49,7 +53,7 @@ export default function SettingsScreen() {
   const [prefs, setPrefs] = useState<UserPrefs | undefined>(undefined);
   const [reloadKey, setReloadKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const firstFocus = useRef(true);
+  const lastRefreshAt = useRef(Date.now());
   const uid = user?.uid ?? null;
 
   const name = user?.displayName ?? (isGuest ? t("Settings.guestName") : (user?.email?.split("@")[0] ?? ""));
@@ -71,10 +75,8 @@ export default function SettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (firstFocus.current) {
-        firstFocus.current = false;
-        return;
-      }
+      if (Date.now() - lastRefreshAt.current < FOCUS_STALE_MS) return;
+      lastRefreshAt.current = Date.now();
       void loadPrefs();
       setReloadKey((k) => k + 1);
     }, [loadPrefs]),
@@ -82,6 +84,7 @@ export default function SettingsScreen() {
 
   async function onRefresh() {
     setRefreshing(true);
+    lastRefreshAt.current = Date.now();
     try {
       await Promise.allSettled([loadPrefs(), refreshFamily()]);
     } finally {

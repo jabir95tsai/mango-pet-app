@@ -35,9 +35,11 @@ type PetsPayload = {
   reminders: Reminder[];
   expenses: Expense[];
   walks: Walk[];
+  /** The pets read itself failed (0 pets is then unknown). */
+  petsFailed: boolean;
 };
 
-const EMPTY: PetsPayload = { pets: [], reminders: [], expenses: [], walks: [] };
+const EMPTY: PetsPayload = { pets: [], reminders: [], expenses: [], walks: [], petsFailed: false };
 
 const fetchPetsScreen: ScopedFetcher<PetsPayload> = async (
   { uid, familyId },
@@ -62,6 +64,7 @@ const fetchPetsScreen: ScopedFetcher<PetsPayload> = async (
       expenses:
         expensesR.status === "fulfilled" ? expensesR.value : (prev?.expenses ?? []),
       walks: walksR.status === "fulfilled" ? walksR.value : (prev?.walks ?? []),
+      petsFailed: petsR.status === "rejected",
     },
     error: firstError,
   };
@@ -75,7 +78,7 @@ export function usePetsData() {
     initial: EMPTY,
     fetch: fetchPetsScreen,
   });
-  const { pets, reminders, expenses, walks } = scoped.data;
+  const { pets, reminders, expenses, walks, petsFailed } = scoped.data;
 
   // Primary pet = earliest createdAt (same anchor web + cloud functions use;
   // listPetsForScope already orders createdAt asc, so pets[0], but sort to be
@@ -99,6 +102,9 @@ export function usePetsData() {
     refreshing: scoped.refreshing,
     /** Scope read error or last load error (previous data kept). */
     error: scoped.error,
+    /** Pets could not be read (scope error or pets query failure) — never
+     *  show the add-first-pet state then. Other partial failures don't count. */
+    petsUnknown: scoped.scopeStatus === "error" || petsFailed,
     /** Gate every write (add pet / reminder / expense / health) on this. */
     scopeReady: scoped.scopeReady,
     scopeStatus: scoped.scopeStatus,
