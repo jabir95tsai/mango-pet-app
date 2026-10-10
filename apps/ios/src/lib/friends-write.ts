@@ -6,6 +6,7 @@
  */
 import firestore from "@react-native-firebase/firestore";
 import { firebase } from "@react-native-firebase/functions";
+import { t } from "./i18n";
 
 const FN_REGION = "asia-east1";
 
@@ -27,7 +28,7 @@ export async function sendFriendRequest(
   from: { uid: string; displayName: string | null; photoURL: string | null },
   toUid: string,
 ): Promise<void> {
-  if (from.uid === toUid) throw new Error("不能加自己為好友");
+  if (from.uid === toUid) throw new Error(t("Friends.add.self"));
   const db = firestore();
   const existing = await db
     .collection("users")
@@ -35,7 +36,7 @@ export async function sendFriendRequest(
     .collection("friends")
     .doc(from.uid)
     .get();
-  if (existing.exists) throw new Error("已是好友");
+  if (existing.exists) throw new Error(t("Friends.alreadyFriends"));
   await db
     .collection("users")
     .doc(toUid)

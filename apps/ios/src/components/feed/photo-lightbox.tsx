@@ -293,6 +293,8 @@ export function PhotoLightbox({
               >
                 {photos.map((uri, i) => (
                   <View key={`${uri}-${i}`} style={[styles.slide, { width, height }]}>
+                    {/* Only the current photo ±1 decode (galleries pass hundreds). */}
+                    {Math.abs(i - index) <= 1 ? (
                     <Image
                       source={{ uri }}
                       resizeMode="contain"
@@ -309,6 +311,7 @@ export function PhotoLightbox({
                         }
                       }}
                     />
+                    ) : null}
                   </View>
                 ))}
               </Animated.View>
@@ -358,6 +361,8 @@ export function PhotoLightbox({
               <Text style={styles.counter} accessibilityLiveRegion="polite">
                 {counterLabel}
               </Text>
+              {/* Dots only for short sets; the counter always shows (web). */}
+              {count <= 10 ? (
               <View style={styles.dots}>
                 {photos.map((_, i) => {
                   const active = i === index;
@@ -380,6 +385,7 @@ export function PhotoLightbox({
                   );
                 })}
               </View>
+              ) : null}
             </View>
           ) : null}
         </Animated.View>

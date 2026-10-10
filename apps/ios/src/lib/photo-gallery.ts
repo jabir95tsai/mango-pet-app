@@ -20,6 +20,7 @@ import type {
 import { listMyPosts } from "./posts";
 import { listPetsForScope, listWalksForScope } from "./walk-data";
 import { listExpensesForScope } from "./pets-data";
+import { t } from "./i18n";
 
 export type PhotoGallerySourceKey = "posts" | "walks" | "pets" | "expenses";
 
@@ -104,7 +105,7 @@ function postAssets(
       id: stableId("post", post.postId, String(idx)),
       source: "post" as const,
       url,
-      title: post.text.trim() || "貼文照片",
+      title: post.text.trim() || t("Photos.titles.post"),
       createdAt: post.createdAt,
       sourceId: post.postId,
       petId: post.petIds[0],
@@ -120,7 +121,7 @@ function walkAssets(walks: Walk[]): GalleryPhotoAsset[] {
       id: stableId("walk", walk.walkId, String(idx)),
       source: "walk" as const,
       url,
-      title: walk.petName ? `${walk.petName} 散步照` : "散步照片",
+      title: walk.petName ? t("Photos.titles.walkWithPet", { pet: walk.petName }) : t("Photos.titles.walk"),
       createdAt: walk.startedAt,
       sourceId: walk.walkId,
       petId: walk.petId,
@@ -137,7 +138,7 @@ function petAssets(pets: Pet[]): GalleryPhotoAsset[] {
       id: stableId("pet-avatar", pet.petId, "avatar"),
       source: "pet-avatar" as const,
       url: pet.photoURL!,
-      title: `${pet.name} 頭像`,
+      title: t("Photos.titles.petAvatar", { pet: pet.name }),
       createdAt: pet.createdAt,
       sourceId: pet.petId,
       petId: pet.petId,
@@ -153,7 +154,7 @@ function expenseAssets(expenses: Expense[]): GalleryPhotoAsset[] {
       id: stableId("expense-receipt", expense.expenseId, "receipt"),
       source: "expense-receipt" as const,
       url: expense.receiptURL!,
-      title: expense.vendor || "收據照片",
+      title: expense.vendor || t("Photos.titles.receipt"),
       createdAt: expense.spentAt,
       sourceId: expense.expenseId,
       petId: expense.petId,

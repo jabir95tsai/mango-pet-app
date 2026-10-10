@@ -122,134 +122,134 @@
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Friends screen has no guest (anonymous) gate — guests see tabs/QR and hit rules-denied writes",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-2": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Friends header: small centered '好友' + icon-only QR disc instead of RouteHeader (26px title + subtitle) + labeled '我的 QR' secondary button",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-3": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Friends/requests have no loading state and listener errors are swallowed (empty-state flash / permanent false empty)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-4": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Request row actions are text pills (flat brand '接受' / grey '拒絕') instead of icon buttons Check (green tint) + UserX; no busy guard; hard-coded '失敗' alerts",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-5": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Friend row remove uses X icon with no a11y label; confirm buttons hard-coded '取消/移除'; no busy guard",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-6": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Search tab: emoji '🔍' button, flat-brand text-only '加好友', no 'no results' state, search/send errors swallowed, hard-coded strings",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-7": {
   "lane": "SOCIAL",
   "severity": "P2",
   "title": "Friends empty states are plain centered text; web uses EmptyState card (dashed border, Users icon tile)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-8": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "My QR modal: no Mango logo overlay, no display name, copy feedback via blocking Alert, hard-coded '分享'/'關閉', flat close button",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-9": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Friend-add: error state removes the send button (no retry) and hides the real error; not-found has no back CTA; back() dead-ends on cold deep link",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-10": {
   "lane": "SOCIAL",
   "severity": "P2",
   "title": "Friend-add layout/copy: centered floating content vs web RouteHeader + white card; flat button w/o icon or '送出中…'; hard-coded sent/self/sign-in strings",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-11": {
   "lane": "SOCIAL",
   "severity": "P0",
   "title": "Photos: primary 'Save N unsaved photos' / 'All saved' action is missing on iOS",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-12": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Photos header + save-selected placement: small nav title and floating flat-orange bottom bar vs web RouteHeader with stacked primary/secondary buttons",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-13": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Photo grid cell is a bare image; web card has info footer (pet/title/date), per-photo Download button, 44pt select button and check-icon 'saved' badge",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-14": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Photos filter pills: active = brandTint/brandDeep text, inactive = bgAlt, 34pt — web active is solid brand + white text, inactive white + hairline, 40pt",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-15": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Photos empty states: filter-empty shows the global 'no photos' copy; no CTAs (去發動態 / 開始遛狗), no icon; no pull-to-refresh when empty",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-16": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Photos ignores failedSources (no partialError banner) and load() has no catch — a failed family lookup shows a false 'no photos' with an unhandled rejection",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-17": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Batch save: permission requested per photo, denial reported as 'partial 0', failed items deselected, lightbox single-save unguarded; remote image re-encoded via ImageManipulator",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-18": {
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Gallery renders up to ~400 full-size images via ScrollView.map, and the lightbox mounts every filtered photo at once",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-19": {
   "lane": "SOCIAL",
   "severity": "P2",
   "title": "Lightbox save control is an emoji '⬇︎' with hard-coded '儲存到相簿' label; screens use hard-coded '返回' a11y labels",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-20": {
   "lane": "A3",
@@ -262,15 +262,15 @@
   "lane": "SOCIAL",
   "severity": "P2",
   "title": "Gallery asset titles hard-coded in Chinese in iOS aggregator (web hard-codes English) — shown in card footer and a11y",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "SOCIAL-22": {
   "lane": "SOCIAL",
   "severity": "P2",
   "title": "Friend/request/search rows: radius md + no shadow, avatar 44 and name 15/700 vs web card (shadow-sm) avatar 40, 14/600",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "WALKS-1": {
   "lane": "A3",
@@ -549,8 +549,8 @@
   "lane": "SOCIAL",
   "severity": "P2",
   "title": "save-photo re-encodes via ImageManipulator (quality loss); permission error not surfaced",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "FEED-23": {
   "lane": "FEED",
@@ -1466,8 +1466,8 @@
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Family/Friends/Onboarding alerts and headers hard-code '取消/失敗/返回/關閉/好友/移除/分享'",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "XCUT-12": {
   "lane": "XC",
@@ -1494,8 +1494,8 @@
   "lane": "SOCIAL",
   "severity": "P1",
   "title": "Feed (up to ~90 PostCards) and Photos grid (hundreds of images) rendered with .map inside ScrollView",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SOCIAL (2026-10-10)"
  },
  "XCUT-16": {
   "lane": "XC",

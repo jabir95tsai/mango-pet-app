@@ -104,7 +104,10 @@
       "notFoundDesc": "這個邀請連結可能失效，或對方還沒登入過 App。",
       "sending": "送出中…",
       "send": "送出好友邀請",
-      "failed": "邀請失敗"
+      "failed": "邀請失敗",
+      "sent": "已送出邀請，等對方接受",
+      "self": "這是你自己的 QR code 喔",
+      "signIn": "請先登入才能送出邀請"
     },
     "tabs": {
       "friends": "好友 ({count})",
@@ -119,7 +122,11 @@
     "wantsToAdd": "想加你為好友",
     "removeConfirm": "移除好友？",
     "accept": "接受",
-    "reject": "拒絕"
+    "reject": "拒絕",
+    "alreadyFriends": "已是好友",
+    "requestSent": "已送出",
+    "addFriend": "加好友",
+    "share": "分享"
   },
   "Feed": {
     "subtitle": "好友與公開動態",
@@ -956,7 +963,8 @@
     "saveToAlbum": {
       "label": "存到相簿",
       "saved": "已存 ✓",
-      "failed": "存取失敗"
+      "failed": "存取失敗",
+      "permissionDenied": "需要相簿儲存權限，請到「設定」允許 Mango Pet 加入照片。"
     },
     "retry": "重試",
     "time": {
@@ -977,7 +985,8 @@
       "almostYears": "將近 {n} 年",
       "inPast": "{time}前",
       "inFuture": "{time}內"
-    }
+    },
+    "shareUnavailable": "此裝置不支援分享"
   },
   "PhotoLightbox": {
     "close": "關閉",
@@ -1031,6 +1040,13 @@
     "emptyFilter": {
       "title": "這個分類還沒有照片",
       "description": "切回全部，或之後新增這類照片再回來查看。"
+    },
+    "titles": {
+      "post": "貼文照片",
+      "walk": "散步照片",
+      "walkWithPet": "{pet} 散步照",
+      "petAvatar": "{pet} 頭像",
+      "receipt": "收據照片"
     }
   },
   "Home": {

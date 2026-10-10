@@ -104,7 +104,10 @@
       "notFoundDesc": "This invite link may have expired, or they haven't signed in to the app yet.",
       "sending": "Sending…",
       "send": "Send friend request",
-      "failed": "Request failed"
+      "failed": "Request failed",
+      "sent": "Request sent — waiting for them to accept",
+      "self": "This is your own QR code",
+      "signIn": "Sign in to send a friend request"
     },
     "tabs": {
       "friends": "Friends ({count})",
@@ -119,7 +122,11 @@
     "wantsToAdd": "wants to be friends",
     "removeConfirm": "Remove friend?",
     "accept": "Accept",
-    "reject": "Reject"
+    "reject": "Reject",
+    "alreadyFriends": "Already friends",
+    "requestSent": "Request sent",
+    "addFriend": "Add friend",
+    "share": "Share"
   },
   "Feed": {
     "subtitle": "Friends & public posts",
@@ -956,7 +963,8 @@
     "saveToAlbum": {
       "label": "Save to Photos",
       "saved": "Saved ✓",
-      "failed": "Save failed"
+      "failed": "Save failed",
+      "permissionDenied": "Photos access is needed — allow Mango Pet to add photos in Settings."
     },
     "retry": "Retry",
     "time": {
@@ -977,7 +985,8 @@
       "almostYears": "almost {n} years",
       "inPast": "{time} ago",
       "inFuture": "in {time}"
-    }
+    },
+    "shareUnavailable": "Sharing is not available on this device"
   },
   "PhotoLightbox": {
     "close": "Close",
@@ -1031,6 +1040,13 @@
     "emptyFilter": {
       "title": "No photos in this category",
       "description": "Switch back to All, or come back after adding this type of photo."
+    },
+    "titles": {
+      "post": "Post photo",
+      "walk": "Walk photo",
+      "walkWithPet": "{pet} on a walk",
+      "petAvatar": "{pet} profile photo",
+      "receipt": "Receipt photo"
     }
   },
   "Home": {

@@ -1,14 +1,23 @@
 /**
- * Photos gallery (P3c) — mirrors apps/web/src/app/app/photos/page.tsx. Filter
- * pills (all / post / walk / pet-avatar / expense-receipt), a 2-col grid with a
- * per-cell select checkbox + saved badge, batch "save selected", tap → lightbox
- * (with per-photo save). Save uses PhotosKit (save-photo.ts, native-upgrade);
- * saved assets are recorded in users/{uid}/photoDownloadState.
+ * Photos gallery — 1:1 with apps/web/src/app/app/photos/page.tsx:
+ * back row → RouteHeader (title + "共 N 張 · M 張尚未儲存") → a full-width
+ * primary "儲存 M 張尚未下載的照片" / "全部已儲存" and, with a selection, a
+ * secondary "儲存選取的 N 張" → partial-error / status banners → filter pills
+ * (solid brand when active) → a virtualized 2-column grid of PhotoAssetCards
+ * (select, per-photo save, source pill, new / saved badge, footer) → tap
+ * opens the lightbox (only current ±1 decoded).
+ *
+ * Saving asks Photos permission once per batch (denial offers iOS
+ * Settings), downloads the original bytes, records users/{uid}/
+ * photoDownloadState, keeps failed items selected, and gates every save
+ * control (incl. the lightbox) while a batch runs.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
+  Alert,
+  FlatList,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,13 +26,10 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { ArrowLeft, Check } from "lucide-react-native";
+import { ArrowLeft, Camera, Download, Images } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import type {
-  GalleryPhotoAsset,
-  GalleryPhotoSource,
-} from "@mango/shared-types";
+import type { GalleryPhotoAsset, GalleryPhotoSource } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
 import { useFamilyScope } from "@/lib/use-family-scope";
@@ -31,15 +37,18 @@ import {
   listDownloadedPhotoAssetIds,
   listMyPhotoAssetsWithStatus,
   markPhotoAssetsDownloaded,
+  type PhotoGallerySourceKey,
 } from "@/lib/photo-gallery";
-import { savePhotoToAlbum } from "@/lib/save-photo";
+import { ensureAddPermission, savePhotoToAlbum } from "@/lib/save-photo";
 import { PhotoLightbox } from "@/components/feed/photo-lightbox";
+import { PhotoAssetCard } from "@/components/photos/photo-asset-card";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { t } from "@/lib/i18n";
-import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
+import { colors, radius, spacing, type, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 type FilterKey = "all" | GalleryPhotoSource;
 const FILTERS: FilterKey[] = ["all", "post", "walk", "pet-avatar", "expense-receipt"];
-
 const FILTER_LABEL: Record<FilterKey, string> = {
   all: "Photos.filters.all",
   post: "Photos.filters.post",
@@ -47,23 +56,19 @@ const FILTER_LABEL: Record<FilterKey, string> = {
   "pet-avatar": "Photos.filters.petAvatar",
   "expense-receipt": "Photos.filters.expenseReceipt",
 };
-const SOURCE_LABEL: Record<GalleryPhotoSource, string> = {
-  post: "Photos.sources.post",
-  walk: "Photos.sources.walk",
-  "pet-avatar": "Photos.sources.petAvatar",
-  "expense-receipt": "Photos.sources.expenseReceipt",
-};
+const ALL_SOURCES: PhotoGallerySourceKey[] = ["posts", "walks", "pets", "expenses"];
+const GAP = spacing.md;
 
 export default function PhotosScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  // Capped like the other screens (CONTENT_MAX_WIDTH) so the 2-col grid
-  // doesn't blow up into huge tiles on iPad. iPad QA pass.
   const { width: windowWidth } = useWindowDimensions();
   const width = Math.min(windowWidth, CONTENT_MAX_WIDTH);
+  const cellW = Math.floor((width - spacing.lg * 2 - GAP) / 2);
 
   const [assets, setAssets] = useState<GalleryPhotoAsset[]>([]);
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
+  const [failedSources, setFailedSources] = useState<PhotoGallerySourceKey[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,9 +76,9 @@ export default function PhotosScreen() {
   const [status, setStatus] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const savingRef = useRef(false);
 
-  // Scope from FamilyContext (SOCIAL-20 / R08): waits for it, reloads when
-  // the family changes, never reads users/{uid}.currentFamilyId itself.
+  // Scope from FamilyContext (R08): waits for it, reloads when it changes.
   const { familyId, scopeReady, status: scopeStatus } = useFamilyScope();
   const loadGen = useRef(0);
 
@@ -83,28 +88,28 @@ export default function PhotosScreen() {
       const gen = ++loadGen.current;
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
-      try {
-        const [{ assets: list }, dl] = await Promise.all([
-          listMyPhotoAssetsWithStatus(user.uid, familyId),
-          listDownloadedPhotoAssetIds(user.uid),
-        ]);
-        if (gen !== loadGen.current) return; // superseded (scope changed)
-        setAssets(list);
-        setDownloadedIds(dl);
-      } catch {
-        // Keep what is on screen; error/partial UI is XCUT-13 (photos lane).
-      } finally {
-        if (gen === loadGen.current) {
-          setRefreshing(false);
-          setLoading(false);
-        }
+      const [galleryR, dlR] = await Promise.allSettled([
+        listMyPhotoAssetsWithStatus(user.uid, familyId),
+        listDownloadedPhotoAssetIds(user.uid),
+      ]);
+      if (gen !== loadGen.current) return; // superseded (scope changed)
+      if (galleryR.status === "fulfilled") {
+        setAssets(galleryR.value.assets);
+        setFailedSources(galleryR.value.failedSources);
+      } else {
+        setAssets([]);
+        setFailedSources(ALL_SOURCES);
       }
+      if (dlR.status === "fulfilled") setDownloadedIds(dlR.value);
+      setRefreshing(false);
+      setLoading(false);
     },
     [user, familyId, scopeReady],
   );
 
   useEffect(() => {
     if (scopeStatus === "error") {
+      setFailedSources(ALL_SOURCES);
       setLoading(false);
       return;
     }
@@ -115,73 +120,129 @@ export default function PhotosScreen() {
     () => (filter === "all" ? assets : assets.filter((a) => a.source === filter)),
     [assets, filter],
   );
-  const remaining = useMemo(
-    () => assets.filter((a) => !downloadedIds.has(a.id)).length,
+  const undownloaded = useMemo(
+    () => assets.filter((a) => !downloadedIds.has(a.id)),
     [assets, downloadedIds],
   );
 
-  const gap = spacing.sm;
-  const cols = 2;
-  const cellW = Math.floor((width - spacing.lg * 2 - gap * (cols - 1)) / cols);
-
-  function toggleSelect(id: string) {
+  const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }
+  }, []);
 
-  async function saveSelected() {
-    if (!user || selected.size === 0 || saving) return;
-    setSaving(true);
-    setStatus(null);
-    const toSave = assets.filter((a) => selected.has(a.id));
-    const done: GalleryPhotoAsset[] = [];
-    let failed = 0;
-    for (const a of toSave) {
+  const saveAssets = useCallback(
+    async (targets: GalleryPhotoAsset[]): Promise<boolean> => {
+      if (!user || targets.length === 0 || savingRef.current) return false;
+      savingRef.current = true;
+      setSaving(true);
+      setStatus(null);
       try {
-        await savePhotoToAlbum(a.url);
-        done.push(a);
-      } catch {
-        failed++;
+        if (!(await ensureAddPermission())) {
+          setStatus(t("Photos.status.failed"));
+          Alert.alert(t("Photos.status.failed"), t("Common.saveToAlbum.permissionDenied"), [
+            { text: t("Common.cancel"), style: "cancel" },
+            { text: t("Push.openIosSettings"), onPress: () => void Linking.openSettings() },
+          ]);
+          return false;
+        }
+        const done: GalleryPhotoAsset[] = [];
+        let failed = 0;
+        for (const a of targets) {
+          try {
+            await savePhotoToAlbum(a.url, { skipPermission: true });
+            done.push(a);
+          } catch {
+            failed++;
+          }
+        }
+        if (done.length > 0) {
+          await markPhotoAssetsDownloaded(user.uid, done, "download").catch(() => {});
+          setDownloadedIds((prev) => {
+            const next = new Set(prev);
+            done.forEach((a) => next.add(a.id));
+            return next;
+          });
+          // Only completed ones leave the selection; failures stay selected.
+          setSelected((prev) => {
+            const next = new Set(prev);
+            done.forEach((a) => next.delete(a.id));
+            return next;
+          });
+        }
+        setStatus(
+          done.length === 0
+            ? t("Photos.status.failed")
+            : failed > 0
+              ? t("Photos.status.partial", { count: done.length })
+              : t("Photos.status.saved", { count: done.length }),
+        );
+        return failed === 0;
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
       }
-    }
-    if (done.length > 0) {
-      try {
-        await markPhotoAssetsDownloaded(user.uid, done, "download");
-      } catch {
-        // best-effort; saved to album regardless
-      }
-      setDownloadedIds((prev) => {
-        const next = new Set(prev);
-        done.forEach((a) => next.add(a.id));
-        return next;
-      });
-    }
-    setSelected(new Set());
-    setSaving(false);
-    setStatus(
-      failed > 0
-        ? t("Photos.status.partial", { count: done.length })
-        : t("Photos.status.saved", { count: done.length }),
-    );
-  }
+    },
+    [user],
+  );
 
-  return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.flex}>
-      <View style={styles.header}>
-        <Pressable accessibilityLabel="返回" onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
-          <ArrowLeft size={22} color={colors.ink} strokeWidth={2} />
-        </Pressable>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>{t("Photos.title")}</Text>
-          <Text style={styles.subtitle}>
-            {t("Photos.subtitle", { total: assets.length, remaining })}
-          </Text>
-        </View>
+  const header = (
+    <View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t("Common.back")}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/settings"))}
+        hitSlop={8}
+        style={styles.backBtn}
+      >
+        <ArrowLeft size={20} color={colors.ink} strokeWidth={2} />
+      </Pressable>
+      <Text style={styles.title} accessibilityRole="header">
+        {t("Photos.title")}
+      </Text>
+      <Text style={styles.subtitle}>
+        {t("Photos.subtitle", { total: assets.length, remaining: undownloaded.length })}
+      </Text>
+
+      <View style={styles.actions}>
+        <Button
+          fullWidth
+          icon={<Download size={16} color="#ffffff" strokeWidth={2} />}
+          label={
+            saving
+              ? t("Photos.actions.saving")
+              : undownloaded.length === 0
+                ? t("Photos.actions.allSaved")
+                : t("Photos.actions.saveRemaining", { count: undownloaded.length })
+          }
+          disabled={saving || undownloaded.length === 0}
+          onPress={() => void saveAssets(undownloaded)}
+        />
+        {selected.size > 0 ? (
+          <Button
+            fullWidth
+            variant="secondary"
+            icon={<Download size={16} color={colors.ink} strokeWidth={2} />}
+            label={t("Photos.actions.saveSelected", { count: selected.size })}
+            disabled={saving}
+            onPress={() => void saveAssets(assets.filter((a) => selected.has(a.id)))}
+          />
+        ) : null}
       </View>
+
+      {failedSources.length > 0 ? (
+        <View style={[styles.banner, styles.bannerWarn]}>
+          <Text style={styles.bannerText}>{t("Photos.partialError")}</Text>
+        </View>
+      ) : null}
+      {status ? (
+        <View style={styles.banner} accessibilityLiveRegion="polite">
+          <Text style={[styles.bannerText, styles.bannerMuted]}>{status}</Text>
+        </View>
+      ) : null}
 
       <ScrollView
         horizontal
@@ -194,92 +255,79 @@ export default function PhotosScreen() {
           return (
             <Pressable
               key={f}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
               onPress={() => setFilter(f)}
               style={[styles.pill, on && styles.pillOn]}
             >
-              <Text style={[styles.pillText, on && styles.pillTextOn]}>
-                {t(FILTER_LABEL[f])}
-              </Text>
+              <Text style={[styles.pillText, on && styles.pillTextOn]}>{t(FILTER_LABEL[f])}</Text>
             </Pressable>
           );
         })}
       </ScrollView>
+    </View>
+  );
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.brand} size="large" />
+  const empty = loading ? (
+    <ActivityIndicator color={colors.brand} size="large" style={styles.loader} />
+  ) : assets.length === 0 ? (
+    <EmptyState
+      icon={Images}
+      title={t("Photos.empty.title")}
+      description={t("Photos.empty.description")}
+      action={
+        <View style={styles.emptyActions}>
+          <Button
+            label={t("Photos.empty.feedCta")}
+            icon={<Camera size={16} color="#ffffff" strokeWidth={2} />}
+            onPress={() => router.push("/feed")}
+          />
+          <Button
+            label={t("Photos.empty.walkCta")}
+            variant="secondary"
+            onPress={() => router.push("/(tabs)/walks")}
+          />
         </View>
-      ) : filtered.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyTitle}>{t("Photos.empty.title")}</Text>
-          <Text style={styles.emptyBody}>{t("Photos.empty.description")}</Text>
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={[styles.grid, { gap }]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.brand} />
-          }
-        >
-          {filtered.map((a, i) => {
-            const isSel = selected.has(a.id);
-            const isDl = downloadedIds.has(a.id);
-            return (
-              <Pressable
-                key={a.id}
-                accessibilityLabel={t("Photos.openPhoto", { title: a.title })}
-                onPress={() => setLightboxIdx(i)}
-                style={{ width: cellW }}
-              >
-                <Image
-                  source={{ uri: a.url }}
-                  style={{ width: cellW, height: cellW, borderRadius: radius.md, backgroundColor: colors.bgAlt }}
-                />
-                <Pressable
-                  accessibilityLabel={isSel ? t("Photos.deselect") : t("Photos.select")}
-                  onPress={() => toggleSelect(a.id)}
-                  hitSlop={8}
-                  style={[styles.checkbox, isSel && styles.checkboxOn]}
-                >
-                  {isSel ? <Check size={14} color="#ffffff" strokeWidth={3} /> : null}
-                </Pressable>
-                <View style={styles.srcBadge}>
-                  <Text style={styles.srcText}>{t(SOURCE_LABEL[a.source])}</Text>
-                </View>
-                {isDl ? (
-                  <View style={styles.dlBadge}>
-                    <Text style={styles.dlText}>{t("Photos.downloaded")}</Text>
-                  </View>
-                ) : (
-                  <View style={[styles.dlBadge, styles.newBadge]}>
-                    <Text style={styles.dlText}>{t("Photos.newBadge")}</Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      )}
+      }
+    />
+  ) : (
+    <EmptyState
+      icon={Images}
+      title={t("Photos.emptyFilter.title")}
+      description={t("Photos.emptyFilter.description")}
+    />
+  );
 
-      {status ? <Text style={styles.statusBar}>{status}</Text> : null}
-
-      {selected.size > 0 ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={saveSelected}
-          disabled={saving}
-          style={({ pressed }) => [styles.saveBar, pressed && styles.pressed]}
-        >
-          {saving ? (
-            <ActivityIndicator color={colors.card} />
-          ) : (
-            <Text style={styles.saveBarText}>
-              {t("Photos.actions.saveSelected", { count: selected.size })}
-            </Text>
-          )}
-        </Pressable>
-      ) : null}
+  return (
+    <SafeAreaView edges={["top"]} style={styles.flex}>
+      <FlatList
+        data={loading ? [] : filtered}
+        keyExtractor={(a) => a.id}
+        numColumns={2}
+        columnWrapperStyle={styles.column}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+        initialNumToRender={8}
+        windowSize={5}
+        removeClippedSubviews
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={colors.brand} />
+        }
+        renderItem={({ item, index }) => (
+          <PhotoAssetCard
+            asset={item}
+            width={cellW}
+            downloaded={downloadedIds.has(item.id)}
+            selected={selected.has(item.id)}
+            saving={saving}
+            onOpen={() => setLightboxIdx(index)}
+            onToggleSelected={() => toggleSelect(item.id)}
+            onSave={() => void saveAssets([item])}
+          />
+        )}
+      />
 
       {lightboxIdx !== null ? (
         <PhotoLightbox
@@ -288,19 +336,9 @@ export default function PhotosScreen() {
           open
           onClose={() => setLightboxIdx(null)}
           saving={saving}
-          onSave={async (url) => {
-            if (!user) return;
-            const asset = filtered.find((a) => a.url === url);
-            try {
-              await savePhotoToAlbum(url);
-              if (asset) {
-                await markPhotoAssetsDownloaded(user.uid, [asset], "download").catch(() => {});
-                setDownloadedIds((prev) => new Set(prev).add(asset.id));
-              }
-              setStatus(t("Photos.status.saved", { count: 1 }));
-            } catch {
-              setStatus(t("Photos.status.failed"));
-            }
+          onSave={async (_url, i) => {
+            const asset = filtered[i];
+            if (asset) await saveAssets([asset]);
           }}
         />
       ) : null}
@@ -310,49 +348,47 @@ export default function PhotosScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  backText: { fontSize: 30, color: colors.ink, fontWeight: "700", lineHeight: 32 },
-  headerText: { flex: 1, marginLeft: spacing.xs },
-  title: { fontSize: 18, fontWeight: "800", color: colors.ink },
-  subtitle: { fontSize: 12, color: colors.ink3 },
-  pillsWrap: { maxHeight: 52, flexGrow: 0, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
-  pills: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingVertical: spacing.sm },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
+    gap: GAP,
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
+  },
+  column: { gap: GAP },
+  backBtn: { width: 44, height: 44, marginLeft: -10, alignItems: "center", justifyContent: "center", marginBottom: spacing.xs },
+  title: { ...type.h1, color: colors.ink },
+  subtitle: { marginTop: 4, fontSize: 14, lineHeight: 24, color: colors.ink2 },
+  actions: { gap: spacing.sm, marginTop: spacing.md, marginBottom: spacing.lg },
+  banner: {
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.cardSoft,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  bannerWarn: { borderColor: colors.bellTint },
+  bannerText: { fontSize: 14, color: colors.ink },
+  bannerMuted: { color: colors.ink2 },
+  pillsWrap: { flexGrow: 0, marginBottom: spacing.lg },
+  pills: { gap: spacing.sm },
+  // web: h-10 px-4 rounded-full border text-sm font-semibold
   pill: {
-    paddingHorizontal: spacing.md, height: 34, borderRadius: radius.pill, justifyContent: "center",
-    backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.hairline,
+    height: 40,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.card,
+    justifyContent: "center",
   },
-  pillOn: { backgroundColor: colors.brandTint, borderColor: colors.brand },
-  pillText: { fontSize: 13, fontWeight: "600", color: colors.ink2 },
-  pillTextOn: { color: colors.brandDeep, fontWeight: "800" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.xs, padding: spacing.xl },
-  emptyTitle: { fontSize: 16, fontWeight: "800", color: colors.ink },
-  emptyBody: { fontSize: 13, color: colors.ink2, textAlign: "center", lineHeight: 19 },
-  grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: spacing.lg, paddingBottom: 96, width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
-  checkbox: {
-    position: "absolute", top: 6, left: 6, width: 26, height: 26, borderRadius: 13,
-    borderWidth: 2, borderColor: "#fff", backgroundColor: "rgba(0,0,0,0.3)",
-    alignItems: "center", justifyContent: "center",
-  },
-  checkboxOn: { backgroundColor: colors.brand, borderColor: colors.card },
-  checkMark: { color: "#fff", fontSize: 14, fontWeight: "900" },
-  srcBadge: {
-    position: "absolute", bottom: 6, left: 6, paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: radius.pill, backgroundColor: "rgba(0,0,0,0.55)",
-  },
-  srcText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  dlBadge: {
-    position: "absolute", top: 6, right: 6, paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: radius.pill, backgroundColor: colors.leaf,
-  },
-  newBadge: { backgroundColor: colors.brand },
-  dlText: { color: "#fff", fontSize: 10, fontWeight: "800" },
-  statusBar: { textAlign: "center", fontSize: 12, color: colors.ink2, paddingVertical: spacing.xs },
-  saveBar: {
-    position: "absolute", left: spacing.lg, right: spacing.lg, bottom: spacing.xl, height: 52,
-    borderRadius: radius.pill, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center",
-    shadowColor: colors.brandDeep, shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6,
-  },
-  saveBarText: { color: colors.card, fontSize: 15, fontWeight: "800" },
-  pressed: { opacity: 0.85 },
+  pillOn: { backgroundColor: colors.brand, borderColor: colors.brand },
+  pillText: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
+  pillTextOn: { color: "#ffffff" },
+  loader: { marginTop: spacing.xl },
+  emptyActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "center" },
 });
