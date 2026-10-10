@@ -1,38 +1,41 @@
 /**
  * Settings → "已封鎖的使用者" — lets the user see and undo who they've
- * blocked (users/{uid}.blockedUids). Without this the block action would
- * be a one-way door. Spec docs/features/ugc-moderation.md. Web parity:
- * apps/web/src/components/settings/blocked-users-section.tsx.
+ * blocked (users/{uid}.blockedUids). Without this the block action would be a
+ * one-way door. Spec docs/features/ugc-moderation.md. 1:1 with web
+ * apps/web/src/components/settings/blocked-users-section.tsx: UserX disc +
+ * title, avatar rows with a secondary sm "unblock" button, optimistic removal
+ * with rollback + red Moderation.unblockFailed.
+ *
+ * The uid list comes from the settings screen's single users/{uid} read
+ * (`prefs`, undefined = still loading); only the profiles are fetched here.
  */
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { UserX } from "lucide-react-native";
 
-import { useAuth } from "@/state/auth-context";
-import { getBlockedUids, getUserProfileLite, unblockUser } from "@/lib/user-prefs";
+import { Button } from "@/components/ui/Button";
 import { UserAvatar } from "@/components/feed/user-avatar";
-import { scoped } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
-
-const t = scoped("Moderation");
+import { useAuth } from "@/state/auth-context";
+import { getUserProfileLite, unblockUser, type UserPrefs } from "@/lib/user-prefs";
+import { t } from "@/lib/i18n";
+import { colors, spacing } from "@/theme/theme";
+import { SettingsCard, SettingsIconDisc, settingsText } from "./settings-card";
 
 type Row = { uid: string; displayName: string; photoURL: string | null };
 
-export function BlockedUsersSection() {
+export function BlockedUsersSection({ prefs }: { prefs: UserPrefs | undefined }) {
   const { user } = useAuth();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<Row[] | null>(null);
   const [pendingUid, setPendingUid] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const uidsKey = (prefs?.blockedUids ?? []).join(",");
 
   useEffect(() => {
-    if (!user) return;
+    if (!prefs) return;
     let cancelled = false;
-    (async () => {
-      try {
-        const uids = await getBlockedUids(user.uid);
-        const profiles = await Promise.all(
-          uids.map((uid) => getUserProfileLite(uid).catch(() => null)),
-        );
+    const uids = prefs.blockedUids ?? [];
+    void Promise.all(uids.map((uid) => getUserProfileLite(uid).catch(() => null))).then(
+      (profiles) => {
         if (cancelled) return;
         setRows(
           uids.map((uid, i) => ({
@@ -41,41 +44,42 @@ export function BlockedUsersSection() {
             photoURL: profiles[i]?.photoURL ?? null,
           })),
         );
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uidsKey, prefs === undefined]);
 
   async function handleUnblock(uid: string) {
-    if (!user || pendingUid) return;
+    if (!user || pendingUid || !rows) return;
     setPendingUid(uid);
+    setError(false);
     const prev = rows;
-    setRows((rs) => rs.filter((r) => r.uid !== uid));
+    setRows(rows.filter((r) => r.uid !== uid));
     try {
       await unblockUser(user.uid, uid);
     } catch {
       setRows(prev);
+      setError(true);
     } finally {
       setPendingUid(null);
     }
   }
 
-  if (loading) return null;
-
   return (
-    <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <View style={styles.iconDisc}>
-          <UserX size={16} color={colors.brandDeep} />
-        </View>
-        <Text style={styles.title}>{t("blockedUsersTitle")}</Text>
+    <SettingsCard>
+      <View style={styles.header}>
+        <SettingsIconDisc>
+          <UserX size={16} color={colors.brandDeep} strokeWidth={2} />
+        </SettingsIconDisc>
+        <Text style={[settingsText.title, styles.flex]}>{t("Moderation.blockedUsersTitle")}</Text>
       </View>
-      {rows.length === 0 ? (
-        <Text style={styles.empty}>{t("blockedUsersEmpty")}</Text>
+      {rows === null ? (
+        <Text style={settingsText.sub}>{t("Common.loading")}</Text>
+      ) : rows.length === 0 ? (
+        <Text style={settingsText.sub}>{t("Moderation.blockedUsersEmpty")}</Text>
       ) : (
         rows.map((r) => (
           <View key={r.uid} style={styles.row}>
@@ -83,52 +87,29 @@ export function BlockedUsersSection() {
             <Text style={styles.name} numberOfLines={1}>
               {r.displayName}
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => handleUnblock(r.uid)}
-              disabled={pendingUid === r.uid}
-              style={({ pressed }) => [styles.unblockBtn, pressed && styles.pressed]}
-            >
-              <Text style={styles.unblockText}>{t("unblock")}</Text>
-            </Pressable>
+            <Button
+              label={t("Moderation.unblock")}
+              variant="secondary"
+              size="sm"
+              onPress={() => void handleUnblock(r.uid)}
+              disabled={pendingUid !== null}
+              loading={pendingUid === r.uid}
+            />
           </View>
         ))
       )}
-    </View>
+      {error ? (
+        <Text style={settingsText.error} accessibilityRole="alert">
+          {t("Moderation.unblockFailed")}
+        </Text>
+      ) : null}
+    </SettingsCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  headerRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  iconDisc: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.brandTint,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: { fontSize: 15, fontWeight: "800", color: colors.ink },
-  empty: { fontSize: 12, color: colors.ink3, paddingLeft: 48 },
+  flex: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   name: { flex: 1, fontSize: 14, color: colors.ink },
-  unblockBtn: {
-    height: 32,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  unblockText: { fontSize: 12, fontWeight: "700", color: colors.ink2 },
-  pressed: { opacity: 0.7 },
 });

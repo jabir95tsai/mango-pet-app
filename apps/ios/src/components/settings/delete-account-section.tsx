@@ -1,22 +1,25 @@
 /**
- * Delete account (P5a) — danger zone button → dialog: impact preview +
- * typed-displayName confirm + callable. On success signs out (root navigator
- * routes to login). Mirrors web delete-account-dialog.tsx.
+ * Delete account — the danger-zone button + confirm dialog, 1:1 with web
+ * apps/web/src/components/settings/delete-account-dialog.tsx:
+ *
+ *   red warning box (AlertTriangle + warning + cannotUndo) → impact preview
+ *   (loading / previewFailed — the delete stays possible / ImpactSummary with
+ *   only non-zero lines, cascade chip, nothing-to-delete) → typed display-name
+ *   confirm (hint only while typed and not matching) → error box →
+ *   Cancel (ghost) / red confirm (Trash2 + confirmButton, "deleting" while busy).
+ *
+ * Built on the shared Dialog, so the input and actions stay above the
+ * keyboard. On success signs out (root navigator routes to sign-in).
  */
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { Trash2 } from "lucide-react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { AlertTriangle, Trash2 } from "lucide-react-native";
 import type { DeleteAccountImpact } from "@mango/shared-types";
 
+import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
+import { Field, Input } from "@/components/ui/Input";
+import { withAlpha } from "@/components/auth/color";
 import { useAuth } from "@/state/auth-context";
 import { deleteUserAccount, previewDeleteAccountImpact } from "@/lib/account";
 import { signOut } from "@/lib/auth";
@@ -24,10 +27,65 @@ import { getUserPrefs } from "@/lib/user-prefs";
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 
+const RED_50 = "#fef2f2";
+const RED_700 = "#b91c1c";
+const RED_900 = "#7f1d1d";
+
+function ImpactSummary({ impact }: { impact: DeleteAccountImpact }) {
+  const personal = impact.personalPets;
+  const family = impact.familyPets;
+  const myActivity = impact.familyWalks + impact.familyReminders + impact.familyExpenses;
+  const social = impact.posts;
+  if (personal + family + myActivity + social === 0) {
+    return <Text style={styles.muted12}>{t("DeleteAccount.nothingToDelete")}</Text>;
+  }
+  const line = (section: string, body: string) => (
+    <Text style={styles.impactLine}>
+      <Text style={styles.impactSection}>{`${section}：`}</Text>
+      {body}
+    </Text>
+  );
+  return (
+    <View style={styles.impact}>
+      <Text style={styles.impactHeader}>{t("DeleteAccount.impactHeader")}</Text>
+      {personal > 0
+        ? line(
+            t("DeleteAccount.personalDataSection"),
+            t("DeleteAccount.personalDataCount", { n: personal }),
+          )
+        : null}
+      {family > 0 ? (
+        <>
+          {line(
+            t("DeleteAccount.familyDataSection"),
+            t("DeleteAccount.familyDataCount", { n: family }),
+          )}
+          <Text style={styles.cascade}>{`⚠ ${t("DeleteAccount.cascadeWarning")}`}</Text>
+        </>
+      ) : null}
+      {myActivity > 0
+        ? line(
+            t("DeleteAccount.myActivitySection"),
+            t("DeleteAccount.myActivityCount", {
+              walks: impact.familyWalks,
+              reminders: impact.familyReminders,
+              expenses: impact.familyExpenses,
+            }),
+          )
+        : null}
+      {social > 0
+        ? line(t("DeleteAccount.socialDataSection"), t("DeleteAccount.socialDataCount", { n: social }))
+        : null}
+    </View>
+  );
+}
+
 export function DeleteAccountSection() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [impact, setImpact] = useState<DeleteAccountImpact | null>(null);
+  const [impactLoading, setImpactLoading] = useState(false);
+  const [impactError, setImpactError] = useState(false);
   const [expectedName, setExpectedName] = useState("");
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -35,147 +93,173 @@ export function DeleteAccountSection() {
 
   useEffect(() => {
     if (!open || !user) return;
+    let alive = true;
     setConfirmName("");
     setError(null);
     setImpact(null);
-    previewDeleteAccountImpact().then(setImpact).catch(() => setImpact(null));
-    // expected name: prefer the Firestore profile displayName, fall back to auth
+    setImpactError(false);
+    setImpactLoading(true);
+    previewDeleteAccountImpact()
+      .then((v) => {
+        if (alive) setImpact(v);
+      })
+      .catch(() => {
+        if (alive) setImpactError(true);
+      })
+      .finally(() => {
+        if (alive) setImpactLoading(false);
+      });
+    // Expected name: the Firestore profile displayName, else auth (web).
     getUserPrefs(user.uid)
-      .then((p) => setExpectedName((p.displayName ?? user.displayName ?? "").trim()))
-      .catch(() => setExpectedName((user.displayName ?? "").trim()));
+      .then((p) => {
+        if (alive) setExpectedName((p.displayName ?? user.displayName ?? "").trim());
+      })
+      .catch(() => {
+        if (alive) setExpectedName((user.displayName ?? "").trim());
+      });
+    return () => {
+      alive = false;
+    };
   }, [open, user]);
 
-  const canDelete = confirmName.trim().length > 0 && confirmName.trim() === expectedName;
+  const matches = confirmName.trim().length > 0 && confirmName.trim() === expectedName;
 
   async function doDelete() {
-    if (!canDelete || deleting) return;
+    if (!matches || deleting) return;
     setDeleting(true);
     setError(null);
     try {
       await deleteUserAccount(confirmName.trim());
       await signOut({ accountDeleted: true });
-      // root navigator redirects to sign-in once auth clears
     } catch (e) {
       setDeleting(false);
-      setError(`${t("DeleteAccount.errorPrefix")}: ${e instanceof Error ? e.message : ""}`);
+      setError(e instanceof Error && e.message ? e.message : "Delete failed");
     }
   }
 
   return (
     <>
-      <Pressable onPress={() => setOpen(true)} style={styles.dangerBtn}>
-        <Trash2 size={16} color="#ffffff" />
-        <Text style={styles.dangerText}>{t("Settings.dangerZone.deleteAction")}</Text>
-      </Pressable>
+      <Button
+        label={t("Settings.dangerZone.deleteAction")}
+        variant="danger"
+        icon={Trash2}
+        onPress={() => setOpen(true)}
+        style={styles.openBtn}
+      />
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => !deleting && setOpen(false)}>
-          <Pressable style={styles.sheet}>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <Text style={styles.title}>{t("DeleteAccount.dialogTitle")}</Text>
-              <Text style={styles.cannotUndo}>{t("DeleteAccount.cannotUndo")}</Text>
+      <Dialog
+        visible={open}
+        onClose={() => setOpen(false)}
+        title={t("DeleteAccount.dialogTitle")}
+        dismissible={!deleting}
+        footer={
+          <View style={styles.actions}>
+            <Button
+              label={t("DeleteAccount.cancelButton")}
+              variant="ghost"
+              onPress={() => setOpen(false)}
+              disabled={deleting}
+            />
+            <Button
+              label={deleting ? t("DeleteAccount.deleting") : t("DeleteAccount.confirmButton")}
+              variant="danger"
+              icon={deleting ? undefined : Trash2}
+              onPress={doDelete}
+              disabled={!matches || deleting}
+            />
+          </View>
+        }
+      >
+        <View style={styles.warning}>
+          <AlertTriangle size={20} color={RED_900} strokeWidth={2} style={styles.warningIcon} />
+          <View style={styles.warningText}>
+            <Text style={styles.warningTitle}>{t("DeleteAccount.warning")}</Text>
+            <Text style={styles.warningBody}>{t("DeleteAccount.cannotUndo")}</Text>
+          </View>
+        </View>
 
-              <Text style={styles.impactHeader}>{t("DeleteAccount.impactHeader")}</Text>
-              {impact === null ? (
-                <Text style={styles.previewLoading}>{t("DeleteAccount.previewLoading")}</Text>
-              ) : (
-                <View style={styles.impactBox}>
-                  <Text style={styles.impactLine}>
-                    {t("DeleteAccount.personalDataSection")}: {t("DeleteAccount.personalDataCount", { n: impact.personalPets })}
-                  </Text>
-                  <Text style={styles.impactLine}>
-                    {t("DeleteAccount.familyDataSection")}: {t("DeleteAccount.familyDataCount", { n: impact.familyPets })}
-                  </Text>
-                  <Text style={styles.impactLine}>
-                    {t("DeleteAccount.socialDataSection")}: {t("DeleteAccount.socialDataCount", { n: impact.posts })}
-                  </Text>
-                </View>
-              )}
+        {impactLoading ? (
+          <Text style={styles.muted14}>{t("DeleteAccount.previewLoading")}</Text>
+        ) : impactError ? (
+          <Text style={styles.muted12}>{t("DeleteAccount.previewFailed")}</Text>
+        ) : impact ? (
+          <ImpactSummary impact={impact} />
+        ) : null}
 
-              <Text style={styles.confirmLabel}>
-                {t("DeleteAccount.confirmInputLabel", { name: expectedName || "—" })}
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={confirmName}
-                onChangeText={setConfirmName}
-                placeholder={expectedName}
-                placeholderTextColor={colors.ink3}
-                autoCapitalize="none"
-              />
-              <Text style={styles.confirmHint}>{t("DeleteAccount.confirmInputHint")}</Text>
+        <Field
+          label={t("DeleteAccount.confirmInputLabel", { name: expectedName || "—" })}
+          hint={confirmName.length > 0 && !matches ? t("DeleteAccount.confirmInputHint") : undefined}
+        >
+          <Input
+            value={confirmName}
+            onChangeText={setConfirmName}
+            placeholder={expectedName}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoFocus
+            editable={!deleting}
+          />
+        </Field>
 
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-
-              <View style={styles.actions}>
-                <Pressable onPress={() => !deleting && setOpen(false)} style={styles.cancelBtn}>
-                  <Text style={styles.cancelText}>{t("DeleteAccount.cancelButton")}</Text>
-                </Pressable>
-                <Pressable
-                  onPress={doDelete}
-                  disabled={!canDelete || deleting}
-                  style={[styles.confirmBtn, (!canDelete || deleting) && styles.disabled]}
-                >
-                  {deleting ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.confirmBtnText}>{t("DeleteAccount.confirmButton")}</Text>
-                  )}
-                </Pressable>
-              </View>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        {error ? (
+          <Text style={styles.errorBox} accessibilityRole="alert">
+            {`${t("DeleteAccount.errorPrefix")}: ${error}`}
+          </Text>
+        ) : null}
+      </Dialog>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  dangerBtn: {
-    alignSelf: "flex-start",
+  openBtn: { alignSelf: "flex-start" },
+  // web: flex gap-3 rounded-md border border-red-300/70 bg-red-50 p-3 text-red-900
+  warning: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    height: 44,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: colors.danger,
-  },
-  dangerText: { fontSize: 14, fontWeight: "700", color: "#ffffff" },
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  sheet: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.lg,
-    maxHeight: "88%",
-  },
-  title: { fontSize: 18, fontWeight: "800", color: colors.ink },
-  cannotUndo: { fontSize: 13, color: colors.cookie, marginTop: spacing.sm },
-  impactHeader: { fontSize: 13, fontWeight: "800", color: colors.ink2, marginTop: spacing.lg },
-  previewLoading: { fontSize: 12, color: colors.ink3, marginTop: spacing.xs },
-  impactBox: { marginTop: spacing.sm, gap: spacing.xs },
-  impactLine: { fontSize: 13, color: colors.ink2 },
-  confirmLabel: { fontSize: 13, fontWeight: "700", color: colors.ink, marginTop: spacing.lg },
-  input: {
-    height: 48,
-    backgroundColor: colors.bgAlt,
-    borderWidth: 1,
-    borderColor: colors.hairline,
+    gap: spacing.md,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    fontSize: 15,
-    color: colors.ink,
-    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: "rgba(252,165,165,0.7)",
+    backgroundColor: RED_50,
+    padding: spacing.md,
   },
-  confirmHint: { fontSize: 11, color: colors.ink3, marginTop: spacing.xs },
-  error: { fontSize: 12, color: colors.cookie, marginTop: spacing.sm },
-  actions: { flexDirection: "row", gap: spacing.md, marginTop: spacing.lg, marginBottom: spacing.md },
-  cancelBtn: { flex: 1, height: 48, borderRadius: radius.pill, backgroundColor: colors.bgAlt, alignItems: "center", justifyContent: "center" },
-  cancelText: { fontSize: 15, fontWeight: "700", color: colors.ink2 },
-  confirmBtn: { flex: 1, height: 48, borderRadius: radius.pill, backgroundColor: colors.cookie, alignItems: "center", justifyContent: "center" },
-  confirmBtnText: { fontSize: 15, fontWeight: "800", color: "#fff" },
-  disabled: { opacity: 0.5 },
+  warningIcon: { marginTop: 2 },
+  warningText: { flex: 1, gap: 4 },
+  warningTitle: { fontSize: 14, fontWeight: "600", color: RED_900 },
+  warningBody: { fontSize: 12, lineHeight: 17, color: RED_900 },
+  muted14: { fontSize: 14, color: colors.ink2 },
+  muted12: { fontSize: 12, lineHeight: 17, color: colors.ink2 },
+  impact: { gap: 6 },
+  impactHeader: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: colors.ink2,
+  },
+  impactLine: { fontSize: 14, lineHeight: 20, color: colors.ink },
+  impactSection: { fontWeight: "500" },
+  // web: rounded-sm bg-brand-tint/50 px-2 py-1.5 text-xs ink-2
+  cascade: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.ink2,
+    backgroundColor: withAlpha(colors.brandTint, 0.5),
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    overflow: "hidden",
+  },
+  // web: rounded-sm bg-red-50 px-2 py-1.5 text-xs text-red-700
+  errorBox: {
+    fontSize: 12,
+    color: RED_700,
+    backgroundColor: RED_50,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    overflow: "hidden",
+  },
+  // web: flex justify-end gap-3
+  actions: { flexDirection: "row", justifyContent: "flex-end", gap: spacing.md },
 });

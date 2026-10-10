@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: colors.card,
-    padding: spacing.lg,
+    padding: spacing.xl,
     ...shadows.card,
   },
   sectionLeft: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: spacing.md },

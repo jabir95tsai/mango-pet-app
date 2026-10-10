@@ -563,15 +563,15 @@
   "lane": "FAMACH",
   "severity": "P0",
   "title": "Achievements page missing on iOS (web /app/achievements has no iOS route, data module, or badge card)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "LEAD-2": {
   "lane": "SETTINGS",
   "severity": "P0",
   "title": "Settings has no 成就徽章 entry card (web shows it right after profile/guest-upgrade)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "LEAD-3": {
   "lane": "LEAD",
@@ -857,8 +857,8 @@
   "lane": "SETTINGS",
   "severity": "P0",
   "title": "Achievements entry card and the achievements screen are missing on iOS",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-2": {
   "lane": "A2",
@@ -871,106 +871,106 @@
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "Guest gating does not match web: iOS hides the family, engagement push, walk auto-photo, export and delete-account sections from guests",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-4": {
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "Settings card shell differs: most cards use radius lg (14) instead of xl (18), padding 16 instead of 24, and no shadow-card",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-5": {
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "Page header: title is the hard-coded '設定' at 22/800 instead of t('Nav.settings') at the RouteHeader 26/800/-0.5 style",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-6": {
   "lane": "SETTINGS",
   "severity": "P2",
   "title": "Web's top-right '更多' overflow-drawer trigger has no iOS counterpart",
-  "state": "todo",
-  "note": ""
+  "state": "skipped",
+  "note": "accepted difference: the drawer's only iOS destination (photos) is already reachable from the settings photos card; revisit when a 2nd destination ships"
  },
  "SETTINGS-7": {
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "The push retry link calls a key that does not exist, t('Common.retry'), so iOS renders a raw '[missing \"zh-TW.Common.retry\" translation]' string",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-8": {
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "Hard-coded Chinese and activeLocale-ternary strings across the settings and family surfaces (R20-style)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-9": {
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "Push card has no state icon disc (Bell / BellRing / BellOff) and no 'Test' push action",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-10": {
   "lane": "SETTINGS",
   "severity": "P2",
   "title": "Engagement push section is missing the Sparkles header disc, per-row Bell icons, row dividers, pending guard and error text",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-11": {
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "Walk auto-photo and leaderboard visibility: no loading state, no pending guard, unhandled read rejection, no error text",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-12": {
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "Delete-account sheet: the keyboard covers the confirm input and buttons, and a failed preview stays on 'loading' forever",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-13": {
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "Delete-account content differs: no red warning box, no 'my activity' and cascade lines, no 'nothing to delete' state, hint always visible, orange instead of red confirm button",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-14": {
   "lane": "FAMACH",
   "severity": "P1",
   "title": "Family create/join sheets: keyboard covers the input and submit, no cancel button, and join maps every failure to 'invalid code'",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-15": {
   "lane": "FAMACH",
   "severity": "P1",
   "title": "No 'move personal data into the family' import wizard after creating or joining a family",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-16": {
   "lane": "FAMACH",
   "severity": "P2",
   "title": "Inline family card detail differences: copy feedback, regen spinner, members loading, owner badge, remove icon, leave colour, '＋' glyph, switch pill style",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-17": {
   "lane": "FAMACH",
   "severity": "P1",
   "title": "Standalone /family screen is a ~450-line divergent copy of the inline family card (different layout, hard-coded strings)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-18": {
   "lane": "A2",
@@ -990,8 +990,8 @@
   "lane": "SETTINGS",
   "severity": "P1",
   "title": "Settings tab stays mounted and never refreshes, and the same users/{uid} doc is read 4-5 times on mount",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-21": {
   "lane": "A3",
@@ -1004,22 +1004,22 @@
   "lane": "SETTINGS",
   "severity": "P2",
   "title": "Profile card: guest subtitle shows the family 'personal mode' copy instead of the email placeholder; name weight differs; no shadow",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-23": {
   "lane": "SETTINGS",
   "severity": "P2",
   "title": "Export button differs (full-width pill, no Download icon, spinner instead of 'downloading' label, no success text, silent when sharing is unavailable)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-24": {
   "lane": "SETTINGS",
   "severity": "P2",
   "title": "Blocked users: unblock failure is silent and the unblock button style differs",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SETTINGS-25": {
   "lane": "A3",
@@ -1326,8 +1326,8 @@
   "lane": "FAMACH",
   "severity": "P1",
   "title": "Achievements has no iOS route or entry point (web: settings card → /app/achievements)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SHELL-15": {
   "lane": "A1",
@@ -1340,8 +1340,8 @@
   "lane": "SETTINGS",
   "severity": "P2",
   "title": "Overflow 'More' drawer has no iOS equivalent (web settings top-right MoreHorizontal)",
-  "state": "todo",
-  "note": ""
+  "state": "skipped",
+  "note": "accepted difference: the drawer's only iOS destination (photos) is already reachable from the settings photos card; revisit when a 2nd destination ships"
  },
  "SHELL-17": {
   "lane": "A1",
@@ -1368,8 +1368,8 @@
   "lane": "FAMACH",
   "severity": "P2",
   "title": "Dead or duplicated shell code: PlaceholderScreen, Sheet, Pill and Card unused; app/family.tsx duplicates settings FamilySection (~450 lines each)",
-  "state": "todo",
-  "note": ""
+  "state": "done",
+  "note": "commit SETTINGS+FAMACH (2026-10-10)"
  },
  "SHELL-21": {
   "lane": "A2",

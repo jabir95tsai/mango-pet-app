@@ -1,48 +1,66 @@
 /**
- * Settings → inline family card — 1:1 with web family-section, ported to RN.
- * Header (👥 disc + 家庭 + name + 加入/建立 buttons) → personal-info note OR
- * the invite-code card (code + 🔗 share / 📋 copy / ↻ regen) + members list +
- * 離開 button, all expanded inline (web parity; was a「家庭 ›」row that pushed a
- * separate screen).
+ * Family card — 1:1 with web apps/web/src/components/family/family-section.tsx
+ * (the single family surface: settings renders it inline, /family wraps it
+ * in a back-header screen).
  *
- * Presentation-only port: every mutation calls the SAME existing
- * families-write functions the standalone /family screen already uses — no
- * write/callable logic is changed here.
+ *  - guests: the GuestLockedNotice (family needs a real identity)
+ *  - header: Users disc + 家庭 + family name / personal mode, ghost 加入 +
+ *    secondary "+ 新建"
+ *  - personal mode: info box; scope read failure: error + retry (R08)
+ *  - ≥2 families: switch pills (active = solid brand + white)
+ *  - invite card: code + Share / Copy (icon swaps to Check for 2s) / owner
+ *    regen (spinner while busy) [+ iOS QR when `showQr`]
+ *  - members ("loading…" while fetched), owner pill badge, "you", owner-only
+ *    X remove; red LogOut "leave"
+ *  - errors inline in red under the card (web), never a native alert
+ *  - after create / join → the import wizard, then refresh
+ *
+ * Every mutation calls the same families-write callables web uses.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   Share,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { Users, Share2, Copy, RefreshCw, LogOut, UserMinus } from "lucide-react-native";
+import { Check, Copy, LogOut, Plus, QrCode, RefreshCw, Share2, Users, X } from "lucide-react-native";
 import type { Family, FamilyMember } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
 import { useFamily } from "@/state/family-context";
 import { listFamilyMembers } from "@/lib/families-read";
-import {
-  createFamily,
-  joinFamilyByCode,
-  leaveFamily,
-  regenerateInviteCode,
-  removeFamilyMember,
-} from "@/lib/families-write";
+import { leaveFamily, regenerateInviteCode, removeFamilyMember } from "@/lib/families-write";
 import { UserAvatar } from "@/components/feed/user-avatar";
+import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
+import { CreateFamilyDialog, JoinFamilyDialog } from "@/components/family/family-dialogs";
+import { ImportWizardSheet } from "@/components/family/import-wizard-sheet";
+import { InviteQR } from "@/components/family/invite-qr";
 import { Button } from "@/components/ui/Button";
+import { confirm } from "@/lib/confirm";
 import { SITE_URL } from "@/lib/config";
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
+import { SettingsCard, SettingsIconDisc, settingsText } from "./settings-card";
 
-export function FamilySection() {
-  const { user } = useAuth();
+function messageOf(err: unknown): string {
+  return err instanceof Error && err.message ? err.message : t("Family.actionFailed");
+}
+
+export function FamilySection({
+  reloadKey = 0,
+  showQr = false,
+}: {
+  /** Bumped by the screen on focus / pull-to-refresh (re-reads members). */
+  reloadKey?: number;
+  /** iOS: add a QR action to the invite-code row (the /family screen). */
+  showQr?: boolean;
+}) {
+  const { user, isGuest } = useAuth();
   const {
     family,
     families,
@@ -53,150 +71,187 @@ export function FamilySection() {
     switchingFamilyId,
   } = useFamily();
   const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [pendingImportFamilyId, setPendingImportFamilyId] = useState<string | null>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const isOwner = !!family && !!user && family.ownerUid === user.uid;
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const loadMembers = useCallback(async (fam: Family | null) => {
     if (!fam) {
       setMembers([]);
       return;
     }
+    setMembersLoading(true);
     try {
       setMembers(await listFamilyMembers(fam));
     } catch {
       setMembers([]);
+    } finally {
+      setMembersLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadMembers(family);
-  }, [family, loadMembers]);
+    if (!isGuest) void loadMembers(family);
+  }, [family, loadMembers, reloadKey, isGuest]);
 
+  if (isGuest) {
+    return (
+      <SettingsCard>
+        <GuestLockedNotice feature="family" />
+      </SettingsCard>
+    );
+  }
+
+  const isOwner = !!family && !!user && family.ownerUid === user.uid;
   const inviteUrl = family ? `${SITE_URL}/join/${family.inviteCode}` : "";
 
-  /** switchFamily rejects when the write fails — surface it (SETTINGS-21). */
+  function flash(set: (v: boolean) => void) {
+    set(true);
+    timers.current.push(setTimeout(() => set(false), 2000));
+  }
+
   async function onSwitchFamily(familyId: string) {
+    setError(null);
     try {
       await switchFamily(familyId);
-    } catch {
-      Alert.alert(t("Error.title"), t("Family.actionFailed"));
+    } catch (err) {
+      setError(messageOf(err));
     }
   }
 
   async function copyCode() {
     if (!family) return;
-    await Clipboard.setStringAsync(family.inviteCode);
-    Alert.alert(t("Family.copyCode"), family.inviteCode);
+    try {
+      await Clipboard.setStringAsync(family.inviteCode);
+      flash(setCopied);
+    } catch {
+      /* clipboard unavailable — nothing to show (web) */
+    }
   }
+
   async function shareInvite() {
     if (!family) return;
-    await Share.share({
-      message: t("Family.invite.text", { name: family.name, url: inviteUrl }),
+    try {
+      // The text template already embeds the URL — one message, not two.
+      const res = await Share.share({
+        message: t("Family.invite.text", { name: family.name, url: inviteUrl }),
+      });
+      if (res.action === Share.sharedAction) flash(setShared);
+    } catch {
+      /* dismissed */
+    }
+  }
+
+  async function handleRegen() {
+    if (!family || busy) return;
+    const ok = await confirm({
+      title: t("Family.regenConfirm.title"),
+      message: t("Family.regenConfirm.message"),
+      confirmLabel: t("Family.regenConfirm.confirm"),
+      cancelLabel: t("Common.cancel"),
+      destructive: true,
     });
+    if (!ok) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await regenerateInviteCode(family.familyId);
+      await refresh();
+    } catch (err) {
+      setError(messageOf(err));
+    } finally {
+      setBusy(false);
+    }
   }
-  function confirmRegen() {
-    if (!family) return;
-    Alert.alert(t("Family.regenConfirm.title"), t("Family.regenConfirm.message"), [
-      { text: t("Common.cancel"), style: "cancel" },
-      {
-        text: t("Family.regenConfirm.confirm"),
-        style: "destructive",
-        onPress: async () => {
-          setBusy(true);
-          try {
-            await regenerateInviteCode(family.familyId);
-            await refresh();
-          } catch {
-            Alert.alert("失敗", "無法重新產生邀請碼");
-          } finally {
-            setBusy(false);
-          }
-        },
-      },
-    ]);
+
+  async function handleLeave() {
+    if (!family || busy) return;
+    const ok = await confirm({
+      title: t("Family.leaveConfirm.title"),
+      message: t("Family.leaveConfirm.message", { name: family.name }),
+      confirmLabel: t("Family.leaveConfirm.confirm"),
+      cancelLabel: t("Common.cancel"),
+      destructive: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await leaveFamily(family.familyId);
+      await refresh();
+    } catch (err) {
+      setError(messageOf(err));
+    } finally {
+      setBusy(false);
+    }
   }
-  function confirmLeave() {
-    if (!family) return;
-    Alert.alert(
-      t("Family.leaveConfirm.title"),
-      t("Family.leaveConfirm.message", { name: family.name }),
-      [
-        { text: t("Common.cancel"), style: "cancel" },
-        {
-          text: t("Family.leaveConfirm.confirm"),
-          style: "destructive",
-          onPress: async () => {
-            setBusy(true);
-            try {
-              await leaveFamily(family.familyId);
-              await refresh();
-            } catch {
-              Alert.alert("失敗", "無法離開家庭");
-            } finally {
-              setBusy(false);
-            }
-          },
-        },
-      ],
-    );
+
+  async function handleRemove(m: FamilyMember) {
+    if (!family || busy) return;
+    const ok = await confirm({
+      title: t("Family.removeConfirm.title"),
+      message: t("Family.removeConfirm.message", { name: m.displayName }),
+      confirmLabel: t("Family.removeConfirm.confirm"),
+      cancelLabel: t("Common.cancel"),
+      destructive: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await removeFamilyMember(family.familyId, m.uid);
+      await refresh();
+      await loadMembers(family);
+    } catch (err) {
+      setError(messageOf(err));
+    } finally {
+      setBusy(false);
+    }
   }
-  function confirmRemove(m: FamilyMember) {
-    if (!family) return;
-    Alert.alert(
-      t("Family.removeConfirm.title"),
-      t("Family.removeConfirm.message", { name: m.displayName }),
-      [
-        { text: t("Common.cancel"), style: "cancel" },
-        {
-          text: t("Family.removeConfirm.confirm"),
-          style: "destructive",
-          onPress: async () => {
-            setBusy(true);
-            try {
-              await removeFamilyMember(family.familyId, m.uid);
-              await refresh();
-              await loadMembers(family);
-            } catch {
-              Alert.alert("失敗", "無法移除成員");
-            } finally {
-              setBusy(false);
-            }
-          },
-        },
-      ],
-    );
+
+  async function handleCreatedOrJoined(familyId: string) {
+    await refresh();
+    setPendingImportFamilyId(familyId);
   }
 
   return (
-    <View style={styles.card}>
+    <SettingsCard style={styles.card}>
       {/* Header: icon + title/name + join/create */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
-          <View style={styles.iconDisc}>
-            <Users size={18} color={colors.brandDeep} strokeWidth={1.8} />
-          </View>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>{t("Family.title")}</Text>
-            <Text style={styles.sub} numberOfLines={1}>
+          <SettingsIconDisc>
+            <Users size={16} color={colors.brandDeep} strokeWidth={2} />
+          </SettingsIconDisc>
+          <View style={styles.flexShrink}>
+            <Text style={settingsText.title}>{t("Family.title")}</Text>
+            <Text style={settingsText.sub} numberOfLines={1}>
               {family ? family.name : t("Family.personalMode")}
             </Text>
           </View>
         </View>
         <View style={styles.headerActions}>
-          <Pressable onPress={() => setJoinOpen(true)} hitSlop={4} style={styles.ghostBtn}>
-            <Text style={styles.ghostText}>{t("Family.join")}</Text>
-          </Pressable>
-          <Pressable onPress={() => setCreateOpen(true)} hitSlop={4} style={styles.secondaryBtn}>
-            <Text style={styles.secondaryText}>＋ {t("Family.create")}</Text>
-          </Pressable>
+          <Button label={t("Family.join")} variant="ghost" size="sm" onPress={() => setJoinOpen(true)} />
+          <Button
+            label={t("Family.create")}
+            variant="secondary"
+            size="sm"
+            icon={<Plus size={14} color={colors.ink} strokeWidth={2.5} />}
+            onPress={() => setCreateOpen(true)}
+          />
         </View>
       </View>
 
       {loading ? (
-        <ActivityIndicator color={colors.brand} style={styles.loader} />
+        <Text style={settingsText.sub}>{t("Common.loading")}</Text>
       ) : !family && familyStatus === "error" ? (
         // Scope read failed: NOT personal mode — offer a retry only (R08).
         <View style={styles.infoBox}>
@@ -206,19 +261,21 @@ export function FamilySection() {
             variant="secondary"
             size="sm"
             onPress={() => void refresh()}
-            style={{ marginTop: spacing.sm, alignSelf: "flex-start" }}
+            style={styles.retry}
           />
-        </View>
-      ) : !family ? (
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>{t("Family.personalInfo")}</Text>
         </View>
       ) : (
         <>
+          {!family ? (
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>{t("Family.personalInfo")}</Text>
+            </View>
+          ) : null}
+
           {families.length > 1 ? (
             <View style={styles.switcher}>
               {families.map((f) => {
-                const on = f.familyId === family.familyId;
+                const on = f.familyId === family?.familyId;
                 return (
                   <Pressable
                     key={f.familyId}
@@ -230,7 +287,11 @@ export function FamilySection() {
                       busy: switchingFamilyId === f.familyId,
                       disabled: switchingFamilyId !== null,
                     }}
-                    style={[styles.switchPill, on && styles.switchPillOn]}
+                    style={({ pressed }) => [
+                      styles.switchPill,
+                      on && styles.switchPillOn,
+                      pressed && !on && styles.switchPillPressed,
+                    ]}
                   >
                     <Text style={[styles.switchText, on && styles.switchTextOn]}>{f.name}</Text>
                   </Pressable>
@@ -239,260 +300,291 @@ export function FamilySection() {
             </View>
           ) : null}
 
-          {/* Invite code */}
-          <View style={styles.codeCard}>
-            <View style={styles.codeTop}>
-              <View>
-                <Text style={styles.codeLabel}>{t("Family.inviteCode")}</Text>
-                <Text style={styles.code}>{family.inviteCode}</Text>
-              </View>
-              <View style={styles.codeActions}>
-                <Pressable onPress={shareInvite} style={styles.codeBtn} accessibilityLabel={t("Family.invite.shareAria")}>
-                  <Share2 size={16} color={colors.brandDeep} strokeWidth={1.8} />
-                </Pressable>
-                <Pressable onPress={copyCode} style={styles.codeBtn} accessibilityLabel={t("Family.copyCode")}>
-                  <Copy size={16} color={colors.brandDeep} strokeWidth={1.8} />
-                </Pressable>
-                {isOwner ? (
-                  <Pressable onPress={confirmRegen} disabled={busy} style={styles.codeBtn} accessibilityLabel={t("Family.regenCode")}>
-                    <RefreshCw size={16} color={colors.brandDeep} strokeWidth={1.8} />
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
-            <Text style={styles.codeHelp}>{t("Family.inviteHelp")}</Text>
-          </View>
-
-          {/* Members */}
-          <Text style={styles.membersLabel}>{t("Family.members", { count: members.length })}</Text>
-          <View style={styles.members}>
-            {members.map((m) => {
-              const memberIsOwner = m.uid === family.ownerUid;
-              const isMe = m.uid === user?.uid;
-              return (
-                <View key={m.uid} style={styles.memberRow}>
-                  <UserAvatar name={m.displayName} photoURL={m.photoURL} size={36} />
-                  <View style={styles.memberBody}>
-                    <Text style={styles.memberName} numberOfLines={1}>
-                      {m.displayName}
-                      {memberIsOwner ? (
-                        <Text style={styles.ownerTag}>  {t("Family.owner")}</Text>
-                      ) : null}
-                      {isMe ? <Text style={styles.youTag}>  {t("Family.you")}</Text> : null}
-                    </Text>
+          {family ? (
+            <>
+              {/* Invite code */}
+              <View style={styles.codeCard}>
+                <View style={styles.codeTop}>
+                  <View style={styles.flexShrink}>
+                    <Text style={styles.codeLabel}>{t("Family.inviteCode")}</Text>
+                    <Text style={styles.code}>{family.inviteCode}</Text>
                   </View>
-                  {isOwner && !memberIsOwner ? (
+                  <View style={styles.codeActions}>
                     <Pressable
-                      onPress={() => confirmRemove(m)}
-                      hitSlop={8}
+                      onPress={() => void shareInvite()}
+                      style={({ pressed }) => [styles.codeBtn, pressed && styles.codeBtnPressed]}
                       accessibilityRole="button"
-                      accessibilityLabel={`${t("Family.removeMember")} ${m.displayName}`}
-                      style={styles.removeBtn}
+                      accessibilityLabel={t("Family.invite.shareAria")}
                     >
-                      <UserMinus size={16} color={colors.ink3} strokeWidth={1.8} />
+                      {shared ? (
+                        <Check size={16} color={colors.brandDeep} strokeWidth={2} />
+                      ) : (
+                        <Share2 size={16} color={colors.brandDeep} strokeWidth={2} />
+                      )}
                     </Pressable>
-                  ) : null}
+                    <Pressable
+                      onPress={() => void copyCode()}
+                      style={({ pressed }) => [styles.codeBtn, pressed && styles.codeBtnPressed]}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("Family.copyCode")}
+                    >
+                      {copied ? (
+                        <Check size={16} color={colors.brandDeep} strokeWidth={2} />
+                      ) : (
+                        <Copy size={16} color={colors.brandDeep} strokeWidth={2} />
+                      )}
+                    </Pressable>
+                    {showQr ? (
+                      <Pressable
+                        onPress={() => setQrOpen(true)}
+                        style={({ pressed }) => [styles.codeBtn, pressed && styles.codeBtnPressed]}
+                        accessibilityRole="button"
+                        accessibilityLabel="QR"
+                      >
+                        <QrCode size={16} color={colors.brandDeep} strokeWidth={2} />
+                      </Pressable>
+                    ) : null}
+                    {isOwner ? (
+                      <Pressable
+                        onPress={() => void handleRegen()}
+                        disabled={busy}
+                        style={({ pressed }) => [
+                          styles.codeBtn,
+                          pressed && styles.codeBtnPressed,
+                          busy && styles.disabled,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("Family.regenCode")}
+                        accessibilityState={{ busy, disabled: busy }}
+                      >
+                        {busy ? (
+                          <ActivityIndicator size="small" color={colors.brandDeep} />
+                        ) : (
+                          <RefreshCw size={16} color={colors.brandDeep} strokeWidth={2} />
+                        )}
+                      </Pressable>
+                    ) : null}
+                  </View>
                 </View>
-              );
-            })}
-          </View>
+                <Text style={styles.codeHelp}>{t("Family.inviteHelp")}</Text>
+              </View>
 
-          {/* Leave */}
-          <Pressable onPress={confirmLeave} disabled={busy} style={styles.leaveBtn}>
-            <LogOut size={15} color={colors.cookie} strokeWidth={1.8} />
-            <Text style={styles.leaveText}>{t("Family.leave")}</Text>
-          </Pressable>
+              {/* Members */}
+              <View style={styles.membersBlock}>
+                <Text style={styles.membersLabel}>
+                  {t("Family.members", { count: members.length })}
+                </Text>
+                {membersLoading ? (
+                  <Text style={settingsText.sub}>{t("Common.loading")}</Text>
+                ) : (
+                  members.map((m) => {
+                    const memberIsOwner = m.uid === family.ownerUid;
+                    const isMe = m.uid === user?.uid;
+                    return (
+                      <View key={m.uid} style={styles.memberRow}>
+                        <UserAvatar name={m.displayName} photoURL={m.photoURL} size={36} />
+                        <View style={styles.memberBody}>
+                          <Text style={styles.memberName} numberOfLines={1}>
+                            {m.displayName}
+                          </Text>
+                          {memberIsOwner ? (
+                            <View style={styles.ownerBadge}>
+                              <Text style={styles.ownerText}>{t("Family.owner")}</Text>
+                            </View>
+                          ) : null}
+                          {isMe ? <Text style={styles.youTag}>{t("Family.you")}</Text> : null}
+                        </View>
+                        {isOwner && !isMe ? (
+                          <Pressable
+                            onPress={() => void handleRemove(m)}
+                            disabled={busy}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t("Family.removeMember")} ${m.displayName}`}
+                            style={({ pressed }) => [styles.removeBtn, pressed && styles.removePressed]}
+                          >
+                            <X size={16} color={colors.ink3} strokeWidth={2} />
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+
+              {/* Leave */}
+              <Pressable
+                onPress={() => void handleLeave()}
+                disabled={busy}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.leaveBtn,
+                  pressed && styles.leavePressed,
+                  busy && styles.disabled,
+                ]}
+              >
+                <LogOut size={16} color={colors.danger} strokeWidth={2} />
+                <Text style={styles.leaveText}>{t("Family.leave")}</Text>
+              </Pressable>
+            </>
+          ) : null}
         </>
       )}
 
-      <CreateDialog
+      {error ? (
+        <Text style={settingsText.error} accessibilityRole="alert">
+          {error}
+        </Text>
+      ) : null}
+
+      <CreateFamilyDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onDone={async () => {
-          setCreateOpen(false);
-          await refresh();
-        }}
+        onDone={handleCreatedOrJoined}
       />
-      <JoinDialog
+      <JoinFamilyDialog
         open={joinOpen}
         onClose={() => setJoinOpen(false)}
-        onDone={async () => {
-          setJoinOpen(false);
-          await refresh();
-        }}
+        onDone={handleCreatedOrJoined}
       />
-    </View>
-  );
-}
+      {pendingImportFamilyId ? (
+        <ImportWizardSheet
+          familyId={pendingImportFamilyId}
+          onClose={() => {
+            setPendingImportFamilyId(null);
+            void refresh();
+          }}
+        />
+      ) : null}
 
-function CreateDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    if (open) setName("");
-  }, [open]);
-  async function submit() {
-    setBusy(true);
-    try {
-      await createFamily(name);
-      onDone();
-    } catch {
-      Alert.alert("失敗", "無法建立家庭");
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.dialog}>
-          <Text style={styles.dialogTitle}>{t("Family.createDialog.title")}</Text>
-          <Text style={styles.dialogBody}>{t("Family.createDialog.instructions")}</Text>
-          <Text style={styles.fieldLabel}>{t("Family.createDialog.nameLabel")}</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder={t("Family.createDialog.namePlaceholder")}
-            placeholderTextColor={colors.ink3}
-            maxLength={30}
-          />
-          <Button label={t("Family.createDialog.submit")} onPress={submit} loading={busy} size="lg" fullWidth style={styles.dialogSubmit} />
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function JoinDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (open) {
-      setCode("");
-      setError(null);
-    }
-  }, [open]);
-  async function submit() {
-    if (!/^\d{6}$/.test(code.trim())) {
-      setError(t("Family.joinDialog.errInvalidCode"));
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await joinFamilyByCode(code);
-      if (res.alreadyMember) {
-        setError(t("Family.joinDialog.errAlready"));
-        setBusy(false);
-        return;
-      }
-      onDone();
-    } catch {
-      setError(t("Family.joinDialog.errInvalidCode"));
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.dialog}>
-          <Text style={styles.dialogTitle}>{t("Family.joinDialog.title")}</Text>
-          <Text style={styles.dialogBody}>{t("Family.joinDialog.instructions")}</Text>
-          <TextInput
-            style={[styles.input, styles.codeInput]}
-            value={code}
-            onChangeText={setCode}
-            placeholder="000000"
-            placeholderTextColor={colors.ink3}
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-          {error ? <Text style={styles.dialogError}>{error}</Text> : null}
-          <Button label={t("Family.joinDialog.submit")} onPress={submit} loading={busy} size="lg" fullWidth style={styles.dialogSubmit} />
-        </Pressable>
-      </Pressable>
-    </Modal>
+      {showQr && family ? (
+        <Modal visible={qrOpen} transparent animationType="fade" onRequestClose={() => setQrOpen(false)}>
+          <Pressable style={styles.qrBackdrop} onPress={() => setQrOpen(false)}>
+            <Pressable style={styles.qrSheet} accessibilityViewIsModal>
+              <Text style={styles.qrTitle}>{family.name}</Text>
+              <InviteQR url={inviteUrl} size={240} />
+              <Text style={styles.qrCode}>{family.inviteCode}</Text>
+              <Button label={t("Common.close")} variant="secondary" onPress={() => setQrOpen(false)} />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      ) : null}
+    </SettingsCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    gap: spacing.md,
+  card: { gap: spacing.lg },
+  flexShrink: { flexShrink: 1, minWidth: 0 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
   },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.md, flexShrink: 1 },
-  iconDisc: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.brandTint,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerText: { flexShrink: 1 },
-  title: { fontSize: 15, fontWeight: "800", color: colors.ink },
-  sub: { fontSize: 12, color: colors.ink3, marginTop: 1 },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-  ghostBtn: { paddingHorizontal: spacing.sm, height: 32, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  ghostText: { fontSize: 13, fontWeight: "700", color: colors.ink2 },
-  secondaryBtn: {
-    paddingHorizontal: spacing.md,
-    height: 32,
-    borderRadius: radius.pill,
-    backgroundColor: colors.bgAlt,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryText: { fontSize: 13, fontWeight: "700", color: colors.ink },
-  loader: { marginVertical: spacing.md },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  // web: rounded-lg border bg-amber-50 p-3 text-xs (mango tokens)
   infoBox: {
     backgroundColor: colors.cardSoft,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.hairline,
     padding: spacing.md,
   },
-  infoText: { fontSize: 12, color: colors.ink2, lineHeight: 18 },
-  switcher: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  switchPill: { paddingHorizontal: spacing.md, height: 30, borderRadius: radius.pill, justifyContent: "center", backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.hairline },
-  switchPillOn: { backgroundColor: colors.brandTint, borderColor: colors.brand },
-  switchText: { fontSize: 12, fontWeight: "700", color: colors.ink2 },
-  switchTextOn: { color: colors.brandDeep, fontWeight: "800" },
-  codeCard: { backgroundColor: colors.cardSoft, borderRadius: radius.md, padding: spacing.md, gap: spacing.sm },
+  infoText: { fontSize: 12, lineHeight: 18, color: colors.ink2 },
+  retry: { marginTop: spacing.sm, alignSelf: "flex-start" },
+  // web: flex flex-wrap gap-1.5; pill h-7 px-3 text-xs font-medium
+  switcher: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  switchPill: {
+    height: 28,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    justifyContent: "center",
+    backgroundColor: colors.bgAlt,
+  },
+  switchPillOn: { backgroundColor: colors.brand },
+  switchPillPressed: { backgroundColor: colors.hairline },
+  switchText: { fontSize: 12, fontWeight: "500", color: colors.ink2 },
+  switchTextOn: { color: "#ffffff" },
+  // web: flex flex-col gap-2 rounded-lg bg-amber-50 p-3
+  codeCard: { backgroundColor: colors.cardSoft, borderRadius: radius.sm, padding: spacing.md, gap: spacing.sm },
   codeTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
-  codeLabel: { fontSize: 11, fontWeight: "700", color: colors.brandDeep },
-  code: { fontSize: 28, fontWeight: "900", color: colors.brandDeep, letterSpacing: 6, fontVariant: ["tabular-nums"], marginTop: 2 },
-  codeActions: { flexDirection: "row", gap: spacing.xs },
-  codeBtn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
-  codeHelp: { fontSize: 11, color: colors.ink3 },
-  membersLabel: { fontSize: 11, fontWeight: "800", color: colors.ink3, letterSpacing: 0.5, textTransform: "uppercase" },
-  members: { gap: spacing.xs },
+  codeLabel: { fontSize: 12, color: colors.brandDeep },
+  code: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: colors.brandDeep,
+    letterSpacing: 4,
+    fontVariant: ["tabular-nums"],
+  },
+  codeActions: { flexDirection: "row", gap: 6 },
+  // web: grid size-9 rounded-lg bg-white text-amber-700
+  codeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  codeBtnPressed: { backgroundColor: colors.brandTint },
+  codeHelp: { fontSize: 12, color: colors.ink2 },
+  membersBlock: { gap: spacing.sm },
+  membersLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.ink3,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
   memberRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 4 },
-  memberBody: { flex: 1 },
-  memberName: { fontSize: 14, fontWeight: "600", color: colors.ink },
-  ownerTag: { fontSize: 11, fontWeight: "700", color: colors.brandDeep },
+  memberBody: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 6 },
+  memberName: { flexShrink: 1, fontSize: 14, fontWeight: "500", color: colors.ink },
+  // web: ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium
+  ownerBadge: {
+    backgroundColor: colors.brandTint,
+    borderRadius: radius.pill,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  ownerText: { fontSize: 10, fontWeight: "600", color: colors.brandDeep },
   youTag: { fontSize: 12, color: colors.ink3 },
-  // 28x28 box + hitSlop 8 = 44x44 effective tap target (iOS HIG minimum).
-  removeBtn: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
-  leaveBtn: { flexDirection: "row", alignItems: "center", gap: spacing.xs, alignSelf: "flex-start", paddingHorizontal: spacing.md, height: 36, borderRadius: radius.md, justifyContent: "center" },
-  leaveText: { fontSize: 14, fontWeight: "700", color: colors.cookie },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  dialog: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, gap: spacing.sm },
-  dialogTitle: { fontSize: 18, fontWeight: "800", color: colors.ink },
-  dialogBody: { fontSize: 13, color: colors.ink2 },
-  fieldLabel: { fontSize: 12, fontWeight: "700", color: colors.ink2, marginTop: spacing.sm },
-  input: { height: 48, backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.md, paddingHorizontal: spacing.md, fontSize: 15, color: colors.ink },
-  codeInput: { fontSize: 24, fontWeight: "800", letterSpacing: 8, textAlign: "center" },
-  dialogError: { fontSize: 12, color: colors.cookie },
-  dialogSubmit: { marginTop: spacing.md, marginBottom: spacing.sm },
+  removeBtn: { width: 28, height: 28, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  removePressed: { backgroundColor: "#fef2f2" },
+  // web: self-start gap-1.5 rounded-lg px-3 h-9 text-sm text-red-600
+  leaveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    height: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+  },
+  leavePressed: { backgroundColor: "#fef2f2" },
+  leaveText: { fontSize: 14, fontWeight: "500", color: colors.danger },
+  disabled: { opacity: 0.5 },
+  qrBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  qrSheet: {
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  qrTitle: { fontSize: 16, fontWeight: "600", color: colors.ink },
+  qrCode: {
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: 4,
+    color: colors.brandDeep,
+    fontVariant: ["tabular-nums"],
+  },
 });

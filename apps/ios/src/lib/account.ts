@@ -40,3 +40,10 @@ export function deleteUserAccount(confirmDisplayName: string) {
 export function exportUserData() {
   return call<UserDataExport>("exportUserData")();
 }
+
+/** web messaging.sendTestPush — a sanity-check push to this account's devices. */
+export type TestPushResult = { ok: boolean; sent: number; failed: number };
+
+export function sendTestPush() {
+  return call<TestPushResult>("sendTestPush")();
+}

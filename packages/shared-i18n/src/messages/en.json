@@ -660,7 +660,12 @@
       "subtitle": "Actions below cannot be undone. Make sure you understand the consequences first.",
       "deleteAction": "Delete my account"
     },
-    "languageLabel": "語言 / Language"
+    "languageLabel": "語言 / Language",
+    "guestName": "Guest",
+    "signOutFailed": {
+      "title": "Could not sign out",
+      "body": "Could not unregister this device. Check your connection and try again."
+    }
   },
   "DeleteAccount": {
     "dialogTitle": "Confirm account deletion",
@@ -879,7 +884,8 @@
       "disabled": "Not enabled yet",
       "denied": "Blocked — re-enable notifications in your browser settings",
       "deniedIos": "Notifications are off — turn them on in iOS Settings",
-      "enabled": "Active — you'll get a push when reminders fire"
+      "enabled": "Active — you'll get a push when reminders fire",
+      "error": "Registration failed. Check your connection and try again."
     },
     "eveningWalkReminder": {
       "title": "Time to walk",
@@ -896,7 +902,9 @@
     "familyMilestone": {
       "title": "Family hit today's goal 🎉",
       "body": "{achieverName} just hit today's goal for {petName}"
-    }
+    },
+    "openIosSettings": "Open iOS Settings",
+    "openSettingsManually": "Open Settings manually and select Notifications."
   },
   "Expense": {
     "title": "Pet Expenses",

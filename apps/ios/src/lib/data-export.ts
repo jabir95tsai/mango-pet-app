@@ -8,10 +8,13 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
 import { exportUserData } from "./account";
+import { t } from "./i18n";
 
 /** Fetch the export, persist it as a JSON file, and share it. Returns the
  *  file uri. Throws on failure so the caller can surface a message. */
 export async function exportAndShareUserData(uid: string): Promise<string> {
+  // No share sheet → the file would be unreachable; surface it as an error.
+  if (!(await Sharing.isAvailableAsync())) throw new Error("Sharing unavailable");
   const data = await exportUserData();
   const json = JSON.stringify(data, null, 2);
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -19,12 +22,10 @@ export async function exportAndShareUserData(uid: string): Promise<string> {
   await FileSystem.writeAsStringAsync(fileUri, json, {
     encoding: FileSystem.EncodingType.UTF8,
   });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(fileUri, {
-      mimeType: "application/json",
-      dialogTitle: "Mango Pet 資料",
-      UTI: "public.json",
-    });
-  }
+  await Sharing.shareAsync(fileUri, {
+    mimeType: "application/json",
+    dialogTitle: t("Settings.privacyData.title"),
+    UTI: "public.json",
+  });
   return fileUri;
 }

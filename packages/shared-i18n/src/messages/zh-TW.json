@@ -660,7 +660,12 @@
       "subtitle": "下方操作不可復原。請確認你了解後果再進行。",
       "deleteAction": "刪除我的帳號"
     },
-    "languageLabel": "語言 / Language"
+    "languageLabel": "語言 / Language",
+    "guestName": "訪客",
+    "signOutFailed": {
+      "title": "暫時無法登出",
+      "body": "尚未解除此裝置的通知綁定，請確認連線後重試。"
+    }
   },
   "DeleteAccount": {
     "dialogTitle": "確認刪除帳號",
@@ -879,7 +884,8 @@
       "disabled": "尚未啟用",
       "denied": "瀏覽器已拒絕，請到瀏覽器設定開啟通知權限",
       "deniedIos": "通知權限已關閉，請到 iOS 設定 開啟通知",
-      "enabled": "已啟用，提醒到時會推播"
+      "enabled": "已啟用，提醒到時會推播",
+      "error": "推播註冊失敗，請確認連線後重試。"
     },
     "eveningWalkReminder": {
       "title": "晚上遛狗提醒",
@@ -896,7 +902,9 @@
     "familyMilestone": {
       "title": "家人達成今日目標 🎉",
       "body": "{achieverName} 完成 {petName} 今日目標了"
-    }
+    },
+    "openIosSettings": "開啟 iOS 設定",
+    "openSettingsManually": "請手動開啟系統設定，選擇通知。"
   },
   "Expense": {
     "title": "寵物開銷",

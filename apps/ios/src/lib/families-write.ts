@@ -58,3 +58,18 @@ export function regenerateInviteCode(familyId: string) {
 export function removeFamilyMember(familyId: string, memberUid: string) {
   return removeFamilyMemberFn({ familyId, memberUid });
 }
+
+/** Personal-mode collections the import wizard can move into a family. */
+export type ImportPersonalType = "pets" | "walks" | "reminders" | "expenses";
+export type ImportPersonalCounts = Record<ImportPersonalType, number>;
+
+const importPersonalToFamilyFn = callable<
+  { familyId: string; types?: ImportPersonalType[] },
+  { counts: ImportPersonalCounts }
+>("importPersonalToFamily");
+
+/** Bulk-move this user's personal-mode docs into `familyId` (web
+ *  importPersonalToFamily — the same callable; omit `types` = everything). */
+export function importPersonalToFamily(familyId: string, types?: ImportPersonalType[]) {
+  return importPersonalToFamilyFn({ familyId, types });
+}

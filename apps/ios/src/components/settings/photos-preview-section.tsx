@@ -14,13 +14,13 @@ import { useAuth } from "@/state/auth-context";
 import { useFamilyScope } from "@/lib/use-family-scope";
 import { listMyPhotoAssetsWithStatus } from "@/lib/photo-gallery";
 import { scoped } from "@/lib/i18n";
-import { colors, radius, spacing } from "@/theme/theme";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 const tS = scoped("Settings");
 const tPv = scoped("Settings.photosPreview");
 const PREVIEW = 3;
 
-export function PhotosPreviewSection() {
+export function PhotosPreviewSection({ reloadKey = 0 }: { reloadKey?: number }) {
   const router = useRouter();
   const { user } = useAuth();
   // Fetch once the family scope is known (SETTINGS-25) — not with a
@@ -51,7 +51,7 @@ export function PhotosPreviewSection() {
     return () => {
       cancelled = true;
     };
-  }, [uid, familyId, scopeReady, scopeStatus]);
+  }, [uid, familyId, scopeReady, scopeStatus, reloadKey]);
 
   const open = () => router.push("/photos");
 
@@ -109,8 +109,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.hairline,
-    padding: spacing.lg,
+    padding: spacing.xl,
     gap: spacing.md,
+    ...shadows.card,
   },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.md },
@@ -124,8 +125,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  title: { fontSize: 15, fontWeight: "800", color: colors.ink },
-  viewAll: { fontSize: 12, fontWeight: "700", color: colors.brandDeep },
+  title: { fontSize: 16, fontWeight: "600", color: colors.ink },
+  viewAll: { fontSize: 12, fontWeight: "600", color: colors.brandDeep },
   dim: { opacity: 0.6 },
   grid: { flexDirection: "row", gap: spacing.sm },
   cell: { flex: 1, aspectRatio: 1, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.bgAlt },

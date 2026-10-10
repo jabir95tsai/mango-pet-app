@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: withAlpha(colors.brand, 0.4),
     backgroundColor: withAlpha(colors.brandTint, 0.5),
-    padding: spacing.lg,
+    padding: spacing.xl,
   },
   // web: flex items-center gap-3
   titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
