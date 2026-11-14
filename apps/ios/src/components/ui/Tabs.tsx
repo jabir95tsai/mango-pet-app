@@ -43,6 +43,8 @@ export type TabsProps<K extends string = string> = {
   fullWidth?: boolean;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
+  /** Warm-glass pill look (Home/Walks/Leaderboard redesign). */
+  warm?: boolean;
 };
 
 const SIZES = {
@@ -59,6 +61,7 @@ export function Tabs<K extends string>({
   fullWidth = false,
   accessibilityLabel,
   style,
+  warm = false,
 }: TabsProps<K>) {
   const list: TabItem<K>[] =
     items ?? (options ?? []).map((o) => ({ key: o.value, label: o.label }));
@@ -76,14 +79,15 @@ export function Tabs<K extends string>({
       }))}
       selectedIndex={selectedIndex}
       onSelect={(i) => onChange(list[i].key)}
-      trackStyle={[styles.track, fullWidth && styles.trackFull, style]}
+      trackStyle={[styles.track, warm && styles.trackWarm, fullWidth && styles.trackFull, style]}
       itemStyle={() => [
         styles.seg,
         { height: s.height, paddingHorizontal: s.padX },
         fullWidth && styles.segFull,
+        warm && styles.segWarm,
       ]}
-      lensStyle={styles.segOn}
-      lensRadius={6}
+      lensStyle={[styles.segOn, warm && styles.segWarm]}
+      lensRadius={warm ? radius.pill : 6}
       hitSlop={{ top: s.slop, bottom: s.slop, left: 2, right: 2 }}
       renderItem={(i, lit) => {
         const item = list[i];
@@ -92,7 +96,7 @@ export function Tabs<K extends string>({
         return (
           <>
             {Icon ? <Icon size={s.icon} color={fg} strokeWidth={2} /> : null}
-            <Text style={[styles.text, { fontSize: s.font, color: fg }]} numberOfLines={1}>
+            <Text style={[styles.text, { fontSize: s.font, color: fg }, warm && lit && styles.textWarmOn]} numberOfLines={1}>
               {item.label}
             </Text>
           </>
@@ -112,6 +116,14 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   trackFull: { alignSelf: "stretch" },
+  trackWarm: {
+    backgroundColor: "rgba(255,255,255,0.55)",
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
+    borderRadius: radius.pill,
+  },
+  segWarm: { borderRadius: radius.pill },
+  textWarmOn: { fontWeight: "700" },
   seg: {
     flexDirection: "row",
     alignItems: "center",

@@ -39,13 +39,13 @@ export function BoardHeader({
   );
 }
 
-/** Scope + period rows with web's 12 / 16 spacing. */
+/** Scope + period share one row, wrapping when labels are long. */
 export function BoardTabs({ scope, period }: { scope: ReactNode; period: ReactNode }) {
   return (
-    <>
-      <View style={styles.scopeRow}>{scope}</View>
-      <View style={styles.periodRow}>{period}</View>
-    </>
+    <View style={styles.tabsRow}>
+      {scope}
+      {period}
+    </View>
   );
 }
 
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.md,
     marginBottom: spacing.lg,
@@ -116,8 +116,7 @@ const styles = StyleSheet.create({
   // web RouteHeader: text-[26px] font-extrabold tracking-[-0.5px]
   title: { fontSize: 26, fontWeight: "800", letterSpacing: -0.5, color: colors.ink },
   // web: mt-1 text-sm leading-6 ink-2
-  subtitle: { marginTop: 4, fontSize: 14, lineHeight: 24, color: colors.ink2 },
-  scopeRow: { marginBottom: spacing.md },
-  periodRow: { marginBottom: spacing.lg },
+  subtitle: { marginTop: 4, fontSize: 13, lineHeight: 19, fontWeight: "500", color: colors.ink2 },
+  tabsRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.lg },
   separator: { height: spacing.sm },
 });

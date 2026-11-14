@@ -27,7 +27,9 @@ import {
   DogLeaderboard,
   type DogScope,
 } from "@/components/leaderboard/dog-leaderboard";
-import { Segmented } from "@/components/leaderboard/segmented";
+import { Dog, User } from "lucide-react-native";
+import { Tabs } from "@/components/ui/Tabs";
+import { WarmCanvas } from "@/components/ui/WarmCanvas";
 import { t } from "@/lib/i18n";
 import { colors, spacing } from "@/theme/theme";
 
@@ -102,10 +104,12 @@ export default function LeaderboardScreen() {
 
   const toggle = (
     <View style={styles.toggle}>
-      <Segmented
-        options={[
-          { value: "human", label: `🧑 ${t("Leaderboard.dimension.human")}` },
-          { value: "dog", label: `🐕 ${t("Leaderboard.dimension.dog")}` },
+      <Tabs
+        warm
+        fullWidth
+        items={[
+          { key: "human", label: t("Leaderboard.dimension.human"), icon: User },
+          { key: "dog", label: t("Leaderboard.dimension.dog"), icon: Dog },
         ]}
         value={dimension}
         onChange={changeDimension}
@@ -115,6 +119,7 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.flex}>
+      <WarmCanvas />
       {!prefs ? (
         <ActivityIndicator color={colors.brand} style={styles.loader} />
       ) : dimension === "human" ? (

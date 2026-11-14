@@ -180,16 +180,17 @@ export function DogLeaderboard({
       )}
       header={
         <>
-          {header}
           <BoardHeader
             title={t("Leaderboard.title")}
             subtitle={t("Leaderboard.dog.subtitle")}
             refreshing={refreshing}
             onRefresh={refresh}
           />
+          {header}
           <BoardTabs
             scope={
               <Segmented
+                warm
                 options={[
                   { value: "friends", label: t("Leaderboard.dog.scope.friends") },
                   { value: "all", label: t("Leaderboard.dog.scope.all") },
@@ -200,6 +201,7 @@ export function DogLeaderboard({
             }
             period={
               <Segmented
+                warm
                 options={[
                   { value: "weekly", label: t("Leaderboard.period.weekly") },
                   { value: "monthly", label: t("Leaderboard.period.monthly") },

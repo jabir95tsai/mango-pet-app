@@ -157,8 +157,8 @@ export function HumanLeaderboard({
         renderItem={() => null}
         header={
           <>
-            {header}
             <BoardHeader title={t("Nav.leaderboard")} />
+            {header}
           </>
         }
         empty={
@@ -182,8 +182,8 @@ export function HumanLeaderboard({
         renderItem={() => null}
         header={
           <>
-            {header}
             <BoardHeader title={t("Nav.leaderboard")} />
+            {header}
           </>
         }
         empty={
@@ -242,16 +242,17 @@ export function HumanLeaderboard({
       )}
       header={
         <>
-          {header}
           <BoardHeader
             title={t("Nav.leaderboard")}
             subtitle={t("Leaderboard.humanSubtitle")}
             refreshing={refreshing}
             onRefresh={refresh}
           />
+          {header}
           <BoardTabs
             scope={
               <Segmented
+                warm
                 options={[
                   { value: "all", label: t("Leaderboard.scope.all") },
                   { value: "family", label: t("Leaderboard.scope.family") },
@@ -262,6 +263,7 @@ export function HumanLeaderboard({
             }
             period={
               <Segmented
+                warm
                 options={[
                   { value: "weekly", label: t("Leaderboard.period.weekly") },
                   { value: "monthly", label: t("Leaderboard.period.monthly") },

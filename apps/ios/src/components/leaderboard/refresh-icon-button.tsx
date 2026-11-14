@@ -10,6 +10,7 @@ import { RefreshCw } from "lucide-react-native";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { t } from "@/lib/i18n";
 import { colors, radius } from "@/theme/theme";
+import { WarmGlass } from "@/components/ui/WarmCanvas";
 
 export function RefreshIconButton({
   refreshing,
@@ -43,6 +44,7 @@ export function RefreshIconButton({
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
 
   return (
+    <WarmGlass style={styles.glass}>
     <Pressable
       onPress={onPress}
       disabled={refreshing}
@@ -55,6 +57,7 @@ export function RefreshIconButton({
         <RefreshCw size={20} color={colors.brandDeep} strokeWidth={2} />
       </Animated.View>
     </Pressable>
+    </WarmGlass>
   );
 }
 
@@ -66,6 +69,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dim: { opacity: 0.6, backgroundColor: colors.brandTint },
+  // same glass control as the Home bell
+  glass: { width: 44, height: 44, borderRadius: radius.pill, borderWidth: 1, borderColor: "rgba(255,255,255,0.9)" },
+  dim: { opacity: 0.6 },
   icon: { fontSize: 22, fontWeight: "700", color: colors.brandDeep },
 });
