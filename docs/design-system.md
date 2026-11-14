@@ -58,6 +58,7 @@
   - 📌 **三方矛盾已裁決**：以本條為準 → `globals.css` 頭部那句「CTAs put ink on brand」**註解是錯的**（與實作/SoT 不符），UI/UX 實作 P2-1 時一併修正該註解。
 - **卡片**：`bg-mango-card`/`card-soft` + `1px hairline` + `--radius-lg/xl` + 暖色柔光 shadow。
 - **Tabs**：**簡單 toggle（active/inactive 切換），不做滑動 indicator。**（codify：web 的 `pet-tabs` / `ui/Tabs` 都是 toggle；先前 session 加的 Reanimated 滑動 indicator 已退掉，**不要再加**。）
+  - **唯一例外（user 2026-10-11 拍板）**：iOS 26+ 底部 **Liquid Glass tab bar** 的「玻璃鏡片」— 可按住拖曳、鼓起、放大圖示、放開回彈（LINE / iOS 26 系統 tab bar 手感），見 `apps/ios/src/components/liquid-glass-tab-bar.tsx`。**iOS 版擴大（同日 user 拍板）**：頁內「選一個」的切換也用同一套鏡片動作 — `ui/LensTrack`，套在 `ui/Tabs`、排行榜 `Segmented`（現在直接用 `ui/Tabs`）、毛孩頁 `PetTabs`。頁內版**底維持實心 mango**，只有按住時鏡片變透明玻璃（iOS 26 用 `GlassView`，舊版用白色泡泡）。**Web 仍是單純 toggle**。Reduce Motion 下不鼓起、不拉伸、不放大，直接跳到該 tab。
 - **頭像**：沿用 `Avatar` 元件（無 src → initials fallback）。
 - **Liquid Glass（玻璃材質）**：**只用在浮在內容上方的導覽層**（目前 = iOS 底部 tab bar）；卡片 / 列表 / 頁首 / 主鈕一律維持實心 mango。iOS 用原生 `expo-glass-effect`，iOS < 26 退回原本實心 bar；減少透明度 / 動態由系統玻璃自行處理。Web 版尚未做（backlog）。詳 [`features/ios-liquid-glass.md`](features/ios-liquid-glass.md)。（user 2026-10-10 拍板）
 

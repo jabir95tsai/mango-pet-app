@@ -139,7 +139,7 @@ Apple 問「你（或你用的第三方 SDK）蒐集哪些資料類型」，逐�
 ## 審查備註（App Review Notes）— 建議內容
 
 ```
-1. 登入方式：App 提供 Google / Apple / Facebook 登入，也提供「以訪客身分繼續」
+1. 登入方式：App 提供 Google / Apple 登入，也提供「以訪客身分繼續」
    （匿名登入），審查員可直接點「以訪客身分繼續」進入 App 體驗核心功能
    （遛狗、寵物檔案），無需申請帳號。
 
@@ -152,6 +152,30 @@ Apple 問「你（或你用的第三方 SDK）蒐集哪些資料類型」，逐�
    「⋯」選單）與封鎖使用者機制。收到 3 次檢舉後內容會自動隱藏，開發者
    （同時也是唯一維運者）會在 24 小時內人工複查並視情況移除違規內容或
    停權帳號。
+```
+
+### English（貼這版 — 審查員讀英文）
+```
+1. Sign-in: The app supports Sign in with Google / Apple, and also
+   "Continue as Guest" (anonymous sign-in). Reviewers can tap "Continue as
+   Guest" on the welcome screen to access the core features (walk tracking,
+   pet profiles) without creating an account. Social features (posting,
+   report/block, and the blocked-users list in Settings) require a full
+   account: please use "Sign in with Apple" with any Apple ID. Account
+   deletion is available in Settings.
+
+2. Background location: The core feature is dog-walk route/distance tracking.
+   After the user taps "Start Walk", the app requests "Always" location
+   permission so the route keeps recording while the phone is locked or the
+   user switches apps. Location updates stop immediately when the user taps
+   "End Walk"; no background location runs outside an active walk.
+
+3. User-generated content moderation: Posts and comments can be reported via
+   the "..." menu, and users can block other users (blocked users' content is
+   hidden immediately; blocks can be managed in Settings). Content that
+   receives 3 reports is auto-hidden, and the developer reviews all reports
+   within 24 hours, removing violating content and suspending offending
+   accounts as needed.
 ```
 
 ## 📋 這份文件之後怎麼用

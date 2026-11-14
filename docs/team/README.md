@@ -2,7 +2,9 @@
 
 開新 Claude / Codex session 前，先決定**這個 session 是哪個平台軌道 + 哪個角色**。把通用初始 prompt 和對應角色檔案塞進 context（複製貼上，或叫 agent `read docs/team/{role}.md`）。**一個 session 只當一個角色**，跨角色的事丟到該角色的 backlog 等下次。
 
-通用初始 prompt：[`session-start-prompt.md`](./session-start-prompt.md)
+通用初始 prompt：[`session-start-prompt.md`](./session-start-prompt.md)。填入平台、角色檔案、本次任務與完成標準；agent 能讀 repo 時可直接用文件末尾的短版啟動範例。
+
+以下是協作與操作參考，不代表每個 session 都要執行 push / deploy。依通用 prompt 先檢查工作樹、目前 scripts 與任務授權；歷史 P0 說明不代表目前尚未完成 migration。
 
 ## 決策樹
 
@@ -121,11 +123,11 @@ git fetch && git log -5 --stat origin/main
 monorepo 化之後，**任何動到 `package.json` / `package-lock.json` / native dep / repo 結構**的改動，**不准直推 main**。要：
 
 1. **Branch-first**：開 branch 做，main 保持 live 可回滾。
-2. **linux build gate**：push branch 後用
+2. **linux build gate**：push branch 後，對該 commit 使用既有 backend 的 App Hosting Build API 建置，確認 build 為 `READY` 才 merge。只建立 build、不建立 rollout，可避免 gate 提前切換線上流量。若本次已授權部署，也可用：
    ```bash
    npx firebase apphosting:rollouts:create -b <branch>
    ```
-   讓 App Hosting 在 **linux** 對該 branch 跑一次真 build。**綠了才 merge main**；紅了留在 branch 改，production 全程穩在上一個 good build。
+   讓 App Hosting 在 **linux** 對該 branch 跑一次真 build **並部署**。**綠了才 merge main**；紅了留在 branch 改。注意此 CLI 指令成功後會發布該分支，不能當作純 build 使用。
 3. 嚴格走這套，紅 3 次都不會污染 main / production（已驗證）。
 
 **為什麼一定要 linux gate**：本機是 **Windows**。`npm install` 在 Windows 生的 monorepo lockfile **會漏掉 linux 平台的 transitive optional native binary**（例：`@parcel/watcher-linux-x64-glibc`）。本地 `npm run build` 在 Windows 全綠，App Hosting（linux）卻紅在「找不到原生 binary」。**Windows 本地 build 過 ≠ App Hosting 會過** → 一定要 linux branch build 當 gate。
@@ -176,8 +178,11 @@ iOS 長期開發期間建議啟動 worktree。尤其 P0 完成後，Web/PWA 維�
 每個角色都會用到：
 
 ```bash
-# Typecheck（commit 前一律跑）
-npx tsc --noEmit
+# Typecheck（code 改動 commit 前，依受影響專案執行）
+npm run typecheck -w apps/web
+npm run typecheck -w apps/ios
+# Functions：進 functions 目錄後執行 npx tsc --noEmit
+# shared packages：執行套件既有檢查及受影響使用端檢查
 
 # 部署（看你動了什麼）
 git push origin main                                    # 前端 → App Hosting auto-build
@@ -205,11 +210,11 @@ npx eas build --platform ios
 
 P0 monorepo migration 前，這些指令只是目標狀態；實際 script 以 iOS 五角色文件和當時 `package.json` 為準。
 
-## 第一次起跑：iOS 五角色
+## iOS session：依現況選擇五角色
 
-接下來進 iOS app 開發時，用 [`session-start-prompt.md`](./session-start-prompt.md) 的 iOS P0 起手範例。
+進入 iOS app 工作時，用 [`session-start-prompt.md`](./session-start-prompt.md) 的 iOS PM 短版範例盤點現況，或指定已規格化任務的工程角色。目前 repo 已有 `apps/web`、`apps/ios` 與 `packages/*`，不要因舊 checklist 未勾選就重做 migration。
 
-第一個 iOS session 建議是 **Cross-platform PM** 或 **iOS PM**，不要直接大搬家，先做：
+以下為 P0 規劃的歷史起手順序；只有任務確實涉及新的 repo 結構遷移時才套用：
 
 1. 讀 `docs/features/ios-app-strategy.md`
 2. 檢查 repo shape / package scripts / App Hosting 設定

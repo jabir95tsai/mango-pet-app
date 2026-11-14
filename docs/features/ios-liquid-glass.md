@@ -11,6 +11,16 @@
 - 用原生 `expo-glass-effect`（`GlassView` / `GlassContainer`，底層 UIKit `UIGlassEffect`），**不是** blur 模擬。
 - 品牌不變：中央遛狗圓鈕仍是 brand→brandDeep 漸層 + 白色腳印（design-system §4 主鈕）。
 
+## 2026-10-11 更新：玻璃鏡片 tab bar（取代中央圓鈕）
+
+user 要 LINE（iOS 26）那種底部列：5 格平均（圖示＋文字，遛狗改 Footprints 圖示），選中格是品牌淡橘膠囊；**按住 → 鼓成透明玻璃泡泡凸出膠囊、拖曳時跟手＋依速度果凍拉伸＋經過的圖示放大、放開 spring 回彈並切頁**。設計稿：claude.ai Design 畫布「Floating Tab Bar」。
+- 檔案：`apps/ios/src/components/liquid-glass-tab-bar.tsx`（RNGH Pan `minDistance(0)` + Reanimated 4）；`raised-tab-bar.tsx` 在 `LIQUID_GLASS` 時改交給它，iOS < 26 凹口 bar 不變。
+- `GLASS_DISC_RISE`(18) → `GLASS_LENS_BULGE`(10)：玻璃模式不再有圓鈕，只保留鏡片鼓起的空間。
+- Reduce Motion：不鼓起、不拉伸、不放大，直接跳格。VoiceOver 仍走各 tab 的 onPress。
+- 驗證：`tsc`（只剩 `app/_layout.tsx` 兩個既有 typed-routes 錯誤，與本次無關）、`expo export --platform ios` 成功。**尚未上真機** — 需重出 dev-client／TestFlight 後在 iOS 26 手機上確認手感。
+
+- **擴大到頁內切換**（同日）：新增 `apps/ios/src/components/ui/LensTrack.tsx`（可變寬 segment，依 onLayout 量測；Pan `activeOffsetX ±8` + `failOffsetY ±12`，所以外層 ScrollView 照常上下捲；點一下仍走 Pressable）。`ui/Tabs`、`leaderboard/segmented.tsx`（改成包 `ui/Tabs`，a11y role 由 button → tab）、`pets/pet-tabs.tsx` 都改用它。底維持實心，按住才變玻璃；鼓起 1.12 倍、文字放大 0.12（比底部列收斂）。
+
 ## 實作
 
 | 檔案 | 內容 |

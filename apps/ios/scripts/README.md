@@ -4,6 +4,7 @@ Run from the repository root with installed workspace dependencies:
 
 ```powershell
 node --test apps/ios/scripts/auth-push.test.cjs
+node --test apps/ios/scripts/tab-gestures.test.cjs
 npm run typecheck -w apps/ios
 npm run typecheck -w apps/web
 ```
@@ -12,6 +13,11 @@ These 28 tests transpile and execute the actual `auth.ts`, `auth-profile.ts`,
 `push.ts`, and `AuthProvider` modules. Native Google/Apple, messaging/APNs,
 AsyncStorage and Firestore transport are mocked. The small hook scheduler is
 not a React Native renderer or a device test.
+
+The eight tab-gesture regressions execute the component callbacks with a
+controlled animation clock: quick taps use the release position and cancelled
+drags restore the selected segment, with and without Reduce Motion. Native
+gesture recognition and rendering still require the phase device check.
 
 To prove the first-permission regression detects the original bug:
 

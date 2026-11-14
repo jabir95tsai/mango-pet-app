@@ -1,11 +1,13 @@
 /**
  * 4-tab pill bar (概覽 / 提醒 / 開銷 / 健康) — 1:1 with apps/web/src/components/
  * pets/pet-tabs.tsx: a single bg-alt pill (rounded-full, hairline border, p-1)
- * with a simple per-tab colour toggle (active = card bg + soft shadow + bold
- * ink; inactive = ink-2 semibold). Web uses a 200ms colour transition, not a
- * sliding indicator — so we toggle, not slide.
+ * (active = card bg + soft shadow + bold ink; inactive = ink-2 semibold).
+ * iOS motion: the active pill is a draggable glass lens (ui/LensTrack) —
+ * docs/design-system.md §4 exception (user 2026-10-11); web stays a toggle.
  */
-import { StyleSheet, Pressable, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
+
+import { LensTrack } from "@/components/ui/LensTrack";
 
 import { scoped } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
@@ -23,24 +25,18 @@ export function PetTabs({
   onChange: (tab: PetTabKey) => void;
 }) {
   return (
-    <View style={styles.bar}>
-      {PET_TABS.map((key) => {
-        const isActive = key === active;
-        return (
-          <Pressable
-            key={key}
-            onPress={() => onChange(key)}
-            style={[styles.tab, isActive && styles.tabActive]}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-          >
-            <Text style={[styles.label, isActive && styles.labelActive]}>
-              {tPP(`tabs.${key}`)}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <LensTrack
+      items={PET_TABS.map((key) => ({ key, accessibilityLabel: tPP(`tabs.${key}`) }))}
+      selectedIndex={PET_TABS.indexOf(active)}
+      onSelect={(i) => onChange(PET_TABS[i])}
+      trackStyle={styles.bar}
+      itemStyle={() => styles.tab}
+      lensStyle={styles.tabActive}
+      lensRadius={radius.pill}
+      renderItem={(i, lit) => (
+        <Text style={[styles.label, lit && styles.labelActive]}>{tPP(`tabs.${PET_TABS[i]}`)}</Text>
+      )}
+    />
   );
 }
 

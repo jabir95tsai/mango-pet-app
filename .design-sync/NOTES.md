@@ -1,6 +1,6 @@
 # design-sync notes — Mango Pet (claude.ai/design import)
 
-Project: `Mango Pet Design System` → https://claude.ai/design/p/be590e36-ff8d-4c2f-8953-cb1916d505a0
+Project: `Mango Pet App PWA Design System` → https://claude.ai/design/p/9bbc73cb-b958-47d0-b475-6d3765cefb43 (created 2026-11-02; the earlier `Mango Pet Design System` be590e36… no longer appears as writable)
 Scope (user decision 2026-09-14): the 13 files in `apps/web/src/components/ui/` only (16 exports). Feature components under `apps/web/src/components/*` are app screens, not synced.
 
 ## How this repo differs from a packaged DS

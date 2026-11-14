@@ -1,7 +1,7 @@
 import "@/lib/rnfb-setup";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { Stack, usePathname, useRouter, useSegments } from "expo-router";
+import { Stack, usePathname, useRouter, useSegments, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -23,8 +23,8 @@ import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 import { restorePersistedLocale, t, useLocale, useLocaleRestored } from "@/lib/i18n";
 import { signOutUnreadySession } from "@/lib/auth";
 
-/** Auth / onboarding paths are never "resumed" after a re-bootstrap. */
-function isResumablePath(path: string | null): path is string {
+/** Only router-generated usePathname values enter here; never resume auth/onboarding. */
+function isResumablePath(path: string | null): path is string & Href {
   return !!path && !path.startsWith("/sign-in") && !path.startsWith("/onboarding");
 }
 

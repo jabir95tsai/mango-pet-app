@@ -1,6 +1,8 @@
 /**
- * Tabs — 1:1 with web apps/web/src/components/ui/tabs.tsx: a SIMPLE TOGGLE
- * (docs/design-system.md §4 — no sliding indicator, never re-add one).
+ * Tabs — visuals 1:1 with web apps/web/src/components/ui/tabs.tsx. Motion:
+ * the active pill is a draggable glass lens (ui/LensTrack) — the iOS-only
+ * exception to the "simple toggle" rule in docs/design-system.md §4
+ * (user 2026-10-11). Web stays a simple toggle.
  *
  *   track  `inline-flex rounded-lg bg-zinc-100 p-1`  → hugs content, left-
  *          aligned, bgAlt fill, radius sm (8), padding 4
@@ -16,16 +18,10 @@
  * `options` ({ value, label }) is accepted as an alias of `items` so the
  * leaderboard Segmented call sites can switch imports without other changes.
  */
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from "react-native";
+import { StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
 
+import { LensTrack } from "@/components/ui/LensTrack";
 import { colors, radius } from "@/theme/theme";
 
 export type TabItem<K extends string = string> = {
@@ -68,44 +64,41 @@ export function Tabs<K extends string>({
     items ?? (options ?? []).map((o) => ({ key: o.value, label: o.label }));
   const s = SIZES[size];
 
+  const selectedIndex = Math.max(0, list.findIndex((it) => it.key === value));
+
   return (
-    <View
-      accessibilityRole="tablist"
+    <LensTrack
       accessibilityLabel={accessibilityLabel}
-      style={[styles.track, fullWidth && styles.trackFull, style]}
-    >
-      {list.map((item) => {
-        const on = item.key === value;
+      items={list.map((it) => ({
+        key: it.key,
+        accessibilityLabel: it.accessibilityLabel ?? it.label,
+        disabled: it.disabled,
+      }))}
+      selectedIndex={selectedIndex}
+      onSelect={(i) => onChange(list[i].key)}
+      trackStyle={[styles.track, fullWidth && styles.trackFull, style]}
+      itemStyle={() => [
+        styles.seg,
+        { height: s.height, paddingHorizontal: s.padX },
+        fullWidth && styles.segFull,
+      ]}
+      lensStyle={styles.segOn}
+      lensRadius={6}
+      hitSlop={{ top: s.slop, bottom: s.slop, left: 2, right: 2 }}
+      renderItem={(i, lit) => {
+        const item = list[i];
         const Icon = item.icon;
-        const fg = on ? colors.brandDeep : colors.ink2;
+        const fg = lit ? colors.brandDeep : colors.ink2;
         return (
-          <Pressable
-            key={item.key}
-            accessibilityRole="tab"
-            accessibilityLabel={item.accessibilityLabel ?? item.label}
-            accessibilityState={{ selected: on, disabled: !!item.disabled }}
-            disabled={item.disabled}
-            onPress={() => onChange(item.key)}
-            hitSlop={{ top: s.slop, bottom: s.slop, left: 2, right: 2 }}
-            style={[
-              styles.seg,
-              { height: s.height, paddingHorizontal: s.padX },
-              fullWidth && styles.segFull,
-              on && styles.segOn,
-              item.disabled && styles.segDisabled,
-            ]}
-          >
+          <>
             {Icon ? <Icon size={s.icon} color={fg} strokeWidth={2} /> : null}
-            <Text
-              style={[styles.text, { fontSize: s.font, color: fg }]}
-              numberOfLines={1}
-            >
+            <Text style={[styles.text, { fontSize: s.font, color: fg }]} numberOfLines={1}>
               {item.label}
             </Text>
-          </Pressable>
+          </>
         );
-      })}
-    </View>
+      }}
+    />
   );
 }
 
@@ -135,6 +128,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
-  segDisabled: { opacity: 0.5 },
   text: { fontWeight: "500" },
 });
