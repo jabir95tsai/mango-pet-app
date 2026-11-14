@@ -1,3 +1,4 @@
+import { WarmGlass } from "@/components/ui/WarmCanvas";
 /**
  * Active-pet pill + picker — 1:1 with the web walks page pill
  * (apps/web/src/app/app/walks/page.tsx) and pet-picker-dropdown.tsx.
@@ -64,10 +65,11 @@ export function PetPill({ activePet, pets, hasMultiplePets, onSelect }: Props) {
         onPress={openPanel}
         style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
       >
+        <WarmGlass style={StyleSheet.absoluteFill} />
         <Avatar
           name={activePet.name}
           photoURL={activePet.photoURL}
-          size={22}
+          size={28}
           variant="pet"
           fallbackChar="🐾"
           style={styles.pillAvatar}
@@ -150,19 +152,21 @@ export function PetPill({ activePet, pets, hasMultiplePets, onSelect }: Props) {
 const styles = StyleSheet.create({
   // web: rounded-full border bg-card pl-1 pr-2.5 py-1 gap-1.5
   pill: {
+    minHeight: 44,
+    flexShrink: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: colors.card,
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: colors.hairline,
+    borderColor: "#FFFFFF",
     borderRadius: radius.pill,
     paddingLeft: 4,
     paddingRight: 10,
     paddingVertical: 4,
   },
   pillAvatar: { backgroundColor: "#f7c168" },
-  name: { fontSize: 13, fontWeight: "600", color: colors.ink, maxWidth: 104 },
+  name: { flexShrink: 1, fontSize: 13, fontWeight: "600", color: colors.ink, maxWidth: 104 },
   chevronOpen: { transform: [{ rotate: "180deg" }] },
   pressed: { opacity: 0.7 },
   panel: {

@@ -57,6 +57,7 @@ const CARD_BORDER = 1;
 
 export type PostCardProps = {
   post: Post;
+  warm?: boolean;
   currentUid: string;
   /** @deprecated Tagged-pet chips were removed for web parity; ignored. */
   petNameById?: Record<string, string>;
@@ -68,7 +69,7 @@ export type PostCardProps = {
   onBlocked?: (blockedUid: string) => void;
 };
 
-function PostCardImpl({ post, currentUid, onOpenPhotos, onDeleted, onBlocked }: PostCardProps) {
+function PostCardImpl({ warm = false, post, currentUid, onOpenPhotos, onDeleted, onBlocked }: PostCardProps) {
   const { isGuest } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
   // Cards render inside a CONTENT_MAX_WIDTH-capped column — on iPad the raw
@@ -106,7 +107,7 @@ function PostCardImpl({ post, currentUid, onOpenPhotos, onDeleted, onBlocked }: 
   }
 
   return (
-    <View style={[styles.card, deleting && styles.deleting]}>
+    <View style={[styles.card, warm && styles.warm, deleting && styles.deleting]}>
       <View style={styles.header}>
         <UserAvatar name={post.authorName} photoURL={post.authorPhotoURL} size={40} />
         <View style={styles.headerText}>
@@ -261,6 +262,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     ...shadows.card,
   },
+  warm: { borderRadius: 26, borderColor: "#FFFFFF", backgroundColor: "rgba(255,255,255,0.88)", shadowOpacity: 0.06, shadowRadius: 18 },
   deleting: { opacity: 0.5 },
   // web header flex items-center gap-3
   header: { flexDirection: "row", alignItems: "center", gap: spacing.md },

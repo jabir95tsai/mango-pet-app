@@ -1,8 +1,3 @@
-/**
- * Feed section header — 1:1 with apps/web/src/components/home/feed-section-header.tsx:
- * "最新動態" 15/800 + "家人 · 朋友" 12 ink3 on the left, an always-present
- * "查看全部 ›" link (12.5/700 brand-deep + ChevronRight 12) to the full feed.
- */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ChevronRight } from "lucide-react-native";
 
@@ -12,12 +7,12 @@ import { colors, spacing } from "@/theme/theme";
 export function FeedSectionHeader({ onViewAll }: { onViewAll: () => void }) {
   return (
     <View style={styles.row}>
-      <Text style={styles.titleWrap} numberOfLines={1}>
+      <View style={styles.titleWrap}>
         <Text style={styles.title} accessibilityRole="header">
           {t("Home.feed.title")}
         </Text>
-        <Text style={styles.subtitle}>{`  ${t("Home.feed.subtitle")}`}</Text>
-      </Text>
+        <Text style={styles.subtitle}>{t("Home.feed.subtitle")}</Text>
+      </View>
       <Pressable
         accessibilityRole="link"
         onPress={onViewAll}
@@ -41,10 +36,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: 10,
   },
-  titleWrap: { flexShrink: 1 },
-  title: { fontSize: 15, fontWeight: "800", letterSpacing: -0.1, color: colors.ink },
-  subtitle: { fontSize: 12, color: colors.ink3 },
-  link: { flexDirection: "row", alignItems: "center", gap: 2 },
+  titleWrap: { flexShrink: 1, gap: 4 },
+  title: { fontSize: 22, fontWeight: "800", letterSpacing: -0.1, color: colors.ink },
+  subtitle: { fontSize: 12, color: colors.ink2 },
+  link: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 2 },
   linkText: { fontSize: 12.5, fontWeight: "700", color: colors.brandDeep },
   pressed: { opacity: 0.6 },
 });

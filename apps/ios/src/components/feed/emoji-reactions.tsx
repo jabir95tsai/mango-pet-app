@@ -31,6 +31,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import { SmilePlus } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { REACTION_EMOJIS, type ReactionEmoji } from "@mango/shared-types";
@@ -83,6 +84,7 @@ export function EmojiReactions({
   const pendingRef = useRef(false);
   const [tray, setTray] = useState<TrayPos | null>(null);
   const [trayAnim] = useState(() => new Animated.Value(0));
+  const [popAnim] = useState(() => new Animated.Value(1));
   const wrapperRef = useRef<View>(null);
 
   // Fresh server counts after a refetch (same post key → no remount).
@@ -133,6 +135,23 @@ export function EmojiReactions({
     if (next) optimistic[next] = (optimistic[next] ?? 0) + 1;
     setCounts(optimistic);
     setMine(next);
+    // Haptics aren't motion, so they still fire under Reduce Motion; iOS mutes them if system haptics are off.
+    Haptics.impactAsync(
+      next ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Soft,
+    ).catch(() => {});
+    // Like feedback: the main emoji pops (skipped under Reduce Motion).
+    if (next && !reduceMotion) {
+      popAnim.setValue(1);
+      Animated.sequence([
+        Animated.timing(popAnim, {
+          toValue: 1.35,
+          duration: 110,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(popAnim, { toValue: 1, friction: 4, tension: 160, useNativeDriver: true }),
+      ]).start();
+    }
     pendingRef.current = true;
     setPending(true);
     setReaction(postId, uid, next)
@@ -193,7 +212,9 @@ export function EmojiReactions({
           pressed && styles.pressed,
         ]}
       >
-        <Text style={styles.mainEmoji}>{mine ?? DEFAULT_EMOJI}</Text>
+        <Animated.Text style={[styles.mainEmoji, { transform: [{ scale: popAnim }] }]}>
+          {mine ?? DEFAULT_EMOJI}
+        </Animated.Text>
       </Pressable>
 
       {/* Accessible tray opener. */}

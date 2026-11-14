@@ -152,10 +152,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    backgroundColor: colors.card,
+    backgroundColor: "rgba(255,255,255,0.88)",
     borderWidth: 1,
-    borderColor: colors.hairline,
-    borderRadius: 16,
+    borderColor: "#FFFFFF",
+    borderRadius: 24,
     paddingHorizontal: 14,
     paddingVertical: spacing.md,
     // web: box-shadow 0 1px 0 rgba(0,0,0,0.02)
@@ -229,8 +229,8 @@ const styles = StyleSheet.create({
   },
   // web: grid size-8 rounded-lg ink-3, hover bg-red-50 text-red-600
   delete: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
