@@ -1,12 +1,11 @@
 # iOS ↔ PWA 介面對齊 + 功能優化（2026-10）
 
-狀態：**CODE DONE + REVIEWED（215 / 222 項；4 項待 PM、3 項接受差異）— 待 merge + 實機驗收**（iOS UI/UX + iOS Feature Builder，2026-10-08 ~ 10-10）
+狀態：**CODE DONE + REVIEWED（215 / 222 項；4 項待 PM、3 項接受差異）— 已整合 main，待實機驗收**（iOS UI/UX + iOS Feature Builder，2026-10-08 ~ 10-10）
 user 需求：「讓 iOS app 的介面按照 PWA 的介面實作，並優化功能」
-branch：`ios-pwa-fidelity-2026-10`（**未 merge、未 push**）；`ios-pwa-fidelity-2026-10-wip` 已被吸收（TRACK / PETSB 半成品已完成並 commit），可刪除
-worktree：`C:\Users\jabir\Hacker_J\mango_pet_app-ios-pwa`（node_modules 為 junction，拆除前先 `cmd /c rmdir`，見 memory reference_worktree_isolation_technique）
+整合狀態（2026-11-14）：本表 commits 與第二輪 review 修復 `3317d4a` 皆已在 main；歷史工作分支／worktree 已清理。接續工作從目前 checkout 的最新 main 開始。
 盤點資料 / 工具：[`docs/research/ios-pwa-gap-audit-2026-10/`](../research/ios-pwa-gap-audit-2026-10/)（逐項狀態：`status.json`）
 
-> 取代 [`ios-uiux-fidelity-gaps.md`](./ios-uiux-fidelity-gaps.md)（2026-06）的逐頁 diff。Apple Glass 仍 DEFERRED，本輪不做。
+> 取代 [`ios-uiux-fidelity-gaps.md`](./ios-uiux-fidelity-gaps.md)（2026-06）的逐頁 diff。當時未包含玻璃改版；後續已整合 [原生 Liquid Glass](./ios-liquid-glass.md)，舊 expo-blur 全 surface 方案已封存。
 
 ## 1. 怎麼盤點的
 
@@ -14,7 +13,7 @@ worktree：`C:\Users\jabir\Hacker_J\mango_pet_app-ios-pwa`（node_modules 為 ju
 - 逆向核實只完成 HOME、SOCIAL；其餘面向由實作時逐項對照 code 確認，不存在就略過。
 - 每項的 web/iOS 檔案行號、現況、目標、修法：`lane-*.json`；逐項狀態：`status.json`。
 
-## 2. ✅ 已完成（每個 commit 都過 `npm run typecheck -w apps/ios` + `tools/check-keys.js .`；未實機驗、未做第二輪 review）
+## 2. ✅ 已完成（每個 commit 都過 `npm run typecheck -w apps/ios` + `tools/check-keys.js .`；未實機驗；第二輪 review 已完成，見 §3）
 
 | Commit | Lane | 重點 |
 |---|---|---|
@@ -57,10 +56,9 @@ worktree：`C:\Users\jabir\Hacker_J\mango_pet_app-ios-pwa`（node_modules 為 ju
 | web 寫死字串可改用新 key | Web UI/UX | `Walks.page.dialGoal`（dial「分」）、`Walks.manual.errRequired/errEndAfterStart`、`PetsPage.stat.hoursAhead/daysAhead/hoursAgo/daysAgo/walkDaysUnit`、`Photos.titles.*`（web 目前英文）、`Home.notifications`、`Friends.add.sent/self/signIn`、`Feed.deleteConfirm` |
 | iOS 推播點擊沒有路由（成就解鎖推播 deep link `/app/achievements`） | iOS Backend | 加 notification-open handler 時把它導到 `/achievements` |
 | `app.json` `CFBundleLocalizations: ['zh-Hant','en']` | iOS Backend | 選配：讓原生 Apple 按鈕 / 權限提示跟隨 App 內語言 |
-| 刪除 `ios-pwa-fidelity-2026-10-wip` branch | 任一 | 內容已全數吸收 |
 
 ## 5. 如何接續
 
-1. 在 worktree `C:\Users\jabir\Hacker_J\mango_pet_app-ios-pwa`（branch `ios-pwa-fidelity-2026-10`）繼續。
+1. 從最新 main 接續；先核對目前 checkout／worktree，不再使用已刪除的歷史工作目錄。
 2. 有改動就跑 `npm run typecheck -w apps/ios` + `node docs/research/ios-pwa-gap-audit-2026-10/tools/check-keys.js .`。
-3. merge 進 main（user 確認後）→ iOS PM 發一顆 EAS build 實機批次驗收（README 規則 5），重點：遛狗追蹤全流程（含 app 被殺後復原、離線儲存）、tab bar 上方 CTA/FAB 位置、成就頁、匯入精靈、照片批次儲存。
+3. 程式碼已整合；由 iOS PM 安排一顆 EAS build 實機批次驗收（README 規則 5），重點：遛狗追蹤全流程（含 app 被殺後復原、離線儲存）、tab bar 上方 CTA/FAB 位置、成就頁、匯入精靈、照片批次儲存。

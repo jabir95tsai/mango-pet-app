@@ -60,11 +60,11 @@
 - **Tabs**：**簡單 toggle（active/inactive 切換），不做滑動 indicator。**（codify：web 的 `pet-tabs` / `ui/Tabs` 都是 toggle；先前 session 加的 Reanimated 滑動 indicator 已退掉，**不要再加**。）
   - **唯一例外（user 2026-10-11 拍板）**：iOS 26+ 底部 **Liquid Glass tab bar** 的「玻璃鏡片」— 可按住拖曳、鼓起、放大圖示、放開回彈（LINE / iOS 26 系統 tab bar 手感），見 `apps/ios/src/components/liquid-glass-tab-bar.tsx`。**iOS 版擴大（同日 user 拍板）**：頁內「選一個」的切換也用同一套鏡片動作 — `ui/LensTrack`，套在 `ui/Tabs`、排行榜 `Segmented`（現在直接用 `ui/Tabs`）、毛孩頁 `PetTabs`。頁內版**底維持實心 mango**，只有按住時鏡片變透明玻璃（iOS 26 用 `GlassView`，舊版用白色泡泡）。**Web 仍是單純 toggle**。Reduce Motion 下不鼓起、不拉伸、不放大，直接跳到該 tab。
 - **頭像**：沿用 `Avatar` 元件（無 src → initials fallback）。
-- **Liquid Glass（玻璃材質）**：**只用在浮在內容上方的導覽層**（目前 = iOS 底部 tab bar）；卡片 / 列表 / 頁首 / 主鈕一律維持實心 mango。iOS 用原生 `expo-glass-effect`，iOS < 26 退回原本實心 bar；減少透明度 / 動態由系統玻璃自行處理。Web 版尚未做（backlog）。詳 [`features/ios-liquid-glass.md`](features/ios-liquid-glass.md)。（user 2026-10-10 拍板）
+- **Liquid Glass（玻璃材質）**：**用於浮動導覽層**（iOS 底部 tab bar），另有上列明訂的頁內切換鏡片例外；卡片 / 列表 / 頁首 / 主鈕一律維持實心 mango。iOS 用原生 `expo-glass-effect`，iOS < 26 退回原本實心 bar；原生材質的透明度／對比由系統處理，自訂鏡片動效另以 `useReducedMotion` 降級。Web 版尚未做（backlog）。詳 [`features/ios-liquid-glass.md`](features/ios-liquid-glass.md)。（user 2026-10-10 拍板）
 
 ## 5. 動效 / Motion
 
-- medium 強度、**純 CSS keyframes**；**不引入動畫 library**（no Reanimated sliding / no Framer 之類當基礎 UI；canvas 慶祝引擎屬特例）。
+- Web/PWA 維持 medium 強度、CSS keyframes，不新增基礎 UI 動畫 library；canvas 慶祝引擎屬特例。iOS §4 明訂的玻璃鏡片使用既有 Reanimated，其他元件不因此擴大動畫範圍。
 - **強制尊重 `prefers-reduced-motion: reduce`**：所有動畫/transition 在 reduce 下關閉；粒子/紙花 reduce 下不生成。這是**硬規則**，每個有動效的元件都要做降級。
 
 ## 6. a11y
@@ -86,11 +86,11 @@
 - zinc/amber 原生色（含 `dark:` 變體）→ mango token（§1）。
 - Tailwind 預設 `rounded-md/lg/xl/2xl` → `rounded-[var(--radius-*)]`（§2）。
 - 寫死 hex `bg-[#f7c168]`（`app/walks/page.tsx`）→ `bg-mango-amber`。
-- ✅ 已驗證無殘留（audit 確認）：Reanimated 滑動 tab indicator（web/iOS 皆 simple toggle）、動畫 library、reduced-motion guard。
+- 歷史 audit 的「web/iOS 皆 simple toggle」已由 §4 iOS 鏡片例外更新；Web/PWA 仍為 simple toggle，兩端都必須保留 reduced-motion 降級。
 
 > 策略仍是「動到哪頁順手收哪頁」，但 `ui/` primitives 值得獨立一批主動先做。
 
 ## 8. 跨平台備註
 
 - token 數值改動 → 改 `packages/shared-tokens`（web + iOS 同步），不要單邊硬寫。
-- iOS（RN）沒有 Tailwind / CSS var，但**數值與語意對齊本文**（同 mango 色票 + 同 radius 數值 + tabs toggle + reduced-motion via `useReducedMotion`）。
+- iOS（RN）沒有 Tailwind / CSS var，但**數值與語意對齊本文**（同 mango 色票 + 同 radius 數值 + tabs 遵守 §4 平台例外 + reduced-motion via `useReducedMotion`）。

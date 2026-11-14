@@ -2,7 +2,15 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-09-27（🍎 iOS PM/cross-role — **user「協助我上架app」→ UGC 檢舉/封鎖 CODE DONE**：user 授權同 session 跨到 Backend+iOS FB+Web FB 一次做完 [`ugc-moderation.md`](../features/ugc-moderation.md)（唯一硬性 code blocker）— rules（`reports`/`moderationAudit` + `authorBlockedMe` 擋互動）+ `onReportCreated` trigger（達 3 報 hidden）+ web/iOS 檢舉/封鎖 UI + blocked-users 設定頁 + `/terms` 零容忍條款;`@mango/shared-types`+`shared-business` 新 `moderation.ts`;functions/web/ios 三個 `tsc --noEmit` 全過;**尚未部署**（rules+functions 還沒 `firebase deploy`）+ 未實機驗證,下一步。同時複查 Apple Glass defer 決策仍成立（`ios-glass-blur` branch 今日 split-merge 只帶 web-fidelity 部分,glass 部分留在 branch）→ [`ios-app-store-submission.md`](../features/ios-app-store-submission.md) 同步更新｜先前 2026-08-26 🍎 iOS PM — **user「想先上架 app store 了」→ re-check 2026-06-03 gap audit,狀態不變**：近 3 個月唯一動作 = Apple Glass 設計系統 spec（立而未做,未裝 `expo-blur`）+ dev-client 工具鏈;UGC 檢舉/封鎖仍 0 實作（grep 全 repo 確認）= **唯一硬 blocker**;iPad QA 未做、`eas submit.production` 未設。**user 2026-08-26 拍板**：Apple Glass **defer 到上架後**（v1.1 再撿回，spec 保留不作廢）;UGC 檢舉/封鎖（唯一硬性 code blocker）**下一個 dev session 立即開工**（Backend → iOS FB → Web FB,spec 見 [`ugc-moderation.md`](../features/ugc-moderation.md)）。上架建議順序（可平行）：①UGC dev ②iPad responsive QA ③user 手動 ASC 帳號設定 ④PM metadata ⑤素材確認 ⑥`eas.json submit.production` 設定 ⑦production build+TestFlight+送審 → 全部同步進 [`ios-app-store-submission.md`](../features/ios-app-store-submission.md)）｜先前 2026-06-03 🍎 iOS PM — **🔄 視覺方向轉向：改「忠實還原 PWA 視覺」**（user：要 web 一致的外觀，選 A re-skin）→ polish pass 從 native-feel 改成 **1:1 對齊 web 元件**（仍 RN、原生能力保留，D1 技術路線不變）;**S1/S2 已做的要回頭 re-align web** + S3–S6 直接 web-faithful;[`ios-uiux-polish-pass.md`](../features/ios-uiux-polish-pass.md) 已更新｜先前 **UI/UX polish Session 1 SHIPPED**（UX-0 primitives `@/components/ui` + `useReducedMotion` + S1 Walks `175345f`/`6a373c4` + S2 Home/Feed）→ Walks/Home-Feed 視覺到位;**S3 Pets / S4 Leaderboard+Family / S5 Settings+Friends / S6 收斂 QA 下一棒一次跑完**（複用 UX-0），收齊後 PM 發一顆 EAS build user 一次走完整 app（規則 5）｜先前 **iOS UI/UX polish pass spec READY** → [`ios-uiux-polish-pass.md`](../features/ios-uiux-polish-pass.md)：P2–P7 功能已 code-done（平行 sessions 跑完 pets/feed/leaderboard/family/settings/friends/onboarding），現做全 app 視覺 polish（UX-0 primitives + S1–S6 per-surface）;動畫 dep 全已裝→無新 gate;批次驗收末端一次｜先前 **驗收改批次**（user：不想每 sub-phase 驗）→ README **規則 5**：實機驗收 per-phase 一次（dev 全 merge 只跑自動 tsc+web-gate，phase 末發一顆 EAS build 一次走完）;P2 spec 6 個 prompt 改成「中途不發 device build，⑥ 端到端一次驗」｜先前 **P2 Pets 完整 spec READY-FOR-DEV** → [`ios-p2-pets.md`](../features/ios-p2-pets.md)：前置決策全拍板 + sub-phase + §A P2 補滿｜先前 **P2–P7 port 藍圖**（workflow）→ [`ios-port-master-plan.md`](../features/ios-port-master-plan.md)｜先前 **P1c code done 待驗**（backend `18803fb` + FB `de2265c`）：拍照 ≤5 + START/END post 同 walkId cross-link + createPost;expo-camera/image-manipulator 走 gate;parity §A P1 兩列 → 🟡;驗過 = P1 全 parity 收齊 → iOS UI/UX walks polish pass｜先前 **P1b code done**（`8a14ce3`，datetime picker defer）｜先前 **🏁 P1d 背景 GPS 實機簽收 → P1 核心遛狗 loop（含背景定位）完成**（EAS `4e875f0b`）：鎖屏/口袋走一段時間+距離續算;session-only + Always fallback;parity §A P1 GPS 背景列 → ✅;審查 note + Open Q3 收 §F;下一棒 P1b（done/手動/recent 展開）｜先前 **P1d code/native COMPLETE**（merge `871b154`）｜先前同日 **P1a Walks 核心 loop 實機簽收**（`f44fa94c`）：B/C/D 全過、parity §A P1 四列 → ✅;**P1 重排序 → P1d 插隊先做**｜先前 **P1a screens CODE COMPLETE**（`a02289c`）：WalksHome dial + 前景 GPS tracking + createWalk 落地;parity §A P1 四列 → 🟡;iOS Backend follow-up（streak/stats 收進 shared-business + active-pet AsyncStorage）+ UI/UX follow-up（svg dial / Reanimated 走路狗）已記 [`ios-p1a-walks-screens.md`](../features/ios-p1a-walks-screens.md)｜先前同日 **web build 事件收尾 + P1a backend merged**：App Hosting 連紅 3 build 根因 = Windows 生 lockfile 漏 linux transitive optional native binary（`@parcel/watcher-linux-x64-glibc`）+ 過寬 overrides;修法 `626df7c`+`42cb5b9`+merge `35b5057`（drop 過寬 @types/react+typescript override + 宣告 linux native binaries）;**branch-first + `apphosting:rollouts:create -b` linux gate 嚴格走完,3 紅 0 污染 main/production**;leaderboard-v2 上線;P1a `7fe2438`（shared walk data layer + 前景 GPS service）已 merge。教訓記入 README 規則 4｜先前 **P1 Walks spec READY-FOR-DEV** [`ios-p1-walks.md`](../features/ios-p1-walks.md)：data contract（接同 walks/{walkId} + leaderboard trigger 不動）+ 背景 GPS committed + sub-phase P1a–d + 三角色 handoff｜先前同日 **P0 Foundation MILESTONE 全簽收**：iPhone 實機 Google+Apple 登入通 + 空白 5-tab nav + shared-types/tokens 雙端通;parity §A P0 三列 → ✅｜先前同日 Cross-platform PM — **P0 Foundation 完成 + hard-freeze 解除**：monorepo migration merge main(`3961f19`)、App Hosting build `c94c384` 修綠、exit criteria 全達成,進入 §2 parallel guarded;放行 iOS Feature Builder P0 Step 7｜先前 05-30 iOS PM — **phase plan 算清**：P1 工期重估含背景 GPS buffer → 累計 **13.5–14 週**;deferred-v1 餐廳/知識庫正式列 post-launch catch-up sprint;parallel-policy §5 拍板維持「critical + polish」｜先前同日 Cross-platform PM — **iOS parity 5 open questions 拍板**：餐廳/知識庫 deferred-v1、照片圖庫排 P3、**背景 GPS 升 P1 committed**、D4 收斂為核心 parity + native 擴張;strategy + checklist 同步更新｜先前 05-29：**iOS parity checklist + Web/PWA 並行 policy 落地**：[`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（web 全 20 路由 → P0–P7 對齊;抓出餐廳/知識庫/照片圖庫 3 個 phase plan gap + 5 open questions）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（P0 hard freeze / P1–P7 parallel guarded + catch-up 節奏）｜先前：P0 monorepo migration spec READY-FOR-DEV + npm workspaces + iOS 五角色結構落地）
+最後更新：2026-11-14（文件狀態對齊 main `9287947`）
+
+## 本次確認的現況
+
+- PWA 對齊、Expo SDK 57、原生 Liquid Glass、瀏覽器預覽與手勢／typed-routes 修復均已整合 main。
+- Web／iOS typecheck、36 項測試、兩平台 Metro export 與 Linux build gate 已通過；main 自動部署成功，首頁 HTTP 200。完整證據見 [backlog 已結案紀錄](team/backlog.md)。
+- 本機與遠端僅保留 main；舊 `ios-glass-blur` 方案已被新版取代並清理，不再列為 v1.1 待接續工作。
+- 仍需 iOS phase 批次實機驗收；產品開放問題與平台差異見 [PWA 對齊紀錄](features/ios-pwa-parity-2026-10.md)。上架流程見 [送審清單](features/ios-app-store-submission.md)。
+- 下方為先前各 epic 的規劃／驗收紀錄，非本次全產品重新驗收；遇到舊分支或狀態，以對應 feature 文件的較新紀錄為準。
 
 ## 進行中
 
@@ -16,7 +24,7 @@
   - 👉 **下個動作（user）**：
     - 即時：今日 walk 滿 30 min 觸發 complete 變體驗收（順便 Epic 5 A1/A2 也對齊測）
     - 然後：決定 Phase 2 (pets page) 要不要走 prototype-first 還是 UI/UX 直接動工
-- **Epic 5: 主動推播 — 提升用戶活躍** — [`docs/features/engagement-push-notifications.md`](../features/engagement-push-notifications.md) ✅ **5 phase 全 SHIPPED + deploy verified**（FB session 5/24 深夜批 ship + 收尾 report）
+- **Epic 5: 主動推播 — 提升用戶活躍** — [`docs/features/engagement-push-notifications.md`](features/engagement-push-notifications.md) ✅ **5 phase 全 SHIPPED + deploy verified**（FB session 5/24 深夜批 ship + 收尾 report）
   - 4 push types 上線：A1 evening reminder 20:00 cron (`1a6fc7f`) / A2 streak warning 22:00 cron (`64f5de7`) / B1 rank-overtake aggregateLeaderboards 改 (`9c6442e`) / B2 family-milestone walks onCreate (`40a7e02`)；schema + UI (`f1e6952`)；PM ship recap (`380786d`)
   - Deploy 全到位：rules（engagementPushes + userDailyStats）+ 3 個新 functions create + aggregateLeaderboards update + frontend push 完 App Hosting auto-build
   - 1 deviation：`engagementPushes` 路徑改 3-level（`/{type}/waves/{ISO}`，functionally 等價）
@@ -25,65 +33,65 @@
     - 即時：手動 test 觀察清單跑一輪（spec 內 4 個 test 步驟）
     - **觀察至 2026-05-27（3 天）**：每 push opt-out 率 < 20% / A1 開啟率 ≥ 20% / A2 補遛率 ≥ 15% / B1 追上率 ≥ 10% / B2 family 開啟率 ≥ 30% / 同晚 A1+A2 雙推不擾人
     - 觀察過關 → 收尾移到已收尾速覽；不過關 → 寫 follow-up（throttle / 文案調整 / 時段微調）
-- **Family Leaderboard 即時更新** — [`docs/features/family-leaderboard-realtime.md`](../features/family-leaderboard-realtime.md) ✅ **SHIPPED 2026-05-25**（FB session 3 commits + deploy 完成）
+- **Family Leaderboard 即時更新** — [`docs/features/family-leaderboard-realtime.md`](features/family-leaderboard-realtime.md) ✅ **SHIPPED 2026-05-25**（FB session 3 commits + deploy 完成）
   - `bf8ed08` refactor: extract computeWalkerPeriodScore helper
   - `1245286` feat: recomputeWalkerLeaderboards onCreate trigger + audit + lastUpdatedAt
   - `4edb873` feat: client onSnapshot listener + glow animation + reduced-motion skip
   - Deploy 全到位：rules（realtimeLeaderboardUpdates audit）+ functions:recomputeWalkerLeaderboards,aggregateLeaderboards + App Hosting frontend rebuild
   - ⚠️ Mid-session hygiene：commit `d07511c` 訊息誤掛 `feat(leaderboard)` 但內容是 `/join` redirect 修復（前一 session 遺留 working tree）；歷史 cosmetic 髒，無功能影響
   - 👉 **下個動作（user）**：雙瀏覽器實機 test（家人 A 在 leaderboard / 家人 B 完成 walk → 對方 1-2s glow）+ 明天 00:30 cron reconciliation 觀察
-- **Phase 2 pets 全頁重建** — [`docs/features/pets-v2-rebuild.md`](../features/pets-v2-rebuild.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 7 commits + 6 artboard 變體全 port，PM 後 sync header）
+- **Phase 2 pets 全頁重建** — [`docs/features/pets-v2-rebuild.md`](features/pets-v2-rebuild.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 7 commits + 6 artboard 變體全 port，PM 後 sync header）
   - `cbd95df` pet-avatar + top-bar + header + switcher / `b24c17c` pet-tabs + URL state + stat grid + overview / `fbc4bcf` reminder-card + reminders / `5e14f15` expense-card + donut + expenses / `a40481a` health-record-card + weight-trend chart + health / `46c62e2` floating-add tab-aware / `9d7956a` empty-state + page.tsx 整合
   - Pet avatar 改用真照片 + fallback initial / Donut chart + 體重 trend line chart 純 hand-rolled SVG / FAB tab-aware tone
   - 👉 **下個動作（user）**：實機驗證 — 單 pet / 多 pet switcher / 4 tab (概覽/提醒/開銷/健康) / EmptyState 0 pets 情境
-- **Per-pet 自訂散步目標** — [`docs/features/per-pet-walk-goal.md`](../features/per-pet-walk-goal.md) ✅ **SHIPPED 2026-05-25**（FB session 6 commits + A1+B2 deployed asia-east1）
+- **Per-pet 自訂散步目標** — [`docs/features/per-pet-walk-goal.md`](features/per-pet-walk-goal.md) ✅ **SHIPPED 2026-05-25**（FB session 6 commits + A1+B2 deployed asia-east1）
   - `1d0f51b` types + walk-goals helper / `ee9bb1a` updatePet walkGoal passthrough / `8ac764f` pet-walk-goal-input stepper + form 整合 / `9606f80` pet-picker-dropdown + i18n / `313af47` walks page activate chevron + activePet state / `985a547` A1+B2 push cascade (deployed)
   - **Phase 1 v2 DEFERRED chevron 已 ACTIVATED** — multi-pet user 看到 dropdown picker 含 goal chip + 「管理寵物」link
   - A2 streak / leaderboard scoring 全照 spec 不動
   - 已知 follow-ups（PM 排序候選）：per-pet push 不只主寵物 / inline goal-stepper 在 picker / breed-based computed goal / goal 改動 history
   - 👉 **下個動作（user）**：實機驗證（多 pet user 切 pet 看 dial 換 goal；A1 20:00 cron 看 push 用新 threshold）+ live test pending
-- **拍照後選擇性存到手機相簿** — [`docs/features/save-photo-to-album.md`](../features/save-photo-to-album.md) ✅ **SHIPPED 2026-05-25**（FB session 6 commits + 4 個拍照 entry 全接 SaveToAlbumButton）
+- **拍照後選擇性存到手機相簿** — [`docs/features/save-photo-to-album.md`](features/save-photo-to-album.md) ✅ **SHIPPED 2026-05-25**（FB session 6 commits + 4 個拍照 entry 全接 SaveToAlbumButton）
   - `c106d74` save-to-album helper / `ff5e26d` SaveToAlbumButton + i18n / `c6aa3b5` pet-form-dialog / `76f7fbb` walk-tracking-view / `fb0a120` receipt-scanner / `224829d` post-composer per-photo
   - 純 client + browser API（Web Share），無 schema / functions 改動
   - 👉 **下個動作（user）**：iOS Safari/PWA real-device 4 入口 test → share sheet 點「儲存影像」進 Photos.app
-- **UI Polish Bundle 2026-05-25** — [`docs/features/ui-polish-bundle-2026-05-25.md`](../features/ui-polish-bundle-2026-05-25.md) ✅ **SHIPPED 2026-05-25**（4 commits + App Hosting auto-build）
+- **UI Polish Bundle 2026-05-25** — [`docs/features/ui-polish-bundle-2026-05-25.md`](features/ui-polish-bundle-2026-05-25.md) ✅ **SHIPPED 2026-05-25**（4 commits + App Hosting auto-build）
   - `76ac18d` friends icon in settings avatar 框 / `d53f65e` post default public / `74751a3` leaderboard refresh + 800ms spinner / `9ab5c10` i18n keys
   - 👉 **下個動作（user）**：實機跑 3 個改動驗收 — settings friends icon 點 / 發 post 看預設 public / leaderboard refresh button 點
-- **加入家庭時自動加為家人好友** — [`docs/features/auto-friend-family-members.md`](../features/auto-friend-family-members.md) ✅ **SHIPPED 2026-05-25**（3 commits + 1 sideways slip + asia-east1 deployed）
+- **加入家庭時自動加為家人好友** — [`docs/features/auto-friend-family-members.md`](features/auto-friend-family-members.md) ✅ **SHIPPED 2026-05-25**（3 commits + 1 sideways slip + asia-east1 deployed）
   - `b9038da` friendship-helpers + createMutualFriendship (idempotent) / `e17acd5` autoFriendFamilyMembers onDocumentWritten trigger + audit / `4962c69` autoFriendEvents rules
   - ⚠️ commit `e17acd5` 訊息誤掛 `purgeMyOrphanWalks` 但實際也含 trigger 內容（FB spec 已 verified by grep）
   - ⭐ 同 commit 順手 ship `purgeMyOrphanWalks` callable（leaderboard data hygiene tool，無獨立 spec — FB session 主動修補）
   - 退家 friendship 仍保留（per D1）；trigger 對 N 人 join + missing profile + 重複 join 都 idempotent
   - 👉 **下個動作（user）**：2 帳號 join 同 family live test → friends 頁互相看到
-- **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](../features/walks-auto-photo-share.md) ✅ **SHIPPED 2026-05-25**（FB session 6 commits + 無 functions / 無 rules 改動）
+- **遛狗自動拍照 + 自動發動態** — [`docs/features/walks-auto-photo-share.md`](features/walks-auto-photo-share.md) ✅ **SHIPPED 2026-05-25**（FB session 6 commits + 無 functions / 無 rules 改動）
   - `5ecbe38` schema (walkPrefs.autoPhotoShare + Post.walkId + mintWalkId helper) / `f0fdd61` PhotoPromptSheet bottom sheet + i18n + slide-up keyframe / `22801f9` PostComposer 加 3 optional props / `9e8f7ae` start-photo flow / `94135f5` end-photo flow (1s delay after confetti) / `a03caf9` settings toggle (default ON)
   - START + END 各自 1 post 含同 walkId cross-link
   - 👉 **下個動作（user）**：iOS PWA real-device 4 flows test（START 拍/跳 + END 拍/跳）+ camera 拒權 fallback + settings OFF → 0 prompts
-- **🐛 拍收據 AI 辨識不見了** — [`docs/features/bug-receipt-ai-missing.md`](../features/bug-receipt-ai-missing.md) ✅ **SHIPPED 2026-05-26**（Bug Hunter 走完 4 步 + fix #1 ship `e972cf8`）
+- **🐛 拍收據 AI 辨識不見了** — [`docs/features/bug-receipt-ai-missing.md`](features/bug-receipt-ai-missing.md) ✅ **SHIPPED 2026-05-26**（Bug Hunter 走完 4 步 + fix #1 ship `e972cf8`）
   - Root cause = mobile bottom-nav reorg (`e34640a` 2026-05-23) 拿掉「開銷」slot + drawer 搬到 settings 頁右上角 → AI 拍收據 變 4-tap 路徑
   - Bug Hunter 選 fix #1（最小，不破 IA）— PM #2 前提不成立：`ExpensesOverviewSection` 是 dead code（grep 整 codebase 從未 import，只 self-reference）
   - Fix：settings 帳號區下方加 Camera quick-action card → `/app/expenses?action=scan` + useSearchParams ref-guarded useEffect 自動開 ReceiptScanner
   - User 路徑：**4 tap → 2 tap** ✅
   - 2026-05-29 audit sync：`ExpensesOverviewSection` 已刪（`22bee39`），此 bug spec 保留為 stopgap 事故紀錄；long-term 正解已由 expenses-into-pets-page ship
   - 👉 **下個動作（user）**：實機驗證 2-tap path（settings → 拍收據 card → scanner 自動開）
-- **/app 首頁 v3 — Feed-first + IG Stories pets bar** — [`docs/features/home-v3-feed-first.md`](../features/home-v3-feed-first.md) ✅ **SHIPPED 2026-05-26**（UI/UX session 6 commits + 1 locale polish）
+- **/app 首頁 v3 — Feed-first + IG Stories pets bar** — [`docs/features/home-v3-feed-first.md`](features/home-v3-feed-first.md) ✅ **SHIPPED 2026-05-26**（UI/UX session 6 commits + 1 locale polish）
   - `38d847c` stories bar + your-story/pet-story avatars + `useTodayWalkStatus` / `2428507` top bar + feed header + empty/no-posts states / `e13812a` invite-family card / `fdd567a` page integration + 4 variants / `3063707` i18n / `2d63b98` locale-aware App.name top-bar polish
   - Reuses PostCard / PostComposer / listPets / listFeedPosts / useFamily；stories pet tap remains no-op future hook per spec
   - 👉 **下個動作（user）**：production 實機驗 4 variants（family+posts / 0 pets / personal / no posts）+ 點 user avatar 開 composer + stories ring 狀態
-- **開銷完全搬進寵物頁** — [`docs/features/expenses-into-pets-page.md`](../features/expenses-into-pets-page.md) ✅ **SHIPPED 2026-05-26**（Feature Builder 5 commits，無 functions / rules / schema 改動）
+- **開銷完全搬進寵物頁** — [`docs/features/expenses-into-pets-page.md`](features/expenses-into-pets-page.md) ✅ **SHIPPED 2026-05-26**（Feature Builder 5 commits，無 functions / rules / schema 改動）
   - `16f23d9` pet-expenses-body category filter / `0d672d3` FAB direct-to-camera + ReceiptScanner `initialFile/defaultPetId/onManualEntry` / `261d588` `/app/expenses` redirect / `5726640` remove settings quick-action / `22bee39` drop expenses nav + delete dead overview section
   - 產品決策已落地：開銷 IA 完全折進 pets「開銷」tab；per-pet only；舊 `/app/expenses` redirect 到 `/app/pets`
   - 👉 **下個動作（user）**：iOS PWA 真機驗 FAB → camera → AI scan → save → 該 pet list 更新；manual entry fallback；multi-pet 切換隔離；`/app/expenses` redirect
-- **Photo Lightbox** — [`docs/features/photo-lightbox.md`](../features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
+- **Photo Lightbox** — [`docs/features/photo-lightbox.md`](features/photo-lightbox.md) ✅ **SHIPPED 2026-05-25**（UI/UX session 5 commits + 自寫 SHIPPED record + Chrome MCP verification）
   - `b1c925e` photo-lightbox 元件（carousel + swipe + 三招關閉 + a11y）/ `bc7b6cf` post-card 接 / `97df9b5` walk-row + walk-tracking-view done screen 接 / `69160c4` i18n keys / `9da6883` UI/UX SHIPPED record
   - 👉 **下個動作（user）**：feed post 點 photo / walks recent 點 photo / done screen 點 photo — 3 處驗收 lightbox 開
-- **🧹 Pre-iOS Cleanup（audit 清理）** — [`docs/features/pre-ios-cleanup.md`](../features/pre-ios-cleanup.md) ✅ **RESOLVED 2026-05-29 audit sync**
+- **🧹 Pre-iOS Cleanup（audit 清理）** — [`docs/features/pre-ios-cleanup.md`](features/pre-ios-cleanup.md) ✅ **RESOLVED 2026-05-29 audit sync**
   - PM + general-purpose agent 逐條驗 15 SHIPPED specs vs git + code
   - 2026-05-29 re-audit：原列 knowledge `[id]` orphan / walks `__pycache__` / expense-summary / expenses-overview-section 都不存在；`expense-summary` 刪除 commit `261d588`、`expenses-overview-section` 刪除 commit `22bee39`
   - 已補 `.gitignore` `__pycache__/`；doc drift headers 已修（walk-core / family-leaderboard / reminders-to-pets-page / visual-redesign-mango / pre-ios-cleanup）
   - 驗證：`npx tsc --noEmit` pass；`npm run build` pass（first sandbox run failed on Google Fonts network, network-enabled retry passed）
   - 👉 **下個動作（user）**：可進 iOS P0 monorepo migration
-- **🍎 iOS app 戰略 — React Native + Expo + Feature parity 並行 PWA** — [`docs/features/ios-app-strategy.md`](../features/ios-app-strategy.md) **STRATEGY GO**（user 2026-05-28 4 個 strategic decisions confirmed）
+- **🍎 iOS app 戰略 — React Native + Expo + Feature parity 並行 PWA** — [`docs/features/ios-app-strategy.md`](features/ios-app-strategy.md) **STRATEGY GO**（user 2026-05-28 4 個 strategic decisions confirmed）
   - **🏁 Web-first PWA Phase 完成** — 15 個 SHIPPED features 全在 production
   - ⚠️ **依賴 pre-ios-cleanup 先完成**（清乾淨再 monorepo migration）
   - 4 decisions：D1 RN cross-platform 重寫 / D2 Apple Dev account 已買 / D3 並行 PWA + iOS / D4 feature parity 一次到位
@@ -92,17 +100,17 @@
   - Monorepo migration P0 first：apps/web (既有 Next.js) + apps/ios (新 Expo) + packages/{shared-types, shared-firebase, shared-business, shared-i18n, shared-tokens}
   - 並行維護策略：每 P-phase iOS 收尾 catch up 期間 web 新 feature
   - 工作量 **XL**，3-5 個月 conservative；solo founder vibe-coding 高度依賴 Cursor / Claude Code 加速
-  - ✅ **P0 Foundation migration 完成 + freeze 解除（2026-05-31）** → [`ios-p0-monorepo-migration.md`](../features/ios-p0-monorepo-migration.md)：npm workspaces monorepo 已 merge main（`3961f19` migrate + `c8d7c90`/`c94c384` App Hosting fix）。原 05-30 App Hosting build 紅(Cloud Build FAILED_PRECONDITION) 由 `c94c384`「normalize standalone output」修綠。iOS Backend 2026-05-31 驗證 exit criteria 全達成(build 綠 + tsc pass + apps/web dev 正常 + production golden path 驗 web 沒壞)→ Cross-platform PM 解除 P0 hard-freeze,進入 §2 parallel guarded。⚠️ 過程偏離:migration 直推 main(非 branch-first),production build 紅約 44 分(靠 last-good 撐著無斷線);下次 repo-shape 大改回 branch-first。
-  - **Parity + 並行 policy 已落地**（Cross-platform PM 2026-05-29）→ [`ios-parity-checklist.md`](../features/ios-parity-checklist.md)（single source of truth：每個 web feature → phase → policy → iOS 狀態）+ [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md)（freeze / catch-up）
+  - ✅ **P0 Foundation migration 完成 + freeze 解除（2026-05-31）** → [`ios-p0-monorepo-migration.md`](features/ios-p0-monorepo-migration.md)：npm workspaces monorepo 已 merge main（`3961f19` migrate + `c8d7c90`/`c94c384` App Hosting fix）。原 05-30 App Hosting build 紅(Cloud Build FAILED_PRECONDITION) 由 `c94c384`「normalize standalone output」修綠。iOS Backend 2026-05-31 驗證 exit criteria 全達成(build 綠 + tsc pass + apps/web dev 正常 + production golden path 驗 web 沒壞)→ Cross-platform PM 解除 P0 hard-freeze,進入 §2 parallel guarded。⚠️ 過程偏離:migration 直推 main(非 branch-first),production build 紅約 44 分(靠 last-good 撐著無斷線);下次 repo-shape 大改回 branch-first。
+  - **Parity + 並行 policy 已落地**（Cross-platform PM 2026-05-29）→ [`ios-parity-checklist.md`](features/ios-parity-checklist.md)（single source of truth：每個 web feature → phase → policy → iOS 狀態）+ [`ios-pwa-parallel-policy.md`](features/ios-pwa-parallel-policy.md)（freeze / catch-up）
     - ✅ **5 個 open questions 已拍板（2026-05-30）**：Q1 餐廳 **不進首版**(deferred-v1) / Q2 知識庫 **不進首版**(deferred-v1) / Q3 照片圖庫 **排 P3** / Q4 iOS 背景 GPS **要做且重要 → 升 P1 committed scope**(+App Store 背景定位審查注意) / Q5 D4 **收斂為核心 parity + 背景 GPS native 擴張**。strategy spec + parity checklist 已同步更新
     - ✅ **iOS PM phase plan 算清（2026-05-30）**：P1 工期重估含背景 GPS buffer → P1 2.5–3 週、**累計 13.5–14 週**;deferred-v1(餐廳/知識庫)正式列 strategy §Post-launch catch-up sprint(粗時點 + 估工;餐廳受 web Google Places 成本暫停連動);parallel-policy §5 拍板維持「critical + polish」。phase plan 內部一致性 verified
-  - ✅ **P0 Foundation MILESTONE 全簽收（2026-05-31 iPhone 實機）** → [`ios-p0-user-setup.md`](../team/ios-p0-user-setup.md)
+  - ✅ **P0 Foundation MILESTONE 全簽收（2026-05-31 iPhone 實機）** → [`ios-p0-user-setup.md`](team/ios-p0-user-setup.md)
     - Step 7 apps/ios scaffold merged（Expo + Expo Router + 5-tab raised-disc nav + @react-native-firebase）
     - user 無 macOS → 走 **EAS internal build + iPhone 實機**（非 simulator）；`eas init`（projectId `856804a1-…`）+ Google Web client id 填 config + Apple capability/provider 啟用 + `eas device:create` + `eas build --profile preview`(device)
     - **實機三項全綠**：Google 登入 ✅ / Apple 登入 ✅ / 空白 5-tab bottom nav ✅
     - code-sharing 機制雙端通：`apps/ios` import `@mango/shared-types`(Pet) + `@mango/shared-tokens`(mangoColors via theme.ts)
     - parity-checklist §A P0 三列(Auth / BottomNav / tokens)→ ✅
-  - ✅ **P1 Walks spec READY-FOR-DEV（2026-05-31 iOS PM）** → [`ios-p1-walks.md`](../features/ios-p1-walks.md)
+  - ✅ **P1 Walks spec READY-FOR-DEV（2026-05-31 iOS PM）** → [`ios-p1-walks.md`](features/ios-p1-walks.md)
     - grounded on web walks 實作盤點（Walk schema `walks/{walkId}` + Storage 路徑 + Post walkId cross-link + walk-goals/score/haversine pure helpers + Cloud trigger 不動）
     - **data contract**：iOS 寫入逐欄位對齊 web，接同 leaderboard trigger；score 公式抽 `@mango/shared-business`（functions 不動）
     - **背景 GPS（Q4 committed）**：Always 權限 + UIBackgroundModes + session-only + App Store 審查 pre-check
@@ -110,7 +118,7 @@
     - 三角色 handoff（Backend / Feature Builder / UI/UX）+ 4 open questions 已列
   - ✅ **P1a backend 前置 merged（`7fe2438`）** — `@mango/shared-business`（walk-goals + score + gps/haversine, pure）+ `@mango/shared-types` 加 Walk/Post + apps/ios 前景 GPS service + walk 寫入 path（`storage-paths`/`walks`/`walk-tracking-service`）。`scoring.ts` Pet→ScorablePet 修正已在同線收（`7fe2438`）。⚠️ 此線連坐踩到 web build 事件（見下「web build 事件」），已修綠。
   - ⚠️ **web build 事件（2026-05-31 已收尾）**：P1a/EAS-fix 的 dep/lockfile 改動連紅 App Hosting 3 build（根因：Windows 生 lockfile 漏 linux native binary + 過寬 overrides）。修法 `626df7c`+`42cb5b9`+`35b5057`；branch-first + linux rollout gate 全程未污染 production（穩在 build-005，綠了才 cutover）。教訓 → **README 規則 4**（dep/lockfile/repo-shape 改動硬性 branch-first + linux build gate；Windows 本地 build 過 ≠ App Hosting 過）。
-  - ✅ **P1a Walks 核心 loop 實機簽收（2026-06-01 iPhone，`a02289c`）** → [`ios-p1a-walks-screens.md`](../features/ios-p1a-walks-screens.md)
+  - ✅ **P1a Walks 核心 loop 實機簽收（2026-06-01 iPhone，`a02289c`）** → [`ios-p1a-walks-screens.md`](features/ios-p1a-walks-screens.md)
     - EAS internal build（`f44fa94c`）裝 iPhone 走一趟：B（WalksHome dial+week strip+走路狗+pet picker+CTA）✅ / C（前景 GPS timer+距離+stop）✅ / D（walk doc 落地 `walks/{walkId}` + leaderboard 反應）✅
     - **parity §A P1**：Walks 全頁 / 前景 GPS+timer+stop / per-pet goal+picker / recent history **四列 → ✅**
     - 已知非 bug（刻意 P1a 不做）：背景鎖屏不計時（= 前景-only，對齊 web 暫停語意）→ **背景續跑 = P1d**
@@ -120,7 +128,7 @@
     - native：`UIBackgroundModes:location` + Always usage strings + `expo-task-manager` + `@react-native-async-storage/async-storage`；service：session-only 背景續跑 + wall-clock duration + Always 拒絕退前景 fallback（merge `871b154` / feat `b001445`）
     - **App Store 審查 note 草稿** → parity §F.2；**Open Q3 拍板**（P1d 就跑完整背景流程驗，不等 P7）→ §F.3
     - parity §A P1 GPS 背景列 → ✅;**🏁 P1 核心遛狗 loop（含背景定位）正式完成**，iOS-only 殺手能力（Q4 committed）達成
-  - 🟡 **P1b done screen + 手動補登 + recent 展開 code done（`8a14ce3`）待實機驗收** → [`ios-p1b-walks-done-manual.md`](../features/ios-p1b-walks-done-manual.md)
+  - 🟡 **P1b done screen + 手動補登 + recent 展開 code done（`8a14ce3`）待實機驗收** → [`ios-p1b-walks-done-manual.md`](features/ios-p1b-walks-done-manual.md)
     - done phase（摘要 + emerald 達標慶祝 + **hand-rolled confetti 無新 dep** + recap + notes + 存檔/捨棄）+ 手動補登（isManual:true）+ recent「全部」當頁展開
     - **零新 dep / 零 native 改動**（confetti 自寫 Animated）→ 不需 gate;但**驗收需新 EAS preview build**（JS bundled）
     - **PM 決策**：手動補登 datetime picker **defer**（維持「往回推時長」，不加 `@react-native-community/datetimepicker`；刻意 parity gap，低頻 → 有需求再 re-open 走 gate）
@@ -132,20 +140,20 @@
   - 👉 **下個動作（user）**：
     - **裝新 EAS build 驗 P1c**：遛狗中拍照（≤5）→ 存進 walk;開始/結束 prompt 拍照發動態 → feed 看到 post + 同 walkId;相機拒權不崩。**順便補驗 P1b**（done 慶祝 / 手動補登 isManual / recent 展開）若還沒驗。過 → 回報 iOS PM 升 §A P1 兩(+三)列 ✅。
     - P1c + P1b 驗過 → **🏁 P1 Walks 全 parity 收齊** → 開 **iOS UI/UX walks polish pass**（見下）。
-  - 📐 **P2–P7 完整 port 藍圖已產出（2026-06-01 workflow）** → [`ios-port-master-plan.md`](../features/ios-port-master-plan.md)：6 Explore agent 並行盤點 web 全 surface + synthesis。含 P2–P7 phase 藍圖（每 feature 的 iOS approach + data contract + policy）、**native-dep 總清單（每 dep 標 gate）**、shared-package 追加、**建議排序（native-dep gate 序列化 + 同類 dep 聚一 sub-phase 一次驗 + shared-package 先落）**、風險、parity 待補列。實作仍走 gated session;餐廳/知識庫維持 deferred-v1。
-  - 🟢 **P2 Pets 完整 spec READY-FOR-DEV（2026-06-01 iOS PM）** → [`ios-p2-pets.md`](../features/ios-p2-pets.md)
+  - 📐 **P2–P7 完整 port 藍圖已產出（2026-06-01 workflow）** → [`ios-port-master-plan.md`](features/ios-port-master-plan.md)：6 Explore agent 並行盤點 web 全 surface + synthesis。含 P2–P7 phase 藍圖（每 feature 的 iOS approach + data contract + policy）、**native-dep 總清單（每 dep 標 gate）**、shared-package 追加、**建議排序（native-dep gate 序列化 + 同類 dep 聚一 sub-phase 一次驗 + shared-package 先落）**、風險、parity 待補列。實作仍走 gated session;餐廳/知識庫維持 deferred-v1。
+  - 🟢 **P2 Pets 完整 spec READY-FOR-DEV（2026-06-01 iOS PM）** → [`ios-p2-pets.md`](features/ios-p2-pets.md)
     - **前置決策已拍板**（解 blocker）：i18n = next-intl RN 跑不了 → 起 `@mango/shared-i18n`（web 共用 catalog + iOS i18n-js/expo-localization）;4-tab = 自刻 pill（不用 tab-view dep）;modal = Expo Router 內建;datepicker = `@react-native-community/datetimepicker`;charts = 手刻 `react-native-svg`
     - **sub-phase**：P2-pre（shared-types/business/i18n）→ P2a 骨架（無 dep，可並行）→ P2b svg charts → P2c forms/picker（datepicker + image-picker/manipulator + linear-gradient）→ P2d camera（收據掃描）
     - **§A P2 parity 列已補滿 + 標 sub-phase**;camera FAB+AI 收據標 native-upgrade
     - **全 5 個 session 起手 prompt 已備**（spec §Launch prompts，照順序貼）
   - 🔁 **驗收模式改批次（user 2026-06-01，README 規則 5）**：實機驗收 **per-phase 一次**，不 per-sub-phase。dev session 一路 ①→⑤ 全寫完全 merge（每步只跑自動 tsc + web-gate，不要 user 碰 iPhone）→ **P2 末發一顆 EAS build，user 一次走完整 P2（⑥ 清單）**。
   - 👉 **下個動作（user，醒來）**：
-    - 先收尾 P1（P1b+P1c 實機驗，這個還沒做）→ 然後 **照 [`ios-p2-pets.md`](../features/ios-p2-pets.md) §Launch prompts 開 session ①→⑤**（Backend/FB 之間自動 gate + merge，不用你中途驗）→ 全收齊後跑 **⑥ P2 端到端一次實機驗收**
+    - 先收尾 P1（P1b+P1c 實機驗，這個還沒做）→ 然後 **照 [`ios-p2-pets.md`](features/ios-p2-pets.md) §Launch prompts 開 session ①→⑤**（Backend/FB 之間自動 gate + merge，不用你中途驗）→ 全收齊後跑 **⑥ P2 端到端一次實機驗收**
     - 每碰新 dep 仍走 branch + linux rollout gate（規則 4，自動、保護 web）;實機只在 ⑥ 一次
     - **follow-up**：active-pet AsyncStorage 持久化（async-storage 已裝，low pri）;stat helpers 收進 shared-business;shared-i18n 收斂（若 P1c 未起）。
     - 🎨 **iOS UI/UX walks polish pass（排程：P1 功能收齊後，user 2026-06-01 決定 features-first）**：目前 iOS walks 是「功能對、外觀粗胚」（戰略 D1 = 原生手感，非 web 像素複製；目標 = 同品牌+同功能+native 感）。**功能正常、非 bug**。收斂的 polish 項：dial 平滑 arc（react-native-svg）/ Reanimated 走路狗 / confetti+emerald 慶祝精緻化 / streak badge pop / reduced-motion / mango tokens 細修。→ **P1c 後開一個 iOS UI/UX session 一次做**（svg/Reanimated = 新 dep 走 branch+gate）。
-    - Web 側恢復可動,但依 [`ios-pwa-parallel-policy.md`](../features/ios-pwa-parallel-policy.md) §2「critical + polish only,新 feature 預設不做」
-- **照片圖庫 + 照片儲存** — [`docs/features/photo-gallery-downloads.md`](../features/photo-gallery-downloads.md) ✅ **SHIPPED 2026-05-27**（Feature Builder `e76f97c`）
+    - Web 側恢復可動,但依 [`ios-pwa-parallel-policy.md`](features/ios-pwa-parallel-policy.md) §2「critical + polish only,新 feature 預設不做」
+- **照片圖庫 + 照片儲存** — [`docs/features/photo-gallery-downloads.md`](features/photo-gallery-downloads.md) ✅ **SHIPPED 2026-05-27**（Feature Builder `e76f97c`）
   - 新增 `/app/photos`「我的照片」集中圖庫；聚合自己的 post / walk / pet avatar / existing receiptURL；點圖沿用 PhotoLightbox；支援單張、多張、一鍵儲存尚未下載
   - `src/lib/photo-download.ts` 走 Web Share files 優先、desktop fallback Blob download；`users/{uid}/photoDownloadState/{assetId}` 記錄 downloaded state；nav + settings entry + i18n 已接
   - 👉 **下個動作（user）**：production / iOS PWA 驗單張、多張、一鍵儲存未下載，刷新後 downloaded state 不再計入未下載
@@ -158,14 +166,14 @@
 | **0.5** | Raised center walks tab + bg-mango-card-soft nav surface | S | ✅ **SHIPPED** `e1a7b60` |
 | ~~1~~ | ~~`/app/walks` 套 mockup tone（warm cream bg + brand CTA + leaf success）~~ | S | ⚠️ **SUPERSEDED by Phase 1 v2** — 原 ship `37d1ec4` + `8aebe14` 不 rollback，視覺由 v2 覆蓋 |
 | **1 v2** | `/app/walks` **全頁結構重建** — radial dial hero + week strip + 圈內走路狗 + 主寵物 only pill + Confetti @ 達標 + 「再遛一次」CTA | M | ✅ **SHIPPED** 2026-05-25 — 元件 `c98c939` + page `984be5b` + i18n `110601e` + 紀錄 `33fef7b`；desktop 12 項驗收全過；complete 變體待 user 觸發 |
-| **2 v2** | `/app/pets` + `/app/pets/[petId]` **全頁重建** — TopBar + PetHeader (真照片) + sticky 4-tab pill + 概覽 2×2 stat grid + Reminder/Expense/Health tab bodies + Expense donut + 體重 trend chart + tab-aware FAB + 完整 EmptyState + multi-pet switcher | L | ✅ **SHIPPED 2026-05-25** — 7 commits `cbd95df` → `9d7956a`（[`pets-v2-rebuild.md`](../features/pets-v2-rebuild.md)）|
+| **2 v2** | `/app/pets` + `/app/pets/[petId]` **全頁重建** — TopBar + PetHeader (真照片) + sticky 4-tab pill + 概覽 2×2 stat grid + Reminder/Expense/Health tab bodies + Expense donut + 體重 trend chart + tab-aware FAB + 完整 EmptyState + multi-pet switcher | L | ✅ **SHIPPED 2026-05-25** — 7 commits `cbd95df` → `9d7956a`（[`pets-v2-rebuild.md`](features/pets-v2-rebuild.md)）|
 | ~~2~~ home page | ~~`/app`~~ 移到 Phase 3 | — | merged into Phase 3 |
 | 3 | `/onboarding` + Landing + sign-in | M | 🔓 ready，等 PM spec |
 | 4 | `/app/settings` + `/app/leaderboard` | M | 🔓 ready，等 PM spec |
 | 5 | Drawer pages: `/app/feed` + ~~`/app/restaurants` (+detail)~~ ⏸️ + `/app/knowledge` (+detail) + `/app/friends` (+/add) + `/app/expenses` | L | 🔓 ready，等 PM spec（**`/app/restaurants` 重設計暫停** — user 2026-05-30，見「暫停中（hold）」；其餘 drawer pages 不受影響）|
 | 6 | Polish — 一致性 audit + loading/error tone + reduced-motion verify | S | 等 Phase 2-5 |
 
-**Spec**: [`docs/features/visual-redesign-mango.md`](../features/visual-redesign-mango.md) + Phase 1 v2 addendum [`walks-v2-rebuild.md`](../features/walks-v2-rebuild.md)
+**Spec**: [`docs/features/visual-redesign-mango.md`](features/visual-redesign-mango.md) + Phase 1 v2 addendum [`walks-v2-rebuild.md`](features/walks-v2-rebuild.md)
 
 **User 20 個 decisions 重點**：
 - 主黃 **#FFCA28**（Material Amber 400，user 自訂；比 PM 預設亮）
@@ -220,7 +228,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 
 ## 想做但還沒規格
 
-- ✅ **排行榜 v2 — 計分公式擴充（加品種/年齡/體重）+ 以狗為中心排行榜（朋友/全 app 雙 tab）** — [`docs/features/leaderboard-v2-dog-centric.md`](../features/leaderboard-v2-dog-centric.md) **READY-FOR-DEV**（user 2026-05-30：5 決策全拍板 — breed 要做 / personal-mode 狗納入 / opt-out 為 per-user 總開關(public·friends·off 三選一) / 接受歷史分數漂移；公式採 **加權加法** `1+Σ(factorᵢ-1)*0.4` clamp 0.5–3.0 取代乘法，避免疊乘撞頂壓扁差異）。人榜+狗榜並存；`dogLeaderboards/{period}/entries/{petId}` 資料模型。唯一可選微調=加法係數 0.4。**實作排在 iOS P0 穩定後**（README：P0 期間暫停 production-code session）。
+- ✅ **排行榜 v2 — 計分公式擴充（加品種/年齡/體重）+ 以狗為中心排行榜（朋友/全 app 雙 tab）** — [`docs/features/leaderboard-v2-dog-centric.md`](features/leaderboard-v2-dog-centric.md) **READY-FOR-DEV**（user 2026-05-30：5 決策全拍板 — breed 要做 / personal-mode 狗納入 / opt-out 為 per-user 總開關(public·friends·off 三選一) / 接受歷史分數漂移；公式採 **加權加法** `1+Σ(factorᵢ-1)*0.4` clamp 0.5–3.0 取代乘法，避免疊乘撞頂壓扁差異）。人榜+狗榜並存；`dogLeaderboards/{period}/entries/{petId}` 資料模型。唯一可選微調=加法係數 0.4。**實作排在 iOS P0 穩定後**（README：P0 期間暫停 production-code session）。
 - Quiet hours / per-pet opt-out push 設定（Epic 5 follow-up，pushPrefs namespace 已預埋）
 - ~~多 pet picker UX~~（per-pet-walk-goal spec 即將解鎖）
 - **breed/age/weight 自動計算 walk goal**（per-pet-walk-goal spec ship 後 follow-up，schema source: 'computed' 已預埋）
@@ -253,7 +261,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
   - 餐廳照片 lightbox（原想做但還沒規格 — Photo Lightbox 元件複用）
   - Epic 4 Phase 5 視覺重設計內的 `/app/restaurants`（+detail）改版 — 暫不規格化（Phase 5 其餘 drawer pages 不受影響）
 - **不在暫停範圍（維持現狀）**：既有 production `/app/restaurants` 頁**保持上線**，不下架、不從 nav / drawer 移除。「暫停」= 停止新投入，不是拔功能。（若 user 想連既有頁也隱藏 → 另開 UI/UX handoff，本決策預設不動。）
-- **iOS 連動**：本決策同時回答 iOS parity **Q1（餐廳不進 iOS 首版）**、支持 **Q5 收斂為「核心 parity + 餐廳/知識庫 post-launch catch-up」**。→ **handoff 給 iOS PM**：在 [`ios-parity-checklist.md`](../features/ios-parity-checklist.md) 把餐廳標為 post-launch catch-up、結掉 Q1。
+- **iOS 連動**：本決策同時回答 iOS parity **Q1（餐廳不進 iOS 首版）**、支持 **Q5 收斂為「核心 parity + 餐廳/知識庫 post-launch catch-up」**。→ **handoff 給 iOS PM**：在 [`ios-parity-checklist.md`](features/ios-parity-checklist.md) 把餐廳標為 post-launch catch-up、結掉 Q1。
 - **重啟條件**：user 主動撿回，或核心 parity（walks/pets/home/feed/leaderboard）上線後評估 post-launch catch-up 時。
 
 ## 不做（拒絕清單）

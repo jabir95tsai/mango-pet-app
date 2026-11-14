@@ -1,6 +1,6 @@
 # iOS App 瀏覽器預覽（react-native-web）
 
-> **狀態**：2026-10-11 code 完成、本地瀏覽器驗證通過（branch `ios-web-preview`）。
+> **狀態**：已整合 main（2026-11-14，`f3dbe0a` / `ced740c`）。當日 Web／iOS typecheck、兩平台 Metro export 與 Linux App Hosting gate 通過；2026-10-11 的瀏覽器互動紀錄保留為歷史驗證，未代替 iPhone 真機驗收。
 > **用途**：沒有 Mac / iOS 模擬器時，在 Windows 瀏覽器用手機尺寸看 `apps/ios` 的畫面，給 Claude Design / UI 調整用。
 > **不是**：上架用的 web 版，也不是 PWA（PWA 是 `apps/web`）。不能代替 dev-client 真機驗收。
 

@@ -1,10 +1,8 @@
 # iOS App Store 上架就緒清單（P7 submission）
 
-狀態：**GAP AUDIT**（iOS PM 2026-06-03，**2026-08-26 re-check：狀態不變**）
+狀態：**送審待辦清單**（2026-11-14 更新整合／玻璃方案狀態；Apple 帳號、素材與真機項目未在本次重新驗收）
 目標：列出 Mango Pet iOS 上架 App Store 還缺什麼。標 ✅ 已備 / ❌ 缺（blocking）/ ⚠️ 風險。
 配合：[`ios-parity-checklist.md`](./ios-parity-checklist.md) §F（背景定位審查）、[`ios-uiux-fidelity-gaps.md`](./ios-uiux-fidelity-gaps.md) §S0（icon）
-
-> **2026-08-26 re-check**（user：「想先上架 app store 了」）：距上次 audit 近 3 個月，其間唯一 iOS 相關進度是 **Apple Glass 設計系統 spec**（`ios-apple-glass-design-system.md`，2026-06-03 立、**never started** — 未裝 `expo-blur`）+ dev-client 工具鏈（`expo-dev-client`，6/22）。**下面清單逐項複查，全部原封不動**：UGC 檢舉/封鎖仍 0 實作（grep 全 repo 無 `reportPost`/`blockUser`）、iPad responsive QA 未做、`eas.json` `submit.production` 仍空物件、icon/splash 檔案存在（`apps/ios/assets/icon.png`+`splash.png`，6/6 加入）但未逐項確認是否乾淨 1024² master。**Apple Glass 重新設計不是上架必要項** — 建議明確 defer 到上架後，把僅存心力全押在下面「❌ 缺」清單，才是「先上架」最短路徑。
 
 > 功能面 P1–P7 已 code-done（含背景 GPS / push / 社群 feed / 家庭 / 好友 / 刪帳號 / 匯出）。下面是「上架」這道關卡缺的東西，多數**不是寫功能**，是 Apple 帳號設定、metadata、合規、素材。
 
@@ -70,7 +68,7 @@ app 一開要登入 → 審查員需能進。guest 登入可解（審查備註�
 
 ## 📋 建議順序（2026-09-27 更新 — 3 項已完成）
 
-**決策**：Apple Glass redesign **defer 到上架後**；UGC 檢舉/封鎖 **✅ 已 code-done + 已部署**。
+**目前狀態（2026-11-14）**：舊 expo-blur 全介面 redesign 已封存；[原生 Liquid Glass](./ios-liquid-glass.md) 已整合 main、待實機驗收；UGC 檢舉/封鎖 **✅ 已 code-done + 已部署**。
 
 1. ✅ **UGC 檢舉/封鎖 — CODE DONE + 已部署（2026-09-27）**：`firebase deploy --only firestore:rules` + `functions:onReportCreated` 都成功。**剩：真人帳號端到端驗一次**（web 或 EAS build 裝置——檢舉貼文/留言 → 「已收到」提示;封鎖 → 對方內容從 feed 消失 + settings 能看到並解封鎖）。
 2. ✅ **iPad responsive QA — CODE DONE（2026-09-27），待真機/simulator 目視驗證**（見上方 ⚠️-iPad 段落；開發機無 macOS，無法自己看過畫面）。

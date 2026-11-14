@@ -28,51 +28,19 @@ P3 = 也許永遠不做的「想法」。
 
 ---
 
+## 已結案：2026-11-14 整合與清理
+
+- **程式碼基準**：`main` / `origin/main` 已同步至 `9287947`；修復 `f3dbe0a`，整合 commit `ced740c`。以下是當日驗證紀錄，不代表 iOS 真機驗收。
+- **手勢已修復**：底部 tab 依放開位置選取，不再讀取動畫中位置；底部與頁內鏡片取消拖曳時回到目前選項。8 項回歸測試修前 5 項失敗、修後全通過。
+- **typed routes 已修復**：`isResumablePath` 收斂 router 產生的路徑為 `string & Href`；包含 Expo 生成路由型別的 iOS typecheck 通過。
+- **送審文字已修正**：中英文皆為 Google／Apple／訪客登入，不再宣稱 iOS 提供 Facebook 登入。
+- **本機生成檔已整理**：根 `.expo/` 已 ignore；根 Expo `tsconfig.json` 備存於 ignored `outputs/review-20261114/root-expo-tsconfig.json`。`apps/ios/.gitignore` 與 `expo-env.d.ts` 已同步 Expo 生成內容；後者仍受 Git 追蹤，沒有移除追蹤。
+- **驗證通過**：Web／iOS typecheck、36 項單元測試、iOS／web Metro export、獨立 code review。Linux gate `review-20261114-ced740c` 為 `READY`，Cloud Build `a05174f0-c30e-4e1f-aca6-41bd3b7e1821` 為 `SUCCESS`。
+- **發布完成**：main 自動 rollout `rollout-2026-11-14-002` 為 `SUCCEEDED`，revision `mango-pet-build-2026-11-14-002` 接收 100% 流量，首頁 HTTP 200。Build API gate 本身未切流量；README 已區分 build 與 rollout。
+- **分支已清理**：已整合分支全數刪除；舊 `ios-glass-blur` 原型經確認被新版取代後也已刪除，本機／遠端僅保留 main。其 PWA 對齊內容已由 `ef57b20` 整合，不需再 merge。完整歷史備份位於本機 ignored `outputs/branch-cleanup-20261114/branches.bundle`，其他 clone 不會自動取得此備份。
+- **仍待驗證**：SDK 57／原生玻璃／手勢的 iPhone 批次驗收，見下方 Inbox 與 [現行規格](../features/ios-liquid-glass.md)。
+
 ## Inbox（未分類）
-
-### 2026-11-14 審查後修復與整合（後續狀態）
-- **已修復**：底部 tab 由放開位置選取；底部與頁內鏡片在取消手勢時回到目前選項。新增 8 項手勢回歸測試，修前 5 項失敗、修後全通過。中英文送審說明皆移除 Facebook 登入宣稱。
-- **typed routes**：`isResumablePath` 對既有 `usePathname` 來源收斂為 `string & Href`；保留原本 auth/onboarding 排除規則，帶 `.expo/types/router.d.ts` 的 iOS typecheck 已通過。
-- **驗證**：Web／iOS typecheck、36 項單元測試、iOS 與 web Metro export 皆通過；獨立 reviewer 未發現阻擋合併問題。Linux App Hosting gate `review-20261114-ced740c` 已於 2026-11-14 通過（`READY`）；來源 `ced740cd07d683c7b10f1cbc374d6e99277d5da7`，Cloud Build `a05174f0-c30e-4e1f-aca6-41bd3b7e1821` 為 `SUCCESS`。gate 僅建立 revision，完成時原 rollout 仍持有 100% 線上流量。後續提交僅記錄此驗證結果。
-- **本機生成檔**：根 `.expo/` 加入 ignore；意外產生的根 Expo `tsconfig.json` 保留於 ignored `outputs/review-20261114/root-expo-tsconfig.json`，不納入 monorepo 設定。既有 apps/ios Expo 生成註解與 ignore 同步。
-- **發布界線**：README 已更正 rollout CLI 會發布分支；本次 gate 使用相同 backend 的 Build API，不建立 rollout。下方首次審查紀錄為修復前狀態，實機驗收仍待 phase 批次執行。
-
-### 2026-11-14 分支審查：玻璃分頁快速點擊與取消手勢會造成選取錯位
-- **發現於**：2026-11-14、分支與未提交變更審查。
-- **類型 / 優先級**：bug / P1。
-- **證據**：`liquid-glass-tab-bar.tsx:108,117` 在按下時啟動 spring，放開時卻由動畫中的 `lensX` 判定目的地。抽取原始 callback、模擬動畫尚未前進時點第 5 格，實際呼叫 `go(0)`。這是 callback 邏輯測試，尚非真機重現；目前檔案與 `origin/main` 的 `691b505` blob 相同。
-- **取消手勢**：底部列 `onFinalize(_, false)` 與 `ui/LensTrack.tsx:173` 都先移動鏡片到手指位置，只在成功時更新選取。以原始 callback 測試由第 1 格拖到最後一格再取消，選取維持第 1 格、鏡片卻留在最後一格；selection effect 的依賴沒變，不會自行復原。
-- **建議交付給**：iOS Bug Hunter。
-- **所需變更 / 驗收**：成功時以手指最終位置決定目的地；取消時回到目前選取格。補快速點擊、取消拖曳的回歸測試，並在 iOS 驗證一般／Reduce Motion 路徑。修復前不整合這批 UI 變更。
-
-### 2026-11-14 分支審查：送審英文說明包含未實作的 Facebook 登入
-- **類型 / 優先級**：文件錯誤 / P2。
-- **證據**：未提交的 `docs/features/ios-app-store-listing.md:159` 說明支援 Facebook；`apps/ios/app/(auth)/sign-in.tsx` 與 `src/lib/auth.ts` 實際只有 Google／Apple／訪客，程式註解也明列不提供 Facebook。
-- **建議交付給**：iOS PM；移除錯誤平台宣稱，核對中英文送審說明與實際登入畫面一致。
-
-### 2026-11-14 全分支整合檢查紀錄
-- **遠端基準**：已 fetch；本地 `main=fc5616d`，`origin/main=691b505`，本次未 commit／merge／push。
-- **已整合**：backend-security-r01-r02、r15-data-integrity、reaction-number-compat 為 main 祖先；feed-query-limit、ios-auth-push、moderation-dedupe、walk-draft-recovery、walk-stop-save 的額外 commits 全部有等價 patch（`git cherry` 全為 `-`）。除了 ios-glass-blur，所有遠端分支均無 origin/main 以外的 commits。
-- **保留舊分支**：`ios-glass-blur` 的 PWA 對齊已由 `ef57b20` 分拆整合；該 commit 明確排除舊 expo-blur／Glass primitives，不應把整支舊原型重新合併。
-- **驗證**：Web typecheck 通過；iOS auth/push 測試 28/28；`git diff --check` 通過；`npm ci --dry-run --ignore-scripts --offline --no-audit --no-fund` 通過（不是實際乾淨安裝或 Linux build）。iOS typecheck 仍有下列既有 typed-routes 兩處錯誤。
-- **待整合條件**：先修本次分頁問題及文件錯誤、恢復 iOS typecheck；web-preview 的 package.json／lockfile 變更須依 README 完成 branch-first + Linux build gate，這次未執行 rollout。`.expo/` 是本機生成資料，不應納入提交；根目錄未追蹤 `tsconfig.json` 是 Expo 設定，應先確認用途，不能當作全 monorepo 檢查設定。
-- **限制 / handoff**：未做 iOS 真機／瀏覽器互動驗證、未部署；iOS Bug Hunter 接手手勢與型別修復，iOS PM 接手送審文字。原有 dirty／untracked 檔案均保留。
-
-### 2026-10-11 iOS 跑過 `expo start` 後 `npm run typecheck -w apps/ios` 會紅（typed routes）
-- **發現於**：2026-10-11、iOS Feature Builder session（瀏覽器預覽）
-- **類型**：技術債
-- **重現 / 觀察**：`app.json` 開了 `experiments.typedRoutes`。只要執行過一次 `expo start`（不論 iOS 或 web），就會產生 `apps/ios/.expo/types/router.d.ts`，之後 tsc 會在 `app/_layout.tsx:104`、`:137` 報 `router.replace(string)` 的 TS2345 錯誤（因為 `resumePath` 是 string，不是 typed `Href`）。沒有這個產生檔時（乾淨 clone、CI）會通過，所以平常看不出來。主 checkout 目前也有這個產生檔。
-- **所需變更**：把 `resumePath` 收斂成 `Href`（例如在 `isResumablePath` 加 type guard），或是在呼叫處明確轉型。不影響執行行為。
-- **建議交付給**：iOS Bug Hunter
-- **優先級提示**：P2
-
-### 2026-10-11 `expo start` 會改寫 `apps/ios/.gitignore` 與 `expo-env.d.ts`
-- **發現於**：2026-10-11、iOS Feature Builder session
-- **類型**：技術債
-- **重現 / 觀察**：Expo 57 CLI 啟動時會在 `apps/ios/.gitignore` 加一段 `# @generated expo-cli … expo-env.d.ts`，並把 `expo-env.d.ts` 的註解改成「should be in your git ignore」。所以每次跑 `npm start` / `npm run web` 後，這兩個檔案都會變成 dirty（主 checkout 目前的這兩個未提交修改就是這樣來的）。
-- **所需變更**：決定要不要採用 Expo 的建議（ignore 並移除追蹤 `expo-env.d.ts`），一次提交，之後就不會再出現 dirty。
-- **建議交付給**：iOS PM / iOS Backend（repo 設定）
-- **優先級提示**：P3
 
 ### 2026-10-11 瀏覽器預覽看到的 UI 觀察（待真機比對）
 - **發現於**：2026-10-11、iOS Feature Builder session（[`ios-web-preview.md`](../features/ios-web-preview.md)）
@@ -84,7 +52,7 @@ P3 = 也許永遠不做的「想法」。
 ### 2026-10-10 iOS Expo SDK 57 + Liquid Glass tab bar — 待 dev-client 真機驗
 - **發現於**：2026-10-10、iOS UI/UX session
 - **類型**：驗收 / 技術債
-- **觀察**：branch `ios-expo-57-liquid-glass`（main 之上 2 個 commit，未 merge / 未 push）。Expo 52→57、RN 0.86、RNFB 21→25（`snap.exists` → `exists()` 14 處）、iOS 26 玻璃 tab bar。tsc / expo-doctor / 28 測試 / Metro 打包 / web build 都過，**未 native build、未上機**。驗收清單見 [`ios-liquid-glass.md`](../features/ios-liquid-glass.md)「待 user」。main 也已在本機 fast-forward 併入 `ios-pwa-fidelity-2026-10`（未 push）。
+- **觀察**：Expo 升級（`1843975`）與原生玻璃（`fc5616d`）皆已整合至 main。Expo 52→57、RN 0.86、RNFB 21→25（`snap.exists` → `exists()` 14 處）、iOS 26 玻璃 tab bar。tsc / expo-doctor / 28 測試 / Metro 打包 / web build 都過，**未 native build、未上機**。驗收清單見 [`ios-liquid-glass.md`](../features/ios-liquid-glass.md)「待 user」。PWA 對齊與 2026-11-14 手勢修復也已整合、推送；目前待辦只有既定實機驗收，不需重做 merge。
 - **建議交付給**：user（EAS dev-device build + 冒煙）→ iOS Backend（若 native build 失敗）
 - **優先級提示**：P1（會影響 App Store 送審的 build 基底）
 
@@ -102,9 +70,9 @@ P3 = 也許永遠不做的「想法」。
 - **建議交付給**：UI/UX（web）
 - **優先級提示**：P2
 
-### 2026-10-10 iOS ↔ PWA 介面對齊 + 功能優化（code done，待 review + 實機）
-- **進度 / 證據**：[`ios-pwa-parity-2026-10.md`](../features/ios-pwa-parity-2026-10.md)；盤點 222 項，完成 215 項（branch `ios-pwa-fidelity-2026-10`，`64c4863`..`66eb9ec`，**未 merge / 未 push**），每批 typecheck + i18n key 檢查通過、未實機。
-- **剩餘**：R11 語意 3 項 + App 內 QR 掃描交 PM；第二輪 code review；merge 後 EAS 實機批次驗收。
+### 2026-10-10 iOS ↔ PWA 介面對齊 + 功能優化（已整合與 review，待實機）
+- **進度 / 證據**：[`ios-pwa-parity-2026-10.md`](../features/ios-pwa-parity-2026-10.md)；盤點 222 項，完成 215 項（`64c4863`..`66eb9ec` 已在 main，歷史工作分支已清理），每批 typecheck + i18n key 檢查通過、未實機。
+- **剩餘**：R11 語意 3 項 + App 內 QR 掃描交 PM；第二輪 review 已由 `3317d4a` 完成；待 EAS 實機批次驗收。
 - **交接**：web 可改用的新 i18n key、web 總覽提醒卡 no-op、web `updateExpense` 忽略 items、iOS 推播點擊路由 — 見 feature doc §4。
 
 ### 2026-10-08 R15 反應計數型別回歸
