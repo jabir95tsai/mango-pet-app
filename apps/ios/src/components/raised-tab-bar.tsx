@@ -9,14 +9,13 @@
 // a11y: the row is a tablist and every slot a tab with selected state (web
 // marks the active link aria-current="page"), so VoiceOver reads "tab, n of 5".
 //
-// iOS 26+ (LIQUID_GLASS): the same tabs + raised disc sit in a FLOATING Liquid
-// Glass capsule instead of the notched bar; the disc's glass ring merges with
-// the capsule through a GlassContainer. The bar overlays the screens (see
-// useTabBarOverlap in @/lib/liquid-glass). docs/features/ios-liquid-glass.md.
+// iOS 26+ (LIQUID_GLASS): delegates to LiquidGlassTabBar — a floating glass
+// capsule of 5 equal tabs with a draggable glass lens (no raised disc). The bar
+// overlays the screens (see useTabBarOverlap in @/lib/liquid-glass).
+// docs/features/ios-liquid-glass.md.
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { GlassContainer, GlassView } from "expo-glass-effect";
 import Svg, { Path } from "react-native-svg";
 import {
   Home,
@@ -27,12 +26,8 @@ import {
 } from "lucide-react-native";
 
 import { t } from "@/lib/i18n";
-import {
-  GLASS_BAR_H,
-  GLASS_DISC_RISE,
-  LIQUID_GLASS,
-  glassBarBottomGap,
-} from "@/lib/liquid-glass";
+import { LIQUID_GLASS } from "@/lib/liquid-glass";
+import { LiquidGlassTabBar } from "@/components/liquid-glass-tab-bar";
 import { colors } from "@/theme/theme";
 
 export type TabBarProps = {
@@ -84,14 +79,13 @@ const DISC_TOP = -20;
 // there, so this is a no-op below the cap). iPad QA pass, docs/features/
 // ios-app-store-submission.md ⚠️-iPad.
 const MAX_BAR_WIDTH = 430;
-// Liquid Glass capsule: inset from the screen edges like the iOS 26 tab bar.
-// Disc 56 inside a 66 glass ring whose top rises GLASS_DISC_RISE above the
-// capsule; the ring's bottom (48) stays clear of the centre label (bottom 4).
-const GLASS_SIDE_INSET = 16;
-const GLASS_RING = 66;
-const GLASS_DISC = 56;
 
-export function RaisedTabBar({ state, navigation }: TabBarProps) {
+export function RaisedTabBar(props: TabBarProps) {
+  if (LIQUID_GLASS) return <LiquidGlassTabBar {...props} />;
+  return <NotchedTabBar {...props} />;
+}
+
+function NotchedTabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const width = Math.min(windowWidth, MAX_BAR_WIDTH);
@@ -101,8 +95,8 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
     if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
   };
 
-  const tabs = (glass: boolean) => (
-    <View accessibilityRole="tablist" style={[styles.row, { height: glass ? GLASS_BAR_H : BAR_H }]}>
+  const tabs = (
+    <View accessibilityRole="tablist" style={[styles.row, { height: BAR_H }]}>
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const label = tabLabel(route.name);
@@ -117,24 +111,18 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
               onPress={press(route, focused)}
               style={styles.centerCell}
             >
-              {/* Classic: cream ring around the disc. Glass: the ring is the
-                  GlassView behind this row, so only the gradient core here. */}
-              <View
-                style={[
-                  glass ? styles.glassDiscSlot : styles.discRing,
-                  focused && styles.discActive,
-                ]}
-              >
+              {/* cream ring around the disc */}
+              <View style={[styles.discRing, focused && styles.discActive]}>
                 <LinearGradient
                   colors={[colors.brand, colors.brandDeep]}
                   start={{ x: 0.15, y: 0 }}
                   end={{ x: 0.85, y: 1 }}
-                  style={glass ? styles.glassDiscCore : styles.discCore}
+                  style={styles.discCore}
                 >
-                  <PawPrint size={glass ? 24 : 26} color="#ffffff" fill="#ffffff" strokeWidth={2} />
+                  <PawPrint size={26} color="#ffffff" fill="#ffffff" strokeWidth={2} />
                 </LinearGradient>
               </View>
-              <Text style={[styles.centerLabel, glass && styles.glassCenterLabel]} numberOfLines={1}>
+              <Text style={styles.centerLabel} numberOfLines={1}>
                 {label}
               </Text>
             </Pressable>
@@ -169,37 +157,6 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
     </View>
   );
 
-  if (LIQUID_GLASS) {
-    // Floating capsule, inset from the screen edges, overlaying the content.
-    const gap = glassBarBottomGap(insets.bottom);
-    const capsuleW = width - GLASS_SIDE_INSET * 2;
-    return (
-      <View
-        pointerEvents="box-none"
-        style={[styles.glassWrap, { height: gap + GLASS_BAR_H + GLASS_DISC_RISE }]}
-      >
-        <View
-          style={[
-            styles.glassFrame,
-            { width: capsuleW, bottom: gap, left: (windowWidth - capsuleW) / 2 },
-          ]}
-        >
-          {/* One container so the disc's glass ring and the capsule merge into
-              a single liquid shape (spacing = merge distance). */}
-          <GlassContainer spacing={14} style={StyleSheet.absoluteFill} pointerEvents="none">
-            <GlassView glassEffectStyle="regular" colorScheme="light" style={styles.glassCapsule} />
-            <GlassView
-              glassEffectStyle="regular"
-              colorScheme="light"
-              style={[styles.glassRing, { left: (capsuleW - GLASS_RING) / 2 }]}
-            />
-          </GlassContainer>
-          {tabs(true)}
-        </View>
-      </View>
-    );
-  }
-
   // ONE continuous SVG covers the notched bar AND the safe-area below it — no
   // two-piece seam. Scale the viewBox height with the render height so the notch
   // (y 0-40) keeps its pixel size while the extra fill extends straight down.
@@ -223,7 +180,7 @@ export function RaisedTabBar({ state, navigation }: TabBarProps) {
           />
         </Svg>
       </View>
-      {tabs(false)}
+      {tabs}
     </View>
   );
 }
@@ -272,37 +229,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  // ── Liquid Glass variant ──
-  glassWrap: { position: "absolute", left: 0, right: 0, bottom: 0 },
-  glassFrame: { position: "absolute", height: GLASS_BAR_H },
-  glassCapsule: { ...StyleSheet.absoluteFill, borderRadius: GLASS_BAR_H / 2 },
-  glassRing: {
-    position: "absolute",
-    top: -GLASS_DISC_RISE,
-    width: GLASS_RING,
-    height: GLASS_RING,
-    borderRadius: GLASS_RING / 2,
-  },
-  // Centred in the glass ring (ring/disc are concentric).
-  glassDiscSlot: {
-    position: "absolute",
-    top: -GLASS_DISC_RISE + (GLASS_RING - GLASS_DISC) / 2,
-    width: GLASS_DISC,
-    height: GLASS_DISC,
-    borderRadius: GLASS_DISC / 2,
-    shadowColor: colors.brand,
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  glassDiscCore: {
-    width: GLASS_DISC,
-    height: GLASS_DISC,
-    borderRadius: GLASS_DISC / 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  glassCenterLabel: { bottom: 4 },
   // pinned to the cell bottom so the popped-up disc never covers it.
   centerLabel: {
     position: "absolute",

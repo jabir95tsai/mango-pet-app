@@ -34,8 +34,8 @@ export const LIQUID_GLASS = detect();
 
 /** Floating capsule height (icons + labels). */
 export const GLASS_BAR_H = 64;
-/** The raised walks disc pokes this far above the capsule's top edge. */
-export const GLASS_DISC_RISE = 18;
+/** The pressed glass lens swells this far above the capsule's top edge. */
+export const GLASS_LENS_BULGE = 10;
 
 /** Gap between the capsule's bottom edge and the screen bottom. */
 export function glassBarBottomGap(insetBottom: number): number {
@@ -51,7 +51,7 @@ export function glassBarBottomGap(insetBottom: number): number {
 export function useTabBarOverlap(): number {
   const insets = useSafeAreaInsets();
   if (!LIQUID_GLASS) return 0;
-  return glassBarBottomGap(insets.bottom) + GLASS_BAR_H + GLASS_DISC_RISE;
+  return glassBarBottomGap(insets.bottom) + GLASS_BAR_H + GLASS_LENS_BULGE;
 }
 
 /** ScrollView / FlatList props that let content scroll fully past the glass bar. */
