@@ -182,7 +182,6 @@ export function DogLeaderboard({
         <>
           <BoardHeader
             title={t("Leaderboard.title")}
-            subtitle={t("Leaderboard.dog.subtitle")}
             refreshing={refreshing}
             onRefresh={refresh}
           />

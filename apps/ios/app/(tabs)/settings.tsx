@@ -28,6 +28,7 @@ import { getUserPrefs, type UserPrefs } from "@/lib/user-prefs";
 import { useAuth } from "@/state/auth-context";
 import { useFamily } from "@/state/family-context";
 import { RouteHeader } from "@/components/ui";
+import { WarmCanvas } from "@/components/ui/WarmCanvas";
 import { UserAvatar } from "@/components/feed/user-avatar";
 import { PushToggle } from "@/components/settings/push-toggle";
 import { EngagementPushSection } from "@/components/settings/engagement-push-section";
@@ -109,6 +110,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.flex}>
+      <WarmCanvas />
       <ScrollView
         {...tabBarInsets}
         contentContainerStyle={styles.scroll}
@@ -117,7 +119,7 @@ export default function SettingsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={colors.brand} />
         }
       >
-        <RouteHeader title={t("Nav.settings")} />
+        <RouteHeader title={t("Nav.settings")} style={styles.header} />
 
         <View style={styles.stack}>
           {/* Profile */}
@@ -221,11 +223,14 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   scroll: {
     padding: spacing.lg,
+    paddingTop: 10,
     paddingBottom: spacing.xxl,
     width: "100%",
     maxWidth: CONTENT_MAX_WIDTH,
     alignSelf: "center",
   },
+  // same title row height as the other tabs
+  header: { minHeight: 44, justifyContent: "center" },
   // web: flex flex-col gap-4
   stack: { gap: spacing.lg },
   profile: { gap: spacing.lg },

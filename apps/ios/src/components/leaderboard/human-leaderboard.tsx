@@ -244,7 +244,6 @@ export function HumanLeaderboard({
         <>
           <BoardHeader
             title={t("Nav.leaderboard")}
-            subtitle={t("Leaderboard.humanSubtitle")}
             refreshing={refreshing}
             onRefresh={refresh}
           />

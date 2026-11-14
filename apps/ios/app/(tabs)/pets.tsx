@@ -44,6 +44,7 @@ import { t } from "@/lib/i18n";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PetHeader } from "@/components/pets/pet-header";
+import { WarmCanvas, WarmGlass } from "@/components/ui/WarmCanvas";
 import { PetSwitcher } from "@/components/pets/pet-switcher";
 import { PetTabs, type PetTabKey } from "@/components/pets/pet-tabs";
 import { PetOverviewBody } from "@/components/pets/pet-overview-body";
@@ -85,6 +86,10 @@ export default function PetsScreen() {
   const [switcherAnchor, setSwitcherAnchor] = useState<{ x: number; y: number } | null>(null);
   const [form, setForm] = useState<FormState>(null);
   const [healthKey, setHealthKey] = useState(0);
+  // Sticky tab bar gets an opaque backing only while pinned, so it doesn't
+  // show as a flat band over the warm canvas at rest.
+  const [tabsY, setTabsY] = useState(Infinity);
+  const [tabsStuck, setTabsStuck] = useState(false);
   const headerRef = useRef<View>(null);
 
   const uid = user?.uid ?? "";
@@ -180,6 +185,7 @@ export default function PetsScreen() {
   if (loading && pets.length === 0) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
+      <WarmCanvas />
         <View style={styles.center}>
           <ActivityIndicator color={colors.brand} />
         </View>
@@ -192,6 +198,7 @@ export default function PetsScreen() {
   if (petsUnknown && pets.length === 0) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
+      <WarmCanvas />
         <ScrollView
           {...tabBarInsets}
           contentContainerStyle={styles.errorWrap}
@@ -213,6 +220,7 @@ export default function PetsScreen() {
   if (pets.length === 0) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
+      <WarmCanvas />
         <PetsEmptyState onAddPet={() => openForm({ kind: "pet" })} />
         {petForm}
       </SafeAreaView>
@@ -221,11 +229,17 @@ export default function PetsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
+      <WarmCanvas />
       <ScrollView
         {...tabBarInsets}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[STICKY_TABS_INDEX]}
+        scrollEventThrottle={32}
+        onScroll={(e) => {
+          const stuck = e.nativeEvent.contentOffset.y >= tabsY - 1;
+          if (stuck !== tabsStuck) setTabsStuck(stuck);
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} tintColor={colors.brand} />
         }
@@ -239,8 +253,10 @@ export default function PetsScreen() {
             onPress={() => openForm({ kind: "pet" })}
             accessibilityRole="button"
             accessibilityLabel={t("PetsPage.addPet")}
+            hitSlop={4}
             style={({ pressed }) => [styles.addPetBtn, pressed && styles.addPetPressed]}
           >
+            <WarmGlass style={StyleSheet.absoluteFill} />
             <Plus size={16} color={colors.brandDeep} strokeWidth={2.5} />
             <Text style={styles.addPetText}>{t("PetsPage.addPet")}</Text>
           </Pressable>
@@ -260,7 +276,10 @@ export default function PetsScreen() {
         </View>
 
         {/* [2] Sticky tab pill bar */}
-        <View style={styles.tabsWrap}>
+        <View
+          style={[styles.tabsWrap, tabsStuck && styles.tabsWrapStuck]}
+          onLayout={(e) => setTabsY(e.nativeEvent.layout.y)}
+        >
           <PetTabs active={activeTab} onChange={setActiveTab} />
         </View>
 
@@ -420,7 +439,7 @@ const styles = StyleSheet.create({
   // Bottom pad clears the FAB: 56 + 20 + 20.
   scroll: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingTop: 10,
     paddingBottom: 96,
     width: "100%",
     maxWidth: CONTENT_MAX_WIDTH,
@@ -431,6 +450,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.sm,
+    minHeight: 44,
     marginBottom: spacing.xs,
   },
   h1: {
@@ -441,20 +461,24 @@ const styles = StyleSheet.create({
   },
   // web: h-[34px] rounded-full bg-brand-tint pl-2 pr-3 gap-1 Plus 16
   addPetBtn: {
-    height: 34,
+    // glass control, same as Home bell / Walks pet pill
+    height: 36,
     flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     borderRadius: radius.pill,
-    backgroundColor: colors.brandTint,
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
     paddingLeft: spacing.sm,
     paddingRight: spacing.md,
   },
   addPetText: { fontSize: 14, fontWeight: "700", color: colors.brandDeep },
   addPetPressed: { opacity: 0.85 },
   // Sticky: opaque bg so cards scroll underneath (web pt-3.5 pb-2.5).
-  tabsWrap: { backgroundColor: colors.bg, paddingTop: 14, paddingBottom: 10 },
+  tabsWrap: { paddingTop: 14, paddingBottom: 10 },
+  // Full-bleed cream backing while pinned (canvas top colour).
+  tabsWrapStuck: { backgroundColor: "#FFF9F0", marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg },
   switcher: { position: "absolute" },
   fab: {
     position: "absolute",

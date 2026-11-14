@@ -12,7 +12,7 @@
  *  - Each board is a virtualized FlatList whose header carries the toggle.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Animated, AppState, Easing, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -29,8 +29,10 @@ import {
 } from "@/components/leaderboard/dog-leaderboard";
 import { Dog, User } from "lucide-react-native";
 import { Tabs } from "@/components/ui/Tabs";
+import { BoardEnter } from "@/components/leaderboard/board-list";
 import { WarmCanvas } from "@/components/ui/WarmCanvas";
 import { t } from "@/lib/i18n";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { colors, spacing } from "@/theme/theme";
 
 const DIMENSION_KEY = "mango.leaderboard.dimension";
@@ -46,6 +48,13 @@ export default function LeaderboardScreen() {
   const router = useRouter();
   const [prefs, setPrefs] = useState<Prefs | null>(null);
   const [dimension, setDimension] = useState<Dimension>(DEFAULTS.dimension);
+  // The toggle lives inside each board's list header, so swapping boards
+  // remounts it. Move the toggle first, swap the board once the lens has
+  // slid over, then fade the new board in.
+  const [picked, setPicked] = useState<Dimension>(DEFAULTS.dimension);
+  const swapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const boardIn = useRef(new Animated.Value(1)).current;
+  const reduceMotion = useReducedMotion();
   const [focused, setFocused] = useState(true);
   const [foreground, setForeground] = useState(AppState.currentState === "active");
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,6 +71,7 @@ export default function LeaderboardScreen() {
         };
         if (alive) {
           setDimension(next.dimension);
+          setPicked(next.dimension);
           setPrefs(next);
         }
       })
@@ -92,12 +102,29 @@ export default function LeaderboardScreen() {
     return () => {
       sub.remove();
       if (blurTimer.current) clearTimeout(blurTimer.current);
+      if (swapTimer.current) clearTimeout(swapTimer.current);
     };
   }, []);
 
   function changeDimension(next: Dimension) {
-    setDimension(next);
+    setPicked(next);
     void AsyncStorage.setItem(DIMENSION_KEY, next).catch(() => {});
+    if (swapTimer.current) clearTimeout(swapTimer.current);
+    if (reduceMotion) {
+      setDimension(next);
+      return;
+    }
+    swapTimer.current = setTimeout(() => {
+      swapTimer.current = null;
+      boardIn.setValue(0);
+      setDimension(next);
+      Animated.timing(boardIn, {
+        toValue: 1,
+        duration: 240,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    }, 260);
   }
 
   const active = focused && foreground;
@@ -111,7 +138,7 @@ export default function LeaderboardScreen() {
           { key: "human", label: t("Leaderboard.dimension.human"), icon: User },
           { key: "dog", label: t("Leaderboard.dimension.dog"), icon: Dog },
         ]}
-        value={dimension}
+        value={picked}
         onChange={changeDimension}
       />
     </View>
@@ -122,7 +149,9 @@ export default function LeaderboardScreen() {
       <WarmCanvas />
       {!prefs ? (
         <ActivityIndicator color={colors.brand} style={styles.loader} />
-      ) : dimension === "human" ? (
+      ) : (
+        <BoardEnter.Provider value={boardIn}>
+        {dimension === "human" ? (
         <HumanLeaderboard
           active={active}
           header={toggle}
@@ -136,6 +165,8 @@ export default function LeaderboardScreen() {
           initialScope={prefs.dogScope}
           onAddFriend={() => router.push("/friends")}
         />
+        )}
+        </BoardEnter.Provider>
       )}
     </SafeAreaView>
   );

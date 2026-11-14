@@ -7,12 +7,16 @@
  * Header rhythm matches web: title 26/800, subtitle 14 / lh 24, header→scope
  * 16, scope→period 12, period→list 16; rows are separated by 8.
  */
-import type { ReactElement, ReactNode } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, View, type ListRenderItem } from "react-native";
+import { createContext, useContext, type ReactElement, type ReactNode } from "react";
+import { Animated, FlatList, RefreshControl, StyleSheet, Text, View, type ListRenderItem } from "react-native";
 
 import { useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { colors, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 import { RefreshIconButton } from "./refresh-icon-button";
+
+/** 0→1 entrance for the rows when the screen swaps boards; the header
+ *  (title + toggle) stays put. Provided by app/(tabs)/leaderboard.tsx. */
+export const BoardEnter = createContext<Animated.Value | null>(null);
 
 export function BoardHeader({
   title,
@@ -70,15 +74,22 @@ export function BoardList<T>({
   onRefresh?: () => void;
 }) {
   const tabBarInsets = useTabBarScrollInsets();
+  const enter = useContext(BoardEnter);
+  const enterStyle = enter && {
+    opacity: enter,
+    transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
+  };
+  const fade = (el: ReactElement | null | undefined) =>
+    el && enterStyle ? <Animated.View style={enterStyle}>{el}</Animated.View> : (el ?? null);
   return (
     <FlatList
       {...tabBarInsets}
       data={data}
       keyExtractor={keyExtractor}
-      renderItem={renderItem}
+      renderItem={(info) => fade(renderItem(info))}
       ListHeaderComponent={header}
-      ListEmptyComponent={empty}
-      ListFooterComponent={footer ?? null}
+      ListEmptyComponent={fade(empty)}
+      ListFooterComponent={fade(footer)}
       ItemSeparatorComponent={Separator}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
@@ -100,6 +111,7 @@ function Separator() {
 const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
+    paddingTop: 10, // tab-screen title row: top 10, minHeight 44 (matches Home top bar)
     paddingBottom: spacing.xxl,
     width: "100%",
     maxWidth: CONTENT_MAX_WIDTH,
@@ -110,6 +122,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.md,
+    minHeight: 44,
     marginBottom: spacing.lg,
   },
   headerText: { flex: 1, minWidth: 0 },

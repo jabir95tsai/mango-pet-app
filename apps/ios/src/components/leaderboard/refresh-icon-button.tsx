@@ -54,7 +54,7 @@ export function RefreshIconButton({
       style={({ pressed }) => [styles.btn, (pressed || refreshing) && styles.dim]}
     >
       <Animated.View style={{ transform: [{ rotate }] }}>
-        <RefreshCw size={20} color={colors.brandDeep} strokeWidth={2} />
+        <RefreshCw size={17} color={colors.brandDeep} strokeWidth={2} />
       </Animated.View>
     </Pressable>
     </WarmGlass>
@@ -63,14 +63,14 @@ export function RefreshIconButton({
 
 const styles = StyleSheet.create({
   btn: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },
   // same glass control as the Home bell
-  glass: { width: 44, height: 44, borderRadius: radius.pill, borderWidth: 1, borderColor: "rgba(255,255,255,0.9)" },
+  glass: { width: 36, height: 36, borderRadius: radius.pill, borderWidth: 1, borderColor: "rgba(255,255,255,0.9)" },
   dim: { opacity: 0.6 },
   icon: { fontSize: 22, fontWeight: "700", color: colors.brandDeep },
 });
