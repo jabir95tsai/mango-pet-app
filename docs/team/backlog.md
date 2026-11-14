@@ -33,7 +33,7 @@ P3 = 也許永遠不做的「想法」。
 ### 2026-11-14 審查後修復與整合（後續狀態）
 - **已修復**：底部 tab 由放開位置選取；底部與頁內鏡片在取消手勢時回到目前選項。新增 8 項手勢回歸測試，修前 5 項失敗、修後全通過。中英文送審說明皆移除 Facebook 登入宣稱。
 - **typed routes**：`isResumablePath` 對既有 `usePathname` 來源收斂為 `string & Href`；保留原本 auth/onboarding 排除規則，帶 `.expo/types/router.d.ts` 的 iOS typecheck 已通過。
-- **驗證**：Web／iOS typecheck、36 項單元測試、iOS Metro export 皆通過；獨立 reviewer 未發現阻擋合併問題。Linux App Hosting build gate 待本次分支提交後執行。
+- **驗證**：Web／iOS typecheck、36 項單元測試、iOS 與 web Metro export 皆通過；獨立 reviewer 未發現阻擋合併問題。Linux App Hosting gate `review-20261114-ced740c` 已於 2026-11-14 通過（`READY`）；來源 `ced740cd07d683c7b10f1cbc374d6e99277d5da7`，Cloud Build `a05174f0-c30e-4e1f-aca6-41bd3b7e1821` 為 `SUCCESS`。gate 僅建立 revision，完成時原 rollout 仍持有 100% 線上流量。後續提交僅記錄此驗證結果。
 - **本機生成檔**：根 `.expo/` 加入 ignore；意外產生的根 Expo `tsconfig.json` 保留於 ignored `outputs/review-20261114/root-expo-tsconfig.json`，不納入 monorepo 設定。既有 apps/ios Expo 生成註解與 ignore 同步。
 - **發布界線**：README 已更正 rollout CLI 會發布分支；本次 gate 使用相同 backend 的 Build API，不建立 rollout。下方首次審查紀錄為修復前狀態，實機驗收仍待 phase 批次執行。
 
