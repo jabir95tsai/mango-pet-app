@@ -1,11 +1,3 @@
-/**
- * Seven-day strip — 1:1 with apps/web/src/components/walks/walks-week-strip.tsx.
- * Card container (rounded-2xl, hairline, shadow-card). Per day a 34px circle:
- *   done       → solid brand fill, white paw
- *   done+today → solid leaf fill, white paw, leaf-tint halo ring
- *   today      → brand-tint fill, solid brand border, brand dot
- *   other      → dashed hairline border, empty
- */
 import { StyleSheet, Text, View } from "react-native";
 
 import { PawIcon } from "@/components/walks/paw-icon";
@@ -69,14 +61,15 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: colors.card,
+    backgroundColor: "rgba(255,255,255,0.65)",
     // web rounded-2xl = 16 (radius tokens are not in Tailwind @theme)
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: colors.hairline,
+    borderColor: "#FFFFFF",
     paddingHorizontal: spacing.md,
-    paddingVertical: 14,
+    paddingVertical: 10,
     ...shadows.card,
+    shadowOpacity: 0.04,
   },
   col: { alignItems: "center", gap: 6, flex: 1 },
   label: { fontSize: 11, fontWeight: "600", letterSpacing: 0.4, color: colors.ink3 },

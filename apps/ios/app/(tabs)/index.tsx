@@ -1,3 +1,4 @@
+import { WarmCanvas } from "@/components/ui/WarmCanvas";
 /**
  * Home v3 — feed-first + IG stories bar, 1:1 with apps/web/src/app/app/page.tsx
  * (and the app layout's guest nudge):
@@ -96,6 +97,7 @@ export default function HomeScreen() {
   if (petsUnknown && pets.length === 0) {
     return (
       <SafeAreaView edges={["top"]} style={styles.flex}>
+      <WarmCanvas />
         {topBar}
         <ScrollView {...tabBarInsets} contentContainerStyle={[styles.scroll, styles.padded]} refreshControl={refreshControl}>
           <EmptyState
@@ -113,6 +115,7 @@ export default function HomeScreen() {
   if (pets.length === 0) {
     return (
       <SafeAreaView edges={["top"]} style={styles.flex}>
+      <WarmCanvas />
         {topBar}
         <ScrollView {...tabBarInsets} contentContainerStyle={[styles.scroll, styles.padded]} refreshControl={refreshControl}>
           <HomeEmptyState
@@ -127,6 +130,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.flex}>
+      <WarmCanvas />
       {topBar}
       <ScrollView
         {...tabBarInsets}
@@ -158,6 +162,7 @@ export default function HomeScreen() {
               <View style={styles.feed}>
                 {posts.map((p) => (
                   <PostCard
+                    warm
                     key={p.postId}
                     post={p}
                     currentUid={user?.uid ?? ""}

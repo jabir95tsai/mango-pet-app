@@ -11,7 +11,8 @@
  *   active `bg-white text-amber-700 shadow-sm`       → card fill + brandDeep
  *          text + soft shadow; inactive ink2
  *
- * size="sm" is a compact 28pt variant (px 12, 13pt). `fullWidth` stretches the
+ * size="sm" is a compact 28pt variant (px 12, 13pt); "icon" is an icon-only
+ * 40pt variant (give items an empty label + accessibilityLabel). `fullWidth` stretches the
  * track and splits it evenly. a11y: track = tablist, items = tab + selected;
  * each segment gets a hitSlop so the effective target reaches 44pt.
  *
@@ -38,16 +39,19 @@ export type TabsProps<K extends string = string> = {
   options?: { value: K; label: string }[];
   value: K;
   onChange: (key: K) => void;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "icon";
   /** Stretch the track to the container and split segments evenly. */
   fullWidth?: boolean;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
+  /** Warm-glass pill look (Home/Walks/Leaderboard redesign). */
+  warm?: boolean;
 };
 
 const SIZES = {
   md: { height: 32, padX: 16, font: 14, icon: 16, slop: 6 },
   sm: { height: 28, padX: 12, font: 13, icon: 14, slop: 8 },
+  icon: { height: 40, padX: 10, font: 0, icon: 22, slop: 2 },
 } as const;
 
 export function Tabs<K extends string>({
@@ -59,6 +63,7 @@ export function Tabs<K extends string>({
   fullWidth = false,
   accessibilityLabel,
   style,
+  warm = false,
 }: TabsProps<K>) {
   const list: TabItem<K>[] =
     items ?? (options ?? []).map((o) => ({ key: o.value, label: o.label }));
@@ -76,14 +81,15 @@ export function Tabs<K extends string>({
       }))}
       selectedIndex={selectedIndex}
       onSelect={(i) => onChange(list[i].key)}
-      trackStyle={[styles.track, fullWidth && styles.trackFull, style]}
+      trackStyle={[styles.track, warm && styles.trackWarm, fullWidth && styles.trackFull, style]}
       itemStyle={() => [
         styles.seg,
         { height: s.height, paddingHorizontal: s.padX },
         fullWidth && styles.segFull,
+        warm && styles.segWarm,
       ]}
-      lensStyle={styles.segOn}
-      lensRadius={6}
+      lensStyle={[styles.segOn, warm && styles.segWarm]}
+      lensRadius={warm ? radius.pill : 6}
       hitSlop={{ top: s.slop, bottom: s.slop, left: 2, right: 2 }}
       renderItem={(i, lit) => {
         const item = list[i];
@@ -92,9 +98,11 @@ export function Tabs<K extends string>({
         return (
           <>
             {Icon ? <Icon size={s.icon} color={fg} strokeWidth={2} /> : null}
-            <Text style={[styles.text, { fontSize: s.font, color: fg }]} numberOfLines={1}>
-              {item.label}
-            </Text>
+            {item.label ? (
+              <Text style={[styles.text, { fontSize: s.font, color: fg }, warm && lit && styles.textWarmOn]} numberOfLines={1}>
+                {item.label}
+              </Text>
+            ) : null}
           </>
         );
       }}
@@ -112,6 +120,14 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   trackFull: { alignSelf: "stretch" },
+  trackWarm: {
+    backgroundColor: "rgba(255,255,255,0.55)",
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
+    borderRadius: radius.pill,
+  },
+  segWarm: { borderRadius: radius.pill },
+  textWarmOn: { fontWeight: "700" },
   seg: {
     flexDirection: "row",
     alignItems: "center",

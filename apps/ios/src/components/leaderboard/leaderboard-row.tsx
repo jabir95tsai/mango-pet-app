@@ -151,10 +151,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: radius.sm,
-    backgroundColor: colors.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.bellTint,
+    // warm-glass surface, matches walks/walk-row.tsx
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.88)",
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
     ...shadows.card,
   },
   rowMe: {
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   // Rounded overlay instead of overflow:hidden so the card shadow survives.
   glow: {
     ...StyleSheet.absoluteFill,
-    borderRadius: radius.sm,
+    borderRadius: 24,
     backgroundColor: withAlpha(colors.brand, 0.18),
   },
   rankCol: { width: 32, alignItems: "center" },

@@ -1,3 +1,4 @@
+import { WarmCanvas } from "@/components/ui/WarmCanvas";
 /**
  * WalksHome — 1:1 with apps/web/src/app/app/walks/page.tsx:
  * top bar (title + active-pet pill/picker + streak chip) → hero copy → dial →
@@ -195,6 +196,18 @@ export default function WalksScreen() {
           <WalksStreakChip streakDays={streakDays} />
         </View>
 
+        {/* Week strip */}
+        <View style={styles.section}>
+          <View style={styles.sectionHead}>
+            <Text style={styles.sectionLabel}>{t("Walks.page.weekLabel")}</Text>
+            <Text style={styles.sectionMeta}>
+              <Text style={styles.sectionMetaStrong}>{weekCount}</Text>
+              {` / ${WEEK_GOAL_COUNT} · ${weekKm.toFixed(1)} km`}
+            </Text>
+          </View>
+          <WalksWeekStrip days={weekDayFlags} todayIdx={todayIdx} complete={goalHit} />
+        </View>
+
         {/* Hero copy */}
         <View style={styles.hero}>
           <Text style={styles.heroTitle} accessibilityLiveRegion="polite">
@@ -211,18 +224,6 @@ export default function WalksScreen() {
             doneMin={todayProgress.minutes}
             goalMin={goalMin}
           />
-        </View>
-
-        {/* Week strip */}
-        <View style={styles.section}>
-          <View style={styles.sectionHead}>
-            <Text style={styles.sectionLabel}>{t("Walks.page.weekLabel")}</Text>
-            <Text style={styles.sectionMeta}>
-              <Text style={styles.sectionMetaStrong}>{weekCount}</Text>
-              {` / ${WEEK_GOAL_COUNT} · ${weekKm.toFixed(1)} km`}
-            </Text>
-          </View>
-          <WalksWeekStrip days={weekDayFlags} todayIdx={todayIdx} complete={goalHit} />
         </View>
 
         {/* Recent walks — or the empty state in place of the whole section */}
@@ -284,6 +285,7 @@ export default function WalksScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
+      <WarmCanvas />
       {content}
 
       {/* Goal-hit celebration — brief, decorative, never blocks touches.
@@ -296,7 +298,7 @@ export default function WalksScreen() {
 
       {/* Sticky CTA — floats above the bottom tab bar */}
       {!sessionOpen && !noPets ? (
-        <View style={[styles.ctaDock, { bottom: 32 + tabBarOverlap }]}>
+        <View style={[styles.ctaDock, { bottom: 16 + tabBarOverlap }]}>
           <View style={styles.ctaInner}>
             <WalksStartCta onPress={session.startWalking} disabled={pets.length === 0} />
           </View>
@@ -328,26 +330,27 @@ const styles = StyleSheet.create({
     maxWidth: CONTENT_MAX_WIDTH,
     alignSelf: "center",
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingTop: 10,
   },
   // 62pt CTA + 32 above the bar + 24 breathing room.
   scrollWithCta: { paddingBottom: 118 },
   scrollEmpty: { flexGrow: 1, justifyContent: "center", paddingBottom: spacing.xxl },
   flex: { flex: 1 },
   // web: mb-3 flex items-center gap-2.5
-  topBar: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: spacing.md },
+  topBar: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44, marginBottom: spacing.md },
   h1: { fontSize: 26, fontWeight: "800", color: colors.ink, letterSpacing: -0.5 },
   // web: mb-3 px-1; h2 26/700 leading-tight tracking-tight
-  hero: { marginBottom: spacing.md, paddingHorizontal: spacing.xs },
+  hero: { marginBottom: 4, paddingHorizontal: spacing.xs, alignItems: "center" },
   heroTitle: {
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 23,
+    lineHeight: 30,
+    textAlign: "center",
     fontWeight: "700",
     color: colors.ink,
     letterSpacing: -0.65,
   },
-  heroSub: { marginTop: 4, fontSize: 13, fontWeight: "500", color: colors.ink2 },
-  dialWrap: { paddingTop: spacing.sm, paddingBottom: spacing.xl, marginBottom: spacing.xl },
+  heroSub: { textAlign: "center", marginTop: 6, fontSize: 13, fontWeight: "500", color: colors.ink2 },
+  dialWrap: { paddingTop: 4, paddingBottom: 8, marginBottom: 12 },
   section: { marginBottom: spacing.xl },
   sectionHead: {
     flexDirection: "row",
@@ -360,8 +363,8 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 12, fontWeight: "600", color: colors.ink2 },
   sectionMeta: { fontSize: 12, color: colors.ink3, fontVariant: ["tabular-nums"] },
   sectionMetaStrong: { fontWeight: "700", color: colors.ink },
-  sectionTitle: { fontSize: 14, fontWeight: "600", color: colors.ink },
-  toggleAllBtn: { borderRadius: 9999, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  sectionTitle: { fontSize: 19, fontWeight: "700", color: colors.ink },
+  toggleAllBtn: { minHeight: 44, justifyContent: "center", borderRadius: 9999, paddingHorizontal: spacing.sm, paddingVertical: 4 },
   toggleAllPressed: { backgroundColor: colors.brandTint },
   toggleAll: { fontSize: 12, fontWeight: "600", color: colors.brandDeep },
   walkList: { gap: spacing.sm },

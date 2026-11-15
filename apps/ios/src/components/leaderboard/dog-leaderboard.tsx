@@ -12,18 +12,20 @@
  * refresh re-subscribes AND re-pulls the friend list (web parity).
  */
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { ActivityIndicator, StyleSheet } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AlertTriangle, PawPrint, Users } from "lucide-react-native";
 import type { DogLeaderboardEntry, LeaderboardPeriod } from "@mango/shared-types";
 
 import { useAuth } from "@/state/auth-context";
+import { withDemoDogs } from "@/lib/leaderboard-demo";
 import { subscribeDogLeaderboard } from "@/lib/leaderboards";
 import { listFriendUids } from "@/lib/friends-read";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { t } from "@/lib/i18n";
 import { colors, spacing } from "@/theme/theme";
-import { BoardHeader, BoardList, BoardTabs } from "./board-list";
+import { BoardHeader, BoardList } from "./board-list";
+import { MyRankBar, Podium, ScopePill } from "./podium";
 import { LeaderboardRow } from "./leaderboard-row";
 import { Segmented } from "./segmented";
 import { useDogEntryGlow } from "./use-glow";
@@ -157,13 +159,18 @@ export function DogLeaderboard({
     );
   }
 
+  const list = loading ? [] : withDemoDogs(visible);
+  // My best-ranked dog, only when it's below the podium.
+  const meIndex = list.findIndex((e) => e.ownerUid === uid);
+  const me = meIndex >= 3 ? list[meIndex] : null;
+
   return (
     <BoardList
-      data={loading ? [] : visible}
+      data={list.slice(3)}
       keyExtractor={(e) => e.petId}
       renderItem={({ item, index }) => (
         <LeaderboardRow
-          rank={index + 1}
+          rank={index + 4}
           name={item.petName}
           breed={item.breed}
           ownerLabel={t("Leaderboard.dog.byOwner", { owner: item.ownerName })}
@@ -180,39 +187,63 @@ export function DogLeaderboard({
       )}
       header={
         <>
-          {header}
           <BoardHeader
             title={t("Leaderboard.title")}
-            subtitle={t("Leaderboard.dog.subtitle")}
             refreshing={refreshing}
             onRefresh={refresh}
+            subtitle={t("Leaderboard.headerSubtitle", {
+              who: t("Leaderboard.who.dog"),
+              period: t(`Leaderboard.period.${period}`),
+            })}
+            accessory={header}
           />
-          <BoardTabs
-            scope={
-              <Segmented
-                options={[
-                  { value: "friends", label: t("Leaderboard.dog.scope.friends") },
-                  { value: "all", label: t("Leaderboard.dog.scope.all") },
-                ]}
-                value={scope}
-                onChange={changeScope}
-              />
-            }
-            period={
-              <Segmented
-                options={[
-                  { value: "weekly", label: t("Leaderboard.period.weekly") },
-                  { value: "monthly", label: t("Leaderboard.period.monthly") },
-                  { value: "all_time", label: t("Leaderboard.period.all_time") },
-                ]}
-                value={period}
-                onChange={setPeriod}
-              />
-            }
+          <View style={styles.period}>
+            <Segmented
+              warm
+              size="sm"
+              options={[
+                { value: "weekly", label: t("Leaderboard.period.weekly") },
+                { value: "monthly", label: t("Leaderboard.period.monthly") },
+                { value: "all_time", label: t("Leaderboard.period.all_time") },
+              ]}
+              value={period}
+              onChange={setPeriod}
+            />
+            <ScopePill
+              options={[
+                { value: "friends", label: t("Leaderboard.dog.scope.friends") },
+                { value: "all", label: t("Leaderboard.dog.scope.all") },
+              ]}
+              value={scope}
+              onChange={changeScope}
+            />
+          </View>
+          <Podium
+            isDog
+            items={list.slice(0, 3).map((e) => ({
+              key: e.petId,
+              name: e.petName,
+              photoURL: e.petPhotoURL,
+              score: e.totalScore,
+              meta: `${t("Leaderboard.dog.walkCount", { count: e.walkCount })} · ${e.totalDistanceKm.toFixed(1)} km`,
+              isMe: e.ownerUid === uid,
+            }))}
           />
         </>
       }
-      empty={empty}
+      empty={list.length ? null : empty}
+      overlay={
+        me ? (
+          <MyRankBar
+            isDog
+            rank={meIndex + 1}
+            name={me.petName}
+            photoURL={me.petPhotoURL}
+            score={me.totalScore}
+            gap={list[meIndex - 1].totalScore - me.totalScore}
+          />
+        ) : null
+      }
       refreshing={refreshing}
       onRefresh={refresh}
     />
@@ -221,4 +252,11 @@ export function DogLeaderboard({
 
 const styles = StyleSheet.create({
   loader: { marginVertical: spacing.xl },
+  period: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
 });

@@ -9,10 +9,16 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  warm,
+  fullWidth,
+  size,
 }: {
   options: { value: T; label: string }[];
   value: T;
   onChange: (next: T) => void;
+  warm?: boolean;
+  fullWidth?: boolean;
+  size?: "sm" | "md";
 }) {
-  return <Tabs options={options} value={value} onChange={onChange} />;
+  return <Tabs options={options} value={value} onChange={onChange} warm={warm} fullWidth={fullWidth} size={size} />;
 }
