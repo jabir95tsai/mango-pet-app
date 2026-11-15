@@ -746,6 +746,14 @@
         "title": "狗排行榜計算中",
         "subtitle": "遛狗結束後分數即時更新，每天午夜 (Asia/Taipei) 也會重新聚合一次。先去遛狗幫狗狗累積分數！"
       }
+    },
+    "myRank": "你的名次",
+    "gapToNext": "再 {gap} 分追上第 {rank} 名",
+    "scopeA11y": "範圍：{scope}，點擊切換",
+    "headerSubtitle": "{who} · {period}排名",
+    "who": {
+      "human": "遛狗人",
+      "dog": "毛孩"
     }
   },
   "Walks": {

@@ -11,7 +11,8 @@
  *   active `bg-white text-amber-700 shadow-sm`       → card fill + brandDeep
  *          text + soft shadow; inactive ink2
  *
- * size="sm" is a compact 28pt variant (px 12, 13pt). `fullWidth` stretches the
+ * size="sm" is a compact 28pt variant (px 12, 13pt); "icon" is an icon-only
+ * 40pt variant (give items an empty label + accessibilityLabel). `fullWidth` stretches the
  * track and splits it evenly. a11y: track = tablist, items = tab + selected;
  * each segment gets a hitSlop so the effective target reaches 44pt.
  *
@@ -38,7 +39,7 @@ export type TabsProps<K extends string = string> = {
   options?: { value: K; label: string }[];
   value: K;
   onChange: (key: K) => void;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "icon";
   /** Stretch the track to the container and split segments evenly. */
   fullWidth?: boolean;
   accessibilityLabel?: string;
@@ -50,6 +51,7 @@ export type TabsProps<K extends string = string> = {
 const SIZES = {
   md: { height: 32, padX: 16, font: 14, icon: 16, slop: 6 },
   sm: { height: 28, padX: 12, font: 13, icon: 14, slop: 8 },
+  icon: { height: 40, padX: 10, font: 0, icon: 22, slop: 2 },
 } as const;
 
 export function Tabs<K extends string>({
@@ -96,9 +98,11 @@ export function Tabs<K extends string>({
         return (
           <>
             {Icon ? <Icon size={s.icon} color={fg} strokeWidth={2} /> : null}
-            <Text style={[styles.text, { fontSize: s.font, color: fg }, warm && lit && styles.textWarmOn]} numberOfLines={1}>
-              {item.label}
-            </Text>
+            {item.label ? (
+              <Text style={[styles.text, { fontSize: s.font, color: fg }, warm && lit && styles.textWarmOn]} numberOfLines={1}>
+                {item.label}
+              </Text>
+            ) : null}
           </>
         );
       }}

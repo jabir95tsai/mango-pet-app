@@ -746,6 +746,14 @@
         "title": "Dog leaderboard is warming up",
         "subtitle": "Scores update right after each walk, with a nightly re-aggregation (Asia/Taipei). Go walk a dog to get on the board!"
       }
+    },
+    "myRank": "Your rank",
+    "gapToNext": "{gap} pts to reach #{rank}",
+    "scopeA11y": "Scope: {scope}, tap to change",
+    "headerSubtitle": "{who} · {period}",
+    "who": {
+      "human": "Walkers",
+      "dog": "Dogs"
     }
   },
   "Walks": {

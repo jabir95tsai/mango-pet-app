@@ -10,9 +10,12 @@
  *    period after leaving the tab: a fresh listener re-reads the whole board,
  *    so quick tab switches keep the existing one (delta updates only).
  *  - Each board is a virtualized FlatList whose header carries the toggle.
+ *  - Both boards stay mounted (stacked, cross-faded): a swap never remounts,
+ *    so no spinner→rows jump, no lost scroll, no toggle re-mount. The
+ *    incoming list is scrolled to the outgoing offset so the toggle stays put.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, AppState, Easing, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Animated, AppState, Easing, FlatList, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -29,7 +32,7 @@ import {
 } from "@/components/leaderboard/dog-leaderboard";
 import { Dog, User } from "lucide-react-native";
 import { Tabs } from "@/components/ui/Tabs";
-import { BoardEnter } from "@/components/leaderboard/board-list";
+import { BoardScroll, type BoardSlot } from "@/components/leaderboard/board-list";
 import { WarmCanvas } from "@/components/ui/WarmCanvas";
 import { t } from "@/lib/i18n";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
@@ -48,12 +51,12 @@ export default function LeaderboardScreen() {
   const router = useRouter();
   const [prefs, setPrefs] = useState<Prefs | null>(null);
   const [dimension, setDimension] = useState<Dimension>(DEFAULTS.dimension);
-  // The toggle lives inside each board's list header, so swapping boards
-  // remounts it. Move the toggle first, swap the board once the lens has
-  // slid over, then fade the new board in.
-  const [picked, setPicked] = useState<Dimension>(DEFAULTS.dimension);
-  const swapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const boardIn = useRef(new Animated.Value(1)).current;
+  // 0 = human board visible, 1 = dog board visible.
+  const swap = useRef(new Animated.Value(0)).current;
+  const slots = useRef<Record<Dimension, BoardSlot>>({
+    human: { ref: { current: null as FlatList | null }, y: { current: 0 } },
+    dog: { ref: { current: null as FlatList | null }, y: { current: 0 } },
+  }).current;
   const reduceMotion = useReducedMotion();
   const [focused, setFocused] = useState(true);
   const [foreground, setForeground] = useState(AppState.currentState === "active");
@@ -71,7 +74,7 @@ export default function LeaderboardScreen() {
         };
         if (alive) {
           setDimension(next.dimension);
-          setPicked(next.dimension);
+          swap.setValue(next.dimension === "dog" ? 1 : 0);
           setPrefs(next);
         }
       })
@@ -102,46 +105,44 @@ export default function LeaderboardScreen() {
     return () => {
       sub.remove();
       if (blurTimer.current) clearTimeout(blurTimer.current);
-      if (swapTimer.current) clearTimeout(swapTimer.current);
     };
   }, []);
 
   function changeDimension(next: Dimension) {
-    setPicked(next);
+    if (next === dimension) return;
     void AsyncStorage.setItem(DIMENSION_KEY, next).catch(() => {});
-    if (swapTimer.current) clearTimeout(swapTimer.current);
+    // Line the incoming list up with the outgoing one so the toggle doesn't move.
+    const y = slots[dimension].y.current;
+    slots[next].ref.current?.scrollToOffset({ offset: y, animated: false });
+    slots[next].y.current = y;
+    setDimension(next);
+    const to = next === "dog" ? 1 : 0;
     if (reduceMotion) {
-      setDimension(next);
+      swap.setValue(to);
       return;
     }
-    swapTimer.current = setTimeout(() => {
-      swapTimer.current = null;
-      boardIn.setValue(0);
-      setDimension(next);
-      Animated.timing(boardIn, {
-        toValue: 1,
-        duration: 240,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    }, 260);
+    Animated.timing(swap, {
+      toValue: to,
+      duration: 220,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
   }
 
   const active = focused && foreground;
 
+  // Icon-only switch beside the board title (layout T2).
   const toggle = (
-    <View style={styles.toggle}>
-      <Tabs
-        warm
-        fullWidth
-        items={[
-          { key: "human", label: t("Leaderboard.dimension.human"), icon: User },
-          { key: "dog", label: t("Leaderboard.dimension.dog"), icon: Dog },
-        ]}
-        value={picked}
-        onChange={changeDimension}
-      />
-    </View>
+    <Tabs
+      warm
+      size="icon"
+      items={[
+        { key: "human", label: "", accessibilityLabel: t("Leaderboard.dimension.human"), icon: User },
+        { key: "dog", label: "", accessibilityLabel: t("Leaderboard.dimension.dog"), icon: Dog },
+      ]}
+      value={dimension}
+      onChange={changeDimension}
+    />
   );
 
   return (
@@ -150,23 +151,41 @@ export default function LeaderboardScreen() {
       {!prefs ? (
         <ActivityIndicator color={colors.brand} style={styles.loader} />
       ) : (
-        <BoardEnter.Provider value={boardIn}>
-        {dimension === "human" ? (
-        <HumanLeaderboard
-          active={active}
-          header={toggle}
-          initialScope={prefs.humanScope}
-          onCreateFamily={() => router.push("/family")}
-        />
-      ) : (
-        <DogLeaderboard
-          active={active}
-          header={toggle}
-          initialScope={prefs.dogScope}
-          onAddFriend={() => router.push("/friends")}
-        />
-        )}
-        </BoardEnter.Provider>
+        <View style={styles.flex}>
+          {(["human", "dog"] as const).map((d) => {
+            const shown = d === dimension;
+            return (
+              <Animated.View
+                key={d}
+                style={[
+                  StyleSheet.absoluteFill,
+                  { opacity: d === "dog" ? swap : Animated.subtract(1, swap) },
+                ]}
+                pointerEvents={shown ? "auto" : "none"}
+                accessibilityElementsHidden={!shown}
+                importantForAccessibility={shown ? "auto" : "no-hide-descendants"}
+              >
+                <BoardScroll.Provider value={slots[d]}>
+                  {d === "human" ? (
+                    <HumanLeaderboard
+                      active={active}
+                      header={toggle}
+                      initialScope={prefs.humanScope}
+                      onCreateFamily={() => router.push("/family")}
+                    />
+                  ) : (
+                    <DogLeaderboard
+                      active={active}
+                      header={toggle}
+                      initialScope={prefs.dogScope}
+                      onAddFriend={() => router.push("/friends")}
+                    />
+                  )}
+                </BoardScroll.Provider>
+              </Animated.View>
+            );
+          })}
+        </View>
       )}
     </SafeAreaView>
   );
@@ -176,5 +195,4 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   loader: { marginTop: spacing.xxl },
   // web: page-level Tabs above each self-contained board
-  toggle: { marginBottom: spacing.lg },
 });

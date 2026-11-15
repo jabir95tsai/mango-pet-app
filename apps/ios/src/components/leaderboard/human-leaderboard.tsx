@@ -13,7 +13,7 @@
  * re-subscribes and re-pulls members (web handleRefresh).
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { ActivityIndicator, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AlertTriangle, Trophy, Users } from "lucide-react-native";
 import type { FamilyMember, LeaderboardEntry, LeaderboardPeriod } from "@mango/shared-types";
@@ -21,11 +21,13 @@ import type { FamilyMember, LeaderboardEntry, LeaderboardPeriod } from "@mango/s
 import { useAuth } from "@/state/auth-context";
 import { useFamily } from "@/state/family-context";
 import { listFamilyMembers } from "@/lib/families-read";
+import { withDemoHumans } from "@/lib/leaderboard-demo";
 import { subscribeLeaderboard } from "@/lib/leaderboards";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { t } from "@/lib/i18n";
 import { colors, spacing } from "@/theme/theme";
-import { BoardHeader, BoardList, BoardTabs } from "./board-list";
+import { BoardHeader, BoardList } from "./board-list";
+import { MyRankBar, Podium, ScopePill } from "./podium";
 import { LeaderboardRow } from "./leaderboard-row";
 import { Segmented } from "./segmented";
 import { useLeaderboardEntryGlow } from "./use-glow";
@@ -42,7 +44,7 @@ export function HumanLeaderboard({
   onCreateFamily,
 }: {
   active: boolean;
-  /** The page-level dimension toggle, rendered above the board header. */
+  /** The page-level dimension toggle, rendered in the title row. */
   header: ReactElement;
   initialScope: HumanScope;
   onCreateFamily: () => void;
@@ -157,8 +159,7 @@ export function HumanLeaderboard({
         renderItem={() => null}
         header={
           <>
-            <BoardHeader title={t("Nav.leaderboard")} />
-            {header}
+            <BoardHeader title={t("Nav.leaderboard")} accessory={header} />
           </>
         }
         empty={
@@ -182,8 +183,7 @@ export function HumanLeaderboard({
         renderItem={() => null}
         header={
           <>
-            <BoardHeader title={t("Nav.leaderboard")} />
-            {header}
+            <BoardHeader title={t("Nav.leaderboard")} accessory={header} />
           </>
         }
         empty={
@@ -222,13 +222,17 @@ export function HumanLeaderboard({
     );
   }
 
+  const list = loading || familyLoading ? [] : withDemoHumans(visible);
+  const meIndex = list.findIndex((e) => e.uid === user?.uid);
+  const me = meIndex >= 3 ? list[meIndex] : null;
+
   return (
     <BoardList
-      data={loading || familyLoading ? [] : visible}
+      data={list.slice(3)}
       keyExtractor={(e) => e.uid}
       renderItem={({ item, index }) => (
         <LeaderboardRow
-          rank={index + 1}
+          rank={index + 4}
           name={item.displayName}
           photoURL={item.photoURL}
           score={item.totalScore}
@@ -246,36 +250,57 @@ export function HumanLeaderboard({
             title={t("Nav.leaderboard")}
             refreshing={refreshing}
             onRefresh={refresh}
+            subtitle={t("Leaderboard.headerSubtitle", {
+              who: t("Leaderboard.who.human"),
+              period: t(`Leaderboard.period.${period}`),
+            })}
+            accessory={header}
           />
-          {header}
-          <BoardTabs
-            scope={
-              <Segmented
-                warm
-                options={[
-                  { value: "all", label: t("Leaderboard.scope.all") },
-                  { value: "family", label: t("Leaderboard.scope.family") },
-                ]}
-                value={scope}
-                onChange={changeScope}
-              />
-            }
-            period={
-              <Segmented
-                warm
-                options={[
-                  { value: "weekly", label: t("Leaderboard.period.weekly") },
-                  { value: "monthly", label: t("Leaderboard.period.monthly") },
-                  { value: "all_time", label: t("Leaderboard.period.all_time") },
-                ]}
-                value={period}
-                onChange={setPeriod}
-              />
-            }
+          <View style={styles.period}>
+            <Segmented
+              warm
+              size="sm"
+              options={[
+                { value: "weekly", label: t("Leaderboard.period.weekly") },
+                { value: "monthly", label: t("Leaderboard.period.monthly") },
+                { value: "all_time", label: t("Leaderboard.period.all_time") },
+              ]}
+              value={period}
+              onChange={setPeriod}
+            />
+            <ScopePill
+              options={[
+                { value: "all", label: t("Leaderboard.scope.all") },
+                { value: "family", label: t("Leaderboard.scope.family") },
+              ]}
+              value={scope}
+              onChange={changeScope}
+            />
+          </View>
+          <Podium
+            items={list.slice(0, 3).map((e) => ({
+              key: e.uid,
+              name: e.displayName,
+              photoURL: e.photoURL,
+              score: e.totalScore,
+              meta: `${t("Leaderboard.unitWalks", { count: e.walkCount })} · ${e.totalDistanceKm.toFixed(1)} km`,
+              isMe: e.uid === user?.uid,
+            }))}
           />
         </>
       }
-      empty={empty}
+      empty={list.length ? null : empty}
+      overlay={
+        me ? (
+          <MyRankBar
+            rank={meIndex + 1}
+            name={me.displayName}
+            photoURL={me.photoURL}
+            score={me.totalScore}
+            gap={list[meIndex - 1].totalScore - me.totalScore}
+          />
+        ) : null
+      }
       footer={familyOnlyMe ? <Text style={styles.onlyMe}>{t("Leaderboard.familyOnlyMe")}</Text> : null}
       refreshing={refreshing}
       onRefresh={refresh}
@@ -285,5 +310,12 @@ export function HumanLeaderboard({
 
 const styles = StyleSheet.create({
   loader: { marginVertical: spacing.xl },
+  period: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
   onlyMe: { marginTop: spacing.lg, textAlign: "center", fontSize: 14, color: colors.ink2 },
 });

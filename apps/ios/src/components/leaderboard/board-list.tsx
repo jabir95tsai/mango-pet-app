@@ -7,25 +7,31 @@
  * Header rhythm matches web: title 26/800, subtitle 14 / lh 24, header→scope
  * 16, scope→period 12, period→list 16; rows are separated by 8.
  */
-import { createContext, useContext, type ReactElement, type ReactNode } from "react";
-import { Animated, FlatList, RefreshControl, StyleSheet, Text, View, type ListRenderItem } from "react-native";
+import { createContext, useContext, type MutableRefObject, type ReactElement, type ReactNode, type RefObject } from "react";
+import { FlatList, RefreshControl, StyleSheet, Text, View, type ListRenderItem } from "react-native";
 
 import { useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { colors, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 import { RefreshIconButton } from "./refresh-icon-button";
+import { MY_RANK_BAR_SPACE } from "./podium";
 
-/** 0→1 entrance for the rows when the screen swaps boards; the header
- *  (title + toggle) stays put. Provided by app/(tabs)/leaderboard.tsx. */
-export const BoardEnter = createContext<Animated.Value | null>(null);
+/** Per-board scroll handle so the screen can line the incoming board up with
+ *  the outgoing one's offset (toggle stays put on swap). Provided by
+ *  app/(tabs)/leaderboard.tsx. */
+export type BoardSlot = { ref: RefObject<FlatList<any> | null>; y: MutableRefObject<number> };
+export const BoardScroll = createContext<BoardSlot | null>(null);
 
 export function BoardHeader({
   title,
   subtitle,
   refreshing,
   onRefresh,
+  accessory,
 }: {
   title: string;
   subtitle?: string;
+  /** Extra control between the title and refresh (layout A: scope pill). */
+  accessory?: ReactNode;
   refreshing?: boolean;
   /** Omit to hide the refresh button (personal-mode empty state). */
   onRefresh?: () => void;
@@ -38,17 +44,8 @@ export function BoardHeader({
         </Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
+      {accessory}
       {onRefresh ? <RefreshIconButton refreshing={!!refreshing} onPress={onRefresh} /> : null}
-    </View>
-  );
-}
-
-/** Scope + period share one row, wrapping when labels are long. */
-export function BoardTabs({ scope, period }: { scope: ReactNode; period: ReactNode }) {
-  return (
-    <View style={styles.tabsRow}>
-      {scope}
-      {period}
     </View>
   );
 }
@@ -60,6 +57,7 @@ export function BoardList<T>({
   header,
   empty,
   footer,
+  overlay,
   refreshing,
   onRefresh,
 }: {
@@ -70,28 +68,28 @@ export function BoardList<T>({
   /** Loading / error / empty card (shown when `data` is empty). */
   empty: ReactElement | null;
   footer?: ReactElement | null;
+  /** Pinned over the list (layout A: MyRankBar); the list pads past it. */
+  overlay?: ReactElement | null;
   refreshing: boolean;
   onRefresh?: () => void;
 }) {
   const tabBarInsets = useTabBarScrollInsets();
-  const enter = useContext(BoardEnter);
-  const enterStyle = enter && {
-    opacity: enter,
-    transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
-  };
-  const fade = (el: ReactElement | null | undefined) =>
-    el && enterStyle ? <Animated.View style={enterStyle}>{el}</Animated.View> : (el ?? null);
+  const slot = useContext(BoardScroll);
   return (
+    <View style={styles.flex}>
     <FlatList
       {...tabBarInsets}
+      ref={slot?.ref}
+      onScroll={slot ? (e) => (slot.y.current = e.nativeEvent.contentOffset.y) : undefined}
+      scrollEventThrottle={16}
       data={data}
       keyExtractor={keyExtractor}
-      renderItem={(info) => fade(renderItem(info))}
+      renderItem={renderItem}
       ListHeaderComponent={header}
-      ListEmptyComponent={fade(empty)}
-      ListFooterComponent={fade(footer)}
+      ListEmptyComponent={empty}
+      ListFooterComponent={footer}
       ItemSeparatorComponent={Separator}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, overlay ? { paddingBottom: spacing.xxl + MY_RANK_BAR_SPACE } : null]}
       showsVerticalScrollIndicator={false}
       initialNumToRender={12}
       windowSize={7}
@@ -101,6 +99,8 @@ export function BoardList<T>({
         ) : undefined
       }
     />
+    {overlay}
+    </View>
   );
 }
 
@@ -109,6 +109,7 @@ function Separator() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   content: {
     padding: spacing.lg,
     paddingTop: 10, // tab-screen title row: top 10, minHeight 44 (matches Home top bar)
@@ -130,6 +131,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: "800", letterSpacing: -0.5, color: colors.ink },
   // web: mt-1 text-sm leading-6 ink-2
   subtitle: { marginTop: 4, fontSize: 13, lineHeight: 19, fontWeight: "500", color: colors.ink2 },
-  tabsRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.lg },
   separator: { height: spacing.sm },
 });
