@@ -191,10 +191,6 @@ export function DogLeaderboard({
             title={t("Leaderboard.title")}
             refreshing={refreshing}
             onRefresh={refresh}
-            subtitle={t("Leaderboard.headerSubtitle", {
-              who: t("Leaderboard.who.dog"),
-              period: t(`Leaderboard.period.${period}`),
-            })}
             accessory={header}
           />
           <View style={styles.period}>

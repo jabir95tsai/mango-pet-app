@@ -250,10 +250,6 @@ export function HumanLeaderboard({
             title={t("Nav.leaderboard")}
             refreshing={refreshing}
             onRefresh={refresh}
-            subtitle={t("Leaderboard.headerSubtitle", {
-              who: t("Leaderboard.who.human"),
-              period: t(`Leaderboard.period.${period}`),
-            })}
             accessory={header}
           />
           <View style={styles.period}>

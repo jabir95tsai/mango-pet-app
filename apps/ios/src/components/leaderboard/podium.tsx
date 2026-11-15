@@ -6,7 +6,13 @@
  *  - MyRankBar: pinned above the tab bar when "me" is ranked below the podium,
  *    with the gap to the next rank up
  */
-import { ActionSheetIOS, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActionSheetIOS,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { ChevronDown } from "lucide-react-native";
 import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
 
@@ -28,9 +34,27 @@ export type PodiumItem = {
 
 // Medal metals are decorative (gold reuses mango amber); ink numerals pass AA on all three.
 const PLACE = [
-  { medal: colors.amber, edge: colors.brandDeep, ribbon: [colors.brand, colors.brandDeep], avatar: 60, padBottom: 26 },
-  { medal: "#e4e1dc", edge: "#b9b3aa", ribbon: [colors.amber, colors.brand], avatar: 50, padBottom: 14 },
-  { medal: "#f0c39a", edge: "#b9784a", ribbon: [colors.brandTint, colors.amber], avatar: 46, padBottom: 8 },
+  {
+    medal: colors.amber,
+    edge: colors.brandDeep,
+    ribbon: [colors.brand, colors.brandDeep],
+    avatar: 60,
+    padBottom: 26,
+  },
+  {
+    medal: "#e4e1dc",
+    edge: "#b9b3aa",
+    ribbon: [colors.amber, colors.brand],
+    avatar: 50,
+    padBottom: 14,
+  },
+  {
+    medal: "#f0c39a",
+    edge: "#b9784a",
+    ribbon: [colors.brandTint, colors.amber],
+    avatar: 46,
+    padBottom: 8,
+  },
 ] as const;
 
 function Medal({ place }: { place: number }) {
@@ -39,9 +63,30 @@ function Medal({ place }: { place: number }) {
     <Svg width={44} height={54} viewBox="0 0 44 54" style={styles.medal}>
       <Path d="M8 0h10l6 16-8 4L8 0Z" fill={p.ribbon[0]} />
       <Path d="M36 0H26l-6 16 8 4 8-20Z" fill={p.ribbon[1]} />
-      <Circle cx={22} cy={34} r={16} fill={p.medal} stroke={p.edge} strokeWidth={3} />
-      <Circle cx={22} cy={34} r={11} fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={1.5} />
-      <SvgText x={22} y={40} textAnchor="middle" fontSize={16} fontWeight="900" fill={colors.ink}>
+      <Circle
+        cx={22}
+        cy={34}
+        r={16}
+        fill={p.medal}
+        stroke={p.edge}
+        strokeWidth={3}
+      />
+      <Circle
+        cx={22}
+        cy={34}
+        r={11}
+        fill="none"
+        stroke="rgba(255,255,255,0.6)"
+        strokeWidth={1.5}
+      />
+      <SvgText
+        x={22}
+        y={40}
+        textAnchor="middle"
+        fontSize={16}
+        fontWeight="900"
+        fill={colors.ink}
+      >
         {place + 1}
       </SvgText>
     </Svg>
@@ -49,7 +94,13 @@ function Medal({ place }: { place: number }) {
 }
 
 /** Layout A3: top 3 as medal cards, 2nd · 1st · 3rd; 1st is taller + mango outline. */
-export function Podium({ items, isDog }: { items: PodiumItem[]; isDog?: boolean }) {
+export function Podium({
+  items,
+  isDog,
+}: {
+  items: PodiumItem[];
+  isDog?: boolean;
+}) {
   if (items.length === 0) return null;
   // Empty slots keep the 1st card centered.
   const slots = [1, 0, 2];
@@ -60,33 +111,42 @@ export function Podium({ items, isDog }: { items: PodiumItem[]; isDog?: boolean 
         if (!it) return <View key={place} style={styles.slot} />;
         const p = PLACE[place];
         return (
-          <View
-            key={it.key}
-            style={[styles.slot, styles.card, { paddingBottom: p.padBottom }, place === 0 && styles.cardFirst]}
-            accessible
-            accessibilityLabel={`${place + 1}. ${it.name}, ${groupThousands(it.score)} ${t("Leaderboard.unitScore")}`}
-          >
-            <Medal place={place} />
-            <View style={[styles.avatar, it.isMe && styles.avatarMe]}>
-              <Avatar
-                name={it.name}
-                photoURL={it.photoURL}
-                size={p.avatar}
-                shape="circle"
-                fallbackChar={isDog ? "🐾" : "🙂"}
-              />
-            </View>
-            <Text style={styles.cardName} numberOfLines={1}>
-              {it.name}
-            </Text>
-            <Text style={styles.cardMeta} numberOfLines={1}>
-              {it.meta}
-            </Text>
-            <View style={styles.scorePill}>
-              <Text style={styles.scoreText}>
-                {groupThousands(it.score)}
-                <Text style={styles.scoreUnit}> {t("Leaderboard.unitScore")}</Text>
+          // Slot owns the flex; padding/border on the card would otherwise widen its column.
+          <View key={it.key} style={styles.slot}>
+            <View
+              style={[
+                styles.card,
+                { paddingBottom: p.padBottom },
+                place === 0 && styles.cardFirst,
+              ]}
+              accessible
+              accessibilityLabel={`${place + 1}. ${it.name}, ${groupThousands(it.score)} ${t("Leaderboard.unitScore")}`}
+            >
+              <Medal place={place} />
+              <View style={[styles.avatar, it.isMe && styles.avatarMe]}>
+                <Avatar
+                  name={it.name}
+                  photoURL={it.photoURL}
+                  size={p.avatar}
+                  shape="circle"
+                  fallbackChar={isDog ? "🐾" : "🙂"}
+                />
+              </View>
+              <Text style={styles.cardName} numberOfLines={1}>
+                {it.name}
               </Text>
+              <Text style={styles.cardMeta} numberOfLines={1}>
+                {it.meta}
+              </Text>
+              <View style={styles.scorePill}>
+                <Text style={styles.scoreText}>
+                  {groupThousands(it.score)}
+                  <Text style={styles.scoreUnit}>
+                    {" "}
+                    {t("Leaderboard.unitScore")}
+                  </Text>
+                </Text>
+              </View>
             </View>
           </View>
         );
@@ -155,13 +215,22 @@ export function MyRankBar({
       accessibilityLabel={`${t("Leaderboard.myRank")} ${rank}, ${t("Leaderboard.gapToNext", { gap: groupThousands(gap), rank: rank - 1 })}`}
     >
       <Text style={styles.barRank}>#{rank}</Text>
-      <Avatar name={name} photoURL={photoURL} size={32} shape="circle" fallbackChar={isDog ? "🐾" : "🙂"} />
+      <Avatar
+        name={name}
+        photoURL={photoURL}
+        size={32}
+        shape="circle"
+        fallbackChar={isDog ? "🐾" : "🙂"}
+      />
       <View style={styles.barBody}>
         <Text style={styles.barTitle} numberOfLines={1}>
           {isDog ? name : t("Leaderboard.myRank")}
         </Text>
         <Text style={styles.barMeta} numberOfLines={1}>
-          {t("Leaderboard.gapToNext", { gap: groupThousands(gap), rank: rank - 1 })}
+          {t("Leaderboard.gapToNext", {
+            gap: groupThousands(gap),
+            rank: rank - 1,
+          })}
         </Text>
       </View>
       <Text style={styles.barScore}>{groupThousands(score)}</Text>
@@ -179,7 +248,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  slot: { flex: 1 },
+  slot: { flex: 1, minWidth: 0 },
   card: {
     alignItems: "center",
     paddingHorizontal: 6,
@@ -196,9 +265,20 @@ const styles = StyleSheet.create({
     ...shadows.mango,
   },
   medal: { marginTop: -2 },
-  avatar: { marginTop: 6, borderRadius: radius.pill, borderWidth: 2, borderColor: "transparent" },
+  avatar: {
+    marginTop: 6,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
   avatarMe: { borderColor: colors.brandDeep },
-  cardName: { marginTop: 6, maxWidth: "100%", fontSize: 13, fontWeight: "700", color: colors.ink },
+  cardName: {
+    marginTop: 6,
+    maxWidth: "100%",
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.ink,
+  },
   cardMeta: { maxWidth: "100%", fontSize: 11, color: colors.ink2 },
   scorePill: {
     marginTop: spacing.sm,
@@ -209,11 +289,19 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
     backgroundColor: colors.cardSoft,
   },
-  scoreText: { fontSize: 14, fontWeight: "800", color: colors.brandDeep, fontVariant: ["tabular-nums"] },
+  scoreText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.brandDeep,
+    fontVariant: ["tabular-nums"],
+  },
   scoreUnit: { fontSize: 10, fontWeight: "600", color: colors.ink2 },
   pill: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    // Same width on both boards (全 App / 家庭內 / 朋友) so the swap doesn't jump.
+    minWidth: 96,
     gap: 4,
     height: 36,
     paddingLeft: 14,
@@ -240,9 +328,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandTint,
     ...shadows.mango,
   },
-  barRank: { fontSize: 15, fontWeight: "800", color: colors.brandDeep, fontVariant: ["tabular-nums"] },
+  barRank: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: colors.brandDeep,
+    fontVariant: ["tabular-nums"],
+  },
   barBody: { flex: 1, minWidth: 0 },
   barTitle: { fontSize: 14, fontWeight: "700", color: colors.ink },
   barMeta: { fontSize: 12, color: colors.ink2 },
-  barScore: { fontSize: 16, fontWeight: "800", color: colors.brandDeep, fontVariant: ["tabular-nums"] },
+  barScore: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: colors.brandDeep,
+    fontVariant: ["tabular-nums"],
+  },
 });

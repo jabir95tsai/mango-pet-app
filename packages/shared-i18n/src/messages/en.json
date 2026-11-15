@@ -749,12 +749,7 @@
     },
     "myRank": "Your rank",
     "gapToNext": "{gap} pts to reach #{rank}",
-    "scopeA11y": "Scope: {scope}, tap to change",
-    "headerSubtitle": "{who} · {period}",
-    "who": {
-      "human": "Walkers",
-      "dog": "Dogs"
-    }
+    "scopeA11y": "Scope: {scope}, tap to change"
   },
   "Walks": {
     "manual": {
