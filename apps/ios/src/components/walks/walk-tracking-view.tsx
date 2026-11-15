@@ -81,6 +81,7 @@ const END_PROMPT_DELAY_MS = 1000;
 
 type Props = {
   visible: boolean;
+  shareLive?: boolean;
   pet: Pet | null;
   /** All pets in scope — for the END composer's pet tags. */
   pets: Pet[];
@@ -108,6 +109,7 @@ type Props = {
 
 type SessionContext = {
   token: number;
+  shareLive: boolean;
   uid: string;
   walkId: string;
   petId: string;
@@ -126,6 +128,7 @@ let tokenSeq = 0;
 function identityOf(ctx: SessionContext): WalkSessionIdentity {
   return {
     uid: ctx.uid,
+    shareLive: ctx.shareLive,
     walkId: ctx.walkId,
     petId: ctx.petId,
     petName: ctx.petName,
@@ -137,6 +140,7 @@ function identityOf(ctx: SessionContext): WalkSessionIdentity {
 
 export function WalkTrackingView({
   visible,
+  shareLive = false,
   pet,
   pets,
   streakDays,
@@ -240,6 +244,7 @@ export function WalkTrackingView({
       const recPet = pets.find((p) => p.petId === rec.petId) ?? null;
       context = {
         token,
+        shareLive: !!rec.shareLive,
         uid,
         walkId: rec.walkId,
         petId: rec.petId,
@@ -255,6 +260,7 @@ export function WalkTrackingView({
     } else if (uid && pet && walkId) {
       context = {
         token,
+        shareLive,
         uid,
         walkId,
         petId: pet.petId,
@@ -411,9 +417,7 @@ export function WalkTrackingView({
     const startedAt = stopped.startedAt;
     // End = start + pauses + active duration (== the stop instant; for a
     // recovered walk, the last moment it was known to be recording).
-    const endedAt = new Date(
-      startedAt.getTime() + stopped.pausedMs + Math.round(stopped.durationMin * 60_000),
-    );
+    const endedAt = new Date(stopped.route?.stoppedAt ?? (startedAt.getTime() + stopped.pausedMs + Math.round(stopped.durationMin * 60_000)));
     const score = computeWalkScore({
       distanceKm: stopped.totalDistanceKm,
       durationMin: stopped.durationMin,
@@ -422,6 +426,7 @@ export function WalkTrackingView({
     });
     const details = detailsRef.current;
     stoppedInputRef.current = {
+      route: stopped.route,
       scorePet: null,
       score,
       streakDays: context.streakDays,
@@ -775,7 +780,7 @@ export function WalkTrackingView({
   } else if (ctx) {
     let content: ReactNode;
     if (state.errorKind === "permission_denied" && state.status === "failed") {
-      content = <TrackingPermissionScreen onBack={() => onCloseRef.current()} />;
+      content = <TrackingPermissionScreen onTimingOnly={() => { const c=ctxRef.current; if(isCurrent(c))void svc.start(identityOf(c),true); }} onBack={() => onCloseRef.current()} />;
     } else if (state.status === "failed") {
       content = (
         <TrackingStartFailedScreen

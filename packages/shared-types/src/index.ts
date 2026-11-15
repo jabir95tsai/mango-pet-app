@@ -63,6 +63,10 @@ export type WalkPathPoint = { lat: number; lng: number; t: number };
 
 export type Walk = {
   walkId: string;
+  /** Server-finalized segmented route; legacy path remains unchanged. */
+  routeVersion?: 1;
+  routePointCount?: number;
+  routeChunkCount?: number;
   /** Family the pet belongs to. Optional during migration window.
    *  `null` for personal-mode walks — permission gated by
    *  `walkerUid == request.auth.uid` instead of family membership.
@@ -751,4 +755,32 @@ export type DeleteAccountSummary = {
   familiesDissolved: number;
   storagePhotosDeleted: number;
   storagePhotosRetained: number;
+};
+
+// Walk route v1 callable wire format uses epoch milliseconds on every platform.
+export type WalkRoutePoint = WalkPathPoint & { segment: number };
+export type WalkRouteOperation =
+  | { op: "start"; sessionId: string; petId: string; familyId: string | null; startedAtMs: number; shareLive: boolean }
+  | { op: "append"; sessionId: string; chunkIndex: number; points: WalkRoutePoint[] }
+  | { op: "publish"; sessionId: string; point: WalkRoutePoint }
+  | { op: "end"; sessionId: string; endedAtMs: number }
+  | { op: "finalize"; sessionId: string; chunkCount: number; pointCount: number; distanceKm: number; durationMin: number; score: number }
+  | { op: "delete"; sessionId: string };
+export type WalkRouteResult = { sessionId: string; status: "active" | "ended" | "finalized" | "deleted"; expiresAtMs?: number; chunkCount?: number; pointCount?: number };
+export type WalkRouteSession = {
+  sessionId: string; walkerUid: string; petId: string; petName: string; familyId: string | null;
+  shareLive: boolean; startedAt: Timestamp; expiresAt: Timestamp; endedAt?: Timestamp;
+  status: "active" | "ended" | "finalized"; chunkCount: number; pointCount: number;
+  lastPoint: WalkRoutePoint | null; createdAt: Timestamp;
+};
+export type WalkRouteChunk = { chunkIndex: number; points: WalkRoutePoint[] };
+export type WalkLiveLocation = {
+  sessionId: string; familyId: string; walkerUid: string; petId: string;
+  lat: number; lng: number; locatedAt: Timestamp; expiresAt: Timestamp;
+};
+
+export type ListWalkLiveLocationsRequest = { familyId: string; pageSize?: number; cursor?: string | null };
+export type ListWalkLiveLocationsResult = {
+  locations: Array<Omit<WalkLiveLocation, "locatedAt" | "expiresAt"> & { locatedAtMs: number; expiresAtMs: number }>;
+  nextCursor: string | null;
 };

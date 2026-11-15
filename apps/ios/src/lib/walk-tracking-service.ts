@@ -1,7 +1,7 @@
 /**
  * Walk tracking service — native counterpart of the web `WalkSession`
  * (apps/web/src/lib/walk-tracking.ts). All path math (Haversine,
- * accuracy/min-distance filtering, distance accumulation, path cap 500) is
+ * accuracy/min-distance filtering, complete segmented route accumulation) is
  * delegated to `@mango/shared-business` so iOS + web sample identically.
  *
  * Two location sources:
@@ -17,7 +17,7 @@
  *
  * Duration semantics are web §A/§B in BOTH modes: wall-clock time counts
  * (background / lock-screen included); only the user's own pauses
- * (`pause()` / `resume()`) are subtracted, and a 3h runaway cap auto-stops a
+ * (`pause()` / `resume()`) are subtracted, and a 6h runaway cap auto-stops a
  * forgotten walk (`autoStopped`).
  *
  * Session identity (R16 / TRACK-7) is persisted under
@@ -35,17 +35,24 @@ import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  addGpsSample,
-  emptyPathAccumulator,
+  addRouteSample,
+  interruptRoute,
+  emptyRouteAccumulator,
+  WALK_ROUTE_LIMIT_MS,
+
   MIN_ACCEPTABLE_ACCURACY_M,
-  type PathAccumulator,
+  type RouteAccumulator,
   type ScorablePet,
 } from "@mango/shared-business";
-import type { Species, WalkPathPoint } from "@mango/shared-types";
+import type { Species, WalkPathPoint, WalkRoutePoint } from "@mango/shared-types";
+
+import auth from "@react-native-firebase/auth";
+import { queueRouteSnapshot, syncRoute, stopRoutePublishing, resumeRoutePublishing, type RouteSnapshot } from "./walk-route-api";
+import { showWalkReturnReminder, clearWalkReturnReminder, requestWalkReminderPermission } from "./walk-route-notifications";
 
 // ── Tunables (web walk-tracking.ts parity) ───────────────────────────────
-/** Runaway safeguard (web RUNAWAY_CAP_MIN): auto-stop at 3 hours. */
-export const RUNAWAY_CAP_MIN = 180;
+/** Runaway safeguard (web RUNAWAY_CAP_MIN): auto-stop at 6 hours. */
+export const RUNAWAY_CAP_MIN = 360;
 /** Below this, a background interval is too short to plausibly have dropped
  *  distance — no "backgrounded" hint for a quick app switch. */
 const BG_HINT_MIN_MS = 3000;
@@ -78,6 +85,7 @@ export type WalkSessionIdentity = {
   petName: string;
   familyId: string | null;
   streakDays: number;
+  shareLive?: boolean;
   scorable: ScorableSnapshot | null;
 };
 
@@ -90,7 +98,10 @@ export type ActiveWalkSession = WalkSessionIdentity & {
   /** epoch ms of an in-flight user pause, else null. */
   pausedSince: number | null;
   backgroundMode: boolean;
-  acc: PathAccumulator;
+  acc: RouteAccumulator;
+  routeVersion?: 1;
+  timingOnly?: boolean;
+  notificationClaimed?: boolean;
   /** Set once stop()/the runaway cap ended the walk (epoch ms). A stopped
    *  record survives until the walk is handed to a local draft. */
   stoppedAt: number | null;
@@ -161,11 +172,11 @@ export function scorablePetOf(snapshot: ScorableSnapshot | null): ScorablePet | 
 
 /** Duration (min, 2dp, capped at RUNAWAY_CAP_MIN) of a session at `now`. */
 export function sessionDurationMin(session: ActiveWalkSession, now = Date.now()): number {
-  const end = session.stoppedAt ?? now;
+  const end = Math.min(session.stoppedAt ?? now, session.startedAt + WALK_ROUTE_LIMIT_MS);
   const pausedTotal =
     session.pausedMs + (session.pausedSince !== null ? Math.max(0, end - session.pausedSince) : 0);
   const elapsedMs = Math.max(0, end - session.startedAt - pausedTotal);
-  const min = Math.round((elapsedMs / 60_000) * 100) / 100;
+  const min = Math.floor((elapsedMs / 60_000) * 100) / 100;
   return Math.min(RUNAWAY_CAP_MIN, min);
 }
 
@@ -188,6 +199,8 @@ export function sessionFinalState(
     errorKind: null,
     pausedMs: session.pausedMs,
     autoStopped: session.autoStopped || capped,
+    route: routeSnapshot(session),
+    reminderShown: session.acc.reminderShown,
   };
 }
 
@@ -204,22 +217,40 @@ let active: ActiveWalkSession | null = null;
 /** Last fix with usable accuracy (weak-signal hint). Not persisted. */
 let lastGoodFixAt = 0;
 
+let sessionWrites: Promise<unknown> = Promise.resolve();
+function sessionKey(uid:string) { return `${SESSION_STORE_KEY}.${uid}`; }
+export function routeSnapshot(session:ActiveWalkSession):RouteSnapshot | undefined {
+  if(session.routeVersion!==1)return undefined;
+  return {uid:session.uid,walkId:session.walkId,petId:session.petId,familyId:session.familyId,startedAt:session.startedAt,shareLive:session.shareLive,stoppedAt:session.stoppedAt,path:session.acc.path};
+}
 async function persistSession(): Promise<void> {
-  try {
-    if (active) {
-      active.updatedAt = Date.now();
-      await AsyncStorage.setItem(SESSION_STORE_KEY, JSON.stringify(active));
-    }
-    else await AsyncStorage.removeItem(SESSION_STORE_KEY);
-  } catch {
-    /* best-effort */
-  }
+  const session=active; if(!session)return;
+  session.updatedAt=Date.now();
+  const raw=JSON.stringify(session);
+  const write=sessionWrites.catch(()=>{}).then(()=>AsyncStorage.setItem(sessionKey(session.uid),raw));
+  sessionWrites=write;await write;
+  const snapshot=routeSnapshot(session);
+  if(snapshot)await queueRouteSnapshot(snapshot);
+}
+async function syncActive(session:ActiveWalkSession):Promise<void>{
+ if(session.routeVersion!==1)return;
+ await persistSession();
+ const point=session.acc.latestPoint;
+ if(session.acc.reminderShown && !session.notificationClaimed && session.stoppedAt===null){
+  session.notificationClaimed=true;
+  await persistSession(); // claim BEFORE delivery: never duplicate after a crash
+  await showWalkReturnReminder(session.uid,session.walkId,()=>active===session && session.stoppedAt===null && Date.now()<session.startedAt+WALK_ROUTE_LIMIT_MS).catch(()=>{});
+ }
+ await syncRoute(session.uid,session.walkId,session.stoppedAt===null?point:undefined).catch(()=>{});
 }
 
 async function hydrateSession(): Promise<void> {
-  if (active) return;
+  const uid=auth().currentUser?.uid;
+  if(active && active.uid===uid)return;
+  if(active && active.uid!==uid){await stopBackgroundUpdates();active=null;}
+  if(!uid)return;
   try {
-    const raw = await AsyncStorage.getItem(SESSION_STORE_KEY);
+    const raw = await AsyncStorage.getItem(sessionKey(uid)) ?? await AsyncStorage.getItem(SESSION_STORE_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw) as ActiveWalkSession;
     if (
@@ -231,6 +262,9 @@ async function hydrateSession(): Promise<void> {
       parsed.acc &&
       Array.isArray(parsed.acc.path)
     ) {
+      if(parsed.uid!==uid)return;
+      // Older v2 sessions remain legacy; do not claim truncated paths complete.
+      parsed.acc={...emptyRouteAccumulator(),...parsed.acc,path:parsed.acc.path.map(p=>({...p,segment:p.segment??0}))};
       // Another hydrate may have won the race while we awaited storage.
       if (!active) active = parsed;
     } else {
@@ -250,19 +284,20 @@ function stopBackgroundUpdates(): Promise<void> {
 /** Feed raw fixes into the live session. Returns true when the path changed. */
 function ingestLocations(locs: Location.LocationObject[]): boolean {
   const session = active;
-  if (!session || session.stoppedAt !== null || session.pausedSince !== null) return false;
+  if (!session || session.stoppedAt !== null || session.pausedSince !== null || auth().currentUser?.uid!==session.uid) return false;
   let changed = false;
   for (const loc of locs) {
+    if(loc.timestamp>Date.now())continue;
     const accuracy = loc.coords.accuracy ?? Number.POSITIVE_INFINITY;
     if (Number.isFinite(accuracy) && accuracy <= MIN_ACCEPTABLE_ACCURACY_M) {
       lastGoodFixAt = Date.now();
     }
-    const next = addGpsSample(session.acc, {
+    const next = addRouteSample(session.acc, {
       lat: loc.coords.latitude,
       lng: loc.coords.longitude,
       t: loc.timestamp,
       accuracy,
-    });
+    }, session.startedAt);
     if (next !== session.acc) {
       session.acc = next;
       changed = true;
@@ -278,22 +313,26 @@ TaskManager.defineTask(BG_LOCATION_TASK, async ({ data, error }) => {
   if (error) return;
   if (!active) await hydrateSession();
   const session = active;
-  if (!session || session.stoppedAt !== null) {
+  if (!session || session.stoppedAt !== null || auth().currentUser?.uid!==session.uid) {
     // Orphaned updates (no live walk) — never leave background GPS running.
     await stopBackgroundUpdates();
     return;
   }
+  const locations = (data as { locations?: Location.LocationObject[] })?.locations ?? [];
   // Runaway cap — enforced here too, because the foreground ticker does not
   // run while the app is suspended.
-  if (session.pausedSince === null && sessionDurationMin(session) >= RUNAWAY_CAP_MIN) {
-    session.stoppedAt = session.startedAt + session.pausedMs + RUNAWAY_CAP_MIN * 60_000;
+  if (Date.now() >= session.startedAt + WALK_ROUTE_LIMIT_MS) {
+    ingestLocations(locations);
+    session.stoppedAt = session.startedAt + WALK_ROUTE_LIMIT_MS;
     session.autoStopped = true;
+    stopRoutePublishing(session.uid,session.walkId,session.stoppedAt??undefined);
     await persistSession();
     await stopBackgroundUpdates();
+    void clearWalkReturnReminder(session.walkId);
+    await syncActive(session);
     return;
   }
-  const locations = (data as { locations?: Location.LocationObject[] })?.locations ?? [];
-  if (ingestLocations(locations)) await persistSession();
+  if (ingestLocations(locations)) await syncActive(session);
 });
 
 /**
@@ -321,9 +360,10 @@ export async function getActiveWalkSession(): Promise<RecoveredWalkSession | nul
 export async function clearActiveWalkSession(walkId?: string): Promise<void> {
   await hydrateSession();
   if (active && walkId && active.walkId !== walkId) return;
-  active = null;
+  const previous=active; active = null;
   await stopBackgroundUpdates();
-  await persistSession();
+  await sessionWrites.catch(()=>{});
+  if(previous)await AsyncStorage.removeItem(sessionKey(previous.uid));
 }
 
 // ── Public service ───────────────────────────────────────────────────────
@@ -355,8 +395,11 @@ export type WalkTrackingState = {
   errorKind: WalkTrackingErrorKind;
   /** Banked user-pause time (ms). */
   pausedMs: number;
-  /** The 3h runaway cap ended the walk (web autoStopped). */
+  /** The 6h runaway cap ended the walk (web autoStopped). */
   autoStopped: boolean;
+  route?: RouteSnapshot;
+  reminderShown?: boolean;
+  timingOnly?: boolean;
 };
 
 export type WalkTrackingListener = (state: WalkTrackingState) => void;
@@ -454,7 +497,7 @@ export class WalkTrackingService {
    * source fails to start (status failed / position_unavailable) or the
    * service was reset meanwhile. Always-denied still tracks (fallback).
    */
-  async start(identity: WalkSessionIdentity): Promise<boolean> {
+  async start(identity: WalkSessionIdentity, timingOnly = false): Promise<boolean> {
     if (this.state.status === "tracking" || this.state.status === "starting") {
       return this.state.status === "tracking";
     }
@@ -464,7 +507,7 @@ export class WalkTrackingService {
 
     let always: boolean | null;
     try {
-      always = await this.requestPermissions();
+      always = timingOnly ? false : await this.requestPermissions();
     } catch {
       always = null;
     }
@@ -474,20 +517,25 @@ export class WalkTrackingService {
       return false;
     }
 
+    void requestWalkReminderPermission();
     const startedAt = Date.now();
     active = {
       v: 2,
       ...identity,
+      shareLive: timingOnly ? false : identity.shareLive,
+      timingOnly,
       startedAt,
       pausedMs: 0,
       pausedSince: null,
       backgroundMode: always,
-      acc: emptyPathAccumulator(),
+      acc: emptyRouteAccumulator(),
+      routeVersion: 1,
       stoppedAt: null,
       autoStopped: false,
     };
     await persistSession();
     if (gen !== this.generation) return false;
+    void syncActive(active).catch(()=>{});
     return this.attach(gen, always);
   }
 
@@ -499,13 +547,14 @@ export class WalkTrackingService {
     if (this.state.status === "tracking" || this.state.status === "starting") {
       return this.state.status === "tracking";
     }
+    if(session.stoppedAt!==null || Date.now()>=session.startedAt+WALK_ROUTE_LIMIT_MS)return false;
     const gen = ++this.generation;
     this.walkId = session.walkId;
     this.update({ ...emptyTrackingState(), status: "starting" });
 
     let always: boolean | null;
     try {
-      always = await this.requestPermissions();
+      always = session.timingOnly ? false : await this.requestPermissions();
     } catch {
       always = null;
     }
@@ -517,6 +566,8 @@ export class WalkTrackingService {
     await hydrateSession();
     if (gen !== this.generation) return false;
     if (!active || active.walkId !== session.walkId) active = recordOf(session);
+    resumeRoutePublishing(active.uid,active.walkId);
+    active.acc=interruptRoute(active.acc);
     active.stoppedAt = null;
     active.autoStopped = false;
     // Always may have been revoked meanwhile → fall back to the foreground source.
@@ -537,7 +588,7 @@ export class WalkTrackingService {
     if (!session) return false;
     this.backgroundMode = background;
     try {
-      await this.startSource(background);
+      if(!session.timingOnly)await this.startSource(background);
     } catch {
       if (gen === this.generation) {
         this.teardown();
@@ -563,6 +614,7 @@ export class WalkTrackingService {
       isTracking: true,
       isPaused: session.pausedSince !== null,
       backgroundEnabled: background,
+      timingOnly: session.timingOnly,
       startedAt: new Date(session.startedAt),
       path: session.acc.path,
       totalDistanceKm: session.acc.totalDistanceKm,
@@ -578,9 +630,10 @@ export class WalkTrackingService {
   pause(): void {
     const session = active;
     if (this.state.status !== "tracking" || this.state.isPaused || !session) return;
+    session.acc=interruptRoute(session.acc);
     session.pausedSince = Date.now();
     this.clearHint();
-    void persistSession();
+    void persistSession().catch(()=>{});
     this.update({ isPaused: true, errorKind: null });
   }
 
@@ -593,7 +646,7 @@ export class WalkTrackingService {
       session.pausedSince = null;
     }
     lastGoodFixAt = Date.now();
-    void persistSession();
+    void persistSession().catch(()=>{});
     this.update({ isPaused: false, errorKind: null, pausedMs: session.pausedMs });
   }
 
@@ -610,9 +663,9 @@ export class WalkTrackingService {
     if (!changed) return;
     this.update({ path: session.acc.path, totalDistanceKm: session.acc.totalDistanceKm });
     const now = Date.now();
-    if (now - this.lastPersistAt >= PERSIST_THROTTLE_MS) {
+    if (now - this.lastPersistAt >= PERSIST_THROTTLE_MS || session.acc.reminderShown) {
       this.lastPersistAt = now;
-      void persistSession();
+      void syncActive(session).catch(()=>{});
     }
   }
 
@@ -621,6 +674,7 @@ export class WalkTrackingService {
   private tick() {
     const session = active;
     if (!session || this.state.status !== "tracking") return;
+    if(auth().currentUser?.uid!==session.uid){this.reset();return;}
     if (session.stoppedAt !== null && session.autoStopped) {
       // The headless task hit the cap while we were suspended.
       this.finishAutoStop();
@@ -628,14 +682,14 @@ export class WalkTrackingService {
     }
     const now = Date.now();
     const durationMin = sessionDurationMin(session, now);
-    if (durationMin >= RUNAWAY_CAP_MIN && !this.state.autoStopped) {
-      session.stoppedAt = session.startedAt + session.pausedMs + RUNAWAY_CAP_MIN * 60_000;
+    if (now >= session.startedAt + WALK_ROUTE_LIMIT_MS && !this.state.autoStopped) {
+      session.stoppedAt = session.startedAt + WALK_ROUTE_LIMIT_MS;
       session.autoStopped = true;
       this.finishAutoStop();
       return;
     }
     let errorKind = this.state.errorKind;
-    if (!this.state.isPaused && errorKind !== "backgrounded") {
+    if (!session.timingOnly && !this.state.isPaused && errorKind !== "backgrounded") {
       const weak = now - lastGoodFixAt > WEAK_SIGNAL_MS;
       if (weak && errorKind === null) errorKind = "position_unavailable";
       else if (!weak && errorKind === "position_unavailable") errorKind = null;
@@ -645,6 +699,7 @@ export class WalkTrackingService {
       path: session.acc.path,
       totalDistanceKm: session.acc.totalDistanceKm,
       errorKind,
+      reminderShown: session.acc.reminderShown,
     });
   }
 
@@ -653,7 +708,7 @@ export class WalkTrackingService {
     if (next !== "active") {
       if (this.hiddenSince === null) this.hiddenSince = Date.now();
       // Flush the latest path so an eviction while hidden loses nothing.
-      void persistSession();
+      void persistSession().catch(()=>{});
       return;
     }
     const hiddenFor = this.hiddenSince !== null ? Date.now() - this.hiddenSince : 0;
@@ -662,6 +717,7 @@ export class WalkTrackingService {
     this.tick();
     if (this.state.status !== "tracking") return;
     if (!this.backgroundMode && !this.state.isPaused && hiddenFor >= BG_HINT_MIN_MS) {
+      if(active)active.acc=interruptRoute(active.acc);
       this.clearHint();
       this.update({ errorKind: "backgrounded" });
       this.hintTimer = setTimeout(() => {
@@ -702,21 +758,26 @@ export class WalkTrackingService {
     const session = active;
     this.teardown();
     if (!session) return;
+    stopRoutePublishing(session.uid,session.walkId,session.stoppedAt??undefined);
+    void clearWalkReturnReminder(session.walkId);
+    void syncActive(session).catch(()=>{});
     if (session.pausedSince !== null) {
       session.pausedMs += Math.max(0, (session.stoppedAt ?? Date.now()) - session.pausedSince);
       session.pausedSince = null;
     }
-    void persistSession();
+    void persistSession().catch(()=>{});
     this.update({
       status: "idle",
       isTracking: false,
       isPaused: false,
-      durationMin: RUNAWAY_CAP_MIN,
+      durationMin: sessionDurationMin(session),
       path: session.acc.path,
       totalDistanceKm: session.acc.totalDistanceKm,
       pausedMs: session.pausedMs,
       errorKind: null,
       autoStopped: true,
+      route: routeSnapshot(session),
+      reminderShown: session.acc.reminderShown,
     });
   }
 
@@ -734,14 +795,17 @@ export class WalkTrackingService {
       return this.state;
     }
     const now = Date.now();
-    if (session.stoppedAt === null) session.stoppedAt = now;
+    if (session.stoppedAt === null) session.stoppedAt = Math.min(now,session.startedAt+WALK_ROUTE_LIMIT_MS);
+    stopRoutePublishing(session.uid,session.walkId,session.stoppedAt??undefined);
+    void clearWalkReturnReminder(session.walkId);
     if (session.pausedSince !== null) {
       session.pausedMs += Math.max(0, session.stoppedAt - session.pausedSince);
       session.pausedSince = null;
     }
+    void syncActive(session).catch(()=>{});
     const durationMin = sessionDurationMin(session, now);
-    if (durationMin >= RUNAWAY_CAP_MIN) session.autoStopped = true;
-    void persistSession();
+    if (now>=session.startedAt+WALK_ROUTE_LIMIT_MS) session.autoStopped = true;
+    void persistSession().catch(()=>{});
     this.update({
       status: "idle",
       isTracking: false,
@@ -752,6 +816,8 @@ export class WalkTrackingService {
       pausedMs: session.pausedMs,
       errorKind: null,
       autoStopped: session.autoStopped,
+      route: routeSnapshot(session),
+      reminderShown: session.acc.reminderShown,
     });
     return this.state;
   }
@@ -767,7 +833,7 @@ export class WalkTrackingService {
     this.walkId = session.walkId;
     if (!active || active.walkId !== session.walkId) active = recordOf(session);
     if (active.stoppedAt === null && typeof endAt === "number") {
-      active.stoppedAt = Math.max(active.startedAt, endAt);
+      active.stoppedAt = Math.min(active.startedAt+WALK_ROUTE_LIMIT_MS,Math.max(active.startedAt, endAt));
     }
     const final = sessionFinalState(active);
     this.update({ ...final, status: "idle" });
@@ -776,8 +842,9 @@ export class WalkTrackingService {
   /** The walk is safely in a local draft — drop the session record. */
   clearPersistedSession(): void {
     if (active && this.walkId && active.walkId === this.walkId) {
+      const previous=active;
       active = null;
-      void persistSession();
+      void sessionWrites.catch(()=>{}).then(()=>AsyncStorage.removeItem(sessionKey(previous.uid)));
     }
   }
 
@@ -786,8 +853,11 @@ export class WalkTrackingService {
     this.generation += 1;
     this.teardown();
     if (active && this.walkId && active.walkId === this.walkId) {
+      const previous=active;
+      if(previous.stoppedAt===null)previous.acc=interruptRoute(previous.acc);
+      void persistSession().catch(()=>{});
+      stopRoutePublishing(previous.uid,previous.walkId);
       active = null;
-      void persistSession();
     }
     this.walkId = null;
     this.backgroundMode = false;

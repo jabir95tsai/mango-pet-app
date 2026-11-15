@@ -1,3 +1,4 @@
+import { eraseWalkRoute } from "./walk-routes";
 /**
  * Mango Pet — Cloud Functions
  *
@@ -2672,6 +2673,9 @@ async function runAccountDeletion(uid: string, leaseId: string) {
         summary.familyPetSubcollectionsCascaded += hrSnap.size;
       }
 
+      const petRoutes = await db.collection("walkRouteSessions").where("petId", "==", petId).get();
+      for (const route of petRoutes.docs) { await checkLease(); await eraseWalkRoute(db, route.id); }
+
       // 2b. walks pointing at this pet.
       const walksSnap = await db
         .collection("walks")
@@ -2706,6 +2710,8 @@ async function runAccountDeletion(uid: string, leaseId: string) {
     // ─── Step 4: walks/reminders/expenses owned by the user under OTHER
     // people's pets. We query by the per-collection owner field and
     // exclude anything whose petId was already cascaded in step 2.
+    const ownRoutes = await db.collection("walkRouteSessions").where("walkerUid", "==", uid).get();
+    for (const route of ownRoutes.docs) { await checkLease(); await eraseWalkRoute(db, route.id); }
     {
       const snap = await db
         .collection("walks")
@@ -4535,3 +4541,6 @@ export const backfillAchievements = onCall(
     };
   },
 );
+
+// Route capture is server-owned; legacy Walk clients remain supported.
+export { manageWalkRoute, listWalkLiveLocations, cleanupDeletedWalkRoute } from "./walk-routes";

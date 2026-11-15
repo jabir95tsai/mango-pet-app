@@ -1,4 +1,6 @@
 import "@/lib/rnfb-setup";
+import { listenWalkReminderOpen } from "@/lib/walk-route-notifications";
+import { getActiveWalkSession } from "@/lib/walk-tracking-service";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Stack, usePathname, useRouter, useSegments, type Href } from "expo-router";
@@ -45,6 +47,16 @@ function RootNavigator() {
   // auth group; we send the user back where they were (web reloads in place).
   const lastUidRef = useRef<string | null>(null);
   const lastPathRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if(initializing || profileError || !localeRestored || !user)return;
+    return listenWalkReminderOpen((uid,walkId)=>{
+      if(uid!==user.uid)return;
+      void getActiveWalkSession().then(session=>{
+        if(session?.uid===uid && session.walkId===walkId && session.stoppedAt===null)router.push("/(tabs)/walks");
+      });
+    });
+  },[initializing,profileError,localeRestored,user?.uid,router]);
 
   // SETTINGS-2: re-apply the persisted language before the first navigator
   // render (the splash below waits for it).

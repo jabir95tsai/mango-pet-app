@@ -15,6 +15,9 @@
  * carries the score precomputed at stop (`score`) instead of the pet object
  * (`scorePet` is not serialisable — its birthday is a Timestamp).
  */
+import NetInfo from "@react-native-community/netinfo";
+import { retryRouteOutboxes, discardRouteOutbox } from "./walk-route-api";
+import auth from "@react-native-firebase/auth";
 import { AppState, type AppStateStatus } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -89,6 +92,7 @@ export async function removeWalkDraft(uid: string, walkId: string): Promise<void
 /** Only local state. The marker prevents an old callback recreating it. */
 export async function discardWalkDraft(uid: string, walkId: string): Promise<void> {
   await AsyncStorage.setItem(discardedKey(uid, walkId), "1");
+  await discardRouteOutbox(uid,walkId);
   await removeWalkDraft(uid, walkId);
 }
 
@@ -145,9 +149,13 @@ export function onWalkRetryHint(retry: () => void, attemptInitially = false): ()
     previous = next;
     if (!disposed && next === "active" && wasAway) retry();
   });
-  if (attemptInitially) retry();
+  const retryAll=()=>{retry();const uid=auth().currentUser?.uid;if(uid)void retryRouteOutboxes(uid);};
+  let online=false;
+  const unsubscribeNet=NetInfo.addEventListener(state=>{const next=state.isConnected===true && state.isInternetReachable!==false;if(next&&!online&&!disposed)retryAll();online=next;});
+  if (attemptInitially) retryAll();
   return () => {
     disposed = true;
     sub.remove();
+    unsubscribeNet();
   };
 }

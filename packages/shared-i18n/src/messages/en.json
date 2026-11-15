@@ -1241,5 +1241,42 @@
       "resumeActiveContinue": "Continue walk",
       "saveLater": "Save later (kept on the Walks page)"
     }
+  },
+  "WalkRoutes": {
+    "history": "View route",
+    "latest": "Latest position",
+    "start": "Start",
+    "end": "Finish",
+    "nativeMap": "Open the iOS app to view the native map. Maps are unavailable in this web preview.",
+    "unavailable": "Locations are hidden because access or connectivity could not be verified. Access will be checked again after reconnecting.",
+    "verifying": "Verifying connection and access. Locations are hidden until verified.",
+    "legacy": "This legacy route may omit earlier samples and is not a complete route.",
+    "gaps": "The route contains recording gaps. No path is inferred between segments.",
+    "noRoute": "No route is available for this manual, timer-only, or location-free walk.",
+    "familyLive": "Family walk locations",
+    "phoneLocation": "Latest phone location of the walker, not independent pet tracking. Access refreshes every 15 seconds; expired or offline positions are hidden.",
+    "noneSharing": "No shared positions are currently available.",
+    "partial": "More positions may be available beyond this scan. Continue to the next set.",
+    "member": "Family member",
+    "pet": "Pet",
+    "locatedAt": "Location captured: {time}",
+    "stale": "No update for over 1 minute. This position may be stale.",
+    "nextPositions": "View next positions",
+    "firstPositions": "Return to first positions",
+    "isolatedPoint": "Recorded point between gaps"
+  },
+  "WalkRecorder": {
+    "startTitle": "Start this walk",
+    "familyExplanation": "After saving, current family members can view the route. Live sharing starts off each time. If enabled, family sees only your latest position; end the walk to stop sharing. Maximum 6 hours.",
+    "personalExplanation": "This route is private to you. Each walk lasts up to 6 hours; missing GPS intervals remain gaps.",
+    "startPrivate": "Start without live sharing",
+    "startShare": "Start and share live position",
+    "resumeShare": "Continuing restores live position sharing with the original family.",
+    "returnTitle": "Back home?",
+    "returnBody": "Back home? Remember to end your walk.",
+    "foregroundOnly": "Foreground location only. Locking your phone or switching apps may interrupt the route.",
+    "autoStopped": "The 6-hour limit was reached. Location and sharing stopped; your recorded walk is being saved.",
+    "timingOnly": "Timer only, without a route",
+    "timingOnlyHint": "Timer only: no route, live position, or return reminder."
   }
 }

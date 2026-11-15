@@ -23,7 +23,7 @@ export function TrackingStartingScreen() {
   );
 }
 
-export function TrackingPermissionScreen({ onBack }: { onBack: () => void }) {
+export function TrackingPermissionScreen({ onBack, onTimingOnly }: { onBack: () => void; onTimingOnly: () => void }) {
   return (
     <View style={styles.center}>
       <View style={[styles.iconCircle, styles.iconCircleBrand]}>
@@ -41,6 +41,7 @@ export function TrackingPermissionScreen({ onBack }: { onBack: () => void }) {
           fullWidth
           onPress={() => void Linking.openSettings()}
         />
+        <Button label={t("WalkRecorder.timingOnly")} variant="secondary" size="lg" pill fullWidth onPress={onTimingOnly} />
         <Button label={t("Common.back")} variant="secondary" size="lg" pill fullWidth onPress={onBack} />
       </View>
     </View>

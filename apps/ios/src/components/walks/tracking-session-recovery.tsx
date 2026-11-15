@@ -62,7 +62,7 @@ export function useActiveWalkRecovery({
           return;
         }
         const found = session;
-        const capped = sessionDurationMin(found) >= RUNAWAY_CAP_MIN;
+        const capped = Date.now() >= found.startedAt + RUNAWAY_CAP_MIN * 60_000;
         if (found.stoppedAt !== null || capped) {
           busyRef.current = false;
           onRecoverRef.current(found, "finish");
@@ -70,7 +70,7 @@ export function useActiveWalkRecovery({
         }
         Alert.alert(
           t("Ios.walks.resumeActiveTitle"),
-          t("Ios.walks.resumeActiveBody"),
+          t("Ios.walks.resumeActiveBody") + (found.shareLive ? "\n" + t("WalkRecorder.resumeShare") : ""),
           [
             {
               text: t("Ios.walks.resumeActiveContinue"),

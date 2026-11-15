@@ -325,6 +325,38 @@ service cloud.firestore {
       }
     }
 
+    // Route documents are written exclusively by manageWalkRoute.
+    function routeReadable(sessionId) {
+      let route = get(/databases/$(database)/documents/walkRouteSessions/$(sessionId)).data;
+      return request.auth != null && route.status != 'deleted'
+        && (route.familyId == null
+          ? route.walkerUid == request.auth.uid
+          : (isFamilyMember(route.familyId)
+            && (route.walkerUid == request.auth.uid
+              || (route.status == 'finalized'
+                && exists(/databases/$(database)/documents/walks/$(sessionId))))));
+    }
+    match /walkRouteSessions/{sessionId} {
+      allow read: if routeReadable(sessionId)
+        && (resource.data.status != 'finalized'
+          || exists(/databases/$(database)/documents/walks/$(sessionId)));
+      allow write: if false;
+      match /chunks/{chunkId} {
+        allow read: if routeReadable(sessionId)
+          && (get(/databases/$(database)/documents/walkRouteSessions/$(sessionId)).data.status != 'finalized'
+            || exists(/databases/$(database)/documents/walks/$(sessionId)));
+        allow write: if false;
+      }
+    }
+    match /walkLiveLocations/{sessionId} {
+      allow read: if isRealUser() && isFamilyMember(resource.data.familyId)
+        && inFamily(resource.data.familyId, resource.data.walkerUid)
+        && request.time < resource.data.expiresAt
+        && get(/databases/$(database)/documents/walkRouteSessions/$(sessionId)).data.status == 'active'
+        && request.time < get(/databases/$(database)/documents/walkRouteSessions/$(sessionId)).data.expiresAt;
+      allow write: if false;
+    }
+
     match /walks/{walkId} {
       // The parent pet is the authority; client familyIds are not an ACL.
       function validWalkPet(d) {
@@ -336,7 +368,10 @@ service cloud.firestore {
       allow read: if resource == null
         || isPersonalWalkOwner(resource.data)
         || isFamilyMember(resource.data.familyId);
-      allow create: if activeAccount() && (request.auth != null
+      allow create: if activeAccount()
+        && !exists(/databases/$(database)/documents/walkRouteSessions/$(walkId))
+        && !request.resource.data.keys().hasAny(['routeVersion', 'routePointCount', 'routeChunkCount'])
+        && (request.auth != null
         && request.resource.data.walkerUid == request.auth.uid
         && request.resource.data.ownerUid == request.auth.uid
         && validWalkPet(request.resource.data));
