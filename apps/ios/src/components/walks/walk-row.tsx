@@ -19,6 +19,7 @@ import type { Walk } from "@mango/shared-types";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { PhotoLightbox } from "@/components/feed/photo-lightbox";
+import { RouteHistoryModal } from "@/components/walks/route-history-modal";
 import { PawIcon } from "@/components/walks/paw-icon";
 import { alertError } from "@/lib/confirm";
 import { relativeTime } from "@/lib/format";
@@ -36,6 +37,7 @@ function exactTime(walk: Walk): string {
 
 function WalkRowBase({ walk, onDelete }: { walk: Walk; onDelete: (walk: Walk) => void }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [routeOpen, setRouteOpen] = useState(false);
   const photos = walk.photoURLs ?? [];
   const walkerName = walk.walkerName?.trim() || null;
   const rel = relativeTime(walk.startedAt as { toMillis?: () => number } | undefined);
@@ -77,6 +79,7 @@ function WalkRowBase({ walk, onDelete }: { walk: Walk; onDelete: (walk: Walk) =>
             <Text style={[styles.statText, styles.score]}>{(walk.score ?? 0).toFixed(1)}</Text>
           </View>
         </View>
+        <Pressable accessibilityRole="button" onPress={() => setRouteOpen(true)} style={{paddingVertical: 8}}><Text style={styles.score}>{t("WalkRoutes.history")}</Text></Pressable>
         {walkerName ? (
           <View style={styles.walker}>
             <Avatar
@@ -125,6 +128,7 @@ function WalkRowBase({ walk, onDelete }: { walk: Walk; onDelete: (walk: Walk) =>
         )}
       </Pressable>
 
+      {routeOpen && <RouteHistoryModal walk={walk} onClose={() => setRouteOpen(false)} />}
       {lightboxOpen ? (
         <PhotoLightbox
           photos={photos}

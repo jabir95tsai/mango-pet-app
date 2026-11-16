@@ -159,7 +159,7 @@ export function TrackingDonePanel({
             {final.autoStopped ? (
               <View style={styles.notice}>
                 <AlertTriangle size={16} color={colors.brandDeep} strokeWidth={2} />
-                <Text style={styles.noticeText}>{t("Walks.core.autoStoppedNotice")}</Text>
+                <Text style={styles.noticeText}>{t("WalkRecorder.autoStopped")}</Text>
               </View>
             ) : null}
 

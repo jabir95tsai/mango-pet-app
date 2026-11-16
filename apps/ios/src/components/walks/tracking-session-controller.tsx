@@ -18,6 +18,8 @@
  * pets-list change flips the branch, an overlay at a different position
  * would remount and abandon the walk in progress.
  */
+import { Alert } from "react-native";
+import { t } from "@/lib/i18n";
 import { useRef, useState } from "react";
 
 import { PhotoShareFlow } from "@/components/walks/photo-share-flow";
@@ -37,6 +39,7 @@ import { useAuth } from "@/state/auth-context";
 
 export type WalkSessionController = {
   uid: string | null;
+  shareLive: boolean;
   /** The tracking overlay is open (hide the sticky CTA). */
   sessionOpen: boolean;
   /** The START photo prompt / camera / composer is running. */
@@ -56,6 +59,7 @@ export type WalkSessionController = {
 export function useWalkSessionController(data: WalksData): WalkSessionController {
   const { user, isGuest } = useAuth();
   const uid = user?.uid ?? null;
+  const [shareLive, setShareLive] = useState(false);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [startShareOpen, setStartShareOpen] = useState(false);
   // Pre-minted id so a START auto-share post + the walk doc + the END post
@@ -88,12 +92,20 @@ export function useWalkSessionController(data: WalksData): WalkSessionController
   function startWalking() {
     // Never start a walk while the family scope is unknown (R08).
     if (data.pets.length === 0 || !data.scopeReady || busy) return;
-    savedRef.current = false;
-    setRecovered(null);
-    setPendingWalkId(newWalkId());
-    // Guests can't share to feed — skip the prompt entirely (web §C).
-    if (canAutoShare) setStartShareOpen(true);
-    else setSessionOpen(true);
+    setShareLive(false);
+    const begin=(share:boolean)=>{
+      setShareLive(share);
+      savedRef.current = false;
+      setRecovered(null);
+      setPendingWalkId(newWalkId());
+      if (canAutoShare) setStartShareOpen(true);
+      else setSessionOpen(true);
+    };
+    Alert.alert(t("WalkRecorder.startTitle"),t(data.familyId ? "WalkRecorder.familyExplanation" : "WalkRecorder.personalExplanation"),[
+      {text:t("Common.cancel"),style:"cancel"},
+      {text:t("WalkRecorder.startPrivate"),onPress:()=>begin(false)},
+      ...(data.familyId && !isGuest ? [{text:t("WalkRecorder.startShare"),onPress:()=>begin(true)}] : []),
+    ]);
   }
 
   function onStartShareDone() {
@@ -119,6 +131,7 @@ export function useWalkSessionController(data: WalksData): WalkSessionController
 
   return {
     uid,
+    shareLive,
     sessionOpen,
     startShareOpen,
     pendingWalkId,
@@ -153,6 +166,7 @@ export function WalkSessionOverlays({
 
       <WalkTrackingView
         visible={session.sessionOpen}
+        shareLive={session.shareLive}
         pet={data.activePet}
         pets={data.pets}
         streakDays={data.streakDays}

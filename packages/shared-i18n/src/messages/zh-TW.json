@@ -1266,5 +1266,42 @@
       "resumeActiveContinue": "繼續散步",
       "saveLater": "稍後再儲存（紀錄會保留在遛狗頁）"
     }
+  },
+  "WalkRoutes": {
+    "history": "查看路線",
+    "latest": "最新位置",
+    "start": "起點",
+    "end": "終點",
+    "nativeMap": "地圖請於 iOS App 查看。網頁預覽不提供原生地圖。",
+    "unavailable": "目前無法確認存取權限或連線，已隱藏位置。連線恢復後將重新確認。",
+    "verifying": "正在確認連線與權限，暫不顯示位置。",
+    "legacy": "舊版路線可能已省略部分定位點，並非完整路線。",
+    "gaps": "路線有定位或中斷缺口；分段之間不代表實際步行路線。",
+    "noRoute": "沒有可顯示的路線（手動補登、僅計時或未取得定位）。",
+    "familyLive": "家人的散步位置",
+    "phoneLocation": "顯示帶狗者手機的最新位置，不是寵物獨立定位。每 15 秒重新確認；過期或斷網時隱藏。",
+    "noneSharing": "目前沒有可查看的分享位置。",
+    "partial": "此批掃描後可能還有其他分享位置，請繼續查看下一批。",
+    "member": "家庭成員",
+    "pet": "毛孩",
+    "locatedAt": "定位時間：{time}",
+    "stale": "超過 1 分鐘未更新，位置可能過時。",
+    "nextPositions": "查看下一批位置",
+    "firstPositions": "回到第一批位置",
+    "isolatedPoint": "缺口之間的有效定位點"
+  },
+  "WalkRecorder": {
+    "startTitle": "開始這次散步",
+    "familyExplanation": "完成後，目前家庭成員都能查看路線。即時分享每次預設關閉；開啟後家人只看最新位置，需結束散步才停止分享。單次最長 6 小時。",
+    "personalExplanation": "這次路線只供你查看。單次最長 6 小時，定位失訊的區間會保留缺口。",
+    "startPrivate": "開始（不分享即時位置）",
+    "startShare": "開始並分享即時位置",
+    "resumeShare": "繼續後將恢復向原家庭分享最新位置。",
+    "returnTitle": "到家了嗎？",
+    "returnBody": "到家了嗎？記得結束散步。",
+    "foregroundOnly": "目前僅能前景定位，鎖屏或切換 App 後可能無法記錄路線。",
+    "autoStopped": "已達單次 6 小時上限，已停止定位與分享，正在保存已記錄的部分。",
+    "timingOnly": "只計時，不記錄路線",
+    "timingOnlyHint": "僅計時：不產生路線、即時位置或返家偵測。"
   }
 }

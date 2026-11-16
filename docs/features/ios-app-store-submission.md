@@ -15,7 +15,7 @@
    - **審查員登入存取（§2.1）**：iOS 與 Web 登入頁新增次要「使用 Email 帳號登入 / Sign in with Email」入口，並備妥冪等種子腳本 `functions/scripts/seed-reviewer-account.mjs`（預建寵物、遛狗紀錄與另一位示範用戶之公開貼文/留言供測檢舉與封鎖）；送審備註已更新於 [`ios-app-store-listing.md`](./ios-app-store-listing.md)。
    - **👉 上線前手動步驟**：(1) 確認 Firebase Authentication 已啟用 **Email/Password** provider；(2) 部署最新 `functions`、`firestore:indexes`（`private.email` collectionGroup index）與 Web Hosting（含 `/privacy`、`/terms` 更新）；(3) 執行 `node functions/scripts/seed-reviewer-account.mjs --generate-password --commit` 建立審查員帳號並將帳號密碼貼入 App Store Connect。參考 [App Review Guidelines §1.2、§2.1](https://developer.apple.com/app-store/review/guidelines/)。
 
-**首版範圍（2026-11-16 使用者拍板）**：核心遛狗流程 + **首頁通知中心**（[規格](./ios-notification-center.md)；Backend 已部署、iOS code 完成）一起送審。TestFlight 批次驗收需加測：bell 紅點、今日／逾期提醒勾完成、留言／表情／好友邀請列與點擊導向、actor 已刪帳號列隱藏。完整路線歷史與家庭即時位置留待 1.1。未即時查到 EAS／App Store Connect／Firebase Console；本地依 main `bf8854d` 及既有發布紀錄盤點，git fetch 因 FETCH_HEAD 寫入受限未更新遠端快照。未執行 build、送審或實機驗收。
+**首版範圍（2026-11-16 使用者拍板）**：核心遛狗流程 + **首頁通知中心**（[規格](./ios-notification-center.md)；Backend 已部署、iOS code 完成）一起送審。TestFlight 批次驗收需加測：bell 紅點、今日／逾期提醒勾完成、留言／表情／好友邀請列與點擊導向、actor 已刪帳號列隱藏。**2026-11-16 更新**：[遛狗路線紀錄與家庭即時位置 v1](./ios-walk-route-tracking-v1.md) 亦納入 1.0（`codex/walk-route-backend` 已合併 main）；驗收依 [路線實機清單](./ios-walk-route-implementation.md)。新增原生依賴 `react-native-maps`、`expo-notifications`，送審備註「背景定位」段需補充路線歷史與家人位置分享（每次自行開啟、結束即停）。未即時查到 EAS／App Store Connect／Firebase Console；本地依 main `bf8854d` 及既有發布紀錄盤點，git fetch 因 FETCH_HEAD 寫入受限未更新遠端快照。未執行 build、送審或實機驗收。
 
 ## ✅ 已備（不用再做）
 - Apple Developer 會員（D2，已購）、bundle id `com.mangopet.app`

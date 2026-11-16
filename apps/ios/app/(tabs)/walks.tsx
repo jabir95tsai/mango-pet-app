@@ -1,4 +1,5 @@
 import { WarmCanvas } from "@/components/ui/WarmCanvas";
+import { FamilyLiveViewer } from "@/components/walks/family-live-viewer";
 /**
  * WalksHome — 1:1 with apps/web/src/app/app/walks/page.tsx:
  * top bar (title + active-pet pill/picker + streak chip) → hero copy → dial →
@@ -155,6 +156,7 @@ export default function WalksScreen() {
             onPress: () => router.push("/(tabs)/pets"),
           }}
         />
+        <FamilyLiveViewer />
       </ScrollView>
     );
   } else {
@@ -279,6 +281,7 @@ export default function WalksScreen() {
           style={styles.manualBtn}
           labelStyle={styles.manualText}
         />
+        <FamilyLiveViewer />
       </ScrollView>
     );
   }

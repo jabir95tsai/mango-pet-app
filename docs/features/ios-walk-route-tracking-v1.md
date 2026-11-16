@@ -1,6 +1,6 @@
 # iOS 遛狗路線紀錄與家庭即時位置 v1
 
-狀態：**需求已確認／規格已整理，未實作**  
+狀態：**Backend 已部署、Linux gate READY；iOS 通知簽章已修復，preview build FINISHED；待批次實機驗收**
 日期：2026-11-15｜角色：iOS PM｜依據：本次使用者 Q1–Q22 決策與新增回到起點提醒需求。  
 平台：iOS 優先；Web 新地圖與查看入口另行交接，不在本版交付範圍。
 
@@ -143,4 +143,4 @@
 
 實作前需完成的技術確認：背景／終止狀態下的可達行為、通知觸發方式、地圖套件、路線分段／上傳契約、GPS 缺口判準及可接受耗電；若無法滿足本文件目標需明列差距回 PM，不暗自降規。
 
-本次交付只含規格與 roadmap；未修改 production code、未發 build、未部署。
+實作與驗證狀態見 [iOS 交付紀錄](ios-walk-route-implementation.md) 及 [Backend 契約](walk-route-backend-contract.md)。Backend 已部署，iOS build 狀態見發布紀錄；本文驗收表不因此自動視為實機通過。

@@ -20,7 +20,10 @@ import firestore from "@react-native-firebase/firestore";
 import { computeWalkScore, type ScorablePet } from "@mango/shared-business";
 import type { WalkPathPoint } from "@mango/shared-types";
 
+import { finishRoute, type RouteSnapshot } from "./walk-route-api";
+
 export type CreateWalkInput = {
+  route?: RouteSnapshot;
   /** Pet fields the score formula reads (RNFB Timestamp satisfies it). */
   scorePet: ScorablePet | null;
   /** Current streak (days) — feeds the score formula. */
@@ -86,6 +89,11 @@ function millisOf(value: unknown): number | null {
  * is rejected (web parity).
  */
 export async function createWalk(input: CreateWalkInput): Promise<string> {
+  if(input.route){
+    await finishRoute(input.route,{distanceKm:input.distanceKm,durationMin:input.durationMin,score:walkScoreOf(input)});
+    if(input.notes || input.photoURLs?.length)await updateWalkDetails(input.route.walkId,{notes:input.notes??"",photoURLs:input.photoURLs??[]});
+    return input.route.walkId;
+  }
   const db = firestore();
   const ref = input.walkId
     ? db.collection("walks").doc(input.walkId)

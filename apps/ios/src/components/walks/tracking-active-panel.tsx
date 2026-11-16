@@ -116,6 +116,8 @@ export function TrackingActivePanel({
       bounces={false}
     >
       {/* Status pill — the dot doubles as the "still recording" signal */}
+      {state.reminderShown ? <Text accessibilityRole="alert" style={{color:colors.ink,fontSize:16}}>{t("WalkRecorder.returnBody")}</Text> : null}
+      {!state.backgroundEnabled ? <Text style={{color:colors.ink2,fontSize:14}}>{t(state.timingOnly ? "WalkRecorder.timingOnlyHint" : "WalkRecorder.foregroundOnly")}</Text> : null}
       <View style={styles.pillWrap}>
         <View
           style={styles.pill}
