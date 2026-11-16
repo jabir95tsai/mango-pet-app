@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mango Pet",
     "slug": "mango-pet",
-    "version": "0.1.0",
+    "version": "1.0",
     "orientation": "portrait",
     "scheme": "mangopet",
     "userInterfaceStyle": "light",
