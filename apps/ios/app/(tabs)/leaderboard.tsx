@@ -151,7 +151,7 @@ export default function LeaderboardScreen() {
       {!prefs ? (
         <ActivityIndicator color={colors.brand} style={styles.loader} />
       ) : (
-        <View style={styles.flex}>
+        <View style={styles.boards}>
           {(["human", "dog"] as const).map((d) => {
             const shown = d === dimension;
             return (
@@ -193,6 +193,8 @@ export default function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
+  // transparent so WarmCanvas (and the glass controls on it) show through
+  boards: { flex: 1 },
   loader: { marginTop: spacing.xxl },
   // web: page-level Tabs above each self-contained board
 });

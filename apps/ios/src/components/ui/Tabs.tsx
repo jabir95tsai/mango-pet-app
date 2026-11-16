@@ -5,8 +5,8 @@
  * (user 2026-10-11). Web stays a simple toggle.
  *
  *   track  `inline-flex rounded-lg bg-zinc-100 p-1`  → hugs content, left-
- *          aligned, bgAlt fill, radius sm (8), padding 4
- *   tab    `h-8 rounded-md px-4 text-sm font-medium` → 32 tall, radius 6,
+ *          aligned, bgAlt fill, pill radius (iOS §4), padding 4
+ *   tab    `h-8 rounded-md px-4 text-sm font-medium` → 32 tall, pill radius,
  *          px 16, 14/500
  *   active `bg-white text-amber-700 shadow-sm`       → card fill + brandDeep
  *          text + soft shadow; inactive ink2
@@ -89,7 +89,7 @@ export function Tabs<K extends string>({
         warm && styles.segWarm,
       ]}
       lensStyle={[styles.segOn, warm && styles.segWarm]}
-      lensRadius={warm ? radius.pill : 6}
+      lensRadius={radius.pill}
       hitSlop={{ top: s.slop, bottom: s.slop, left: 2, right: 2 }}
       renderItem={(i, lit) => {
         const item = list[i];
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    borderRadius: radius.pill, // web rounded-md
+    borderRadius: radius.pill,
   },
   segFull: { flex: 1 },
   segOn: {
