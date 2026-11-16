@@ -47,12 +47,19 @@ import {
   type AchievementDef,
   type AchievementMetrics,
 } from "./achievements";
-import { actOnReport, type ReportDoc } from "./moderation-helpers";
+import {
+  actOnReport,
+  autoModerateCreatedContent,
+  MODERATION_CONTACT_EMAIL,
+  MODERATION_CONTACT_NAME,
+  type ReportDoc,
+} from "./moderation-helpers";
 import { exportContactFields, exportMemberFamilies, leaveMemberFamilies } from "./family-access";
 import { joinFamilyWithCode } from "./family-join";
 import { readContactTokens, removeContactTokens } from "./user-contact";
 import { assertAccountsActive, withActiveAccounts } from "./account-mutation";
 import { isFirestoreDocumentId } from "./document-id";
+import { syncReactionNotification, writeCommentNotification, writeFriendRequestNotification } from "./notifications";
 import {
   beginAccountDeletion, claimAccountDeletion, checkAccountDeletionLease,
   markAccountDeletionFinalizing, releaseAccountDeletionLease, cleanupDeletedPost,
@@ -1202,7 +1209,8 @@ async function refreshCommentCount(postId: string) {
     const post = await tx.get(postRef);
     if (!post.exists) return;
     const comments = await tx.get(postRef.collection("comments"));
-    tx.update(postRef, { commentCount: comments.size });
+    const visibleCount = comments.docs.filter((d) => d.data().hidden !== true).length;
+    tx.update(postRef, { commentCount: visibleCount });
   });
 }
 
@@ -1224,7 +1232,22 @@ export const onCommentCreated = onDocumentCreated(
     if (!postSnap.exists) return; // post deleted between write + trigger
     const post = postSnap.data() ?? {};
 
+    const mod = await autoModerateCreatedContent(db, {
+      targetType: "comment",
+      targetId: event.params.commentId,
+      postId,
+      authorUid: comment.authorUid as string | undefined,
+      text: comment.text as string | undefined,
+    });
+
     await refreshCommentCount(postId);
+
+    if (mod.hidden) {
+      logger.warn(
+        `onCommentCreated: auto-hidden objectionable comment post=${postId} comment=${event.params.commentId} term=${mod.matchedTerm}`,
+      );
+      return;
+    }
 
     const target = await resolveAuthorPushTarget(
       post.authorUid as string,
@@ -1417,10 +1440,112 @@ export const onReactionCreated = onDocumentCreated(
   },
 );
 
+// ── Notification inbox (docs/features/ios-notification-center.md) ──
+// Separate from the push triggers above so an inbox failure never blocks push
+// (and vice versa). Inbox only; deleting a comment keeps its notification.
+const NOTIFICATION_TRIGGER = { region: FUNCTION_REGION, retry: true, memory: "256MiB" } as const;
+
+export const notifyOnCommentCreated = onDocumentCreated(
+  { ...NOTIFICATION_TRIGGER, document: "posts/{postId}/comments/{commentId}" },
+  async (event) => {
+    const comment = event.data?.data();
+    if (comment) await writeCommentNotification(db, event.params.postId, event.params.commentId, comment);
+  },
+);
+
+export const notifyOnReactionCreated = onDocumentCreated(
+  { ...NOTIFICATION_TRIGGER, document: "posts/{postId}/reactions/{uid}" },
+  (event) => syncReactionNotification(db, event.params.postId, event.params.uid),
+);
+
+export const notifyOnReactionDeleted = onDocumentDeleted(
+  { ...NOTIFICATION_TRIGGER, document: "posts/{postId}/reactions/{uid}" },
+  (event) => syncReactionNotification(db, event.params.postId, null),
+);
+
+export const notifyOnFriendRequestCreated = onDocumentCreated(
+  { ...NOTIFICATION_TRIGGER, document: "users/{uid}/friendRequests/{requestId}" },
+  async (event) => {
+    const request = event.data?.data();
+    if (request) await writeFriendRequestNotification(db, event.params.uid, event.params.requestId, request);
+  },
+);
+
+async function resolveModerationAdminUids(): Promise<string[]> {
+  const uids = new Set<string>();
+  const envUids = (process.env.MODERATION_ADMIN_UID ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const uid of envUids) uids.add(uid);
+
+  try {
+    const snap = await db
+      .collectionGroup("private")
+      .where("email", "==", MODERATION_CONTACT_EMAIL)
+      .limit(5)
+      .get();
+    for (const docSnap of snap.docs) {
+      const uid = docSnap.ref.parent.parent?.id;
+      if (uid) uids.add(uid);
+    }
+  } catch (err) {
+    logger.warn("resolveModerationAdminUids: contact lookup skipped", err);
+  }
+  return Array.from(uids);
+}
+
+async function notifyModerationOperator(params: {
+  reportId: string;
+  report: ReportDoc;
+  action: "hidden" | "logged";
+  reportCount: number | null;
+}) {
+  const { reportId, report, action, reportCount } = params;
+  logger.warn("moderation_report_received", {
+    operator: MODERATION_CONTACT_NAME,
+    operatorEmail: MODERATION_CONTACT_EMAIL,
+    reportId,
+    targetType: report.targetType,
+    targetId: report.targetId,
+    targetAuthorUid: report.targetAuthorUid,
+    reason: report.reason,
+    action,
+    reportCount,
+    slaHours: 24,
+  });
+
+  const adminUids = await resolveModerationAdminUids();
+  for (const adminUid of adminUids) {
+    try {
+      const tokens = await readUserFcmTokens(adminUid);
+      if (tokens.length === 0) continue;
+      const statusText = action === "hidden" ? "已達門檻自動隱藏" : "待 24 小時內人工複查";
+      await sendEngagementPush({
+        uid: adminUid,
+        tokens,
+        body: {
+          title: "[檢舉通知] 收到新的社群檢舉",
+          body: `類型：${report.targetType}｜原因：${report.reason}｜累計：${reportCount ?? "-"}（${statusText}）`,
+        },
+        data: {
+          type: "moderation-report",
+          reportId,
+          targetType: report.targetType,
+          targetId: report.targetId,
+        },
+      });
+    } catch (err) {
+      logger.warn(`notifyModerationOperator: push failed uid=${adminUid}`, err);
+    }
+  }
+}
+
 /**
  * onCreate(reports/{reportId}) — UGC moderation (Guideline 1.2).
  * Spec docs/features/ugc-moderation.md. Counts distinct reporters atomically,
- * auto-hides at REPORT_HIDE_THRESHOLD, writes a moderationAudit doc.
+ * auto-hides at REPORT_HIDE_THRESHOLD, writes a moderationAudit doc, and
+ * alerts the moderation operator (蔡智博 / jabir95tsai@gmail.com).
  * Client can only CREATE report docs (firestore.rules) — this is the only
  * code path that reads/acts on them.
  */
@@ -1441,6 +1566,18 @@ export const onReportCreated = onDocumentCreated(
         `onReportCreated: report=${reportId} target=${report.targetType}/${report.targetId} ` +
           `action=${result.action} reportCount=${result.reportCount}`,
       );
+      if (result.outcome === "counted" || result.outcome === "logged") {
+        try {
+          await notifyModerationOperator({
+            reportId,
+            report,
+            action: result.action,
+            reportCount: result.reportCount,
+          });
+        } catch (notifyErr) {
+          logger.warn(`onReportCreated: operator notification failed report=${reportId}`, notifyErr);
+        }
+      }
     } catch (err) {
       logger.error(`onReportCreated: failed report=${reportId}`, err);
       throw err; // Retry transient failures; the transactional ledger prevents duplicates.
@@ -1623,6 +1760,18 @@ export const onPostCreatedAchievements = onDocumentCreated(
     if (!post) return;
     const uid = post.authorUid as string | undefined;
     if (!uid) return;
+    const mod = await autoModerateCreatedContent(db, {
+      targetType: "post",
+      targetId: event.params.postId,
+      authorUid: uid,
+      text: post.text as string | undefined,
+    });
+    if (mod.hidden) {
+      logger.warn(
+        `onPostCreatedAchievements: auto-hidden objectionable post=${event.params.postId} uid=${uid} term=${mod.matchedTerm}`,
+      );
+      return;
+    }
     const postsSnap = await db
       .collection("posts")
       .where("authorUid", "==", uid)

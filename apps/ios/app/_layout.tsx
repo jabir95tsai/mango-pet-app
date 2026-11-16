@@ -170,6 +170,7 @@ function RootNavigator() {
       <Stack.Screen name="photos" options={{ presentation: "card" }} />
       <Stack.Screen name="family" options={{ presentation: "card" }} />
       <Stack.Screen name="achievements" options={{ presentation: "card" }} />
+      <Stack.Screen name="notifications" options={{ presentation: "card" }} />
       <Stack.Screen name="join/[code]" options={{ presentation: "card" }} />
       <Stack.Screen name="friends/index" options={{ presentation: "card" }} />
       <Stack.Screen name="friends/add" options={{ presentation: "card" }} />

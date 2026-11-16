@@ -38,6 +38,10 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
+import {
+  hasObjectionableContent,
+  OBJECTIONABLE_CONTENT_ERROR_CODE,
+} from "@mango/shared-business";
 import type { Pet, Visibility } from "@mango/shared-types";
 
 import { createPost, isPartialPostError, isPostUploadAllFailed } from "@/lib/posts";
@@ -180,8 +184,13 @@ export function PostComposer({
 
   async function handlePublish() {
     if (!user || posting || closing) return;
-    if (!text.trim() && photoUris.length === 0) {
+    const trimmed = text.trim();
+    if (!trimmed && photoUris.length === 0) {
       setError(t("Post.needTextOrPhoto"));
+      return;
+    }
+    if (hasObjectionableContent(trimmed)) {
+      setError(t("Moderation.objectionableContentBlocked"));
       return;
     }
     setPosting(true);
@@ -192,7 +201,7 @@ export function PostComposer({
         authorName: user.displayName ?? user.email?.split("@")[0] ?? "Friend",
         authorPhotoURL: user.photoURL,
         petIds: selectedPets,
-        text: text.trim(),
+        text: trimmed,
         visibility,
         photoUris,
         walkId,
@@ -210,6 +219,10 @@ export function PostComposer({
           closeTimer.current = null;
           onCloseRef.current();
         }, PARTIAL_CLOSE_MS);
+      } else if (
+        (err as { code?: unknown })?.code === OBJECTIONABLE_CONTENT_ERROR_CODE
+      ) {
+        setError(t("Moderation.objectionableContentBlocked"));
       } else {
         // Only our own (localized) upload error is shown verbatim; raw
         // Firestore / Storage errors map to the generic message.

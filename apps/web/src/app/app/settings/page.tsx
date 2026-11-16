@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ChevronRight,
   Globe,
+  Mail,
   MoreHorizontal,
   ShieldCheck,
   Sparkles,
@@ -42,6 +43,7 @@ export default function SettingsPage() {
   const tPd = useTranslations("Settings.privacyData");
   const tDz = useTranslations("Settings.dangerZone");
   const tS = useTranslations("Settings");
+  const tCommon = useTranslations("Common");
   const tG = useTranslations("Guest");
   const { user, isGuest } = useAuth();
   const { openUpgrade } = useGuestUpgrade();
@@ -232,6 +234,30 @@ export default function SettingsPage() {
             <ExportDataButton />
           </section>
         )}
+
+        {/* Legal & Support — public contact + privacy / terms links (Guideline 1.2) */}
+        <section className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-mango-hairline bg-mango-card p-6 shadow-card">
+          <div className="flex items-center gap-3">
+            <Mail className="size-5 text-mango-brand-deep" />
+            <p className="font-semibold">{tS("legalAndSupportTitle")}</p>
+          </div>
+          <a
+            href="mailto:jabir95tsai@gmail.com?subject=Mango%20Pet%20Support"
+            className="flex items-center justify-between rounded-[var(--radius-md)] border border-mango-hairline bg-mango-bg-alt px-3.5 py-2.5 text-sm font-medium text-mango-ink transition-colors hover:border-mango-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+          >
+            <span>{tS("contactSupport")}</span>
+            <ChevronRight className="size-4 text-mango-ink-3" />
+          </a>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-mango-ink-3">
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-mango-ink">
+              {tCommon("privacy")}
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link href="/terms" className="underline underline-offset-2 hover:text-mango-ink">
+              {tCommon("terms")}
+            </Link>
+          </div>
+        </section>
 
         {/* Danger zone — kept visually distinct (red border + warning icon
             + red action button) so a hand-of-god mis-tap looks obviously

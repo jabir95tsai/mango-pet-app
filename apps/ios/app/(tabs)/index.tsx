@@ -44,6 +44,7 @@ import { FeedSectionHeader } from "@/components/home/feed-section-header";
 import { HomeEmptyState } from "@/components/home/home-empty-state";
 import { InviteFamilyCard } from "@/components/home/invite-family-card";
 import { NoPostsHint } from "@/components/home/no-posts-hint";
+import { useHasUnreadNotifications } from "@/lib/notifications";
 import { t } from "@/lib/i18n";
 import { colors, radius, shadows, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
@@ -52,6 +53,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user, isGuest } = useAuth();
   const { openUpgrade } = useGuestUpgrade();
+  const hasUnread = useHasUnreadNotifications(user?.uid);
   const {
     loading,
     refreshing,
@@ -81,7 +83,12 @@ export default function HomeScreen() {
     <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.brand} />
   );
   const topBar = (
-    <HomeTopBar familyName={isPersonal ? null : familyName} userDisplayName={displayName} />
+    <HomeTopBar
+      familyName={isPersonal ? null : familyName}
+      userDisplayName={displayName}
+      hasUnread={hasUnread}
+      onPressBell={() => router.push("/notifications")}
+    />
   );
 
   if (loading) {

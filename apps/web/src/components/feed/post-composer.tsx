@@ -12,6 +12,10 @@ import { SaveToAlbumButton } from "@/components/ui/save-to-album-button";
 import { createPost } from "@/lib/firebase/posts";
 import { useAuth } from "@/components/auth/auth-provider";
 import { IMAGE_PRESETS, processImage } from "@/lib/image-processing";
+import {
+  hasObjectionableContent,
+  OBJECTIONABLE_CONTENT_ERROR_CODE,
+} from "@mango/shared-business";
 import type { Pet, Visibility } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +57,7 @@ export function PostComposer({
 }: Props) {
   const tCommon = useTranslations("Common");
   const tP = useTranslations("Post");
+  const tMod = useTranslations("Moderation");
   const { user, isGuest } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -129,8 +134,13 @@ export function PostComposer({
 
   async function handleSubmit() {
     if (!user) return;
-    if (!text.trim() && photos.length === 0) {
+    const trimmed = text.trim();
+    if (!trimmed && photos.length === 0) {
       setError(tP("needTextOrPhoto"));
+      return;
+    }
+    if (hasObjectionableContent(trimmed)) {
+      setError(tMod("objectionableContentBlocked"));
       return;
     }
     setPosting(true);
@@ -141,7 +151,7 @@ export function PostComposer({
         authorName: user.displayName ?? "Friend",
         authorPhotoURL: user.photoURL,
         petIds: selectedPets,
-        text: text.trim(),
+        text: trimmed,
         visibility,
         photoURLs: [],
         photos,
@@ -161,6 +171,10 @@ export function PostComposer({
         setError(err instanceof Error ? err.message : "Partial post");
         // Close after a brief moment so the user can read the warning.
         setTimeout(() => onClose(), 1800);
+      } else if (
+        (err as { code?: unknown })?.code === OBJECTIONABLE_CONTENT_ERROR_CODE
+      ) {
+        setError(tMod("objectionableContentBlocked"));
       } else {
         setError(err instanceof Error ? err.message : "Post failed");
       }

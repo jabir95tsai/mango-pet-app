@@ -38,6 +38,8 @@ import {
   filterVisible,
   friendPostAuthorChunks,
   FRIEND_POST_VISIBILITIES,
+  hasObjectionableContent,
+  OBJECTIONABLE_CONTENT_ERROR_CODE,
 } from "@mango/shared-business";
 
 const POSTS = "posts";
@@ -64,6 +66,12 @@ export type CreatePostArgs = PostInput & {
 };
 
 export async function createPost(args: CreatePostArgs): Promise<Post> {
+  if (hasObjectionableContent(args.text)) {
+    throw Object.assign(
+      new Error("內容包含不當或違規字詞，請修改後再送出。"),
+      { code: OBJECTIONABLE_CONTENT_ERROR_CODE },
+    );
+  }
   // walkId is optional + only written when present so legacy posts +
   // composer posts without a walk source don't carry a stray field.
   // Spec docs/features/walks-auto-photo-share.md — start/end-photo
@@ -278,6 +286,12 @@ export async function createComment(
   if (!text) throw new Error("留言不能是空白");
   if (text.length > COMMENT_MAX_LEN) {
     throw new Error(`留言最多 ${COMMENT_MAX_LEN} 字`);
+  }
+  if (hasObjectionableContent(text)) {
+    throw Object.assign(
+      new Error("內容包含不當或違規字詞，請修改後再送出。"),
+      { code: OBJECTIONABLE_CONTENT_ERROR_CODE },
+    );
   }
   const ref = await addDoc(commentsCol(args.postId), {
     authorUid: args.authorUid,

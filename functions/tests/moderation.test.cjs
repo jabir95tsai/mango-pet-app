@@ -2,7 +2,7 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID, createHash } = require('node:crypto');
 const { db, functions, Timestamp } = require('./emulator.cjs');
-const { actOnReport } = require('../lib/moderation-helpers.js');
+const { actOnReport, autoModerateCreatedContent } = require('../lib/moderation-helpers.js');
 const { initializeApp, deleteApp } = require('firebase/app');
 const { getFirestore, connectFirestoreEmulator, doc, setDoc, getDoc, updateDoc, deleteDoc,
   serverTimestamp, terminate, setLogLevel } = require('firebase/firestore');
@@ -252,4 +252,22 @@ test('existing client report shape works; clients cannot forge reporter, guest r
     await terminate(client); await deleteApp(app);
     await terminate(guest); await deleteApp(guestApp);
   }
+});
+
+test('autoModerateCreatedContent hides objectionable post in Firestore and leaves clean post visible', async () => {
+  const cleanRef = await post('clean-post', { text: '帶公狗去散步結紮復原紀錄' });
+  const badRef = await post('bad-post', { text: 'What the fuck spam' });
+
+  const cleanRes = await autoModerateCreatedContent(db, {
+    targetType: 'post', targetId: cleanRef.id, authorUid: id('author'), text: '帶公狗去散步結紮復原紀錄',
+  });
+  assert.deepEqual(cleanRes, { hidden: false, matchedTerm: null });
+  assert.equal((await count(cleanRef)).hidden, undefined);
+
+  const badRes = await autoModerateCreatedContent(db, {
+    targetType: 'post', targetId: badRef.id, authorUid: id('author'), text: 'What the fuck spam',
+  });
+  assert.deepEqual(badRes, { hidden: true, matchedTerm: 'fuck' });
+  assert.equal((await count(badRef)).hidden, true);
+  assert.equal((await count(badRef)).autoHiddenReason, 'objectionable_text');
 });

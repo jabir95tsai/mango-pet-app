@@ -112,9 +112,10 @@ Apple 現行問卷是逐項問「有沒有以下內容」，最後由系統算�
 ## Support URL / Marketing URL / 隱私政策 URL
 
 - **Support URL（必填）**：`https://mango-pet--mango-pet-app.asia-east1.hosted.app/terms`
-  （該頁含聯絡信箱 jabir95tsai@gmail.com；沒有專屬 /support 頁面，terms 頁可以先頂著用。若你想要更像樣的支援頁，可以之後開一個 Web Feature Builder session 加 `/support`，非上架 blocker。）
+  （該頁含營運負責人 蔡智博 與客服信箱 `jabir95tsai@gmail.com`，且 App 內「設定 → 條款與客服支援」亦直接提供 `聯絡客服（jabir95tsai@gmail.com）` 入口與隱私／條款連結。）
 - **Marketing URL（選填）**：`https://mango-pet--mango-pet-app.asia-east1.hosted.app`
 - **隱私政策 URL（必填）**：`https://mango-pet--mango-pet-app.asia-east1.hosted.app/privacy`
+  （已同步說明 Google/Apple/Email/訪客模式、遛狗期間背景定位行為、不當內容過濾與 App 內刪帳流程。）
 
 > 這三個都是目前的 Firebase Hosting 預設網域（非自訂網域）——Apple 只要求「公開可達」，不要求自訂網域，所以「買網域」不是上架 blocker，可以之後再做。
 
@@ -136,46 +137,77 @@ Apple 問「你（或你用的第三方 SDK）蒐集哪些資料類型」，逐�
 
 ✅ **已確認（2026-09-27 grep）**：專案沒有引入 Firebase Analytics — 上表「使用資料」類別不用申報。
 
+## 審查聯絡與登入帳號資訊（App Review Information）
+
+- **Contact Information（聯絡人）**：
+  - First Name / Last Name：`Chih-Po` / `Tsai`（蔡智博）
+  - Email：`jabir95tsai@gmail.com`
+  - Phone Number：送審前請於 ASC 補填本人聯絡電話
+- **Sign-In Required**：**打勾（Sign-in required）**，並於下欄填入審查專用 Email/密碼帳號（由 `node functions/scripts/seed-reviewer-account.mjs --generate-password --commit` 建立，並確認 Firebase Console → Authentication → Sign-in method 已啟用 **Email/Password**）：
+  - Email：`appreview@mangopet.app`
+  - Password：`<填寫 seed-reviewer-account.mjs 產生的密碼>`
+
 ## 審查備註（App Review Notes）— 建議內容
 
 ```
-1. 登入方式：App 提供 Google / Apple 登入，也提供「以訪客身分繼續」
-   （匿名登入），審查員可直接點「以訪客身分繼續」進入 App 體驗核心功能
-   （遛狗、寵物檔案），無需申請帳號。
+1. 登入方式與完整功能存取：
+   App 支援 Google、Apple 登入，並提供「使用 Email 帳號登入」次要入口與
+   「以訪客身分繼續」（匿名登入，僅限個人寵物／遛狗紀錄）。
+   請點選登入頁下方的「使用 Email 帳號登入」，輸入上述 App Review 帳號密碼，
+   即可直接操作所有主要功能（包含預先建立好的寵物「芒果 Mango」、遛狗紀錄、
+   家人排行榜，以及社群動態牆上的貼文與他人示範貼文／留言）。
+   設定頁最下方提供 App 內立即刪除帳號功能（「危險區 → 刪除我的帳號」）
+   及公開客服聯絡入口（jabir95tsai@gmail.com）。
 
-2. 背景定位用途：本 App 的核心功能是遛狗路線/距離追蹤。使用者按下「開始
-   遛狗」後，App 會請求「永遠允許」定位權限，用於使用者鎖屏或切換到其他
-   App 時仍能繼續記錄路線；使用者按下「結束遛狗」後定位立即停止，
-   不會有背景定位在遛狗流程之外持續運作。
+2. 背景定位用途：
+   本 App 的核心功能是遛狗路線／距離追蹤。使用者按下「開始遛狗」後，
+   App 會請求「永遠允許」定位權限，用於使用者鎖屏或切換到其他 App 時仍能
+   繼續記錄路線；使用者按下「結束遛狗」後定位立即停止，不會在遛狗流程之外
+   持續背景追蹤。
 
-3. 使用者產生內容審核：App 內的貼文與留言功能已提供檢舉（貼文/留言的
-   「⋯」選單）與封鎖使用者機制。收到 3 次檢舉後內容會自動隱藏，開發者
-   （同時也是唯一維運者）會在 24 小時內人工複查並視情況移除違規內容或
-   停權帳號。
+3. 使用者產生內容審核（Guideline 1.2）：
+   - 發文／留言前自動過濾：發布動態或留言時會於送出前及後端雙重檢查並攔截不當字詞。
+   - 檢舉與封鎖：動態牆預設已有另一位示範帳號「柴柴鄰居」的公開貼文與留言，
+     點選右上角「⋯」選單即可操作「檢舉」與「封鎖」（封鎖後立即雙向隱藏，
+     並可在設定頁「已封鎖的使用者」解除封鎖）。
+   - 人工審核處置：收到檢舉後會即時推播與告警給維運負責人蔡智博
+     (jabir95tsai@gmail.com)，累計 3 次檢舉內容自動隱藏，並於 24 小時內完成人工複查與處置。
 ```
 
 ### English（貼這版 — 審查員讀英文）
 ```
-1. Sign-in: The app supports Sign in with Google / Apple, and also
-   "Continue as Guest" (anonymous sign-in). Reviewers can tap "Continue as
-   Guest" on the welcome screen to access the core features (walk tracking,
-   pet profiles) without creating an account. Social features (posting,
-   report/block, and the blocked-users list in Settings) require a full
-   account: please use "Sign in with Apple" with any Apple ID. Account
-   deletion is available in Settings.
+1. Sign-in & Full Feature Access:
+   The app offers Sign in with Google, Sign in with Apple, a secondary
+   "Sign in with Email" toggle on the sign-in screen (for App Review / demo
+   access), and "Continue as guest" (anonymous session limited to personal pet
+   & walk tracking).
+   To review ALL features (including pet profiles, background walk tracking,
+   family leaderboards, community feed posting, comments, and moderation):
+   1) Tap "Sign in with Email" at the bottom of the welcome/sign-in screen.
+   2) Sign in with the App Review email and password provided in the Sign-In
+      Information fields.
+   The demo account comes pre-populated with a dog ("芒果 Mango"), a sample
+   walk, and community posts. In-app account deletion is available in Settings
+   ("Danger zone -> Delete my account"), and direct support contact is listed
+   under Settings ("Legal & Support -> Contact Support").
 
-2. Background location: The core feature is dog-walk route/distance tracking.
-   After the user taps "Start Walk", the app requests "Always" location
-   permission so the route keeps recording while the phone is locked or the
-   user switches apps. Location updates stop immediately when the user taps
-   "End Walk"; no background location runs outside an active walk.
+2. Background Location:
+   The core feature is dog-walk route and distance tracking. When the user taps
+   "Start walking", the app requests "Always" location authorization so the
+   walk route continues recording while the screen is locked or another app is
+   active. Location updates stop immediately when the user finishes or discards
+   the walk; no background location runs outside an active walk session.
 
-3. User-generated content moderation: Posts and comments can be reported via
-   the "..." menu, and users can block other users (blocked users' content is
-   hidden immediately; blocks can be managed in Settings). Content that
-   receives 3 reports is auto-hidden, and the developer reviews all reports
-   within 24 hours, removing violating content and suspending offending
-   accounts as needed.
+3. User-Generated Content Moderation (Guideline 1.2):
+   - Pre-post objectionable content filter: Posts and comments are screened for
+     objectionable language prior to publishing (plus server-side fallback).
+   - Report & Block: The feed includes a public post and comment from another
+     demo user ("柴柴鄰居") so reviewers can test the "..." menu to Report a
+     post/comment or Block a user (blocked users' content disappears
+     immediately and can be unblocked in Settings).
+   - 24-hour moderation SLA: New reports notify the designated moderator
+     (Chih-Po Tsai, jabir95tsai@gmail.com) immediately, auto-hide content at 3
+     distinct reports, and are reviewed within 24 hours.
 ```
 
 ## 📋 這份文件之後怎麼用

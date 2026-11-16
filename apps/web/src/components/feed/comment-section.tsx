@@ -15,6 +15,10 @@ import {
   listComments,
 } from "@/lib/firebase/posts";
 import { getBlockedUids } from "@/lib/firebase/users";
+import {
+  hasObjectionableContent,
+  OBJECTIONABLE_CONTENT_ERROR_CODE,
+} from "@mango/shared-business";
 import { COMMENT_MAX_LEN, type Comment } from "@/lib/types";
 import { PostMenu } from "./post-menu";
 import { cn } from "@/lib/utils";
@@ -56,6 +60,7 @@ export function CommentSection({
 }: Props) {
   const t = useTranslations("Comments");
   const tC = useTranslations("Common");
+  const tMod = useTranslations("Moderation");
   const locale = useLocale();
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
   const { user } = useAuth();
@@ -118,6 +123,10 @@ export function CommentSection({
       setError(t("tooLong", { max: COMMENT_MAX_LEN }));
       return;
     }
+    if (hasObjectionableContent(body)) {
+      setError(tMod("objectionableContentBlocked"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -149,13 +158,17 @@ export function CommentSection({
       setComments((prev) =>
         prev.map((c) => (c.commentId === tempId ? { ...c, commentId } : c)),
       );
-    } catch {
+    } catch (err) {
       // Roll back the optimistic row + restore the draft so the user can
       // retry without retyping.
       setComments((prev) => prev.filter((c) => c.commentId !== tempId));
       setText(body);
       onCountChange?.(-1);
-      setError(t("sendFailed"));
+      setError(
+        (err as { code?: unknown })?.code === OBJECTIONABLE_CONTENT_ERROR_CODE
+          ? tMod("objectionableContentBlocked")
+          : t("sendFailed"),
+      );
     } finally {
       setSubmitting(false);
     }

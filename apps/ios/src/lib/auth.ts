@@ -110,6 +110,22 @@ export async function signInWithApple(): Promise<string> {
   return result.user.uid;
 }
 
+/** Email + password sign-in (primarily for App Store review / tester access). */
+export async function signInWithEmailPassword(
+  email: string,
+  password: string,
+): Promise<string> {
+  const uid = auth().currentUser?.uid;
+  if (uid) await detachPushToken(uid);
+  try {
+    const result = await auth().signInWithEmailAndPassword(email.trim(), password);
+    return result.user.uid;
+  } catch (error) {
+    if (uid) resumePushSession(uid);
+    throw error;
+  }
+}
+
 export async function signOut(options: { accountDeleted?: boolean } = {}): Promise<void> {
   const uid = auth().currentUser?.uid;
   if (uid) {

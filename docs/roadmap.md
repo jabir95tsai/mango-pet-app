@@ -2,7 +2,13 @@
 
 > PM 角色維護。其他角色想動這個檔案先停手，把想說的事寫到 `docs/team/backlog.md`。
 
-最後更新：2026-11-14（文件狀態對齊 main `9287947`）
+最後更新：2026-11-15（新增 iOS 路線追蹤 v1 規格；下方部署現況仍為前次盤點）
+
+## 下一個：已規格化，未實作
+
+- **iOS 遛狗路線紀錄與家庭即時位置 v1** — [完整規格](features/ios-walk-route-tracking-v1.md)（2026-11-15 使用者確認需求）。完整背景路線、歷史地圖、每次自行開啟家庭最新位置分享、離線／失訊處理、6 小時上限，以及回到起點停留 5 分鐘提醒一次。先由 iOS Backend／Backend 定義資料契約與權限，再交 iOS Feature Builder／UI/UX；全功能完成後批次實機驗收。動態島、鎖屏小工具、途中單獨停止分享、動畫回放與 Web 新地圖延後。未實作、未部署。
+
+- **iOS 首頁通知中心 v1（納入 1.0 首版，2026-11-16 拍板）** — [完整規格](features/ios-notification-center.md)。首頁 bell 進新頁：上區今日／逾期寵物提醒（可直接勾完成），下區社交動態（留言、表情合併、好友邀請）；紅點以 `lastSeenAt` 判斷。Backend inbox + triggers 已部署（2026-11-15），iOS 頁面 code 完成（2026-11-16），待隨 1.0 TestFlight 批次實機驗收。不發推播、Web 延後。
 
 ## 本次確認的現況
 
@@ -277,7 +283,7 @@ Epic 4 跳過了 dark mode 第一輪。Visual redesign 完 + user 用 1-2 週後
 - 開銷 payer 分析卡（2026-05-23 取消）
 - walk-core 內把分數作為核心目標（2026-05-23 拿掉）
 - walk-core 內把公里數當主要進度條目標（2026-05-23 拿掉）
-- walks-v2 內加影片錄製 / 即時定位分享 / 路徑回放 / 天氣 API 整合 / 季節主題 / 競爭性元素（2026-05-24 排除）
+- walks-v2 內加影片錄製 / 路徑動畫回放 / 天氣 API 整合 / 季節主題 / 競爭性元素（2026-05-24 排除）；即時定位分享於 2026-11-15 改為 [iOS v1 範圍](features/ios-walk-route-tracking-v1.md)，Web 仍延後。
 - walks-v2 內加自訂鼓勵文案（2026-05-24 — over-engineering）
 - 開始遛狗按鈕真的移到下方（沒上方 hero CTA）（2026-05-24 PM push-back，user 選解 A）
 - 首頁 feed 只顯示家庭內 posts（2026-05-24 IA reorg D2 預設）

@@ -119,7 +119,7 @@ export type AppUser = {
   email?: string | null;
   photoURL: string | null;
   /** `"anonymous"` for guest (anonymous-auth) users — see `isGuest`. */
-  authProvider: AuthProviderKind | "anonymous";
+  authProvider: AuthProviderKind | "anonymous" | "password";
   /** True for anonymous/guest accounts (signInAnonymously). Guests can use
    *  personal features (pets/walks) but are excluded from community
    *  (posts/comments/reactions/family/friends) and from the leaderboards

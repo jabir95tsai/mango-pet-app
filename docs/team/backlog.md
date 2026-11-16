@@ -42,6 +42,43 @@ P3 = 也許永遠不做的「想法」。
 
 ## Inbox（未分類）
 
+### r15-rules.test.cjs adapter mock 缺 `./i18n`（2 項測試失敗）
+- **發現於**：2026-11-15、Backend session（通知中心 Phase 1 跑全套 emulator tests）
+- **類型**：bug（測試）
+- **重現 / 觀察**：`functions/tests/*.test.cjs` 全套 103/105；`r15-rules.test.cjs` 兩項 adapter 測試丟 `Unexpected module ./i18n`。`apps/ios/src/lib/posts.ts` 自 `41c1f94` 起 import `./i18n`，測試的 `require` mock（約第 38–44 行）沒補。與通知功能無關。
+- **建議交付給**：Backend / Bug Hunter（mock 加 `./i18n` → `{ t: (k) => k }`，若 posts.ts 新增 objectionable 檢查也要確認 `@mango/shared-business` mock）
+- **優先級提示**：P1（release regression 指令會紅）
+- **處理（2026-11-16）**：mock 補 `./i18n` → `{ t: k => k }`；另修第二個潛藏問題：iOS transaction mock 的 `exists` 改為方法（RNFB 25 `exists()`）。全套 emulator 105/105 通過。
+
+### 通知 inbox：資料匯出未含 notifications
+- **發現於**：2026-11-15、Backend session（通知中心 Phase 1）
+- **類型**：技術債 / 隱私
+- **重現 / 觀察**：`exportUserCollections`（`functions/src/account-lifecycle.ts`）只匯出 achievements / stats / photoDownloadState。刪帳號已由 `recursiveDelete(users/{uid})` 清掉 notifications，但匯出沒有。通知內含他人 uid 與留言預覽，要不要匯出、要不要去識別化屬產品決策。
+- **建議交付給**：PM 決定 → Backend
+- **優先級提示**：P2
+
+### 通知 inbox：actor 刪帳號後他人 inbox 仍留其 uid
+- **發現於**：2026-11-15、Backend session（通知中心 Phase 1）
+- **類型**：體驗
+- **重現 / 觀察**：A 留言 B 的貼文後 A 刪帳號，B 的 `comment_*` 通知仍在、`actorUids` 指向不存在的 profile（spec Q13：刪留言保留通知）。iOS Phase 2 需處理 actor profile 不存在（顯示「已刪除的使用者」或隱藏該列）。
+- **建議交付給**：iOS Feature Builder（Phase 2）
+- **優先級提示**：P2
+- **處理（2026-11-16 iOS Phase 2）**：iOS 通知頁在 lead actor 的 `users/{uid}` 不存在時隱藏該列（reaction 合併列若第一位 actor 刪帳號，整列隱藏）。資料仍留在 inbox；要 server 端清除需 Backend 另議。
+
+### 通知點擊「捲到貼文」只找得到已載入的 feed
+- **發現於**：2026-11-16、iOS Feature Builder（通知中心 Phase 2）
+- **類型**：體驗限制
+- **重現 / 觀察**：`feed.tsx?postId=` 只在已載入的 feed（自己最近 30 篇 + 公開 + 好友）中捲動；舊貼文收到留言時，點通知只會停在 feed 頂端。spec 已把「單篇貼文頁」列為 v1 不做。
+- **建議交付給**：PM（決定是否做單篇貼文頁）
+- **優先級提示**：P3
+
+### Web 版首頁通知中心（對齊 iOS 通知中心 v1）
+- **發現於**：2026-11-15、grilling session（通知中心 spec）
+- **類型**：新功能想法
+- **重現 / 觀察**：iOS 依 [`ios-notification-center.md`](../features/ios-notification-center.md) 做 bell → 通知頁；Web `home-top-bar.tsx` 的 `notifyCount` 仍未接資料。Backend inbox 上線後 Web 可直接讀同一個 collection。
+- **建議交付給**：PM（決定是否跟進）→ Feature
+- **優先級提示**：P2
+
 ### 2026-10-11 瀏覽器預覽看到的 UI 觀察（待真機比對）
 - **發現於**：2026-10-11、iOS Feature Builder session（[`ios-web-preview.md`](../features/ios-web-preview.md)）
 - **類型**：設計

@@ -28,6 +28,8 @@ import {
   filterVisible,
   friendPostAuthorChunks,
   FRIEND_POST_VISIBILITIES,
+  hasObjectionableContent,
+  OBJECTIONABLE_CONTENT_ERROR_CODE,
 } from "@mango/shared-business";
 import { uploadPostPhoto } from "./photos";
 import { t } from "./i18n";
@@ -96,6 +98,11 @@ export type CreatePostInput = {
  * Returns the new postId.
  */
 export async function createPost(input: CreatePostInput): Promise<string> {
+  if (hasObjectionableContent(input.text)) {
+    throw Object.assign(new Error(t("Moderation.objectionableContentBlocked")), {
+      code: OBJECTIONABLE_CONTENT_ERROR_CODE,
+    });
+  }
   const db = firestore();
   const ref = db.collection("posts").doc();
 
@@ -298,6 +305,11 @@ export async function createComment(
   if (!text) throw new Error(t("Comments.emptyText"));
   if (text.length > COMMENT_MAX_LEN) {
     throw new Error(t("Comments.tooLong", { max: COMMENT_MAX_LEN }));
+  }
+  if (hasObjectionableContent(text)) {
+    throw Object.assign(new Error(t("Moderation.objectionableContentBlocked")), {
+      code: OBJECTIONABLE_CONTENT_ERROR_CODE,
+    });
   }
   const ref = await postsCol().doc(args.postId).collection("comments").add({
     authorUid: args.authorUid,

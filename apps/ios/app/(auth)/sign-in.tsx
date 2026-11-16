@@ -20,7 +20,9 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,8 +36,10 @@ import {
   isAppleSignInAvailable,
   signInAsGuest,
   signInWithApple,
+  signInWithEmailPassword,
   signInWithGoogle,
 } from "@/lib/auth";
+import { Button, Input } from "@/components/ui";
 import { SITE_URL } from "@/lib/config";
 import { t, useLocale } from "@/lib/i18n";
 import { GoogleIcon } from "@/components/auth/provider-icons";
@@ -43,7 +47,7 @@ import { signInErrorMessage } from "@/components/auth/auth-errors";
 import { LanguageSwitcher } from "@/components/settings/language-switcher";
 import { colors, radius, shadows, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
-type Busy = null | "google" | "apple" | "guest";
+type Busy = null | "google" | "apple" | "guest" | "email";
 
 // web max-w-md / max-w-xs
 const SECTION_MAX_WIDTH = Math.min(448, CONTENT_MAX_WIDTH);
@@ -54,6 +58,9 @@ export default function SignInScreen() {
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -87,11 +94,15 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.topBar}>
           <LanguageSwitcher />
         </View>
@@ -194,6 +205,64 @@ export default function SignInScreen() {
                 )}
               </Pressable>
 
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: emailOpen, disabled: locked }}
+                disabled={locked}
+                onPress={() => {
+                  setEmailOpen((open) => !open);
+                  setError(null);
+                }}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.emailToggle,
+                  pressed && !locked && styles.emailTogglePressed,
+                ]}
+              >
+                <Text style={styles.emailToggleText}>{t("Auth.emailSignInToggle")}</Text>
+              </Pressable>
+
+              {emailOpen ? (
+                <View style={styles.emailBox}>
+                  <Input
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder={t("Auth.emailPlaceholder")}
+                    accessibilityLabel={t("Auth.emailPlaceholder")}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="emailAddress"
+                    editable={!locked}
+                    returnKeyType="next"
+                  />
+                  <Input
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder={t("Auth.passwordPlaceholder")}
+                    accessibilityLabel={t("Auth.passwordPlaceholder")}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="password"
+                    editable={!locked}
+                    returnKeyType="done"
+                    onSubmitEditing={() => {
+                      if (!locked && email.trim() && password) {
+                        void run("email", () => signInWithEmailPassword(email, password));
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="primary"
+                    label={t("Auth.emailSignInSubmit")}
+                    loading={busy === "email"}
+                    disabled={locked || !email.trim() || !password}
+                    onPress={() => run("email", () => signInWithEmailPassword(email, password))}
+                  />
+                </View>
+              ) : null}
+
               {error ? (
                 <Text
                   style={styles.error}
@@ -224,6 +293,7 @@ export default function SignInScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -233,6 +303,7 @@ const LINK_HIT_SLOP = { top: 14, bottom: 14, left: 8, right: 8 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+  flex: { flex: 1 },
   // web: main flex min-h-dvh flex-col px-4 py-5
   scroll: {
     flexGrow: 1,
@@ -327,6 +398,22 @@ const styles = StyleSheet.create({
   },
   guestPressed: { backgroundColor: colors.cardSoft },
   guestText: { fontSize: 14, fontWeight: "500", color: colors.ink2 },
+  emailToggle: {
+    alignSelf: "center",
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+  },
+  emailTogglePressed: { opacity: 0.7 },
+  emailToggleText: { fontSize: 13, fontWeight: "500", color: colors.ink3, textDecorationLine: "underline" },
+  emailBox: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.bgAlt,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
   // web: text-sm text-red-600 text-center
   error: { fontSize: 14, lineHeight: 20, color: colors.danger, textAlign: "center" },
   // web: flex justify-center gap-4 pb-2 text-xs text-zinc-400

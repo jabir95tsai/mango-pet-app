@@ -45,26 +45,25 @@ export function RefreshIconButton({
 
   return (
     <WarmGlass style={styles.glass}>
-    <Pressable
-      onPress={onPress}
-      disabled={refreshing}
-      hitSlop={4}
-      accessibilityRole="button"
-      accessibilityLabel={t("Leaderboard.refreshButton")}
-      style={({ pressed }) => [styles.btn, (pressed || refreshing) && styles.dim]}
-    >
-      <Animated.View style={{ transform: [{ rotate }] }}>
-        <RefreshCw size={17} color={colors.brandDeep} strokeWidth={2} />
-      </Animated.View>
-    </Pressable>
+      <Pressable
+        onPress={onPress}
+        disabled={refreshing}
+        hitSlop={4}
+        accessibilityRole="button"
+        accessibilityLabel={t("Leaderboard.refreshButton")}
+        style={({ pressed }) => [styles.btn, (pressed || refreshing) && styles.dim]}
+      >
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <RefreshCw size={17} color={colors.brandDeep} strokeWidth={2} />
+        </Animated.View>
+      </Pressable>
     </WarmGlass>
   );
 }
 
 const styles = StyleSheet.create({
   btn: {
-    width: 36,
-    height: 36,
+    flex: 1,
     borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",

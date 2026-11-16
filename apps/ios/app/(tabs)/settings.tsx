@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
-import { AlertTriangle, ChevronRight, Trophy, Users } from "lucide-react-native";
+import { AlertTriangle, ChevronRight, Mail, Trophy, Users } from "lucide-react-native";
 
 import { useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { signOut } from "@/lib/auth";
@@ -40,7 +40,7 @@ import { FamilySection } from "@/components/settings/family-section";
 import { ExportDataSection } from "@/components/settings/export-data-section";
 import { DeleteAccountSection } from "@/components/settings/delete-account-section";
 import { LanguageSection } from "@/components/settings/language-switcher";
-import { SettingsCard, SettingsIconDisc } from "@/components/settings/settings-card";
+import { SettingsCard, SettingsIconDisc, settingsText } from "@/components/settings/settings-card";
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
@@ -191,6 +191,48 @@ export default function SettingsScreen() {
 
           {user ? <ExportDataSection /> : null}
 
+          {/* Legal & Support (App Store Guideline 1.2 + public contact) */}
+          <SettingsCard>
+            <View style={styles.supportHeader}>
+              <Mail size={18} color={colors.brandDeep} strokeWidth={2} />
+              <Text style={settingsText.titleLg}>{t("Settings.legalAndSupportTitle")}</Text>
+            </View>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => {
+                const url = "mailto:jabir95tsai@gmail.com?subject=Mango%20Pet%20Support";
+                void Linking.canOpenURL(url)
+                  .then((ok) => {
+                    if (ok) return Linking.openURL(url);
+                    Alert.alert(
+                      t("Settings.contactSupportFallbackTitle"),
+                      t("Settings.contactSupportFallbackBody"),
+                    );
+                    return undefined;
+                  })
+                  .catch(() => {
+                    Alert.alert(
+                      t("Settings.contactSupportFallbackTitle"),
+                      t("Settings.contactSupportFallbackBody"),
+                    );
+                  });
+              }}
+              style={({ pressed }) => [styles.supportRow, pressed && styles.linkCardPressed]}
+            >
+              <Text style={styles.supportRowText}>{t("Settings.contactSupport")}</Text>
+              <ChevronRight size={16} color={colors.ink3} strokeWidth={2} />
+            </Pressable>
+            <View style={styles.legalRow}>
+              <Pressable onPress={() => void Linking.openURL(`${SITE_URL}/privacy`)} hitSlop={6}>
+                <Text style={styles.legalLink}>{t("Common.privacy")}</Text>
+              </Pressable>
+              <Text style={styles.legalDot}>·</Text>
+              <Pressable onPress={() => void Linking.openURL(`${SITE_URL}/terms`)} hitSlop={6}>
+                <Text style={styles.legalLink}>{t("Common.terms")}</Text>
+              </Pressable>
+            </View>
+          </SettingsCard>
+
           {/* Danger zone — red border + warning icon, no shadow (web) */}
           {user ? (
             <View style={styles.dangerCard}>
@@ -202,17 +244,6 @@ export default function SettingsScreen() {
               <DeleteAccountSection />
             </View>
           ) : null}
-
-          {/* Privacy / Terms (App Store required; content reused from web) */}
-          <View style={styles.legalRow}>
-            <Pressable onPress={() => void Linking.openURL(`${SITE_URL}/privacy`)} hitSlop={6}>
-              <Text style={styles.legalLink}>{t("Common.privacy")}</Text>
-            </Pressable>
-            <Text style={styles.legalDot}>·</Text>
-            <Pressable onPress={() => void Linking.openURL(`${SITE_URL}/terms`)} hitSlop={6}>
-              <Text style={styles.legalLink}>{t("Common.terms")}</Text>
-            </Pressable>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -292,11 +323,24 @@ const styles = StyleSheet.create({
   dangerSubtitle: { fontSize: 14, lineHeight: 20, color: "rgba(127,29,29,0.8)" }, // red-900/80
   legalRow: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    paddingTop: spacing.xs,
   },
+  supportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.bgAlt,
+  },
+  supportHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  supportRowText: { fontSize: 14, fontWeight: "500", color: colors.ink },
   legalLink: { fontSize: 12, color: colors.ink3, textDecorationLine: "underline" },
   legalDot: { fontSize: 12, color: colors.ink3 },
 });

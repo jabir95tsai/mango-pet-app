@@ -24,6 +24,10 @@ import {
   View,
 } from "react-native";
 import { Send, Trash2 } from "lucide-react-native";
+import {
+  hasObjectionableContent,
+  OBJECTIONABLE_CONTENT_ERROR_CODE,
+} from "@mango/shared-business";
 import { COMMENT_MAX_LEN, type Comment } from "@mango/shared-types";
 import type { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 
@@ -124,6 +128,10 @@ export function CommentSection({
       setError(t("Comments.tooLong", { max: COMMENT_MAX_LEN }));
       return;
     }
+    if (hasObjectionableContent(body)) {
+      setError(t("Moderation.objectionableContentBlocked"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     // Optimistic append at the bottom; the temp id is swapped for the real one.
@@ -153,13 +161,17 @@ export function CommentSection({
       setComments((prev) =>
         prev.map((c) => (c.commentId === tempId ? { ...c, commentId } : c)),
       );
-    } catch {
+    } catch (err) {
       if (!aliveRef.current) return;
       // Roll back the row + restore the draft so the user can retry.
       setComments((prev) => prev.filter((c) => c.commentId !== tempId));
       setText(body);
       onCountChange?.(-1);
-      setError(t("Comments.sendFailed"));
+      setError(
+        (err as { code?: unknown })?.code === OBJECTIONABLE_CONTENT_ERROR_CODE
+          ? t("Moderation.objectionableContentBlocked")
+          : t("Comments.sendFailed"),
+      );
     } finally {
       if (aliveRef.current) setSubmitting(false);
     }

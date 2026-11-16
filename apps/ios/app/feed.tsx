@@ -14,7 +14,7 @@
  * iOS: back row (stack navigation), the lightbox lives at screen level
  * (PostCard → onOpenPhotos) and offers save-to-Photos (PhotosKit extra).
  */
-import { useCallback, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import {
   Alert,
   FlatList,
@@ -26,7 +26,7 @@ import {
 } from "react-native";
 import { AlertCircle, Newspaper, PenSquare, RefreshCw } from "lucide-react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import type { Post } from "@mango/shared-types";
 
 import { useFeedData } from "@/lib/feed-data";
@@ -38,6 +38,7 @@ import { PostComposer } from "@/components/feed/post-composer";
 import { PhotoLightbox } from "@/components/feed/photo-lightbox";
 import { savePhotoToAlbum } from "@/lib/save-photo";
 import { alertError } from "@/lib/confirm";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { t } from "@/lib/i18n";
 import { colors, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
@@ -59,6 +60,27 @@ export default function FeedScreen() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [lightbox, setLightbox] = useState<{ photos: string[]; index: number } | null>(null);
   const currentUid = user?.uid ?? "";
+
+  // ?postId= (notification center) → scroll to that post once loaded. A post
+  // that's gone / outside the loaded window just leaves the feed at the top.
+  const { postId } = useLocalSearchParams<{ postId?: string }>();
+  const reduceMotion = useReducedMotion();
+  const listRef = useRef<FlatList<Post>>(null);
+  const scrolledFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!postId || loading || scrolledFor.current === postId) return;
+    scrolledFor.current = postId;
+    const index = posts.findIndex((p) => p.postId === postId);
+    if (index >= 0) listRef.current?.scrollToIndex({ index, animated: !reduceMotion });
+  }, [postId, loading, posts, reduceMotion]);
+  const onScrollToIndexFailed = useCallback(
+    (info: { index: number; averageItemLength: number }) => {
+      // Variable-height rows: jump near it so it renders, then retry.
+      listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+      setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: false }), 100);
+    },
+    [],
+  );
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -152,6 +174,8 @@ export default function FeedScreen() {
   return (
     <SafeAreaView edges={["top"]} style={styles.flex}>
       <FlatList
+        ref={listRef}
+        onScrollToIndexFailed={onScrollToIndexFailed}
         data={posts}
         keyExtractor={(p) => p.postId}
         renderItem={renderItem}
