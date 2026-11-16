@@ -33,9 +33,10 @@ import {
   type ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated from "react-native-reanimated";
 
 import { renderIconSlot, type IconSlot } from "./icon-slot";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { usePressFeedback } from "./use-press-feedback";
 import { colors, mangoGradient, radius, shadows, spacing } from "@/theme/theme";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -62,6 +63,8 @@ export type ButtonProps = {
   /** Escape hatch for bespoke CTAs (e.g. the 800-weight hero pill). */
   labelStyle?: StyleProp<TextStyle>;
 };
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const HEIGHT: Record<ButtonSize, number> = { sm: 36, md: 44, lg: 48 };
 // web px-3 / px-4 / px-6
@@ -94,8 +97,12 @@ export function Button({
   style,
   labelStyle,
 }: ButtonProps) {
-  const reduceMotion = useReducedMotion();
   const isDisabled = disabled || loading;
+  const press = usePressFeedback({
+    pressedOpacity: 0.92,
+    reducedPressedOpacity: 0.85,
+    restOpacity: isDisabled ? 0.7 : 1,
+  });
   const v = VARIANT[variant];
   const box: ViewStyle = {
     minHeight: HEIGHT[size],
@@ -122,20 +129,20 @@ export function Button({
   );
 
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       onPress={onPress}
+      {...press.handlers}
       hitSlop={HIT_SLOP[size]}
       testID={testID}
-      style={({ pressed }) => [
+      style={[
         fullWidth && styles.fullWidth,
         variant === "primary" && !isDisabled && shadows.mango,
-        pressed && !isDisabled && (reduceMotion ? styles.pressedStatic : styles.pressed),
-        isDisabled && styles.disabled,
+        press.style,
         style,
       ]}
     >
@@ -152,7 +159,7 @@ export function Button({
       ) : (
         <View style={[styles.base, box, { backgroundColor: v.bg }, v.border]}>{inner}</View>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -179,7 +186,4 @@ const styles = StyleSheet.create({
   // web font-medium
   label: { fontWeight: "500", flexShrink: 1 },
   iconBox: { alignItems: "center", justifyContent: "center" },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.97 }] },
-  pressedStatic: { opacity: 0.85 },
-  disabled: { opacity: 0.7 },
 });
