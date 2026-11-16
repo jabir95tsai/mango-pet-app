@@ -26,8 +26,8 @@ import type { WalkTrackingState } from "@/lib/walk-tracking-service";
 import { colors, radius, spacing } from "@/theme/theme";
 
 /** web fmtMmSs: floor to whole seconds; minutes may exceed 59. */
-export function formatMmSs(durationMin: number): string {
-  const total = Math.max(0, Math.floor(durationMin * 60));
+export function formatMmSs(durationSec: number): string {
+  const total = Math.max(0, Math.floor(durationSec));
   const mm = String(Math.floor(total / 60)).padStart(2, "0");
   const ss = String(total % 60).padStart(2, "0");
   return `${mm}:${ss}`;
@@ -107,7 +107,7 @@ export function TrackingActivePanel({
   const blended = blendTodayProgress(storedTodayMin, state.durationMin, goalMin);
   const key = hintKey(state.errorKind);
   const denied = state.errorKind === "permission_denied";
-  const timer = formatMmSs(state.durationMin);
+  const timer = formatMmSs(state.durationSec);
 
   return (
     <ScrollView
