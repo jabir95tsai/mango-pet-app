@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     paddingHorizontal: spacing.sm,
   },
   notesTogglePressed: { backgroundColor: colors.bgAlt },

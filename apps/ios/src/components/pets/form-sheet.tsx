@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   stepBtn: {
     width: 40,
     height: 40,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: colors.card,

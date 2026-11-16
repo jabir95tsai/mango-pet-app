@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   tileIcon: {
     width: 30,
     height: 30,
-    borderRadius: 10,
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
   },

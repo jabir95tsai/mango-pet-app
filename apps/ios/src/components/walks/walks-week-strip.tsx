@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { PawIcon } from "@/components/walks/paw-icon";
 import { useLocale } from "@/lib/i18n";
-import { colors, shadows, spacing } from "@/theme/theme";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 /** web date-fns format(day, "EEEEE") — narrow weekday, Monday first. */
 const DAY_LABELS: Record<string, string[]> = {
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "rgba(255,255,255,0.65)",
     // web rounded-2xl = 16 (radius tokens are not in Tailwind @theme)
-    borderRadius: 24,
+    borderRadius: radius.xl2,
     borderWidth: 1,
     borderColor: "#FFFFFF",
     paddingHorizontal: spacing.md,

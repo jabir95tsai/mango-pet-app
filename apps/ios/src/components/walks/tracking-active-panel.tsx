@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     backgroundColor: colors.danger,
   },
   stopPressed: { opacity: 0.9 },

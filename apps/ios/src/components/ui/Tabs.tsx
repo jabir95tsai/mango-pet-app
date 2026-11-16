@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     flexDirection: "row",
     backgroundColor: colors.bgAlt,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     padding: 4,
   },
   trackFull: { alignSelf: "stretch" },
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    borderRadius: 6, // web rounded-md
+    borderRadius: radius.pill, // web rounded-md
   },
   segFull: { flex: 1 },
   segOn: {

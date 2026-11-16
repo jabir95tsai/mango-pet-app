@@ -255,14 +255,14 @@ const styles = StyleSheet.create({
   // web flex flex-col gap-3 rounded-lg border border-zinc-200/80 bg-white p-4 shadow-sm
   card: {
     backgroundColor: colors.card,
-    borderRadius: radius.sm,
+    borderRadius: radius.xl2,
     padding: CARD_PAD,
     borderWidth: 1,
     borderColor: colors.hairline,
     gap: spacing.md,
     ...shadows.card,
   },
-  warm: { borderRadius: 26, borderColor: "#FFFFFF", backgroundColor: "rgba(255,255,255,0.88)", shadowOpacity: 0.06, shadowRadius: 18 },
+  warm: { borderRadius: radius.xl2, borderColor: "#FFFFFF", backgroundColor: "rgba(255,255,255,0.88)", shadowOpacity: 0.06, shadowRadius: 18 },
   deleting: { opacity: 0.5 },
   // web header flex items-center gap-3
   header: { flexDirection: "row", alignItems: "center", gap: spacing.md },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   deleteBtn: {
     width: 36,
     height: 36,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },

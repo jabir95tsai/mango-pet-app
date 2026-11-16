@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 28,
     height: 28,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },

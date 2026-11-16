@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   card: {
     alignItems: "center",
     gap: spacing.sm,
-    borderRadius: 16,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: colors.cardSoft,
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   disc: {
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",

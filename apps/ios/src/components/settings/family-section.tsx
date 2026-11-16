@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
   switchText: { fontSize: 12, fontWeight: "500", color: colors.ink2 },
   switchTextOn: { color: "#ffffff" },
   // web: flex flex-col gap-2 rounded-lg bg-amber-50 p-3
-  codeCard: { backgroundColor: colors.cardSoft, borderRadius: radius.sm, padding: spacing.md, gap: spacing.sm },
+  codeCard: { backgroundColor: colors.cardSoft, borderRadius: radius.md, padding: spacing.md, gap: spacing.sm },
   codeTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   codeLabel: { fontSize: 12, color: colors.brandDeep },
   code: {
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   codeBtn: {
     width: 36,
     height: 36,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   },
   ownerText: { fontSize: 10, fontWeight: "600", color: colors.brandDeep },
   youTag: { fontSize: 12, color: colors.ink3 },
-  removeBtn: { width: 28, height: 28, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  removeBtn: { width: 28, height: 28, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   removePressed: { backgroundColor: "#fef2f2" },
   // web: self-start gap-1.5 rounded-lg px-3 h-9 text-sm text-red-600
   leaveBtn: {
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     height: 36,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
   },
   leavePressed: { backgroundColor: "#fef2f2" },
   leaveText: { fontSize: 14, fontWeight: "500", color: colors.danger },

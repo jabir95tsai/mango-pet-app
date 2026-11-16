@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     backgroundColor: colors.leafTint,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },

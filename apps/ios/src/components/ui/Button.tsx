@@ -9,7 +9,7 @@
  *  - danger    → red fill, white text.
  *
  * Web sizes: sm `h-8 px-3 text-sm`, md `h-10 px-4 text-sm`, lg `h-12 px-6
- * text-base`, all `rounded-lg` (8px) + `font-medium` + `gap-2`. Horizontal
+ * text-base`; iOS uses the §4 pill radius by default (web still `rounded-lg`) + `font-medium` + `gap-2`. Horizontal
  * padding is per size like web; heights keep a native tap floor (sm 36 plus a
  * hitSlop that makes up the 44pt target, md 44, lg 48).
  *
@@ -53,7 +53,7 @@ export type ButtonProps = {
   /** Render the icon after the label instead of before it. */
   iconPosition?: "start" | "end";
   fullWidth?: boolean;
-  /** Pill radius (rounded-full) instead of web's rounded-lg — for the big CTAs. */
+  /** Pill radius (design-system §4 default). false → radius.sm, only for dense inline controls. */
   pill?: boolean;
   accessibilityLabel?: string;
   accessibilityHint?: string;
@@ -87,7 +87,7 @@ export function Button({
   icon,
   iconPosition = "start",
   fullWidth = false,
-  pill = false,
+  pill = true,
   accessibilityLabel,
   accessibilityHint,
   testID,

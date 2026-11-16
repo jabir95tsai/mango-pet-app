@@ -14,7 +14,7 @@ import { Plus } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 import { PawIcon } from "@/components/walks/paw-icon";
 import { t } from "@/lib/i18n";
-import { colors, shadows, spacing } from "@/theme/theme";
+import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 const DISC = 140;
 
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   card: {
     width: 96,
     height: 96,
-    borderRadius: 34,
+    borderRadius: radius.xl2,
     backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",
