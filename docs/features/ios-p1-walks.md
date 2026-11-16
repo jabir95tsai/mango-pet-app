@@ -1,5 +1,7 @@
 # iOS P1 — Walks（核心遛狗）Parity Spec
 
+> 2026-11-15 後續規格：[iOS 路線追蹤 v1](./ios-walk-route-tracking-v1.md) 新增完整路線、歷史地圖、家庭最新位置分享與回到起點提醒。下方 P1 排除項與 rolling 500 點為歷史範圍；新功能依 v1 規格，尚未實作。
+
 狀態：**IN PROGRESS** — ✅ P1a 實機簽收 + ✅ **P1d 背景 GPS 實機簽收（2026-06-01）→ 核心遛狗 loop（含背景）完成**｜🔜 P1b（done/手動補登/recent 展開）→ P1c（拍照/自動分享）｜sub-phase 順序 P1d → P1b → P1c
 建立日期：2026-05-31
 規格作者：iOS PM session

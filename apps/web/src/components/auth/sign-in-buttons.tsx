@@ -7,6 +7,7 @@ import { FirebaseError } from "firebase/app";
 import {
   NeedsLinkError,
   signInAsGuest,
+  signInWithEmailPassword,
   signInWithProvider,
   type AuthProviderKind,
 } from "@/lib/firebase/auth";
@@ -110,6 +111,14 @@ function friendlyError(err: unknown, t: (key: string) => string): string {
         return t("errors.providerDisabled");
       case "auth/unauthorized-domain":
         return t("errors.unauthorizedDomain");
+      case "auth/invalid-email":
+      case "auth/user-not-found":
+      case "auth/wrong-password":
+      case "auth/invalid-credential":
+      case "auth/invalid-login-credentials":
+        return t("errors.invalidCredentials");
+      case "auth/too-many-requests":
+        return t("errors.tooManyRequests");
       case "auth/internal-error":
       case "auth/invalid-api-key":
       case "auth/app-not-authorized":
@@ -136,6 +145,10 @@ export function SignInButtons({ nextPath = "/app/walks" }: Props) {
   const { user } = useAuth();
   const [pending, setPending] = useState<AuthProviderKind | null>(null);
   const [guestPending, setGuestPending] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailPending, setEmailPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [linkHint, setLinkHint] = useState<Hint | null>(null);
 
@@ -174,6 +187,22 @@ export function SignInButtons({ nextPath = "/app/walks" }: Props) {
     }
   }
 
+  async function handleEmailSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim() || !password || anyBusy) return;
+    setEmailPending(true);
+    setError(null);
+    setLinkHint(null);
+    try {
+      await signInWithEmailPassword(email, password);
+    } catch (err) {
+      setError(friendlyError(err, t));
+      setEmailPending(false);
+    }
+  }
+
+  const anyBusy = pending !== null || guestPending || emailPending;
+
   return (
     <div className="mx-auto flex w-full max-w-xs flex-col gap-3">
       {PROVIDERS.map((p) => {
@@ -185,7 +214,7 @@ export function SignInButtons({ nextPath = "/app/walks" }: Props) {
             key={p.kind}
             type="button"
             onClick={() => handleSignIn(p.kind)}
-            disabled={pending !== null || guestPending}
+            disabled={anyBusy}
             aria-label={t(p.labelKey)}
             className={cn(
               "relative flex h-12 items-center justify-center gap-3 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60",
@@ -217,7 +246,7 @@ export function SignInButtons({ nextPath = "/app/walks" }: Props) {
       <button
         type="button"
         onClick={handleGuest}
-        disabled={pending !== null || guestPending}
+        disabled={anyBusy}
         className="flex h-11 items-center justify-center rounded-lg border border-zinc-200 bg-transparent text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
       >
         {guestPending ? (
@@ -226,6 +255,54 @@ export function SignInButtons({ nextPath = "/app/walks" }: Props) {
           <span>{t("continueAsGuest")}</span>
         )}
       </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          setEmailOpen((open) => !open);
+          setError(null);
+        }}
+        disabled={anyBusy}
+        aria-expanded={emailOpen}
+        className="self-center rounded px-2 py-1 text-xs font-medium text-zinc-500 underline underline-offset-2 transition-colors hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-60 dark:text-zinc-400 dark:hover:text-zinc-200"
+      >
+        {t("emailSignInToggle")}
+      </button>
+
+      {emailOpen && (
+        <form
+          onSubmit={handleEmailSignIn}
+          className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-900/60"
+        >
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t("emailPlaceholder")}
+            aria-label={t("emailPlaceholder")}
+            autoComplete="email"
+            disabled={anyBusy}
+            className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus-visible:border-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={t("passwordPlaceholder")}
+            aria-label={t("passwordPlaceholder")}
+            autoComplete="current-password"
+            disabled={anyBusy}
+            className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus-visible:border-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+          />
+          <button
+            type="submit"
+            disabled={anyBusy || !email.trim() || !password}
+            className="flex h-10 items-center justify-center rounded-lg bg-amber-500 text-sm font-medium text-white transition-colors hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:opacity-50"
+          >
+            {emailPending ? "…" : t("emailSignInSubmit")}
+          </button>
+        </form>
+      )}
 
       {linkHint && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-500/30 dark:bg-amber-500/10">

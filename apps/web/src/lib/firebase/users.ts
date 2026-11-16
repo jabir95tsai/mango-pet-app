@@ -39,11 +39,12 @@ function privateContactRef(uid: string) {
 
 const LAST_SEEN_THROTTLE_MS = 60 * 60 * 1000; // 1 hour
 
-function inferProvider(user: User): AuthProviderKind {
+function inferProvider(user: User): AuthProviderKind | "password" {
   const id = user.providerData[0]?.providerId ?? "";
   if (id.includes("google")) return "google";
   if (id.includes("apple")) return "apple";
   if (id.includes("facebook")) return "facebook";
+  if (id === "password") return "password";
   return "google";
 }
 

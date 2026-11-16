@@ -102,6 +102,13 @@ service cloud.firestore {
         allow update: if false;
       }
 
+      // Notification inbox (docs/features/ios-notification-center.md):
+      // owner reads; only Cloud Functions (Admin SDK) write.
+      match /notifications/{notificationId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+
       match /favoriteRestaurants/{rid} {
         allow read: if request.auth.uid == uid;
         allow write: if activeAccount() && (request.auth.uid == uid);

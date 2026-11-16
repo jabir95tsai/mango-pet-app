@@ -203,6 +203,10 @@
     "subtitle": "Track, share, and discover life with your pets",
     "continueAsGuest": "Continue as guest",
     "guestDivider": "or",
+    "emailSignInToggle": "Sign in with Email",
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Password",
+    "emailSignInSubmit": "Sign in with Email",
     "errors": {
       "cancelled": "Sign-in cancelled",
       "popupBlocked": "Popup was blocked. Allow popups and try again.",
@@ -210,6 +214,8 @@
       "differentCredential": "This email is already linked to a different sign-in method.",
       "providerDisabled": "This sign-in method isn't enabled.",
       "unauthorizedDomain": "This domain isn't authorized for sign-in.",
+      "invalidCredentials": "Incorrect email or password. Please try again.",
+      "tooManyRequests": "Too many attempts. Please try again later.",
       "config": "Sign-in is misconfigured. Please try again later.",
       "generic": "Sign-in failed. Please try again."
     },
@@ -668,6 +674,10 @@
       "deleteAction": "Delete my account"
     },
     "languageLabel": "語言 / Language",
+    "legalAndSupportTitle": "Legal & Support",
+    "contactSupport": "Contact Support (jabir95tsai@gmail.com)",
+    "contactSupportFallbackTitle": "Contact Support",
+    "contactSupportFallbackBody": "Please email jabir95tsai@gmail.com and we will respond within 24 hours.",
     "guestName": "Guest",
     "signOutFailed": {
       "title": "Could not sign out",
@@ -1094,6 +1104,20 @@
     },
     "notifications": "Notifications"
   },
+  "Notifications": {
+    "title": "Notifications",
+    "sections": {
+      "reminders": "Due reminders",
+      "activity": "Activity"
+    },
+    "comment": "{name} commented on your post: {preview}",
+    "reaction": "{name} reacted to your post",
+    "reactionMany": "{name} and {others} others reacted to your post",
+    "friendRequest": "{name} sent you a friend request",
+    "empty": "No notifications yet",
+    "bellUnread": "Notifications, new notifications",
+    "openReminders": "Open pet reminders"
+  },
   "PetsPage": {
     "kgUnit": "kg",
     "title": {
@@ -1217,7 +1241,8 @@
     "reportSubmitted": "Report received — thanks for letting us know",
     "reportFailed": "Couldn't submit — try again",
     "blockedUsersTitle": "Blocked users",
-    "blockedUsersEmpty": "You haven't blocked anyone"
+    "blockedUsersEmpty": "You haven't blocked anyone",
+    "objectionableContentBlocked": "Your content contains inappropriate language. Please revise and try again."
   },
   "Ios": {
     "post": {

@@ -203,6 +203,10 @@
     "subtitle": "紀錄、分享、發現屬於你和毛孩的生活",
     "continueAsGuest": "以訪客身分繼續",
     "guestDivider": "或",
+    "emailSignInToggle": "使用 Email 帳號登入",
+    "emailPlaceholder": "Email 信箱",
+    "passwordPlaceholder": "密碼",
+    "emailSignInSubmit": "以 Email 登入",
     "errors": {
       "cancelled": "登入已取消",
       "popupBlocked": "瀏覽器阻擋了登入視窗，請允許彈跳視窗後重試",
@@ -210,6 +214,8 @@
       "differentCredential": "這個 Email 已使用其他方式登入過，請換登入方式",
       "providerDisabled": "此登入方式尚未啟用",
       "unauthorizedDomain": "此網址未授權登入，請聯絡管理員",
+      "invalidCredentials": "Email 或密碼不正確，請重新輸入。",
+      "tooManyRequests": "嘗試次數過多，請稍後再試。",
       "config": "登入設定有問題，請稍後再試",
       "generic": "登入失敗，請稍後再試"
     },
@@ -668,6 +674,10 @@
       "deleteAction": "刪除我的帳號"
     },
     "languageLabel": "語言 / Language",
+    "legalAndSupportTitle": "條款與客服支援",
+    "contactSupport": "聯絡客服（jabir95tsai@gmail.com）",
+    "contactSupportFallbackTitle": "聯絡客服",
+    "contactSupportFallbackBody": "請來信至 jabir95tsai@gmail.com，我們將於 24 小時內回覆。",
     "guestName": "訪客",
     "signOutFailed": {
       "title": "暫時無法登出",
@@ -1094,6 +1104,20 @@
     },
     "notifications": "通知"
   },
+  "Notifications": {
+    "title": "通知",
+    "sections": {
+      "reminders": "待辦提醒",
+      "activity": "動態"
+    },
+    "comment": "{name} 留言了你的貼文：{preview}",
+    "reaction": "{name} 對你的貼文按了表情",
+    "reactionMany": "{name} 等 {count} 人對你的貼文按了表情",
+    "friendRequest": "{name} 想加你為好友",
+    "empty": "目前沒有新通知",
+    "bellUnread": "通知，有新通知",
+    "openReminders": "開啟毛孩提醒"
+  },
   "PetsPage": {
     "kgUnit": "公斤",
     "title": {
@@ -1217,7 +1241,8 @@
     "reportSubmitted": "已收到你的檢舉，謝謝回報",
     "reportFailed": "檢舉失敗，請再試一次",
     "blockedUsersTitle": "已封鎖的使用者",
-    "blockedUsersEmpty": "目前沒有封鎖任何人"
+    "blockedUsersEmpty": "目前沒有封鎖任何人",
+    "objectionableContentBlocked": "內容包含不當或違規字詞，請修改後再送出。"
   },
   "Ios": {
     "post": {

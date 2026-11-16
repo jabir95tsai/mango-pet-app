@@ -8,6 +8,7 @@ import {
   onAuthStateChanged,
   signInAnonymously,
   signInWithCredential,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
   updateProfile,
@@ -123,6 +124,22 @@ export async function signInWithProvider(kind: AuthProviderKind): Promise<User> 
  */
 export async function signInAsGuest(): Promise<User> {
   const result = await signInAnonymously(getFirebaseAuth());
+  return result.user;
+}
+
+/**
+ * Email + password sign-in (primarily for App Store review / tester access).
+ * AuthProvider's subscribeAuth listener automatically invokes upsertUser.
+ */
+export async function signInWithEmailPassword(
+  email: string,
+  password: string,
+): Promise<User> {
+  const result = await signInWithEmailAndPassword(
+    getFirebaseAuth(),
+    email.trim(),
+    password,
+  );
   return result.user;
 }
 

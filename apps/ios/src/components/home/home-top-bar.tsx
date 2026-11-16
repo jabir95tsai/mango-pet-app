@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { WarmGlass } from "@/components/ui/WarmCanvas";
 import { Bell, Home } from "lucide-react-native";
 
@@ -8,9 +8,13 @@ import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 export function HomeTopBar({
   familyName,
   userDisplayName,
+  hasUnread = false,
+  onPressBell,
 }: {
   familyName?: string | null;
   userDisplayName?: string | null;
+  hasUnread?: boolean;
+  onPressBell?: () => void;
 }) {
   const label = familyName ?? userDisplayName ?? null;
   return (
@@ -29,9 +33,18 @@ export function HomeTopBar({
         </WarmGlass>
       ) : null}
       <View style={styles.spacer} />
-      <WarmGlass style={styles.bell}>
-        <Bell accessibilityLabel={t("Home.notifications")} size={16} color={colors.ink2} strokeWidth={1.8} />
-      </WarmGlass>
+      <Pressable
+        onPress={onPressBell}
+        hitSlop={4} // 36pt glass + 4pt slop each side → 44pt touch target
+        accessibilityRole="button"
+        accessibilityLabel={t(hasUnread ? "Notifications.bellUnread" : "Home.notifications")}
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        <WarmGlass style={styles.bell}>
+          <Bell size={16} color={colors.ink2} strokeWidth={1.8} />
+          {hasUnread ? <View style={styles.dot} /> : null}
+        </WarmGlass>
+      </Pressable>
     </View>
   );
 }
@@ -83,4 +96,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  dot: {
+    position: "absolute",
+    top: 7,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: "#dc2626",
+    borderWidth: 1.5,
+    borderColor: colors.card,
+  },
+  pressed: { opacity: 0.7 },
 });

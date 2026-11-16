@@ -28,7 +28,7 @@ function adapter(c, platform) {
   const wrap = raw => ({ raw, collection: name => ({ doc: id => wrap(s.doc(raw, name, id)) }) });
   const native = () => ({ collection: name => ({ doc: id => wrap(s.doc(c, name, id)) }),
     runTransaction: fn => s.runTransaction(c, tx => fn({
-      get: async r => { const v = await tx.get(r.raw); return { exists: v.exists(), data: () => v.data() }; },
+      get: async r => { const v = await tx.get(r.raw); return { exists: () => v.exists(), data: () => v.data() }; }, // RNFB 25: exists() is a method
       update: (r, d) => tx.update(r.raw, d), set: (r, d) => tx.set(r.raw, d), delete: r => tx.delete(r.raw),
     })),
   });
@@ -40,6 +40,7 @@ function adapter(c, platform) {
     if (id === './config') return { getDb: () => c };
     if (['@/lib/types', '@mango/shared-types'].includes(id)) return { REACTION_EMOJIS: emojis };
     if (['./storage', './photos', '@mango/shared-business'].includes(id)) return {};
+    if (id === './i18n') return { t: k => k };
     throw new Error(`Unexpected module ${id}`);
   });
   return exports;

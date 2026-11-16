@@ -30,6 +30,14 @@ export function signInErrorMessage(err: unknown): string | null {
     case "auth/operation-not-allowed":
     case "auth/admin-restricted-operation":
       return t("Auth.errors.providerDisabled");
+    case "auth/invalid-email":
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+    case "auth/invalid-login-credentials":
+      return t("Auth.errors.invalidCredentials");
+    case "auth/too-many-requests":
+      return t("Auth.errors.tooManyRequests");
     case "auth/internal-error":
     case "auth/invalid-api-key":
     case "auth/app-not-authorized":

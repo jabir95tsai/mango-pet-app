@@ -752,3 +752,25 @@ export type DeleteAccountSummary = {
   storagePhotosDeleted: number;
   storagePhotosRetained: number;
 };
+
+// ── Notification inbox (docs/features/ios-notification-center.md) ──
+// users/{uid}/notifications/{notificationId}; written ONLY by Cloud Functions.
+// Doc IDs: comment_{commentId} / reaction_{postId} / friendRequest_{requestId}.
+export type NotificationType = "comment" | "reaction" | "friendRequest";
+
+export type AppNotification = {
+  /** Firestore doc ID (not a stored field). */
+  notificationId: string;
+  type: NotificationType;
+  /** Newest first; reaction keeps at most 3 for display. */
+  actorUids: string[];
+  /** Total distinct reactors for `reaction`; 1 otherwise. */
+  actorCount: number;
+  postId?: string;
+  commentId?: string;
+  /** First 80 characters of the comment. */
+  commentPreview?: string;
+  friendRequestId?: string;
+  /** Bumped when a reaction actor is added, so the row floats to the top. */
+  createdAt: Timestamp;
+};

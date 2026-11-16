@@ -14,7 +14,8 @@
  * the FAB sits 20pt above it — the raised centre disc only overlaps the
  * middle of the bar, never the right-aligned FAB.
  */
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Modal,
@@ -46,7 +47,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PetHeader } from "@/components/pets/pet-header";
 import { WarmCanvas, WarmGlass } from "@/components/ui/WarmCanvas";
 import { PetSwitcher } from "@/components/pets/pet-switcher";
-import { PetTabs, type PetTabKey } from "@/components/pets/pet-tabs";
+import { PET_TABS, PetTabs, type PetTabKey } from "@/components/pets/pet-tabs";
 import { PetOverviewBody } from "@/components/pets/pet-overview-body";
 import { PetRemindersBody } from "@/components/pets/pet-reminders-body";
 import { PetExpensesBody } from "@/components/pets/pet-expenses-body";
@@ -83,6 +84,15 @@ export default function PetsScreen() {
   const data = usePetsData();
   const reduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<PetTabKey>("overview");
+  // ?tab=reminders deep link (notification center). Consumed then cleared so
+  // a later push with the same value re-applies after a manual tab switch.
+  const router = useRouter();
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  useEffect(() => {
+    if (!tabParam) return;
+    if ((PET_TABS as readonly string[]).includes(tabParam)) setActiveTab(tabParam as PetTabKey);
+    router.setParams({ tab: undefined });
+  }, [tabParam, router]);
   const [switcherAnchor, setSwitcherAnchor] = useState<{ x: number; y: number } | null>(null);
   const [form, setForm] = useState<FormState>(null);
   const [healthKey, setHealthKey] = useState(0);

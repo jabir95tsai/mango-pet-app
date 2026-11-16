@@ -4,6 +4,91 @@ import { createHash } from "node:crypto";
 import { FieldValue, type Firestore, type DocumentData } from "firebase-admin/firestore";
 
 export const REPORT_HIDE_THRESHOLD = 3;
+export const MODERATION_CONTACT_NAME = "蔡智博";
+export const MODERATION_CONTACT_EMAIL = "jabir95tsai@gmail.com";
+
+export const OBJECTIONABLE_TERMS_ZH: readonly string[] = [
+  "幹你娘",
+  "操你媽",
+  "他媽的",
+  "草泥馬",
+  "去死吧",
+  "去自殺",
+  "殺了你",
+  "殺死你",
+  "死全家",
+  "強姦",
+  "強暴",
+  "性侵",
+  "援交",
+  "約炮",
+  "裸聊",
+  "色情網站",
+  "傻逼",
+  "賤人",
+  "婊子",
+  "雞巴",
+];
+
+export const OBJECTIONABLE_TERMS_EN: readonly string[] = [
+  "fuck",
+  "fucking",
+  "fucked",
+  "fucker",
+  "motherfucker",
+  "shit",
+  "bullshit",
+  "bitch",
+  "asshole",
+  "bastard",
+  "cunt",
+  "dickhead",
+  "whore",
+  "slut",
+  "nigger",
+  "nigga",
+  "faggot",
+  "retard",
+  "rape",
+  "rapist",
+  "kill yourself",
+  "suicide",
+  "porn",
+  "pornography",
+];
+
+const ZH_COMPACT_SEPARATOR_RE = /[\s\u200B-\u200D\uFEFF*._~•·\-]+/g;
+const EN_OBFUSCATION_CHAR_RE = /[*._~•·\-]/g;
+const EN_BOUNDARY_REGEXES = OBJECTIONABLE_TERMS_EN.map((term) => ({
+  term,
+  regex: new RegExp(`\\b${term.replace(/\s+/g, "\\s+")}\\b`, "i"),
+}));
+
+export function findObjectionableTerm(text: string): string | null {
+  if (!text) return null;
+  const normalized = text.normalize("NFKC").toLowerCase();
+  const compactZh = normalized.replace(ZH_COMPACT_SEPARATOR_RE, "");
+  for (const term of OBJECTIONABLE_TERMS_ZH) {
+    if (compactZh.includes(term)) return term;
+  }
+  for (const { term, regex } of EN_BOUNDARY_REGEXES) {
+    if (regex.test(normalized)) return term;
+  }
+  const deobfuscated = normalized
+    .split(/\s+/)
+    .map((tok) => tok.replace(EN_OBFUSCATION_CHAR_RE, ""))
+    .join(" ");
+  if (deobfuscated !== normalized) {
+    for (const { term, regex } of EN_BOUNDARY_REGEXES) {
+      if (regex.test(deobfuscated)) return term;
+    }
+  }
+  return null;
+}
+
+export function hasObjectionableContent(text: string): boolean {
+  return findObjectionableTerm(text) !== null;
+}
 
 export type ReportDoc = {
   reporterUid: string;
@@ -151,4 +236,61 @@ export async function actOnReport(db: Firestore, reportId: string, report: Repor
     audit(result);
     return result;
   });
+}
+
+export async function autoModerateCreatedContent(
+  db: Firestore,
+  params: {
+    targetType: "post" | "comment";
+    targetId: string;
+    postId?: string;
+    authorUid?: string;
+    text?: string;
+  },
+): Promise<{ hidden: boolean; matchedTerm: string | null }> {
+  if (
+    !params.text ||
+    !validId(params.targetId) ||
+    (params.targetType === "comment" && !validId(params.postId))
+  ) {
+    return { hidden: false, matchedTerm: null };
+  }
+  const matchedTerm = findObjectionableTerm(params.text);
+  if (!matchedTerm) return { hidden: false, matchedTerm: null };
+
+  const path =
+    params.targetType === "comment"
+      ? `posts/${params.postId}/comments/${params.targetId}`
+      : `posts/${params.targetId}`;
+  const targetRef = db.doc(path);
+  const auditRef = db.doc(`moderationAudit/auto-${hash([params.targetType, path])}`);
+
+  await db.runTransaction(async (tx) => {
+    const [targetSnap, auditSnap] = await Promise.all([
+      tx.get(targetRef),
+      tx.get(auditRef),
+    ]);
+    if (targetSnap.exists && targetSnap.data()?.hidden !== true) {
+      tx.update(targetRef, {
+        hidden: true,
+        autoHiddenReason: "objectionable_text",
+        autoHiddenAt: FieldValue.serverTimestamp(),
+      });
+    }
+    if (!auditSnap.exists) {
+      tx.create(auditRef, {
+        action: "auto_hide_keyword",
+        outcome: "auto_hidden",
+        voteVersion: 2,
+        targetType: params.targetType,
+        targetId: auditString(params.targetId),
+        postId: auditString(params.postId),
+        targetAuthorUid: auditString(params.authorUid),
+        matchedTerm,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+  });
+
+  return { hidden: true, matchedTerm };
 }

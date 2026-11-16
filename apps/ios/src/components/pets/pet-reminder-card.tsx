@@ -66,7 +66,7 @@ export function PetReminderCard({
   petName?: string;
   onComplete: () => void;
   onEdit?: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
 }) {
   const tone = toneForTitle(reminder.title);
   const due = relativeDue(reminder.triggerAt);
@@ -119,6 +119,7 @@ export function PetReminderCard({
             <Pencil size={16} color={colors.ink2} strokeWidth={2} />
           </Pressable>
         ) : null}
+        {onDelete ? (
         <Pressable
           onPress={onDelete}
           hitSlop={6}
@@ -128,6 +129,7 @@ export function PetReminderCard({
         >
           <Trash2 size={16} color={colors.ink2} strokeWidth={2} />
         </Pressable>
+        ) : null}
       </View>
     </View>
   );
