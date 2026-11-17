@@ -2,8 +2,8 @@
  * Button — 1:1 with the web Button (apps/web/src/components/ui/button.tsx).
  *
  * Variants mirror web exactly:
- *  - primary   → `.btn-mango`: amber→brand→brandDeep gradient + WHITE text +
- *                lifted mango shadow (globals.css .btn-mango). NOT ink-on-flat.
+ *  - primary   → bright mango Liquid Glass (`MangoGlass`) + WHITE text, NO shadow
+ *                (user 2026-11-17; web still `.btn-mango`). NOT ink-on-flat.
  *  - secondary → white fill, ink text, 1px hairline border.
  *  - ghost     → transparent, ink2 text.
  *  - danger    → red fill, white text.
@@ -21,6 +21,7 @@
  * injected unless the element sets one), or a string (emoji). It is rendered
  * in a View, never nested inside <Text>.
  */
+import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -33,11 +34,13 @@ import {
   type ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { GlassView } from "expo-glass-effect";
 import Animated from "react-native-reanimated";
 
 import { renderIconSlot, type IconSlot } from "./icon-slot";
 import { usePressFeedback } from "./use-press-feedback";
-import { colors, mangoGradient, radius, shadows, spacing } from "@/theme/theme";
+import { colors, radius, spacing } from "@/theme/theme";
+import { LIQUID_GLASS } from "@/lib/liquid-glass";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -141,27 +144,40 @@ export function Button({
       testID={testID}
       style={[
         fullWidth && styles.fullWidth,
-        variant === "primary" && !isDisabled && shadows.mango,
         press.style,
         style,
       ]}
     >
       {variant === "primary" ? (
-        <LinearGradient
-          colors={mangoGradient.colors}
-          locations={mangoGradient.locations}
-          start={mangoGradient.start}
-          end={mangoGradient.end}
-          style={[styles.base, box]}
-        >
-          {inner}
-        </LinearGradient>
+        <MangoGlass style={[styles.base, box]}>{inner}</MangoGlass>
       ) : (
         <View style={[styles.base, box, { backgroundColor: v.bg }, v.border]}>{inner}</View>
       )}
     </AnimatedPressable>
   );
 }
+
+/**
+ * Bright mango Liquid Glass fill shared by primary buttons and the walks start CTA.
+ * iOS 26+: tinted native glass. Older iOS: translucent mango gradient + glass rim + top sheen.
+ */
+export function MangoGlass({ style, children }: { style?: StyleProp<ViewStyle>; children: ReactNode }) {
+  if (LIQUID_GLASS) {
+    return <GlassView glassEffectStyle="regular" tintColor="rgba(255,146,10,0.86)" isInteractive style={[glass.rim, style]}>{children}</GlassView>;
+  }
+  return (
+    <View style={[glass.rim, style]}>
+      <LinearGradient colors={["rgba(255,178,46,0.92)", "rgba(245,124,0,0.92)"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={["rgba(255,255,255,0.38)", "rgba(255,255,255,0)"]} style={glass.sheen} pointerEvents="none" />
+      {children}
+    </View>
+  );
+}
+
+const glass = StyleSheet.create({
+  rim: { borderWidth: 1, borderColor: "rgba(255,255,255,0.55)", overflow: "hidden" },
+  sheen: { position: "absolute", top: 0, left: 0, right: 0, height: "50%" },
+});
 
 const VARIANT: Record<ButtonVariant, { bg: string; fg: string; border?: ViewStyle }> = {
   primary: { bg: "transparent", fg: "#ffffff" },
