@@ -29,6 +29,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AlertTriangle, ChevronDown, Trophy } from "lucide-react-native";
 
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
 import { StreakPop, WalkConfetti } from "@/components/walks/walk-confetti";
 import { blendTodayProgress } from "@/components/walks/tracking-active-panel";
@@ -165,7 +166,7 @@ export function TrackingDonePanel({
 
             {/* This-session recap */}
             <View style={styles.recapBlock}>
-              <View style={styles.stats}>
+              <Card tone="soft" elevated={false} style={styles.stats}>
                 <View style={styles.stat}>
                   <Text style={styles.statLabel}>km</Text>
                   <Text style={styles.statValue}>{final.totalDistanceKm.toFixed(2)}</Text>
@@ -174,9 +175,9 @@ export function TrackingDonePanel({
                   <Text style={styles.statLabel}>min</Text>
                   <Text style={styles.statValue}>{min.toFixed(1)}</Text>
                 </View>
-              </View>
+              </Card>
               {showAvg || kcal > 0 ? (
-                <View style={styles.recapList}>
+                <Card elevated={false} style={styles.recapList}>
                   {showAvg ? (
                     <Text style={styles.recapLine}>
                       {diff > 0
@@ -191,7 +192,7 @@ export function TrackingDonePanel({
                       {t("Walks.celebration.calories", { name: petName, kcal })}
                     </Text>
                   ) : null}
-                </View>
+                </Card>
               ) : null}
             </View>
 
@@ -270,6 +271,7 @@ export function TrackingDonePanel({
                 label={t("Walks.core.backToWalking")}
                 size="lg"
                 fullWidth
+                labelStyle={styles.ctaLabel}
                 onPress={onBack}
                 disabled={ctaDisabled}
               />
@@ -278,6 +280,7 @@ export function TrackingDonePanel({
                 variant="secondary"
                 size="lg"
                 fullWidth
+                labelStyle={styles.ctaLabel}
                 onPress={onLeaderboard}
                 disabled={ctaDisabled}
               />
@@ -338,23 +341,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm,
-    borderRadius: radius.sm,
+    borderRadius: radius.lg,
     backgroundColor: colors.bellTint,
     padding: spacing.md,
   },
   noticeText: { flex: 1, fontSize: 12, lineHeight: 17, color: colors.ink2 },
   // web: flex w-full max-w-xs flex-col gap-3
   recapBlock: { width: "100%", maxWidth: 320, gap: spacing.md },
-  // web: grid grid-cols-2 gap-3 rounded-xl border bg-zinc-50 p-4 text-center
-  stats: {
-    flexDirection: "row",
-    gap: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.cardSoft,
-    padding: spacing.lg,
-  },
+  // ui/Card soft (radius.xl + hairline, design-system §4)
+  stats: { flexDirection: "row", gap: spacing.md },
   stat: { flex: 1, alignItems: "center", gap: 2 },
   statLabel: {
     fontSize: 10,
@@ -369,14 +364,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   // web: flex flex-col gap-1.5 rounded-lg border bg-white p-3 text-xs
-  recapList: {
-    gap: 6,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.card,
-    padding: spacing.md,
-  },
+  recapList: { gap: 6, padding: spacing.md },
   recapLine: { fontSize: 12, lineHeight: 17, color: colors.ink2 },
   notes: { width: "100%", maxWidth: 320 },
   // web summary: centered gap-1 rounded-lg px-2 py-1.5 text-sm text-zinc-500
@@ -397,5 +385,6 @@ const styles = StyleSheet.create({
   error: { fontSize: 14, color: colors.danger, textAlign: "center" },
   // web: flex w-full max-w-xs flex-col gap-2
   ctas: { width: "100%", maxWidth: 320, gap: spacing.sm },
+  ctaLabel: { fontWeight: "700" },
   status: { minHeight: 16, fontSize: 12, color: colors.ink2, textAlign: "center" },
 });

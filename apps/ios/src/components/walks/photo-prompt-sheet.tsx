@@ -9,7 +9,7 @@
  * 📸 tile + 18/700 title + 14 ink2 body, then a btn-mango h-12 pill (WHITE
  * bold text + Camera icon) and an h-11 ghost pill skip (14/600 ink2).
  */
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Camera } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -77,13 +77,13 @@ export function PhotoPromptSheet({
           labelStyle={styles.takeLabel}
           onPress={onTake}
         />
-        <Pressable
-          accessibilityRole="button"
+        <Button
+          label={t("WalksPhotoPrompt.skip")}
+          variant="ghost"
+          fullWidth
+          labelStyle={styles.skipLabel}
           onPress={onSkip}
-          style={({ pressed }) => [styles.skipBtn, pressed && styles.skipPressed]}
-        >
-          <Text style={styles.skipText}>{t("WalksPhotoPrompt.skip")}</Text>
-        </Pressable>
+        />
       </View>
     </Dialog>
   );
@@ -127,12 +127,5 @@ const styles = StyleSheet.create({
   body: { marginTop: 4, fontSize: 14, lineHeight: 20, color: colors.ink2 },
   actions: { marginTop: 20, gap: spacing.sm },
   takeLabel: { fontWeight: "700" },
-  skipBtn: {
-    height: 44,
-    borderRadius: radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  skipPressed: { backgroundColor: colors.bgAlt },
-  skipText: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
+  skipLabel: { fontWeight: "600" },
 });
