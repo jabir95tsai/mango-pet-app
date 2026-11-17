@@ -189,8 +189,6 @@ export function DogLeaderboard({
         <>
           <BoardHeader
             title={t("Leaderboard.title")}
-            refreshing={refreshing}
-            onRefresh={refresh}
             accessory={header}
           />
           <View style={styles.period}>
