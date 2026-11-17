@@ -186,6 +186,9 @@ export function TrackingPhotoGrid({
   );
 }
 
+/** How far the X / save buttons overhang the thumbnail corner. */
+const OVERHANG = 4;
+
 const styles = StyleSheet.create({
   // web: flex w-full max-w-xs flex-col items-center gap-3
   controls: { width: "100%", maxWidth: 320, alignItems: "center", gap: spacing.md },
@@ -205,9 +208,11 @@ const styles = StyleSheet.create({
   photoBtnText: { fontSize: 14, fontWeight: "500", color: colors.ink },
   photoBtnTextFull: { color: colors.ink3 },
   thumbScroll: { alignSelf: "stretch", marginHorizontal: -spacing.sm },
-  // room for the X / save buttons that overhang the thumbnail by 4pt
-  thumbRow: { gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: 6 },
-  thumbWrap: { width: THUMB, height: THUMB },
+  // Each wrap pads the thumbnail by OVERHANG so the X / save buttons that
+  // overhang it stay inside a touchable parent (iOS drops touches outside the
+  // parent's bounds). Gap + padding keep the old 8pt visual spacing.
+  thumbRow: { gap: spacing.sm - OVERHANG * 2, paddingHorizontal: spacing.sm - OVERHANG, paddingVertical: 6 - OVERHANG },
+  thumbWrap: { padding: OVERHANG },
   thumb: {
     width: THUMB,
     height: THUMB,
@@ -219,7 +224,11 @@ const styles = StyleSheet.create({
   thumbUploading: { opacity: 0.5 },
   thumbFailed: { borderColor: colors.danger },
   overlay: {
-    ...StyleSheet.absoluteFill,
+    position: "absolute",
+    top: OVERHANG,
+    left: OVERHANG,
+    right: OVERHANG,
+    bottom: OVERHANG,
     borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
@@ -229,8 +238,8 @@ const styles = StyleSheet.create({
   // web: absolute -right-1 -top-1 size-5 rounded-full bg-zinc-900 ring-1 ring-white
   deleteBtn: {
     position: "absolute",
-    top: -4,
-    right: -4,
+    top: 0,
+    right: 0,
     width: 20,
     height: 20,
     borderRadius: radius.pill,
@@ -242,7 +251,7 @@ const styles = StyleSheet.create({
   },
   deletePressed: { opacity: 0.8 },
   // web: absolute -bottom-1 -right-1 size-5
-  saveBtn: { position: "absolute", bottom: -4, right: -4 },
+  saveBtn: { position: "absolute", bottom: 0, right: 0 },
 
   // Done-phase grid (web: w-full max-w-xs; label mb-2 text-xs semibold uppercase)
   grid: { width: "100%", maxWidth: 320 },
