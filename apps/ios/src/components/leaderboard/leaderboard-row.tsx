@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     // warm-glass surface, matches walks/walk-row.tsx
-    borderRadius: 24,
+    borderRadius: radius.xl2,
     backgroundColor: "rgba(255,255,255,0.88)",
     borderWidth: 1,
     borderColor: "#FFFFFF",
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   // Rounded overlay instead of overflow:hidden so the card shadow survives.
   glow: {
     ...StyleSheet.absoluteFill,
-    borderRadius: 24,
+    borderRadius: radius.xl2,
     backgroundColor: withAlpha(colors.brand, 0.18),
   },
   rankCol: { width: 32, alignItems: "center" },

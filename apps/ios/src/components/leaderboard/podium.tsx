@@ -1,23 +1,26 @@
 /**
  * Leaderboard layout A (podium) pieces, shared by the human + dog boards:
  *  - Podium: top 3 as 2nd · 1st · 3rd columns on mango-toned blocks
- *  - ScopePill: the scope switch as a compact pill beside the title
- *    (native ActionSheetIOS, same pattern as feed/post-menu)
+ *  - ScopePill: the scope switch as a compact pill beside the title, opening
+ *    an anchored dropdown under it (user 2026-11-17; was an action sheet)
  *  - MyRankBar: pinned above the tab bar when "me" is ranked below the podium,
  *    with the gap to the next rank up
  */
+import { useRef, useState } from "react";
 import {
-  ActionSheetIOS,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
-import { ChevronDown } from "lucide-react-native";
+import { Check, ChevronDown } from "lucide-react-native";
 import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { useTabBarOverlap } from "@/lib/liquid-glass";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { groupThousands } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import { colors, radius, shadows, spacing } from "@/theme/theme";
@@ -165,28 +168,77 @@ export function ScopePill<T extends string>({
   onChange: (next: T) => void;
 }) {
   const current = options.find((o) => o.value === value) ?? options[0];
+  const pillRef = useRef<View>(null);
+  const reduceMotion = useReducedMotion();
+  const { width: screenW } = useWindowDimensions();
+  // Panel anchor: its top edge + right inset, measured from the pill.
+  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
+
   function open() {
-    const labels = [...options.map((o) => o.label), t("Common.cancel")];
-    ActionSheetIOS.showActionSheetWithOptions(
-      { options: labels, cancelButtonIndex: labels.length - 1 },
-      (i) => {
-        if (i < options.length) onChange(options[i].value);
-      },
+    pillRef.current?.measureInWindow((x, y, w, h) =>
+      setAnchor({ top: y + h + 6, right: screenW - (x + w) }),
     );
   }
+  function pick(next: T) {
+    setAnchor(null);
+    if (next !== value) onChange(next);
+  }
+
   return (
-    <Pressable
-      onPress={open}
-      accessibilityRole="button"
-      accessibilityLabel={t("Leaderboard.scopeA11y", { scope: current.label })}
-      hitSlop={4}
-      style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
-    >
-      <Text style={styles.pillText} numberOfLines={1}>
-        {current.label}
-      </Text>
-      <ChevronDown size={14} color={colors.ink2} strokeWidth={2.2} />
-    </Pressable>
+    <>
+      <Pressable
+        ref={pillRef}
+        onPress={open}
+        accessibilityRole="button"
+        accessibilityLabel={t("Leaderboard.scopeA11y", { scope: current.label })}
+        accessibilityState={{ expanded: anchor !== null }}
+        hitSlop={4}
+        style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
+      >
+        <Text style={styles.pillText} numberOfLines={1}>
+          {current.label}
+        </Text>
+        <ChevronDown size={14} color={colors.ink2} strokeWidth={2.2} />
+      </Pressable>
+      <Modal
+        visible={anchor !== null}
+        transparent
+        animationType={reduceMotion ? "none" : "fade"}
+        onRequestClose={() => setAnchor(null)}
+      >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={() => setAnchor(null)}
+          accessibilityRole="button"
+          accessibilityLabel={t("Common.close")}
+        />
+        {anchor ? (
+          <View style={[styles.menu, anchor]} accessibilityRole="menu">
+            {options.map((o) => {
+              const on = o.value === value;
+              return (
+                <Pressable
+                  key={o.value}
+                  onPress={() => pick(o.value)}
+                  accessibilityRole="menuitem"
+                  accessibilityState={{ selected: on }}
+                  style={({ pressed }) => [
+                    styles.menuRow,
+                    on && styles.menuRowOn,
+                    pressed && !on && styles.menuRowPressed,
+                  ]}
+                >
+                  <Text style={[styles.menuText, on && styles.menuTextOn]} numberOfLines={1}>
+                    {o.label}
+                  </Text>
+                  {on ? <Check size={16} color={colors.brandDeep} strokeWidth={2.5} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+      </Modal>
+    </>
   );
 }
 
@@ -312,6 +364,30 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.75)",
   },
   pressed: { opacity: 0.7 },
+  // Same floating panel as pets/pet-switcher (radius xl, hairline, p 6, elevated).
+  menu: {
+    position: "absolute",
+    minWidth: 168,
+    padding: 6,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.card,
+    ...shadows.elevated,
+  },
+  menuRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+  },
+  menuRowOn: { backgroundColor: colors.brandTint },
+  menuRowPressed: { backgroundColor: colors.bgAlt },
+  menuText: { fontSize: 14, fontWeight: "500", color: colors.ink },
+  menuTextOn: { fontWeight: "700", color: colors.brandDeep },
   pillText: { fontSize: 13, fontWeight: "600", color: colors.ink2 },
   bar: {
     position: "absolute",

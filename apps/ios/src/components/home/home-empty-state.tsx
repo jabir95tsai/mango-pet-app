@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   tile: {
     width: 120,
     height: 120,
-    borderRadius: 36,
+    borderRadius: radius.xl2,
     backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",

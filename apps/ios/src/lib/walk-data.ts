@@ -11,7 +11,7 @@
  * Timestamp has the same `toMillis()` surface the consumers use.
  */
 import firestore from "@react-native-firebase/firestore";
-import type { Pet, Walk } from "@mango/shared-types";
+import type { Pet, Walk, WalkPrefs } from "@mango/shared-types";
 
 import { computeStreak } from "@/lib/walk-stats";
 
@@ -43,19 +43,23 @@ export async function resolveCurrentFamilyId(
 }
 
 /**
- * Read the user's auto-photo-share preference (walks-auto-photo-share). Default
- * ON — only an explicit `false` disables the start/end prompts, mirroring web
- * (`u?.walkPrefs?.autoPhotoShare !== false`). The toggle UI is P5 settings.
+ * Read the user's walk prefs. autoPhotoShare defaults ON — only an explicit
+ * `false` disables the start/end prompts, mirroring web
+ * (`u?.walkPrefs?.autoPhotoShare !== false`). liveShareDefault defaults OFF —
+ * only an explicit `true` shares live location. Toggles live in settings.
  */
-export async function getAutoPhotoShare(uid: string): Promise<boolean> {
+export async function getWalkPrefs(
+  uid: string,
+): Promise<{ autoPhotoShare: boolean; liveShareDefault: boolean }> {
   try {
     const snap = await firestore().collection("users").doc(uid).get();
-    const data = snap.data() as
-      | { walkPrefs?: { autoPhotoShare?: boolean } }
-      | undefined;
-    return data?.walkPrefs?.autoPhotoShare !== false;
+    const data = snap.data() as { walkPrefs?: WalkPrefs } | undefined;
+    return {
+      autoPhotoShare: data?.walkPrefs?.autoPhotoShare !== false,
+      liveShareDefault: data?.walkPrefs?.liveShareDefault === true,
+    };
   } catch {
-    return true; // best-effort: default ON
+    return { autoPhotoShare: true, liveShareDefault: false }; // best-effort defaults
   }
 }
 

@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignSelf: "flex-start",
     padding: 2,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: colors.card,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   option: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: 6,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },

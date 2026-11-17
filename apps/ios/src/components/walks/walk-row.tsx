@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.88)",
     borderWidth: 1,
     borderColor: "#FFFFFF",
-    borderRadius: 24,
+    borderRadius: radius.xl2,
     paddingHorizontal: 14,
     paddingVertical: spacing.md,
     // web: box-shadow 0 1px 0 rgba(0,0,0,0.02)
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   thumb: {
     width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: colors.bgAlt,
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   delete: {
     width: 44,
     height: 44,
-    borderRadius: 8,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },

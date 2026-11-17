@@ -1,5 +1,5 @@
 /**
- * Walk auto-photo + leaderboard visibility sections — 1:1 with web
+ * Walk auto-photo / live-share switches + leaderboard visibility sections — 1:1 with web
  * walk-auto-photo-section + leaderboard-visibility-section: icon disc + title /
  * body, a loading line until the prefs arrive, controls disabled while loading
  * or saving, optimistic merge writes with rollback + red error text.
@@ -11,12 +11,18 @@
  */
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
-import { Camera, Check, Globe, Lock, Trophy, Users } from "lucide-react-native";
+import { Camera, Check, Globe, Lock, MapPin, Trophy, Users, type LucideIcon } from "lucide-react-native";
 import type { LeaderboardVisibility } from "@mango/shared-types";
 
 import { withAlpha } from "@/components/auth/color";
 import { useAuth } from "@/state/auth-context";
-import { setLeaderboardVisibility, setWalkAutoPhoto, type UserPrefs } from "@/lib/user-prefs";
+import { useFamily } from "@/state/family-context";
+import {
+  setLeaderboardVisibility,
+  setWalkAutoPhoto,
+  setWalkLiveShareDefault,
+  type UserPrefs,
+} from "@/lib/user-prefs";
 import { t } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 import { SettingsCard, SettingsIconDisc, settingsText } from "./settings-card";
@@ -26,14 +32,53 @@ function errorText(e: unknown): string {
 }
 
 export function WalkAutoPhotoSection({ prefs }: { prefs: UserPrefs | undefined }) {
+  return (
+    <PrefSwitchSection
+      prefs={prefs}
+      read={(p) => p.walkPrefs?.autoPhotoShare !== false}
+      write={setWalkAutoPhoto}
+      Icon={Camera}
+      i18nKey="walkAutoPhoto"
+    />
+  );
+}
+
+export function WalkLiveShareSection({ prefs }: { prefs: UserPrefs | undefined }) {
+  return (
+    <PrefSwitchSection
+      prefs={prefs}
+      read={(p) => p.walkPrefs?.liveShareDefault === true}
+      write={setWalkLiveShareDefault}
+      Icon={MapPin}
+      i18nKey="walkLiveShare"
+    />
+  );
+}
+
+/** Icon + title/body + Switch card, optimistic write with rollback. */
+function PrefSwitchSection({
+  prefs,
+  read,
+  write,
+  Icon,
+  i18nKey,
+}: {
+  prefs: UserPrefs | undefined;
+  read: (p: UserPrefs) => boolean;
+  write: (uid: string, on: boolean) => Promise<void>;
+  Icon: LucideIcon;
+  i18nKey: string;
+}) {
   const { user } = useAuth();
-  const [on, setOn] = useState(true);
+  const { markDataChanged } = useFamily();
+  const [on, setOn] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loading = prefs === undefined;
 
   useEffect(() => {
-    if (prefs) setOn(prefs.walkPrefs?.autoPhotoShare !== false);
+    if (prefs) setOn(read(prefs));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- read is a stable selector per call site
   }, [prefs]);
 
   async function toggle(next: boolean) {
@@ -43,7 +88,8 @@ export function WalkAutoPhotoSection({ prefs }: { prefs: UserPrefs | undefined }
     setPending(true);
     setError(null);
     try {
-      await setWalkAutoPhoto(user.uid, next);
+      await write(user.uid, next);
+      markDataChanged(); // walks tab re-reads walk prefs on next focus
     } catch (e) {
       setOn(prev);
       setError(errorText(e));
@@ -56,11 +102,11 @@ export function WalkAutoPhotoSection({ prefs }: { prefs: UserPrefs | undefined }
     <SettingsCard>
       <View style={styles.row}>
         <SettingsIconDisc>
-          <Camera size={16} color={colors.brandDeep} strokeWidth={2} />
+          <Icon size={16} color={colors.brandDeep} strokeWidth={2} />
         </SettingsIconDisc>
         <View style={styles.text}>
-          <Text style={settingsText.title}>{t("Settings.walkAutoPhoto.title")}</Text>
-          <Text style={settingsText.sub}>{t("Settings.walkAutoPhoto.body")}</Text>
+          <Text style={settingsText.title}>{t(`Settings.${i18nKey}.title`)}</Text>
+          <Text style={settingsText.sub}>{t(`Settings.${i18nKey}.body`)}</Text>
         </View>
         <Switch
           value={on}
@@ -68,7 +114,7 @@ export function WalkAutoPhotoSection({ prefs }: { prefs: UserPrefs | undefined }
           disabled={loading || pending}
           trackColor={{ true: colors.brand, false: colors.hairline }}
           thumbColor={colors.card}
-          accessibilityLabel={t("Settings.walkAutoPhoto.title")}
+          accessibilityLabel={t(`Settings.${i18nKey}.title`)}
         />
       </View>
       {error ? (

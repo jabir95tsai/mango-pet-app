@@ -19,7 +19,7 @@ import Reanimated, {
 
 import { t } from "@/lib/i18n";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
-import { colors } from "@/theme/theme";
+import { colors, radius } from "@/theme/theme";
 
 function Flame() {
   return (
@@ -102,13 +102,13 @@ export function WalksStreakChip({ streakDays }: { streakDays: number }) {
 }
 
 const styles = StyleSheet.create({
-  muted: { borderRadius: 9999, paddingHorizontal: 8, paddingVertical: 2 },
+  muted: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
   mutedText: { fontSize: 12, fontWeight: "600", color: colors.ink2, fontVariant: ["tabular-nums"] },
   chip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    borderRadius: 9999,
+    borderRadius: radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },

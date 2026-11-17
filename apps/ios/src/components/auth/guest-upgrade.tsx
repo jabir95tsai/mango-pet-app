@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   providers: { gap: spacing.sm },
   provider: {
     height: 48,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -488,6 +488,6 @@ const styles = StyleSheet.create({
   // web: mt-3 flex flex-wrap gap-2
   nudgeActions: { marginTop: spacing.md, flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   // web: shrink-0 rounded-lg p-1 (X size-4); hitSlop lifts it to 44pt.
-  nudgeClose: { padding: spacing.xs, borderRadius: radius.sm },
+  nudgeClose: { padding: spacing.xs, borderRadius: radius.pill },
   nudgeClosePressed: { backgroundColor: colors.bgAlt },
 });

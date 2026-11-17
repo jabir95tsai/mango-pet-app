@@ -166,7 +166,7 @@ export default function SignInScreen() {
                   <AppleAuthentication.AppleAuthenticationButton
                     buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
                     buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                    cornerRadius={radius.sm}
+                    cornerRadius={24 /* pill = half the 48pt height; native view needs a real number */}
                     style={styles.apple}
                     onPress={() => run("apple", signInWithApple)}
                   />
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   //      bg-white text-zinc-900 border border-zinc-200
   google: {
     height: 48,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.hairline,
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   //      text-sm font-medium text-zinc-600
   guest: {
     height: 44,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: "transparent",
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
   },
   emailTogglePressed: { opacity: 0.7 },
   emailToggleText: { fontSize: 13, fontWeight: "500", color: colors.ink3, textDecorationLine: "underline" },

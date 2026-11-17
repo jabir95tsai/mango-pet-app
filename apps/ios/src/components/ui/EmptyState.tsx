@@ -90,7 +90,6 @@ function ActionButton({
       icon={action.icon}
       variant={variant}
       size={hero ? "lg" : "md"}
-      pill={hero}
       loading={action.loading}
       disabled={action.disabled}
       accessibilityLabel={action.accessibilityLabel}

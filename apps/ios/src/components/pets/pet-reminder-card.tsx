@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   checkBtn: {
     width: 36,
     height: 36,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 1.5,
     borderColor: colors.hairline,
     backgroundColor: colors.card,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 32,
     height: 32,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   trash: {
     width: 32,
     height: 32,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,

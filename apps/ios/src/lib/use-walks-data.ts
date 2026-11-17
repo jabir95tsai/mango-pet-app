@@ -25,7 +25,7 @@ import { getPetWalkGoalMinutes } from "@mango/shared-business";
 import type { Pet, Walk } from "@mango/shared-types";
 
 import {
-  getAutoPhotoShare,
+  getWalkPrefs,
   listPetsForScope,
   listWalksForScope,
   listWalksForStats,
@@ -56,6 +56,7 @@ type WalksPayload = {
   /** walks is the full history (not just the newest page). */
   walksComplete: boolean;
   autoPhotoShare: boolean;
+  liveShareDefault: boolean;
 };
 
 const EMPTY: WalksPayload = {
@@ -63,6 +64,7 @@ const EMPTY: WalksPayload = {
   walks: [],
   walksComplete: false,
   autoPhotoShare: true,
+  liveShareDefault: false,
 };
 
 export type WalksData = ReturnType<typeof useWalksData>;
@@ -117,8 +119,8 @@ export function useWalksData() {
               complete: true,
             }))
           : listWalksForStats(familyId, uid),
-        // Best-effort, default ON (web: only an explicit false disables).
-        getAutoPhotoShare(uid),
+        // Best-effort: auto-photo default ON, live share default OFF.
+        getWalkPrefs(uid),
       ]);
       const error =
         petsR.status === "rejected"
@@ -137,8 +139,12 @@ export function useWalksData() {
               : (prev?.walksComplete ?? false),
           autoPhotoShare:
             autoR.status === "fulfilled"
-              ? autoR.value
+              ? autoR.value.autoPhotoShare
               : (prev?.autoPhotoShare ?? true),
+          liveShareDefault:
+            autoR.status === "fulfilled"
+              ? autoR.value.liveShareDefault
+              : (prev?.liveShareDefault ?? false),
         },
         error,
       };
@@ -150,7 +156,7 @@ export function useWalksData() {
     initial: EMPTY,
     fetch: fetchWalksHome,
   });
-  const { pets, walks, walksComplete, autoPhotoShare } = scoped.data;
+  const { pets, walks, walksComplete, autoPhotoShare, liveShareDefault } = scoped.data;
   const { reload } = scoped;
 
   /** Load the full walk history for "view all" (no-op when already complete). */
@@ -231,6 +237,7 @@ export function useWalksData() {
     weekCount,
     weeklyAvgMin,
     autoPhotoShare,
+    liveShareDefault,
     todayIdx,
     /** Pull-to-refresh / retry (re-resolves a failed family scope first). */
     refresh: scoped.refresh,

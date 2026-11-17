@@ -24,7 +24,6 @@ import {
   View,
 } from "react-native";
 import { ArrowLeft, Check, Copy, QrCode, Search, Share as ShareIcon, UserMinus, UserPlus, Users, UserX } from "lucide-react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -38,13 +37,13 @@ import { UserAvatar } from "@/components/feed/user-avatar";
 import { InviteQR } from "@/components/family/invite-qr";
 import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { Segmented } from "@/components/leaderboard/segmented";
-import { Button } from "@/components/ui/Button";
+import { Button, MangoGlass } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { SITE_URL } from "@/lib/config";
 import { t } from "@/lib/i18n";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
-import { colors, mangoGradient, radius, shadows, spacing, type, CONTENT_MAX_WIDTH } from "@/theme/theme";
+import { colors, radius, shadows, spacing, type, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const LOGO = require("../../assets/icon.png");
@@ -373,15 +372,9 @@ export default function FriendsScreen() {
                     disabled={searching}
                     style={({ pressed }) => [styles.searchBtn, (pressed || searching) && styles.pressed]}
                   >
-                    <LinearGradient
-                      colors={mangoGradient.colors}
-                      locations={mangoGradient.locations}
-                      start={mangoGradient.start}
-                      end={mangoGradient.end}
-                      style={styles.searchFill}
-                    >
+                    <MangoGlass style={styles.searchFill}>
                       <Search size={16} color="#ffffff" strokeWidth={2.4} />
-                    </LinearGradient>
+                    </MangoGlass>
                   </Pressable>
                 </View>
                 {searching ? <ActivityIndicator color={colors.brand} style={styles.loader} /> : null}
@@ -527,14 +520,14 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1, minWidth: 0 },
   rowName: { flex: 1, fontSize: 14, fontWeight: "600", color: colors.ink },
   rowSub: { fontSize: 12, color: colors.ink3, marginTop: 1 },
-  iconBtn: { width: 44, height: 44, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  iconBtn: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   acceptBtn: { backgroundColor: colors.leafTint },
   pressed: { opacity: 0.8 },
   disabled: { opacity: 0.5 },
   searchRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
   searchInput: { flex: 1 },
-  searchBtn: { width: 48, height: 48, borderRadius: radius.md, overflow: "hidden", ...shadows.mango },
-  searchFill: { flex: 1, alignItems: "center", justifyContent: "center" },
+  searchBtn: { width: 48, height: 48, borderRadius: radius.pill, overflow: "hidden" },
+  searchFill: { flex: 1, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   noResults: { textAlign: "center", fontSize: 14, color: colors.ink2, paddingVertical: spacing.md },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
   qrSheet: {

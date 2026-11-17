@@ -248,8 +248,6 @@ export function HumanLeaderboard({
         <>
           <BoardHeader
             title={t("Nav.leaderboard")}
-            refreshing={refreshing}
-            onRefresh={refresh}
             accessory={header}
           />
           <View style={styles.period}>

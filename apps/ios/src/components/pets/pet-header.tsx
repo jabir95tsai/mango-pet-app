@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   editBtn: {
     width: 36,
     height: 36,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     backgroundColor: colors.card,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,

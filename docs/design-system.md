@@ -53,14 +53,15 @@
 
 ## 4. 元件慣例
 
-- **按鈕**：膠囊 `rounded-[var(--radius-pill)]`；主鈕漸層 `linear-gradient(180deg, brand, brandDeep)` **白字**（品牌定案，雙平台一致）+ `--shadow-mango`；按壓 `active:scale-[.97]`。
+- **按鈕**：膠囊 `rounded-[var(--radius-pill)]`；主鈕漸層 `linear-gradient(180deg, brand, brandDeep)` **白字**（品牌定案，雙平台一致）+ `--shadow-mango`（iOS 例外見下方 Liquid Glass）；按壓 `active:scale-[.97]`。
   - ⚠️ **白字對比要求（user 2026-06-03 裁決 P2-1）**：白字 on `brand`(#f39800) 僅 2.6:1，**漸層需加深到讓白字達大字 WCAG AA ≥3:1**（CTA 為 19px/800 大粗字，適用大字門檻；做法：字落在以 `brandDeep`(#d77b00) 為主的深橘區，或整體漸層下移）。**保留白字、不改成 ink**。
   - 📌 **三方矛盾已裁決**：以本條為準 → `globals.css` 頭部那句「CTAs put ink on brand」**註解是錯的**（與實作/SoT 不符），UI/UX 實作 P2-1 時一併修正該註解。
+  - **iOS 互動元件形狀（2026-11-17 全面對齊）**：文字按鈕 = 膠囊（`ui/Button` 預設 `pill`）；icon-only 按鈕 = 圓形（`ui/IconButton` 或 `radius.pill`）；chip / segmented / toggle 也一律 `radius.pill`。不要再手寫 `radius.sm` 方角按鈕。輸入框維持 `radius.sm`。
 - **卡片**：`bg-mango-card`/`card-soft` + `1px hairline` + `--radius-lg/xl` + 暖色柔光 shadow。
 - **Tabs**：**簡單 toggle（active/inactive 切換），不做滑動 indicator。**（codify：web 的 `pet-tabs` / `ui/Tabs` 都是 toggle；先前 session 加的 Reanimated 滑動 indicator 已退掉，**不要再加**。）
   - **唯一例外（user 2026-10-11 拍板）**：iOS 26+ 底部 **Liquid Glass tab bar** 的「玻璃鏡片」— 可按住拖曳、鼓起、放大圖示、放開回彈（LINE / iOS 26 系統 tab bar 手感），見 `apps/ios/src/components/liquid-glass-tab-bar.tsx`。**iOS 版擴大（同日 user 拍板）**：頁內「選一個」的切換也用同一套鏡片動作 — `ui/LensTrack`，套在 `ui/Tabs`、排行榜 `Segmented`（現在直接用 `ui/Tabs`）、毛孩頁 `PetTabs`。頁內版**底維持實心 mango**，只有按住時鏡片變透明玻璃（iOS 26 用 `GlassView`，舊版用白色泡泡）。**Web 仍是單純 toggle**。Reduce Motion 下不鼓起、不拉伸、不放大，直接跳到該 tab。
 - **頭像**：沿用 `Avatar` 元件（無 src → initials fallback）。
-- **Liquid Glass（玻璃材質）**：**用於浮動導覽層**（iOS 底部 tab bar），另有上列明訂的頁內切換鏡片例外；卡片 / 列表 / 頁首 / 主鈕一律維持實心 mango。iOS 用原生 `expo-glass-effect`，iOS < 26 退回原本實心 bar；原生材質的透明度／對比由系統處理，自訂鏡片動效另以 `useReducedMotion` 降級。Web 版尚未做（backlog）。詳 [`features/ios-liquid-glass.md`](features/ios-liquid-glass.md)。（user 2026-10-10 拍板）
+- **Liquid Glass（玻璃材質）**：**用於浮動導覽層**（iOS 底部 tab bar），另有上列明訂的頁內切換鏡片例外；卡片 / 列表 / 頁首 / 主鈕一律維持實心 mango。**例外（user 2026-11-17 拍板）**：iOS **所有主鈕**（`ui/Button` primary、遛狗頁「開始遛狗」、毛孩頁右下 + FAB、好友頁搜尋鈕）改為亮 mango 染色 Liquid Glass、**無陰影**，共用 `ui/Button` 的 `MangoGlass`（iOS < 26 為半透明亮 mango 漸層 + 白色玻璃邊與上緣高光）。Web 仍為漸層 + `--shadow-mango`。iOS 用原生 `expo-glass-effect`，iOS < 26 退回原本實心 bar；原生材質的透明度／對比由系統處理，自訂鏡片動效另以 `useReducedMotion` 降級。Web 版尚未做（backlog）。詳 [`features/ios-liquid-glass.md`](features/ios-liquid-glass.md)。（user 2026-10-10 拍板）
 
 ## 5. 動效 / Motion
 

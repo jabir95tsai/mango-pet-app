@@ -6,12 +6,13 @@
  *
  * Two location sources:
  *
- *  • Background mode (Always permission granted) — the killer iOS-only ability.
+ *  • Background mode (any location permission — "While Using" suffices because
+ *    the walk is always started from the foreground) — the killer iOS ability.
  *    `Location.startLocationUpdatesAsync` + a headless TaskManager task, so the
  *    route keeps recording while the phone is locked / the app is backgrounded.
  *    The iOS blue location indicator is expected (only on during a walk).
  *
- *  • Foreground fallback (Always denied) — `watchPositionAsync`; distance is
+ *  • Foreground fallback (timing-only / legacy) — `watchPositionAsync`; distance is
  *    not recorded while the app is backgrounded (a transient "backgrounded"
  *    hint is shown on return, web errBackground).
  *
@@ -170,14 +171,23 @@ export function scorablePetOf(snapshot: ScorableSnapshot | null): ScorablePet | 
   };
 }
 
-/** Duration (min, 2dp, capped at RUNAWAY_CAP_MIN) of a session at `now`. */
-export function sessionDurationMin(session: ActiveWalkSession, now = Date.now()): number {
+/** Wall-clock ms of a session at `now`, minus user pauses (not capped). */
+function sessionElapsedMs(session: ActiveWalkSession, now: number): number {
   const end = Math.min(session.stoppedAt ?? now, session.startedAt + WALK_ROUTE_LIMIT_MS);
   const pausedTotal =
     session.pausedMs + (session.pausedSince !== null ? Math.max(0, end - session.pausedSince) : 0);
-  const elapsedMs = Math.max(0, end - session.startedAt - pausedTotal);
-  const min = Math.floor((elapsedMs / 60_000) * 100) / 100;
+  return Math.max(0, end - session.startedAt - pausedTotal);
+}
+
+/** Duration (min, 2dp, capped at RUNAWAY_CAP_MIN) of a session at `now`. */
+export function sessionDurationMin(session: ActiveWalkSession, now = Date.now()): number {
+  const min = Math.floor((sessionElapsedMs(session, now) / 60_000) * 100) / 100;
   return Math.min(RUNAWAY_CAP_MIN, min);
+}
+
+/** Whole seconds for the live mm:ss timer — durationMin's 0.01-min (0.6 s) steps make it skip/stall. */
+export function sessionDurationSec(session: ActiveWalkSession, now = Date.now()): number {
+  return Math.min(RUNAWAY_CAP_MIN * 60, Math.floor(sessionElapsedMs(session, now) / 1000));
 }
 
 /** Final numbers for a recovered (or just stopped) session. */
@@ -195,6 +205,7 @@ export function sessionFinalState(
     startedAt: new Date(session.startedAt),
     totalDistanceKm: session.acc.totalDistanceKm,
     durationMin,
+    durationSec: sessionDurationSec(session, now),
     path: session.acc.path,
     errorKind: null,
     pausedMs: session.pausedMs,
@@ -386,11 +397,13 @@ export type WalkTrackingState = {
   isTracking: boolean;
   /** True while the USER has paused (web §A). Time + distance freeze. */
   isPaused: boolean;
-  /** True when Always permission was granted → background recording is on. */
+  /** True when the background source is on (any location permission). */
   backgroundEnabled?: boolean;
   startedAt: Date | null;
   totalDistanceKm: number;
   durationMin: number;
+  /** Exact whole seconds for the live timer display. */
+  durationSec: number;
   path: WalkPathPoint[];
   errorKind: WalkTrackingErrorKind;
   /** Banked user-pause time (ms). */
@@ -413,6 +426,7 @@ export function emptyTrackingState(): WalkTrackingState {
     startedAt: null,
     totalDistanceKm: 0,
     durationMin: 0,
+    durationSec: 0,
     path: [],
     errorKind: null,
     pausedMs: 0,
@@ -451,16 +465,17 @@ export class WalkTrackingService {
     for (const l of this.listeners) l(this.state);
   }
 
-  /** Permission (foreground required, Always optional). null = foreground denied. */
+  /**
+   * Foreground permission is enough for background recording: iOS keeps
+   * `startLocationUpdatesAsync` (UIBackgroundModes=location) running after the
+   * app leaves the foreground when it was started in the foreground, even
+   * under "While Using". Always is still requested (optional). null = denied.
+   */
   private async requestPermissions(): Promise<boolean | null> {
     const fg = await Location.requestForegroundPermissionsAsync();
     if (fg.status !== Location.PermissionStatus.GRANTED) return null;
-    try {
-      const bg = await Location.requestBackgroundPermissionsAsync();
-      return bg.status === Location.PermissionStatus.GRANTED;
-    } catch {
-      return false;
-    }
+    await Location.requestBackgroundPermissionsAsync().catch(() => {});
+    return true;
   }
 
   private async startSource(background: boolean): Promise<void> {
@@ -495,7 +510,7 @@ export class WalkTrackingService {
    * Request permissions and begin a NEW walk for `identity`. Resolves `false`
    * when foreground permission is denied (errorKind permission_denied), the
    * source fails to start (status failed / position_unavailable) or the
-   * service was reset meanwhile. Always-denied still tracks (fallback).
+   * service was reset meanwhile. "While Using" still records in the background.
    */
   async start(identity: WalkSessionIdentity, timingOnly = false): Promise<boolean> {
     if (this.state.status === "tracking" || this.state.status === "starting") {
@@ -570,7 +585,7 @@ export class WalkTrackingService {
     active.acc=interruptRoute(active.acc);
     active.stoppedAt = null;
     active.autoStopped = false;
-    // Always may have been revoked meanwhile → fall back to the foreground source.
+    // Any location permission keeps the background source (see requestPermissions).
     active.backgroundMode = always;
     await persistSession();
     if (gen !== this.generation) return false;
@@ -607,7 +622,8 @@ export class WalkTrackingService {
     }
 
     lastGoodFixAt = Date.now();
-    this.ticker = setInterval(() => this.tick(), 1000);
+    // 500ms: a 1s interval drifts against the second boundary and can skip a second.
+    this.ticker = setInterval(() => this.tick(), 500);
     this.appStateSub = AppState.addEventListener("change", (next) => this.handleAppState(next));
     this.update({
       status: "tracking",
@@ -619,6 +635,7 @@ export class WalkTrackingService {
       path: session.acc.path,
       totalDistanceKm: session.acc.totalDistanceKm,
       durationMin: sessionDurationMin(session),
+      durationSec: sessionDurationSec(session),
       pausedMs: session.pausedMs,
       errorKind: null,
       autoStopped: false,
@@ -696,6 +713,7 @@ export class WalkTrackingService {
     }
     this.update({
       durationMin,
+      durationSec: sessionDurationSec(session, now),
       path: session.acc.path,
       totalDistanceKm: session.acc.totalDistanceKm,
       errorKind,

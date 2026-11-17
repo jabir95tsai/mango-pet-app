@@ -2,14 +2,14 @@
  * Button — 1:1 with the web Button (apps/web/src/components/ui/button.tsx).
  *
  * Variants mirror web exactly:
- *  - primary   → `.btn-mango`: amber→brand→brandDeep gradient + WHITE text +
- *                lifted mango shadow (globals.css .btn-mango). NOT ink-on-flat.
+ *  - primary   → bright mango Liquid Glass (`MangoGlass`) + WHITE text, NO shadow
+ *                (user 2026-11-17; web still `.btn-mango`). NOT ink-on-flat.
  *  - secondary → white fill, ink text, 1px hairline border.
  *  - ghost     → transparent, ink2 text.
  *  - danger    → red fill, white text.
  *
  * Web sizes: sm `h-8 px-3 text-sm`, md `h-10 px-4 text-sm`, lg `h-12 px-6
- * text-base`, all `rounded-lg` (8px) + `font-medium` + `gap-2`. Horizontal
+ * text-base`; iOS uses the §4 pill radius by default (web still `rounded-lg`) + `font-medium` + `gap-2`. Horizontal
  * padding is per size like web; heights keep a native tap floor (sm 36 plus a
  * hitSlop that makes up the 44pt target, md 44, lg 48).
  *
@@ -21,6 +21,7 @@
  * injected unless the element sets one), or a string (emoji). It is rendered
  * in a View, never nested inside <Text>.
  */
+import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -33,10 +34,13 @@ import {
   type ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { GlassView } from "expo-glass-effect";
+import Animated from "react-native-reanimated";
 
 import { renderIconSlot, type IconSlot } from "./icon-slot";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
-import { colors, mangoGradient, radius, shadows, spacing } from "@/theme/theme";
+import { usePressFeedback } from "./use-press-feedback";
+import { colors, radius, spacing } from "@/theme/theme";
+import { LIQUID_GLASS } from "@/lib/liquid-glass";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -53,7 +57,7 @@ export type ButtonProps = {
   /** Render the icon after the label instead of before it. */
   iconPosition?: "start" | "end";
   fullWidth?: boolean;
-  /** Pill radius (rounded-full) instead of web's rounded-lg — for the big CTAs. */
+  /** Pill radius (design-system §4 default). false → radius.sm, only for dense inline controls. */
   pill?: boolean;
   accessibilityLabel?: string;
   accessibilityHint?: string;
@@ -62,6 +66,8 @@ export type ButtonProps = {
   /** Escape hatch for bespoke CTAs (e.g. the 800-weight hero pill). */
   labelStyle?: StyleProp<TextStyle>;
 };
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const HEIGHT: Record<ButtonSize, number> = { sm: 36, md: 44, lg: 48 };
 // web px-3 / px-4 / px-6
@@ -87,15 +93,19 @@ export function Button({
   icon,
   iconPosition = "start",
   fullWidth = false,
-  pill = false,
+  pill = true,
   accessibilityLabel,
   accessibilityHint,
   testID,
   style,
   labelStyle,
 }: ButtonProps) {
-  const reduceMotion = useReducedMotion();
   const isDisabled = disabled || loading;
+  const press = usePressFeedback({
+    pressedOpacity: 0.92,
+    reducedPressedOpacity: 0.85,
+    restOpacity: isDisabled ? 0.7 : 1,
+  });
   const v = VARIANT[variant];
   const box: ViewStyle = {
     minHeight: HEIGHT[size],
@@ -122,39 +132,52 @@ export function Button({
   );
 
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       onPress={onPress}
+      {...press.handlers}
       hitSlop={HIT_SLOP[size]}
       testID={testID}
-      style={({ pressed }) => [
+      style={[
         fullWidth && styles.fullWidth,
-        variant === "primary" && !isDisabled && shadows.mango,
-        pressed && !isDisabled && (reduceMotion ? styles.pressedStatic : styles.pressed),
-        isDisabled && styles.disabled,
+        press.style,
         style,
       ]}
     >
       {variant === "primary" ? (
-        <LinearGradient
-          colors={mangoGradient.colors}
-          locations={mangoGradient.locations}
-          start={mangoGradient.start}
-          end={mangoGradient.end}
-          style={[styles.base, box]}
-        >
-          {inner}
-        </LinearGradient>
+        <MangoGlass style={[styles.base, box]}>{inner}</MangoGlass>
       ) : (
         <View style={[styles.base, box, { backgroundColor: v.bg }, v.border]}>{inner}</View>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
+
+/**
+ * Bright mango Liquid Glass fill shared by primary buttons and the walks start CTA.
+ * iOS 26+: tinted native glass. Older iOS: translucent mango gradient + glass rim + top sheen.
+ */
+export function MangoGlass({ style, children }: { style?: StyleProp<ViewStyle>; children: ReactNode }) {
+  if (LIQUID_GLASS) {
+    return <GlassView glassEffectStyle="regular" tintColor="rgba(255,146,10,0.86)" isInteractive style={[glass.rim, style]}>{children}</GlassView>;
+  }
+  return (
+    <View style={[glass.rim, style]}>
+      <LinearGradient colors={["rgba(255,178,46,0.92)", "rgba(245,124,0,0.92)"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={["rgba(255,255,255,0.38)", "rgba(255,255,255,0)"]} style={glass.sheen} pointerEvents="none" />
+      {children}
+    </View>
+  );
+}
+
+const glass = StyleSheet.create({
+  rim: { borderWidth: 1, borderColor: "rgba(255,255,255,0.55)", overflow: "hidden" },
+  sheen: { position: "absolute", top: 0, left: 0, right: 0, height: "50%" },
+});
 
 const VARIANT: Record<ButtonVariant, { bg: string; fg: string; border?: ViewStyle }> = {
   primary: { bg: "transparent", fg: "#ffffff" },
@@ -179,7 +202,4 @@ const styles = StyleSheet.create({
   // web font-medium
   label: { fontWeight: "500", flexShrink: 1 },
   iconBox: { alignItems: "center", justifyContent: "center" },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.97 }] },
-  pressedStatic: { opacity: 0.85 },
-  disabled: { opacity: 0.7 },
 });

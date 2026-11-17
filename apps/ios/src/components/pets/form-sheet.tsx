@@ -398,9 +398,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xs,
-    minHeight: 56,
+    // iOS 26 pageSheet corners are large — keep Cancel/Save clear of the curve.
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    minHeight: 64,
     borderBottomWidth: 1,
     borderBottomColor: colors.hairline,
   },
@@ -451,7 +453,7 @@ const styles = StyleSheet.create({
   stepBtn: {
     width: 40,
     height: 40,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: colors.card,

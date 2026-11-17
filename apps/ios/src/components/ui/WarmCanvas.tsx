@@ -3,6 +3,7 @@ import { AccessibilityInfo, StyleSheet, View, type StyleProp, type ViewStyle } f
 import { LinearGradient } from "expo-linear-gradient";
 import { GlassView } from "expo-glass-effect";
 import { LIQUID_GLASS } from "@/lib/liquid-glass";
+import { radius } from "@/theme/theme";
 
 /** iOS A palette: ambient canvas, with native glass reserved for small controls. */
 export function WarmCanvas() {
@@ -17,7 +18,7 @@ export function WarmGlass({ children, style }: PropsWithChildren<{ style?: Style
     return () => { active = false; sub.remove(); };
   }, []);
   return <View style={style}>
-    {LIQUID_GLASS && !opaque ? <GlassView pointerEvents="none" glassEffectStyle="regular" colorScheme="light" style={[StyleSheet.absoluteFill, { borderRadius: 999 }]} /> : <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "#FFF9F0", borderRadius: 999 }]} />}
+    {LIQUID_GLASS && !opaque ? <GlassView pointerEvents="none" glassEffectStyle="regular" colorScheme="light" style={[StyleSheet.absoluteFill, { borderRadius: radius.pill }]} /> : <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "#FFF9F0", borderRadius: radius.pill }]} />}
     {children}
   </View>;
 }

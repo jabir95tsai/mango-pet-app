@@ -12,7 +12,8 @@
  *  - danger  → transparent, danger icon (pressed: peachTint)
  *  - ghost   → transparent, ink2 icon (pressed: bgAlt)   ← default
  *
- * Press feedback: background/opacity only, plus scale .97 unless Reduce Motion.
+ * Press feedback (UI thread, see use-press-feedback): background fade plus
+ * scale .97 unless Reduce Motion.
  */
 import {
   Pressable,
@@ -22,9 +23,12 @@ import {
   type ViewStyle,
 } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
+import Animated, { interpolateColor, useAnimatedStyle } from "react-native-reanimated";
 
-import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { usePressFeedback } from "./use-press-feedback";
 import { colors, radius } from "@/theme/theme";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export type IconButtonTone = "neutral" | "brand" | "danger" | "ghost";
 
@@ -84,46 +88,48 @@ export function IconButton({
   testID,
   style,
 }: IconButtonProps) {
-  const reduceMotion = useReducedMotion();
   const t = TONE[tone];
+  const press = usePressFeedback({ restOpacity: disabled ? 0.5 : 1 });
+  const progress = press.progress;
+  const bgStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(progress.value, [0, 1], [t.bg, t.pressedBg]),
+  }));
   const fg = color ?? t.fg;
   const glyph = iconSize ?? Math.round(size * 0.5);
   const slop = Math.max(0, Math.ceil((44 - size) / 2));
 
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled, selected }}
       disabled={disabled}
       onPress={onPress}
+      {...press.handlers}
       hitSlop={slop}
       testID={testID}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         {
           width: size,
           height: size,
           borderRadius: shape === "circle" ? size / 2 : radius.sm,
-          backgroundColor: pressed && !disabled ? t.pressedBg : t.bg,
         },
         t.border,
-        pressed && !disabled && !reduceMotion && styles.pressedScale,
-        disabled && styles.disabled,
+        bgStyle,
+        press.style,
         style,
       ]}
     >
       <Icon size={glyph} color={fg} strokeWidth={2} fill={filled ? fg : "none"} />
       {badge ? <View style={styles.badge} pointerEvents="none" /> : null}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: { alignItems: "center", justifyContent: "center" },
-  pressedScale: { transform: [{ scale: 0.97 }] },
-  disabled: { opacity: 0.5 },
   badge: {
     position: "absolute",
     top: 6,

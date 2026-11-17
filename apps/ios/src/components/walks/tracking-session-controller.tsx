@@ -18,8 +18,6 @@
  * pets-list change flips the branch, an overlay at a different position
  * would remount and abandon the walk in progress.
  */
-import { Alert } from "react-native";
-import { t } from "@/lib/i18n";
 import { useRef, useState } from "react";
 
 import { PhotoShareFlow } from "@/components/walks/photo-share-flow";
@@ -92,20 +90,14 @@ export function useWalkSessionController(data: WalksData): WalkSessionController
   function startWalking() {
     // Never start a walk while the family scope is unknown (R08).
     if (data.pets.length === 0 || !data.scopeReady || busy) return;
-    setShareLive(false);
-    const begin=(share:boolean)=>{
-      setShareLive(share);
-      savedRef.current = false;
-      setRecovered(null);
-      setPendingWalkId(newWalkId());
-      if (canAutoShare) setStartShareOpen(true);
-      else setSessionOpen(true);
-    };
-    Alert.alert(t("WalkRecorder.startTitle"),t(data.familyId ? "WalkRecorder.familyExplanation" : "WalkRecorder.personalExplanation"),[
-      {text:t("Common.cancel"),style:"cancel"},
-      {text:t("WalkRecorder.startPrivate"),onPress:()=>begin(false)},
-      ...(data.familyId && !isGuest ? [{text:t("WalkRecorder.startShare"),onPress:()=>begin(true)}] : []),
-    ]);
+    // Live sharing comes from the settings toggle (no per-walk dialog, user 2026-11-17);
+    // only family members can receive it, never guests.
+    setShareLive(Boolean(data.liveShareDefault && data.familyId && !isGuest));
+    savedRef.current = false;
+    setRecovered(null);
+    setPendingWalkId(newWalkId());
+    if (canAutoShare) setStartShareOpen(true);
+    else setSessionOpen(true);
   }
 
   function onStartShareDone() {

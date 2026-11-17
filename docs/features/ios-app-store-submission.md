@@ -34,7 +34,7 @@
 ### Apple 帳號 / Console（user 手動）
 - **App Store Connect App 紀錄**：已記錄 App ID 6816685055；版本及表單狀態待 Console 確認。
 - **Apple Developer Program License Agreement**：確認會員與現行條款狀態。
-- **APNs Auth Key (.p8)** 上傳 Firebase Console → Cloud Messaging：**push 真正送達的前置**（§parity 111 已記）。沒設 → token 能 mint 但收不到推播。
+- ✅ **APNs Auth Key (.p8)** 已上傳 Firebase（2026-11-17，正式版，Key ID `H9F7P88DLP`，Sandbox & Production）。待 TestFlight 實機確認推播送達。
 
 ### 素材
 - ✅ **App icon 1024²**（2026-09-27 確認）：`apps/ios/assets/icon.png` 實測 1024×1024、RGB 不透明、四角像素取樣確認**非預圓角**（角落與邊緣同色漸層，非白/透明遮罩）——是乾淨 Mango 芒果+爪印 icon，非 placeholder。`splash.png` 1242×1242 同樣確認存在。
@@ -86,7 +86,7 @@ Apple 重點審查。審查備註要講清 session-only、結束即停（§F.2 �
 3. **user 手動**：
    - ✅ App Store Connect 建 App 紀錄（2026-09-27 — 已有 `ascAppId` 6816685055，代表 App 紀錄已建立）
    - Apple Developer Program 會員及現行條款— **狀態待確認**
-   - APNs Auth Key (.p8) 上傳 Firebase Console → Cloud Messaging — **狀態待確認**
+   - ✅ APNs Auth Key (.p8) 已上傳 Firebase（2026-11-17，Key ID `H9F7P88DLP`）
 4. ✅ **PM metadata 草稿完成（2026-09-27）** → [`ios-app-store-listing.md`](./ios-app-store-listing.md)：描述/關鍵字/分類建議/年齡分級推薦答案/URL 三件套/App Privacy 標籤/審查備註全部草稿好，**待你複製貼上進 ASC**（分類 + 年齡問卷仍要在 ASC 介面互動點選）。
 5. ✅ **素材確認（2026-09-27）**：icon 1024² 乾淨非預圓角、splash 1242² 都確認存在。**尚缺**：截圖（大尺寸 iPhone + 13 吋 iPad，需要真機/simulator 產生，還沒做）。
 6. ✅ **`eas.json` `submit.production` 已填完整（2026-09-27）**：`appleId`/`ascAppId`（`6816685055`）/`appleTeamId`（`5HGWLK54MK`）全部到位，可以 `eas submit` 了。

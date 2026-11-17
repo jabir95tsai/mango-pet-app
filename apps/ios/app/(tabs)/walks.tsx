@@ -50,7 +50,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { alertError, confirm } from "@/lib/confirm";
 import { t } from "@/lib/i18n";
 import { deleteWalk } from "@/lib/walks";
-import { colors, CONTENT_MAX_WIDTH, spacing } from "@/theme/theme";
+import { colors, CONTENT_MAX_WIDTH, radius, spacing } from "@/theme/theme";
 
 const WEEK_GOAL_COUNT = 5;
 const RECENT_LIMIT = 5;
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   sectionMeta: { fontSize: 12, color: colors.ink3, fontVariant: ["tabular-nums"] },
   sectionMetaStrong: { fontWeight: "700", color: colors.ink },
   sectionTitle: { fontSize: 19, fontWeight: "700", color: colors.ink },
-  toggleAllBtn: { minHeight: 44, justifyContent: "center", borderRadius: 9999, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  toggleAllBtn: { minHeight: 44, justifyContent: "center", borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 4 },
   toggleAllPressed: { backgroundColor: colors.brandTint },
   toggleAll: { fontSize: 12, fontWeight: "600", color: colors.brandDeep },
   walkList: { gap: spacing.sm },

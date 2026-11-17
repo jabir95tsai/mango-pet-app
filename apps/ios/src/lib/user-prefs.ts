@@ -54,6 +54,11 @@ export async function setWalkAutoPhoto(uid: string, enabled: boolean): Promise<v
   await userRef(uid).set({ walkPrefs: { autoPhotoShare: enabled } }, { merge: true });
 }
 
+/** Share live location with family on every walk (default off). */
+export async function setWalkLiveShareDefault(uid: string, enabled: boolean): Promise<void> {
+  await userRef(uid).set({ walkPrefs: { liveShareDefault: enabled } }, { merge: true });
+}
+
 /** Leaderboard visibility (public/friends/off). */
 export async function setLeaderboardVisibility(
   uid: string,

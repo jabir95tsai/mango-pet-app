@@ -27,7 +27,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { AlertCircle, Plus } from "lucide-react-native";
 import { fromLocalDateInput } from "@mango/shared-business";
 import type {
@@ -58,7 +57,8 @@ import { ReminderForm } from "@/components/pets/reminder-form";
 import { ExpenseForm, type ExpenseFormInitial } from "@/components/pets/expense-form";
 import { HealthForm } from "@/components/pets/health-form";
 import { ReceiptScanner } from "@/components/pets/receipt-scanner";
-import { colors, mangoGradient, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
+import { MangoGlass } from "@/components/ui/Button";
+import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 
 type FormState =
   | { kind: "pet"; pet?: Pet }
@@ -344,15 +344,9 @@ export default function PetsScreen() {
         accessibilityRole="button"
         accessibilityLabel={t(`PetsPage.fab.${activeTab}`)}
       >
-        <LinearGradient
-          colors={mangoGradient.colors}
-          locations={mangoGradient.locations}
-          start={mangoGradient.start}
-          end={mangoGradient.end}
-          style={styles.fabFill}
-        >
+        <MangoGlass style={styles.fabFill}>
           <Plus size={22} color="#ffffff" strokeWidth={2.5} />
-        </LinearGradient>
+        </MangoGlass>
       </Pressable>
 
       {/* Floating pet switcher — outside taps close it (web click-outside). */}
@@ -498,12 +492,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     overflow: "hidden",
-    shadowColor: colors.brand,
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
   },
-  fabFill: { flex: 1, alignItems: "center", justifyContent: "center" },
+  fabFill: { flex: 1, borderRadius: 28, alignItems: "center", justifyContent: "center" },
   fabPressed: { opacity: 0.95 },
 });

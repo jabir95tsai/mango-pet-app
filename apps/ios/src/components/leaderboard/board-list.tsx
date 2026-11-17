@@ -1,8 +1,8 @@
 /**
  * Shared shell for the human + dog boards — a virtualized FlatList (up to 100
  * rows) whose header carries the page-level dimension toggle plus the board's
- * own RouteHeader-style title / subtitle / refresh button and tab rows, with
- * native pull-to-refresh wired to the same refresh as the icon button.
+ * own RouteHeader-style title / subtitle and tab rows, with native
+ * pull-to-refresh as the only refresh (the icon button was removed 2026-11-17).
  *
  * Header rhythm matches web: title 26/800, subtitle 14 / lh 24, header→scope
  * 16, scope→period 12, period→list 16; rows are separated by 8.
@@ -12,7 +12,6 @@ import { FlatList, RefreshControl, StyleSheet, Text, View, type ListRenderItem }
 
 import { useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { colors, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
-import { RefreshIconButton } from "./refresh-icon-button";
 import { MY_RANK_BAR_SPACE } from "./podium";
 
 /** Per-board scroll handle so the screen can line the incoming board up with
@@ -24,17 +23,12 @@ export const BoardScroll = createContext<BoardSlot | null>(null);
 export function BoardHeader({
   title,
   subtitle,
-  refreshing,
-  onRefresh,
   accessory,
 }: {
   title: string;
   subtitle?: string;
-  /** Extra control between the title and refresh (layout A: scope pill). */
+  /** Extra control beside the title (the human/dog toggle). Refresh is pull-to-refresh only. */
   accessory?: ReactNode;
-  refreshing?: boolean;
-  /** Omit to hide the refresh button (personal-mode empty state). */
-  onRefresh?: () => void;
 }) {
   return (
     <View style={styles.headerRow}>
@@ -45,7 +39,6 @@ export function BoardHeader({
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       {accessory}
-      {onRefresh ? <RefreshIconButton refreshing={!!refreshing} onPress={onRefresh} /> : null}
     </View>
   );
 }
