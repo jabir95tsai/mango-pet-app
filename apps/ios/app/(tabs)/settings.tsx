@@ -32,7 +32,11 @@ import { WarmCanvas } from "@/components/ui/WarmCanvas";
 import { UserAvatar } from "@/components/feed/user-avatar";
 import { PushToggle } from "@/components/settings/push-toggle";
 import { EngagementPushSection } from "@/components/settings/engagement-push-section";
-import { WalkAutoPhotoSection, LeaderboardVisibilitySection } from "@/components/settings/prefs-sections";
+import {
+  WalkAutoPhotoSection,
+  WalkLiveShareSection,
+  LeaderboardVisibilitySection,
+} from "@/components/settings/prefs-sections";
 import { BlockedUsersSection } from "@/components/settings/blocked-users-section";
 import { GuestUpgradeSection } from "@/components/settings/guest-upgrade-section";
 import { PhotosPreviewSection } from "@/components/settings/photos-preview-section";
@@ -184,6 +188,7 @@ export default function SettingsScreen() {
           <PushToggle />
           {user ? <EngagementPushSection prefs={prefs} /> : null}
           {user ? <WalkAutoPhotoSection prefs={prefs} /> : null}
+          {user && !isGuest ? <WalkLiveShareSection prefs={prefs} /> : null}
           {user && !isGuest ? <LeaderboardVisibilitySection prefs={prefs} /> : null}
           {user && !isGuest ? <BlockedUsersSection prefs={prefs} /> : null}
 

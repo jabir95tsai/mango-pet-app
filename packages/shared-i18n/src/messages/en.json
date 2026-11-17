@@ -651,6 +651,10 @@
       "title": "Auto-photo on walks",
       "body": "Prompt to capture + share at walk start & end"
     },
+    "walkLiveShare": {
+      "title": "Share live location on walks",
+      "body": "When on, family can see your latest location during every walk; sharing stops when the walk ends. When off, family only sees the route after the walk."
+    },
     "leaderboardVisibility": {
       "title": "Leaderboard visibility",
       "subtitle": "Choose which dog leaderboards your dogs appear on. You can always see your own dogs.",

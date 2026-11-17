@@ -699,6 +699,9 @@ export type WalkPrefs = {
   /** Absent/undefined = ON (default). Only an explicit false disables the
    *  walk start/end auto-photo prompts. */
   autoPhotoShare?: boolean;
+  /** iOS: share live location with family on every walk. Absent = OFF;
+   *  replaces the per-walk start dialog (user 2026-11-17). */
+  liveShareDefault?: boolean;
 };
 
 // ── Account export / delete (P5) — callable return shapes (asia-east1).
