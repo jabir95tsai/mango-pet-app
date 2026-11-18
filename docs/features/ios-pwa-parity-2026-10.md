@@ -54,7 +54,7 @@ user 需求：「讓 iOS app 的介面按照 PWA 的介面實作，並優化功�
 | web 總覽「即將到期」卡的完成/刪除按鈕是 no-op | Web UI/UX | iOS 已接上（`use-reminder-actions`） |
 | web `updateExpense` 忽略 items | Web Bug Hunter | `apps/web/src/lib/firebase/expenses.ts` |
 | web 寫死字串可改用新 key | Web UI/UX | `Walks.page.dialGoal`（dial「分」）、`Walks.manual.errRequired/errEndAfterStart`、`PetsPage.stat.hoursAhead/daysAhead/hoursAgo/daysAgo/walkDaysUnit`、`Photos.titles.*`（web 目前英文）、`Home.notifications`、`Friends.add.sent/self/signIn`、`Feed.deleteConfirm` |
-| iOS 推播點擊沒有路由（成就解鎖推播 deep link `/app/achievements`） | iOS Backend | 加 notification-open handler 時把它導到 `/achievements` |
+| iOS 推播點擊沒有路由（成就解鎖推播 deep link `/app/achievements`） | iOS Backend | ✅ code 完成 2026-11-18：`apps/ios/src/lib/push-open.ts` 依 `data.url` 路由（walks / leaderboard / achievements / feed?postId / pets 提醒 tab / 首頁），前景顯示 banner；`scripts/push-open.test.cjs` 2/2。待實機驗收（冷啟動 + 背景點擊） |
 | `app.json` `CFBundleLocalizations: ['zh-Hant','en']` | iOS Backend | 選配：讓原生 Apple 按鈕 / 權限提示跟隨 App 內語言 |
 
 ## 5. 如何接續

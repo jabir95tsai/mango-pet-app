@@ -1,5 +1,6 @@
 import "@/lib/rnfb-setup";
 import { listenWalkReminderOpen } from "@/lib/walk-route-notifications";
+import { listenPushOpen } from "@/lib/push-open";
 import { getActiveWalkSession } from "@/lib/walk-tracking-service";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
@@ -57,6 +58,12 @@ function RootNavigator() {
       });
     });
   },[initializing,profileError,localeRestored,user?.uid,router]);
+
+  // Remote push tap → matching screen (server sends the web path in data.url).
+  useEffect(() => {
+    if (initializing || profileError || !localeRestored || !user) return;
+    return listenPushOpen((route) => router.push(route));
+  }, [initializing, profileError, localeRestored, user?.uid, router]);
 
   // SETTINGS-2: re-apply the persisted language before the first navigator
   // render (the splash below waits for it).

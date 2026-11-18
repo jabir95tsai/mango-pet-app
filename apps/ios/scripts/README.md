@@ -5,6 +5,7 @@ Run from the repository root with installed workspace dependencies:
 ```powershell
 node --test apps/ios/scripts/auth-push.test.cjs
 node --test apps/ios/scripts/tab-gestures.test.cjs
+node --test apps/ios/scripts/push-open.test.cjs
 npm run typecheck -w apps/ios
 npm run typecheck -w apps/web
 ```
