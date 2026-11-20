@@ -202,6 +202,7 @@ test("generateWalkGoalRecommendation invokes Interactions API with gemini-4-hydr
   );
 
   assert.equal(capturedParams.model, WALK_GOAL_AI_MODEL);
+  assert.equal(WALK_GOAL_AI_MODEL, "gemini-4-hydrogen");
   assert.equal(capturedParams.store, false);
   assert.deepEqual(capturedParams.generation_config, { thinking_level: "low" });
   assert.deepEqual(capturedParams.response_format, {

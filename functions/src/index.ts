@@ -1,5 +1,10 @@
 import { eraseWalkRoute } from "./walk-routes";
 import {
+  enforceReceiptRateLimit,
+  extractReceiptWithGemini,
+  normalizeReceiptRequest,
+} from "./receipt-ai";
+import {
   enforceWalkGoalRateLimit,
   generateWalkGoalRecommendation,
   loadRecentPetWalkSummary,
@@ -4755,6 +4760,55 @@ export const recommendPetWalkGoal = onCall(
       throw new HttpsError(
         "unavailable",
         "AI walk goal service is temporarily unavailable.",
+      );
+    }
+  },
+);
+
+export const extractReceipt = onCall(
+  {
+    region: FUNCTION_REGION,
+    cors: true,
+    secrets: [GEMINI_API_KEY],
+    timeoutSeconds: 60,
+    memory: "512MiB",
+  },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+
+    await withActiveAccounts(db, [uid], async () => {});
+    const input = normalizeReceiptRequest(req.data);
+
+    const apiKey = (GEMINI_API_KEY.value() || process.env.GEMINI_API_KEY || "").trim();
+    if (!apiKey) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Gemini API key is not configured.",
+      );
+    }
+
+    await enforceReceiptRateLimit(db, uid);
+
+    try {
+      return await extractReceiptWithGemini(input, { apiKey });
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      logger.error("[extractReceipt] failed", { uid, err });
+      const status =
+        typeof err === "object" && err !== null && "status" in err
+          ? (err as { status?: unknown }).status
+          : undefined;
+      const msg = err instanceof Error ? err.message : String(err);
+      if (status === 429 || /rate.?limit|quota/i.test(msg)) {
+        throw new HttpsError(
+          "resource-exhausted",
+          "AI service rate limit exceeded. Please try again later.",
+        );
+      }
+      throw new HttpsError(
+        "unavailable",
+        "AI receipt extraction service is temporarily unavailable.",
       );
     }
   },

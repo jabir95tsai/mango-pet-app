@@ -432,8 +432,15 @@ export type ExpenseInput = {
   source: ExpenseSource;
 };
 
+export type ExtractReceiptInput = {
+  /** Base64-encoded receipt image bytes (without data URL prefix). */
+  imageBase64: string;
+  /** Image MIME type, e.g. "image/jpeg", "image/png", "image/webp". */
+  mimeType: string;
+};
+
 /** AI-extracted receipt data before the user confirms (returned by the
- *  `extractReceipt` callable; gemini-2.5-flash). `spentAt` is a YYYY-MM-DD
+ *  `extractReceipt` callable; gemini-4-hydrogen). `spentAt` is a YYYY-MM-DD
  *  string the form parses into a Date. */
 export type ExtractedReceipt = {
   amount?: number;

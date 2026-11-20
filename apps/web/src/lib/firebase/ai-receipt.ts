@@ -1,41 +1,9 @@
-import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { getFirebaseApp } from "./config";
-import type { ExpenseCategory, ExtractedReceipt } from "@/lib/types";
+import type { ExtractReceiptInput, ExtractedReceipt } from "@/lib/types";
 
-// gemini-2.0-flash sunsets 2026-06-01; 2.5-flash is the official successor.
-const MODEL = "gemini-2.5-flash";
-
-const PROMPT = `You extract structured data from a Taiwanese pet store / vet / pet service receipt photo.
-
-Return ONLY valid JSON, no markdown, no commentary. Shape:
-{
-  "amount": <number, total amount in TWD; 0 if unreadable>,
-  "vendor": <string, store/clinic name; "" if unreadable>,
-  "spentAt": <string, ISO date "YYYY-MM-DD"; "" if unreadable>,
-  "category": <one of: "food"|"medical"|"grooming"|"toy"|"training"|"insurance"|"other">,
-  "items": <array of strings, line items; [] if none>
-}
-
-Category guessing rules:
-- vet / 動物醫院 / 獸醫 / 醫療 / 藥 → "medical"
-- 飼料 / 罐頭 / pet food / dog food / cat food / 寵物食品 → "food"
-- 美容 / 洗澡 / grooming / salon / 修毛 → "grooming"
-- 玩具 / toy / 用品 (if clearly not food/medical) → "toy"
-- 訓練 / training class → "training"
-- 保險 / insurance → "insurance"
-- otherwise → "other"
-
-Output JSON only. Do not wrap in markdown fences.`;
-
-const VALID_CATEGORIES: ExpenseCategory[] = [
-  "food",
-  "medical",
-  "grooming",
-  "toy",
-  "training",
-  "insurance",
-  "other",
-];
+const FN_REGION = "asia-east1";
+const MAX_RECEIPT_FILE_BYTES = 6 * 1024 * 1024;
 
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -50,70 +18,46 @@ async function fileToBase64(file: File): Promise<string> {
   });
 }
 
-function stripFences(text: string): string {
-  const trimmed = text.trim();
-  const fence = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  return fence ? fence[1].trim() : trimmed;
-}
-
-function coerceCategory(raw: unknown): ExpenseCategory {
-  if (typeof raw === "string" && VALID_CATEGORIES.includes(raw as ExpenseCategory)) {
-    return raw as ExpenseCategory;
+function mapReceiptCallableError(err: unknown): Error {
+  const code =
+    typeof err === "object" && err !== null && "code" in err
+      ? String((err as { code?: unknown }).code)
+      : "";
+  switch (code) {
+    case "functions/unauthenticated":
+      return new Error("請先登入再使用 AI 收據辨識。");
+    case "functions/resource-exhausted":
+      return new Error("AI 辨識次數已達上限，請稍後再試或手動輸入。");
+    case "functions/invalid-argument":
+      return new Error("圖片格式不支援或檔案過大，請重新選擇收據照片。");
+    case "functions/failed-precondition":
+    case "functions/unavailable":
+      return new Error("AI 收據辨識服務暫時無法使用，請稍後再試或手動輸入。");
+    default:
+      return new Error("AI 回傳的結果無法解析，請手動輸入。");
   }
-  return "other";
 }
 
 export async function extractReceipt(file: File): Promise<ExtractedReceipt> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Please upload an image file.");
   }
-  if (file.size > 8 * 1024 * 1024) {
-    throw new Error("Image is too large (max 8 MB).");
+  if (file.size > MAX_RECEIPT_FILE_BYTES) {
+    throw new Error("Image is too large (max 6 MB).");
   }
 
-  const ai = getAI(getFirebaseApp(), { backend: new GoogleAIBackend() });
-  const model = getGenerativeModel(ai, {
-    model: MODEL,
-    generationConfig: {
-      responseMimeType: "application/json",
-      temperature: 0.1,
-    },
-  });
+  const imageBase64 = await fileToBase64(file);
+  const fns = getFunctions(getFirebaseApp(), FN_REGION);
+  const fn = httpsCallable<ExtractReceiptInput, ExtractedReceipt>(
+    fns,
+    "extractReceipt",
+  );
 
-  const base64 = await fileToBase64(file);
-
-  const result = await model.generateContent([
-    PROMPT,
-    {
-      inlineData: {
-        mimeType: file.type,
-        data: base64,
-      },
-    },
-  ]);
-
-  const text = result.response.text();
-  let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(stripFences(text)) as Record<string, unknown>;
+    const res = await fn({ imageBase64, mimeType: file.type });
+    return res.data;
   } catch (err) {
-    console.error("[ai-receipt] failed to parse JSON:", text);
-    throw new Error("AI 回傳的結果無法解析，請手動輸入。");
+    console.error("[ai-receipt] extractReceipt callable failed:", err);
+    throw mapReceiptCallableError(err);
   }
-
-  const amountNum = Number(parsed.amount);
-  const spentRaw = typeof parsed.spentAt === "string" ? parsed.spentAt : "";
-  const vendor = typeof parsed.vendor === "string" ? parsed.vendor : "";
-  const itemsRaw = Array.isArray(parsed.items) ? parsed.items : [];
-
-  return {
-    amount: Number.isFinite(amountNum) && amountNum > 0 ? amountNum : undefined,
-    vendor: vendor.trim() || undefined,
-    spentAt: spentRaw.match(/^\d{4}-\d{2}-\d{2}$/) ? spentRaw : undefined,
-    category: coerceCategory(parsed.category),
-    items: itemsRaw
-      .filter((x): x is string => typeof x === "string")
-      .map((s) => s.trim())
-      .filter(Boolean),
-  };
 }
