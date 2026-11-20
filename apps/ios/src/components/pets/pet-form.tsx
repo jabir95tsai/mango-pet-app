@@ -5,8 +5,9 @@
  *    picker (PHPicker — no library permission needed) and compressed to
  *    IMAGE_PRESETS.avatar on upload;
  *  - name → species / gender → (speciesOther) → breed → weight (placeholder
- *    8.5) / birthday → daily walk-goal stepper (PetEdit.walkGoal.*, clamp
- *    WALK_GOAL_MIN..MAX = 5–180, step 5, + hint) → bio;
+ *    8.5) / birthday → daily walk-goal stepper + Gemini AI recommendation card
+ *    (PetEdit.walkGoal.*, clamp WALK_GOAL_MIN..MAX = 5–180, step 5, + hint) →
+ *    bio;
  *  - title Common.edit when editing, Pet.addPet when adding;
  *  - a failed save shows the real error (web shows err.message) and the sheet
  *    stays open.
@@ -16,29 +17,39 @@
  *
  * Writes via pets-write (createPet / updatePet / deletePet).
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "lucide-react-native";
 import {
   getPetWalkGoalMinutes,
-  WALK_GOAL_MAX_MINUTES,
-  WALK_GOAL_MIN_MINUTES,
-  WALK_GOAL_STEP_MINUTES,
+  toLocalDateInput,
 } from "@mango/shared-business";
-import type { Gender, Pet, PetInput, Species } from "@mango/shared-types";
+import type {
+  Gender,
+  Pet,
+  PetInput,
+  Species,
+  WalkGoalRecommendation,
+} from "@mango/shared-types";
 
+import {
+  buildWalkGoalRecommendInput,
+  mapWalkGoalAiError,
+  recommendPetWalkGoal,
+  resolveWalkGoalSource,
+} from "@/lib/ai-walk-goal";
 import { alertError, confirm } from "@/lib/confirm";
 import { createPet, deletePet, updatePet } from "@/lib/pets-write";
-import { t } from "@/lib/i18n";
+import { t, useLocale } from "@/lib/i18n";
 import { colors, radius, spacing } from "@/theme/theme";
 import {
   FormSheet,
   OptionalDateField,
   SelectField,
-  StepperField,
   TextField,
 } from "./form-sheet";
+import { WalkGoalField } from "./walk-goal-field";
 
 const SPECIES: Species[] = ["dog", "cat", "other"];
 const GENDERS: Gender[] = ["unknown", "male", "female"];
@@ -79,6 +90,11 @@ export function PetForm({
   onDeleted?: () => void;
 }) {
   const editing = !!pet;
+  const locale = useLocale();
+  const initialGoalMinutes = getPetWalkGoalMinutes(pet ?? null);
+  const initialGoalSource: "manual" | "computed" =
+    pet?.walkGoal?.source === "computed" ? "computed" : "manual";
+
   const [name, setName] = useState(pet?.name ?? "");
   const [species, setSpecies] = useState<Species>(pet?.species ?? "dog");
   const [speciesOther, setSpeciesOther] = useState(pet?.speciesOther ?? "");
@@ -91,7 +107,18 @@ export function PetForm({
     pet ? tsToDate(pet.birthday) : null,
   );
   const [bio, setBio] = useState(pet?.bio ?? "");
-  const [goal, setGoal] = useState(getPetWalkGoalMinutes(pet ?? null));
+  const [goal, setGoal] = useState(initialGoalMinutes);
+  const [goalSource, setGoalSource] = useState<"manual" | "computed">(
+    initialGoalSource,
+  );
+  const [computedMinutes, setComputedMinutes] = useState<number | null>(
+    initialGoalSource === "computed" ? initialGoalMinutes : null,
+  );
+  const [recommendation, setRecommendation] =
+    useState<WalkGoalRecommendation | null>(null);
+  const [recommending, setRecommending] = useState(false);
+  const [recommendError, setRecommendError] = useState<string | null>(null);
+  const recommendReqIdRef = useRef(0);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [photoBroken, setPhotoBroken] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -100,6 +127,62 @@ export function PetForm({
 
   const valid = name.trim().length > 0;
   const previewUri = avatarUri ?? (!photoBroken ? (pet?.photoURL ?? null) : null);
+
+  useEffect(() => {
+    return () => {
+      recommendReqIdRef.current += 1;
+    };
+  }, []);
+
+  function handleGoalChange(next: number) {
+    setGoal(next);
+    setGoalSource(resolveWalkGoalSource(next, computedMinutes));
+  }
+
+  function handleApplyRecommendation(minutes: number) {
+    setComputedMinutes(minutes);
+    setGoal(minutes);
+    setGoalSource("computed");
+  }
+
+  async function handleRequestRecommend() {
+    const reqId = ++recommendReqIdRef.current;
+    setRecommending(true);
+    setRecommendError(null);
+    try {
+      const input = buildWalkGoalRecommendInput({
+        species,
+        speciesOther,
+        breed,
+        birthdayIso: birthday ? toLocalDateInput(birthday) : undefined,
+        gender,
+        weightText: weight,
+        petId: pet?.petId,
+        bio,
+        locale,
+      });
+      const result = await recommendPetWalkGoal(input);
+      if (recommendReqIdRef.current !== reqId) return;
+      setRecommendation(result);
+      setComputedMinutes(result.minutes);
+      setGoal(result.minutes);
+      setGoalSource("computed");
+    } catch (err) {
+      if (recommendReqIdRef.current !== reqId) return;
+      const kind = mapWalkGoalAiError(err);
+      if (kind === "rateLimit") {
+        setRecommendError(t("PetEdit.walkGoal.aiErrorRateLimit"));
+      } else if (kind === "unavailable") {
+        setRecommendError(t("PetEdit.walkGoal.aiErrorUnavailable"));
+      } else {
+        setRecommendError(t("PetEdit.walkGoal.aiErrorGeneric"));
+      }
+    } finally {
+      if (recommendReqIdRef.current === reqId) {
+        setRecommending(false);
+      }
+    }
+  }
 
   async function pickAvatar() {
     try {
@@ -130,8 +213,9 @@ export function PetForm({
         weightKg: Number.isFinite(w) && w > 0 ? w : undefined,
         bio: bio.trim() || undefined,
         birthday: birthday ? dayOf(birthday) : undefined,
-        // Web always writes 'manual' on save (the user reviewed the value).
-        walkGoal: { minutes: goal, source: "manual" },
+        // Preserve "computed" when the user accepts the AI recommendation or
+        // edits other fields without overriding the suggested minutes.
+        walkGoal: { minutes: goal, source: goalSource },
       };
       if (editing && pet) {
         await updatePet(pet.petId, input, uid, avatarUri ?? undefined);
@@ -259,15 +343,16 @@ export function PetForm({
         }}
       />
 
-      <StepperField
-        label={t("PetEdit.walkGoal.label")}
+      <WalkGoalField
         value={goal}
-        onChange={setGoal}
-        min={WALK_GOAL_MIN_MINUTES}
-        max={WALK_GOAL_MAX_MINUTES}
-        step={WALK_GOAL_STEP_MINUTES}
-        unit={t("PetEdit.walkGoal.unit")}
-        hint={t("PetEdit.walkGoal.hint")}
+        onChange={handleGoalChange}
+        source={goalSource}
+        onRequestRecommend={handleRequestRecommend}
+        recommending={recommending}
+        recommendation={recommendation}
+        recommendError={recommendError}
+        onApplyRecommendation={handleApplyRecommendation}
+        disabled={busy}
       />
       <TextField
         label={t("Pet.fields.bio")}

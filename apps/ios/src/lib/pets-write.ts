@@ -30,6 +30,7 @@ export async function createPet(
 ): Promise<string> {
   const ref = await col().add({
     familyId, // explicit (incl null) so `where(familyId == null)` works
+    ...(input.walkGoal ? { walkGoal: input.walkGoal } : {}),
     ...clean({
       ownerUid,
       name: input.name,

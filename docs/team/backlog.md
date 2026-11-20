@@ -48,6 +48,7 @@ P3 = 也許永遠不做的「想法」。
 - **重現 / 觀察**：Web 已實作 Cloud Function `recommendPetWalkGoal`（Gemini Interactions API `gemini-4-hydrogen` + structured output）、`@mango/shared-types` 型別（`WalkGoalRecommendationInput` / `WalkGoalRecommendation`）、`@mango/shared-i18n` `PetEdit.walkGoal.*` 雙語文案，以及 `PetFormDialog` 內的 AI 建議按鈕與結果卡片。iOS 端的 `apps/ios/src/components/pets/pet-form.tsx` 尚未串接此 callable。
 - **建議交付給**：iOS Feature Builder（在 `pet-form.tsx` 串接 `recommendPetWalkGoal` callable、保留 `walkGoal.source` 與 reduced-motion 規範）
 - **優先級提示**：P2（Web 與共用 backend 已先行就緒；iOS 需等後端設定 `GEMINI_API_KEY` secret 並部署 `recommendPetWalkGoal` 後才可實機端到端驗收）
+- **處理（2026-11-20 iOS Feature Builder）**：已完成 iOS 端實作（[`ai-walk-goal-core.ts`](../../apps/ios/src/lib/ai-walk-goal-core.ts)、[`ai-walk-goal.ts`](../../apps/ios/src/lib/ai-walk-goal.ts)、[`ai-walk-goal.web.ts`](../../apps/ios/src/lib/ai-walk-goal.web.ts)、[`walk-goal-field.tsx`](../../apps/ios/src/components/pets/walk-goal-field.tsx)、[`pet-form.tsx`](../../apps/ios/src/components/pets/pet-form.tsx)、修復 [`pets-write.ts`](../../apps/ios/src/lib/pets-write.ts) `createPet` 遺漏 `walkGoal`，並新增 [`walk-goal-ai.test.cjs`](../../apps/ios/scripts/walk-goal-ai.test.cjs)）。已通過 `apps/ios` / `apps/web` typecheck、非 emulator 單元測試與 `check-keys.js`；待下階段實機批次驗收（iPhone 上新增/編輯寵物點「AI 建議」並檢查寫入 Firestore `walkGoal`）。
 
 ### r15-rules.test.cjs adapter mock 缺 `./i18n`（2 項測試失敗）
 - **發現於**：2026-11-15、Backend session（通知中心 Phase 1 跑全套 emulator tests）

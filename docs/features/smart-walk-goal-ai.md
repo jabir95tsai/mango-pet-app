@@ -1,6 +1,6 @@
 # Smart Daily Walk Goal Recommendation (`recommendPetWalkGoal`)
 
-狀態：**CODE DONE (Backend + Web UI) — 未部署 / 未接真 key 線上測試；iOS handoff 已建立**
+狀態：**DEPLOYED (Backend + Web Live Verified) ／ CODE DONE (iOS，待下次實機批次驗收)**
 建立日期：2026-11-19
 規格 / 實作角色：Feature Builder（Web/PWA + 共用 Cloud Functions Backend）
 
@@ -33,6 +33,14 @@
   - [`apps/web/src/lib/firebase/pets.ts`](../../apps/web/src/lib/firebase/pets.ts) 修正 `createPet` 寫入 `input.walkGoal`
   - [`apps/web/src/components/pets/pet-walk-goal-input.tsx`](../../apps/web/src/components/pets/pet-walk-goal-input.tsx) 新增「AI 建議」膠囊鈕、結果建議卡、一鍵重套用按鈕與 Mango token / reduced-motion 對齊
   - [`apps/web/src/components/pets/pet-form-dialog.tsx`](../../apps/web/src/components/pets/pet-form-dialog.tsx) 串接請求、錯誤對應與 `walkGoal.source`（`computed` / `manual`）保留
+- **iOS 前端**：
+  - [`apps/ios/src/lib/ai-walk-goal-core.ts`](../../apps/ios/src/lib/ai-walk-goal-core.ts) 錯誤碼分類、payload 正規化與 `walkGoal.source` 狀態轉換純邏輯
+  - [`apps/ios/src/lib/ai-walk-goal.ts`](../../apps/ios/src/lib/ai-walk-goal.ts) 透過 `@react-native-firebase/functions` 呼叫 `asia-east1` 的 `recommendPetWalkGoal`
+  - [`apps/ios/src/lib/ai-walk-goal.web.ts`](../../apps/ios/src/lib/ai-walk-goal.web.ts) 瀏覽器預覽 stub（回傳 `functions/failed-precondition`，避免 preview 觸發計費請求）
+  - [`apps/ios/src/lib/pets-write.ts`](../../apps/ios/src/lib/pets-write.ts) 修正 `createPet` 寫入 `input.walkGoal`
+  - [`apps/ios/src/components/pets/walk-goal-field.tsx`](../../apps/ios/src/components/pets/walk-goal-field.tsx) 原生每日目標 stepper + 「AI 建議」按鈕 + 建議結果 `Card` + 重套用按鈕 + `useReducedMotion`
+  - [`apps/ios/src/components/pets/pet-form.tsx`](../../apps/ios/src/components/pets/pet-form.tsx) 串接 AI 推薦、locale、stale guard 與 `walkGoal.source`（`computed` / `manual`）保留
+  - [`apps/ios/scripts/walk-goal-ai.test.cjs`](../../apps/ios/scripts/walk-goal-ai.test.cjs) Node 單元測試
 
 ## 部署前設定（由授權部署時執行）
 
@@ -58,4 +66,4 @@
 - **驗收標準**：
   - 在 iOS 寵物表單點「AI 建議」可取得建議分鐘數、建議次數與理由/提醒並填入 stepper；手動修改後 `source` 切回 `manual`。
   - `npm run typecheck -w apps/ios` 與 `node docs/research/ios-pwa-gap-audit-2026-10/tools/check-keys.js .` 通過。
-- **依賴 / 阻塞**：需先完成後端 `GEMINI_API_KEY` secret 設定與 `recommendPetWalkGoal` 部署才能端到端測試真實 AI 回應。
+- **依賴 / 進度**：後端 `GEMINI_API_KEY` secret 與 `recommendPetWalkGoal` 部署及 Web 線上驗證已完成；iOS 程式碼實作、typecheck、`check-keys.js` 與 Node 單元測試已完成，僅餘 iOS 實機批次驗收（隨下一階段 build 一起測）。
