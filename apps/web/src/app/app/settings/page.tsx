@@ -9,6 +9,7 @@ import {
   Globe,
   Mail,
   MoreHorizontal,
+  Pencil,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -30,6 +31,9 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useGuestUpgrade } from "@/components/auth/guest-upgrade";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DISPLAY_NAME_MAX, normalizeDisplayName } from "@mango/shared-business";
+import { updateDisplayName } from "@/lib/firebase/users";
 import {
   resolveUserDisplayName,
   resolveUserPhotoURL,
@@ -49,6 +53,30 @@ export default function SettingsPage() {
   const { openUpgrade } = useGuestUpgrade();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { open: drawerOpen, setOpen: setDrawerOpen } = useNavDrawer();
+  // updateProfile mutates the Auth user without a re-render, so show the saved name locally.
+  const [savedName, setSavedName] = useState<string | null>(null);
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const displayName = savedName ?? resolveUserDisplayName(user) ?? "Guest";
+
+  async function saveName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user || draft === null || saving) return;
+    const name = normalizeDisplayName(draft);
+    if (!name) return setNameError(tS("editNameInvalid", { max: DISPLAY_NAME_MAX }));
+    setSaving(true);
+    try {
+      await updateDisplayName(user, name);
+      setSavedName(name);
+      setDraft(null);
+      setNameError(null);
+    } catch {
+      setNameError(tS("editNameFailed"));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
@@ -74,12 +102,12 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3">
             <Avatar
               src={resolveUserPhotoURL(user)}
-              name={resolveUserDisplayName(user) ?? "Guest"}
+              name={displayName}
               size={48}
             />
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">
-                {resolveUserDisplayName(user) ?? "Guest"}
+                {displayName}
               </p>
               <p className="truncate text-sm text-mango-ink-2">{user?.email ?? "—"}</p>
             </div>
@@ -89,6 +117,17 @@ export default function SettingsPage() {
                 so it reads as "you ↔ your people". 44×44 hit area
                 (size-11) for mobile a11y. */}
             {/* Friends are community — entry hidden for guests. Spec §C. */}
+            {user && !isGuest && draft === null && (
+              <button
+                type="button"
+                onClick={() => setDraft(displayName)}
+                aria-label={tS("editName")}
+                title={tS("editName")}
+                className="grid size-11 shrink-0 place-items-center rounded-full text-mango-ink-3 transition-colors hover:bg-mango-bg-alt hover:text-mango-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
+              >
+                <Pencil className="size-5" strokeWidth={1.8} />
+              </button>
+            )}
             {!isGuest && (
               <Link
                 href="/app/friends"
@@ -100,6 +139,29 @@ export default function SettingsPage() {
               </Link>
             )}
           </div>
+          {draft !== null && (
+            <form onSubmit={saveName} className="flex flex-col gap-2">
+              <label htmlFor="display-name" className="text-sm font-medium">{tS("editName")}</label>
+              <Input
+                id="display-name"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                maxLength={DISPLAY_NAME_MAX * 2}
+                autoFocus
+                aria-invalid={nameError ? true : undefined}
+                aria-describedby="display-name-hint"
+              />
+              <p id="display-name-hint" className={nameError ? "text-sm text-red-600" : "text-xs text-mango-ink-3"} role={nameError ? "alert" : undefined}>
+                {nameError ?? tS("editNameHint", { max: DISPLAY_NAME_MAX })}
+              </p>
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" disabled={saving}>{tCommon("save")}</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setDraft(null); setNameError(null); }}>
+                  {tCommon("cancel")}
+                </Button>
+              </div>
+            </form>
+          )}
           {user && (
             <button
               type="button"

@@ -19,10 +19,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
-import { AlertTriangle, ChevronRight, Mail, Trophy, Users } from "lucide-react-native";
+import { AlertTriangle, ChevronRight, Mail, Pencil, Trophy, Users } from "lucide-react-native";
+import { DISPLAY_NAME_MAX, normalizeDisplayName } from "@mango/shared-business";
 
 import { useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { signOut } from "@/lib/auth";
+import { updateDisplayName } from "@/lib/auth-profile";
 import { SITE_URL } from "@/lib/config";
 import { getUserPrefs, type UserPrefs } from "@/lib/user-prefs";
 import { useAuth } from "@/state/auth-context";
@@ -63,7 +65,9 @@ export default function SettingsScreen() {
   const lastRefreshAt = useRef(Date.now());
   const uid = user?.uid ?? null;
 
-  const name = user?.displayName ?? (isGuest ? t("Settings.guestName") : (user?.email?.split("@")[0] ?? ""));
+  // updateProfile doesn't re-emit the auth user, so show the saved name locally.
+  const [savedName, setSavedName] = useState<string | null>(null);
+  const name = savedName ?? user?.displayName ?? (isGuest ? t("Settings.guestName") : (user?.email?.split("@")[0] ?? ""));
 
   const loadPrefs = useCallback(async () => {
     if (!uid) return;
@@ -98,6 +102,35 @@ export default function SettingsScreen() {
       setReloadKey((k) => k + 1);
       setRefreshing(false);
     }
+  }
+
+  function editName(initial = name) {
+    Alert.prompt(
+      t("Settings.editName"),
+      t("Settings.editNameHint", { max: DISPLAY_NAME_MAX }),
+      [
+        { text: t("Common.cancel"), style: "cancel" },
+        {
+          text: t("Common.save"),
+          onPress: (raw?: string) => {
+            const next = normalizeDisplayName(raw ?? "");
+            if (!next) {
+              Alert.alert(t("Settings.editNameInvalid", { max: DISPLAY_NAME_MAX }), undefined, [
+                { text: "OK", onPress: () => editName(raw ?? "") },
+              ]);
+              return;
+            }
+            if (!user) return;
+            updateDisplayName(user, next).then(
+              () => setSavedName(next),
+              () => Alert.alert(t("Settings.editNameFailed")),
+            );
+          },
+        },
+      ],
+      "plain-text",
+      initial,
+    );
   }
 
   async function handleSignOut() {
@@ -138,6 +171,17 @@ export default function SettingsScreen() {
                   {user?.email ?? "—"}
                 </Text>
               </View>
+              {user && !isGuest ? (
+                <Pressable
+                  onPress={() => editName()}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("Settings.editName")}
+                  hitSlop={8}
+                  style={({ pressed }) => [styles.editDisc, pressed && styles.dim]}
+                >
+                  <Pencil size={18} color={colors.ink3} strokeWidth={1.8} />
+                </Pressable>
+              ) : null}
               {!isGuest ? (
                 <Pressable
                   onPress={() => router.push("/friends")}
@@ -272,6 +316,7 @@ const styles = StyleSheet.create({
   profile: { gap: spacing.lg },
   profileRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   profileText: { flex: 1, minWidth: 0 },
+  editDisc: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   // web: truncate font-medium / text-sm ink-2
   name: { fontSize: 16, fontWeight: "500", color: colors.ink },
   email: { fontSize: 14, color: colors.ink2, marginTop: 1 },

@@ -79,3 +79,12 @@ export function resolveUserDisplayName(user: FirebaseAuthTypes.User | null | und
   if (user.displayName) return user.displayName;
   return user.providerData.find((p) => p?.displayName)?.displayName ?? null;
 }
+
+/** Rename the signed-in user in Auth (web login copies it onto the doc) and users/{uid}. */
+export async function updateDisplayName(user: FirebaseAuthTypes.User, name: string): Promise<void> {
+  await user.updateProfile({ displayName: name });
+  await firestore().collection("users").doc(user.uid).update({
+    displayName: name,
+    displayNameLower: name.trim().toLowerCase(),
+  });
+}

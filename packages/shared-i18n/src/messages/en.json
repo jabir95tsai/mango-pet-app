@@ -690,6 +690,10 @@
     "contactSupport": "Contact Support (jabir95tsai@gmail.com)",
     "contactSupportFallbackTitle": "Contact Support",
     "contactSupportFallbackBody": "Please email jabir95tsai@gmail.com and we will respond within 24 hours.",
+    "editName": "Edit name",
+    "editNameHint": "Shown to others in the feed, friends and leaderboards (max {max} characters)",
+    "editNameInvalid": "Name must be 1–{max} characters",
+    "editNameFailed": "Couldn't update your name. Please try again.",
     "guestName": "Guest",
     "signOutFailed": {
       "title": "Could not sign out",

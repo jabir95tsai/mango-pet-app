@@ -690,6 +690,10 @@
     "contactSupport": "聯絡客服（jabir95tsai@gmail.com）",
     "contactSupportFallbackTitle": "聯絡客服",
     "contactSupportFallbackBody": "請來信至 jabir95tsai@gmail.com，我們將於 24 小時內回覆。",
+    "editName": "編輯名稱",
+    "editNameHint": "其他人會在動態、好友與排行榜看到這個名字（最多 {max} 字）",
+    "editNameInvalid": "名稱需為 1–{max} 字",
+    "editNameFailed": "名稱更新失敗，請再試一次",
     "guestName": "訪客",
     "signOutFailed": {
       "title": "暫時無法登出",

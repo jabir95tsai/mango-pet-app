@@ -12,3 +12,4 @@ export * from "./moderation";
 export * from "./feed-queries";
 
 export * from "./walk-route";
+export * from "./profile";

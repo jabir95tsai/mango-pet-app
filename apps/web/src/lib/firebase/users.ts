@@ -15,7 +15,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import type { User } from "firebase/auth";
+import { updateProfile, type User } from "firebase/auth";
 import { resolveUserDisplayName, resolveUserPhotoURL } from "./auth";
 import { getDb, getFirebaseApp } from "./config";
 import type {
@@ -60,6 +60,16 @@ function toDisplayNameLower(name: string): string {
  *  Kept minimal — guests have no provider identity. */
 function guestDisplayName(locale: "zh-TW" | "en"): string {
   return locale === "en" ? "Guest" : "訪客";
+}
+
+/** Rename the signed-in user. Auth is updated too: upsertUser copies the Auth
+ *  name back over the doc on every login, and new posts/walks read it. */
+export async function updateDisplayName(user: User, name: string): Promise<void> {
+  await updateProfile(user, { displayName: name });
+  await updateDoc(doc(getDb(), "users", user.uid), {
+    displayName: name,
+    displayNameLower: toDisplayNameLower(name),
+  });
 }
 
 export async function upsertUser(user: User, locale: "zh-TW" | "en"): Promise<void> {
