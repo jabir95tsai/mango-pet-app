@@ -1,4 +1,10 @@
 import { eraseWalkRoute } from "./walk-routes";
+import {
+  enforceWalkGoalRateLimit,
+  generateWalkGoalRecommendation,
+  loadRecentPetWalkSummary,
+  normalizeWalkGoalRequest,
+} from "./walk-goal-ai";
 /**
  * Mango Pet — Cloud Functions
  *
@@ -13,6 +19,7 @@ import { eraseWalkRoute } from "./walk-routes";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { randomInt } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
 import {
   onDocumentCreated,
   onDocumentDeleted,
@@ -4693,3 +4700,62 @@ export const backfillAchievements = onCall(
 
 // Route capture is server-owned; legacy Walk clients remain supported.
 export { manageWalkRoute, listWalkLiveLocations, cleanupDeletedWalkRoute } from "./walk-routes";
+
+const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+
+export const recommendPetWalkGoal = onCall(
+  {
+    region: FUNCTION_REGION,
+    cors: true,
+    secrets: [GEMINI_API_KEY],
+    timeoutSeconds: 30,
+    memory: "256MiB",
+  },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign-in required");
+
+    await withActiveAccounts(db, [uid], async () => {});
+    const input = normalizeWalkGoalRequest(req.data);
+
+    const apiKey = (GEMINI_API_KEY.value() || process.env.GEMINI_API_KEY || "").trim();
+    if (!apiKey) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Gemini API key is not configured.",
+      );
+    }
+
+    await enforceWalkGoalRateLimit(db, uid);
+
+    try {
+      const recentWalkSummary = await loadRecentPetWalkSummary(
+        db,
+        uid,
+        input.petId,
+      );
+      return await generateWalkGoalRecommendation(input, {
+        apiKey,
+        recentWalkSummary,
+      });
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      logger.error("[recommendPetWalkGoal] failed", { uid, err });
+      const status =
+        typeof err === "object" && err !== null && "status" in err
+          ? (err as { status?: unknown }).status
+          : undefined;
+      const msg = err instanceof Error ? err.message : String(err);
+      if (status === 429 || /rate.?limit|quota/i.test(msg)) {
+        throw new HttpsError(
+          "resource-exhausted",
+          "AI service rate limit exceeded. Please try again later.",
+        );
+      }
+      throw new HttpsError(
+        "unavailable",
+        "AI walk goal service is temporarily unavailable.",
+      );
+    }
+  },
+);

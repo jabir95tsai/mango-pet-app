@@ -86,6 +86,7 @@ export async function createPet(
   // strips undefined / "" so we splice it back in.
   const data = {
     familyId,
+    ...(input.walkGoal ? { walkGoal: input.walkGoal } : {}),
     ...clean({
       ownerUid,
       name: input.name,

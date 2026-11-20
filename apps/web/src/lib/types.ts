@@ -35,6 +35,8 @@ import type {
   Visibility,
   Walk,
   WalkGoal,
+  WalkGoalRecommendation,
+  WalkGoalRecommendationInput,
   WalkPathPoint,
   WeightData,
 } from "@mango/shared-types";
@@ -87,6 +89,8 @@ export type {
   Visibility,
   Walk,
   WalkGoal,
+  WalkGoalRecommendation,
+  WalkGoalRecommendationInput,
   WalkPathPoint,
   WeightData,
 };

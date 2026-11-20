@@ -298,8 +298,16 @@
     "walkGoal": {
       "label": "每日散步目標",
       "unit": "分鐘 / 天",
-      "hint": "之後可依品種、年齡、體重自動建議",
-      "computedChip": "建議值（可覆蓋）"
+      "hint": "可依品種、年齡與體重由 AI 建議，或隨時手動調整",
+      "computedChip": "建議值（可覆蓋）",
+      "aiSuggest": "AI 建議",
+      "aiSuggesting": "計算中…",
+      "aiResultTitle": "AI 建議每日 {minutes} 分鐘（建議分 {sessions} 次）",
+      "aiApplyAgain": "套用 {minutes} 分鐘",
+      "aiBadge": "Gemini AI",
+      "aiErrorGeneric": "無法取得 AI 建議，請稍後再試或手動設定。",
+      "aiErrorRateLimit": "請求太頻繁，請稍後再試。",
+      "aiErrorUnavailable": "AI 建議服務尚未啟用，請先手動設定。"
     }
   },
   "Health": {

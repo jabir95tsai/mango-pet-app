@@ -298,8 +298,16 @@
     "walkGoal": {
       "label": "Daily walk goal",
       "unit": "min/day",
-      "hint": "Will suggest based on breed/age/weight later",
-      "computedChip": "Suggested (overridable)"
+      "hint": "Use AI to suggest from breed, age, and weight, or adjust manually anytime",
+      "computedChip": "Suggested (overridable)",
+      "aiSuggest": "AI Suggest",
+      "aiSuggesting": "Thinking…",
+      "aiResultTitle": "AI suggestion: {minutes} min/day ({sessions} sessions)",
+      "aiApplyAgain": "Apply {minutes} min",
+      "aiBadge": "Gemini AI",
+      "aiErrorGeneric": "Couldn't get an AI suggestion. Please try again or set manually.",
+      "aiErrorRateLimit": "Too many requests. Please wait a moment and try again.",
+      "aiErrorUnavailable": "AI suggestion isn't enabled yet. You can set the goal manually."
     }
   },
   "Health": {

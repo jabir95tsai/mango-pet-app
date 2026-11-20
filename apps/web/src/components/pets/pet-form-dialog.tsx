@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Camera, Loader2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, FieldLabel } from "@/components/ui/select";
 import { fromLocalDateInput, toLocalDateInput } from "@/lib/dates";
+import { recommendPetWalkGoal } from "@/lib/firebase/ai-walk-goal";
 import { IMAGE_PRESETS, processImage } from "@/lib/image-processing";
 import { PetWalkGoalInput } from "@/components/pets/pet-walk-goal-input";
 import { SaveToAlbumButton } from "@/components/ui/save-to-album-button";
 import { DEFAULT_WALK_GOAL_MINUTES, getPetWalkGoalMinutes } from "@/lib/walk-goals";
-import type { Pet, PetInput, Species, Gender } from "@/lib/types";
+import type {
+  Pet,
+  PetInput,
+  Species,
+  Gender,
+  WalkGoalRecommendation,
+} from "@/lib/types";
 
 type Props = {
   open: boolean;
@@ -24,9 +31,12 @@ type Props = {
 };
 
 export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
+  const locale = useLocale();
   const tPet = useTranslations("Pet");
+  const tWalkGoal = useTranslations("PetEdit.walkGoal");
   const tCommon = useTranslations("Common");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recommendReqIdRef = useRef(0);
 
   const [name, setName] = useState("");
   const [species, setSpecies] = useState<Species>("dog");
@@ -38,13 +48,16 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
   const [birthday, setBirthday] = useState("");
   const [bio, setBio] = useState("");
   const [walkGoalMin, setWalkGoalMin] = useState(DEFAULT_WALK_GOAL_MINUTES);
-  // Snapshot of the initial pet's walkGoal source so the input chip
-  // reflects "建議值（可覆蓋）" when loaded from a future computed
-  // recommendation. This round always writes back 'manual' since the
-  // user explicitly touched the stepper to save.
+  // Tracks whether the current walkGoalMin matches an AI recommendation
+  // ("computed") or was entered/overridden manually ("manual").
   const [walkGoalSource, setWalkGoalSource] = useState<"manual" | "computed">(
     "manual",
   );
+  const [computedMinutes, setComputedMinutes] = useState<number | null>(null);
+  const [recommendation, setRecommendation] =
+    useState<WalkGoalRecommendation | null>(null);
+  const [recommending, setRecommending] = useState(false);
+  const [recommendError, setRecommendError] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [previewURL, setPreviewURL] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -52,7 +65,10 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    recommendReqIdRef.current += 1;
     if (!open) return;
+    const loadedMinutes = getPetWalkGoalMinutes(initial ?? null);
+    const loadedSource = initial?.walkGoal?.source ?? "manual";
     setName(initial?.name ?? "");
     setSpecies(initial?.species ?? "dog");
     setSpeciesOther(initial?.speciesOther ?? "");
@@ -67,8 +83,12 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
     setBio(initial?.bio ?? "");
     // Seed from existing pet's goal via the same clamp/fallback the
     // rest of the app uses; first-edit on a legacy pet shows 30.
-    setWalkGoalMin(getPetWalkGoalMinutes(initial ?? null));
-    setWalkGoalSource(initial?.walkGoal?.source ?? "manual");
+    setWalkGoalMin(loadedMinutes);
+    setWalkGoalSource(loadedSource);
+    setComputedMinutes(loadedSource === "computed" ? loadedMinutes : null);
+    setRecommendation(null);
+    setRecommending(false);
+    setRecommendError(null);
     setAvatar(null);
     setPreviewURL(initial?.photoURL ?? null);
     setProcessing(false);
@@ -81,6 +101,70 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
     setPreviewURL(url);
     return () => URL.revokeObjectURL(url);
   }, [avatar]);
+
+  function handleWalkGoalChange(next: number) {
+    setWalkGoalMin(next);
+    setWalkGoalSource(
+      computedMinutes !== null && next === computedMinutes
+        ? "computed"
+        : "manual",
+    );
+  }
+
+  function handleApplyRecommendation(minutes: number) {
+    setComputedMinutes(minutes);
+    setWalkGoalMin(minutes);
+    setWalkGoalSource("computed");
+  }
+
+  async function handleRequestRecommend() {
+    const reqId = ++recommendReqIdRef.current;
+    setRecommending(true);
+    setRecommendError(null);
+    try {
+      const parsedWeight = weight.trim() ? Number(weight) : undefined;
+      const validWeight =
+        parsedWeight !== undefined &&
+        Number.isFinite(parsedWeight) &&
+        parsedWeight > 0
+          ? parsedWeight
+          : undefined;
+      const result = await recommendPetWalkGoal({
+        species,
+        speciesOther:
+          species === "other" ? speciesOther.trim() || undefined : undefined,
+        breed: breed.trim() || undefined,
+        birthday: birthday || undefined,
+        gender,
+        weightKg: validWeight,
+        petId: initial?.petId,
+        bio: bio.trim() || undefined,
+        locale: locale === "en" ? "en" : "zh-TW",
+      });
+      if (recommendReqIdRef.current !== reqId) return;
+      setRecommendation(result);
+      setComputedMinutes(result.minutes);
+      setWalkGoalMin(result.minutes);
+      setWalkGoalSource("computed");
+    } catch (err) {
+      if (recommendReqIdRef.current !== reqId) return;
+      const code =
+        typeof err === "object" && err !== null && "code" in err
+          ? String((err as { code?: unknown }).code ?? "")
+          : "";
+      if (code === "functions/resource-exhausted") {
+        setRecommendError(tWalkGoal("aiErrorRateLimit"));
+      } else if (code === "functions/failed-precondition") {
+        setRecommendError(tWalkGoal("aiErrorUnavailable"));
+      } else {
+        setRecommendError(tWalkGoal("aiErrorGeneric"));
+      }
+    } finally {
+      if (recommendReqIdRef.current === reqId) {
+        setRecommending(false);
+      }
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -104,12 +188,7 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
           weightKg: weight ? Number(weight) : undefined,
           birthday: birthday ? fromLocalDateInput(birthday) : undefined,
           bio: bio.trim() || undefined,
-          // Always write 'manual' on save — even if the input was
-          // seeded from a 'computed' value, the act of saving means
-          // the user reviewed it. Future spec may refine this (e.g.,
-          // only flip to manual when the value differs from the
-          // computed recommendation).
-          walkGoal: { minutes: walkGoalMin, source: "manual" },
+          walkGoal: { minutes: walkGoalMin, source: walkGoalSource },
         },
         avatar ?? undefined,
       );
@@ -276,8 +355,13 @@ export function PetFormDialog({ open, onClose, initial, onSubmit }: Props) {
 
         <PetWalkGoalInput
           value={walkGoalMin}
-          onChange={setWalkGoalMin}
+          onChange={handleWalkGoalChange}
           source={walkGoalSource}
+          onRequestRecommend={handleRequestRecommend}
+          recommending={recommending}
+          recommendation={recommendation}
+          recommendError={recommendError}
+          onApplyRecommendation={handleApplyRecommendation}
         />
 
         <div className="flex flex-col gap-1">

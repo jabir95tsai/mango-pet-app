@@ -211,6 +211,35 @@ export const REPORT_HIDE_THRESHOLD = 3;
  *  (@mango/shared-business). */
 export type WalkGoal = { minutes: number; source: "manual" | "computed" };
 
+export type WalkGoalRecommendationInput = {
+  species: Species;
+  speciesOther?: string;
+  breed?: string;
+  /** Optional YYYY-MM-DD date string from the pet form. */
+  birthday?: string;
+  gender?: Gender;
+  weightKg?: number;
+  /** Optional petId when editing an existing pet so the backend can
+   *  factor in recent walks if the caller has access. */
+  petId?: string;
+  bio?: string;
+  locale?: "zh-TW" | "en";
+};
+
+export type WalkGoalRecommendation = {
+  /** Recommended daily walk target in minutes, clamped to [5, 180] and
+   *  snapped to 5-minute increments. */
+  minutes: number;
+  /** Suggested number of daily sessions (1–4). */
+  sessionsPerDay: number;
+  /** Concise 1–2 sentence rationale in the requested locale. */
+  rationale: string;
+  /** 1–3 practical pacing or safety tips in the requested locale. */
+  tips: string[];
+  /** Gemini model ID that produced the recommendation. */
+  model: string;
+};
+
 // ── PetInput (create/update payload) ──
 export type PetInput = {
   name: string;
