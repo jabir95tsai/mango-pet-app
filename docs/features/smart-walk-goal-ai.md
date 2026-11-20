@@ -1,6 +1,6 @@
 # Smart Daily Walk Goal Recommendation (`recommendPetWalkGoal`)
 
-狀態：**DEPLOYED (Backend + Web Live Verified) ／ CODE DONE (iOS，待下次實機批次驗收)**
+狀態：**DEPLOYED (Backend + Web Live Verified) ／ VERIFIED ON SIMULATOR (iOS，iPhone 18 Pro 模擬器端到端實測通過；待下次實機 TestFlight 批次驗收)**
 建立日期：2026-11-19
 規格 / 實作角色：Feature Builder（Web/PWA + 共用 Cloud Functions Backend）
 
@@ -66,4 +66,4 @@
 - **驗收標準**：
   - 在 iOS 寵物表單點「AI 建議」可取得建議分鐘數、建議次數與理由/提醒並填入 stepper；手動修改後 `source` 切回 `manual`。
   - `npm run typecheck -w apps/ios` 與 `node docs/research/ios-pwa-gap-audit-2026-10/tools/check-keys.js .` 通過。
-- **依賴 / 進度**：後端 `GEMINI_API_KEY` secret 與 `recommendPetWalkGoal` 部署及 Web 線上驗證已完成；iOS 程式碼實作、typecheck、`check-keys.js` 與 Node 單元測試已完成，僅餘 iOS 實機批次驗收（隨下一階段 build 一起測）。
+- **依賴 / 進度**：後端 `GEMINI_API_KEY` secret 與 `recommendPetWalkGoal` 部署及 Web 線上驗證已完成；iOS 程式碼實作、typecheck、`check-keys.js`、Node 單元測試、Firestore Emulator + `firestore.rules` 寫入驗證，以及 `iPhone 18 Pro`（iOS 27.2，家庭模式 `Mango` 編輯＋新增／編輯冷重啟讀回）與 `iPhone 17`（訪客模式）模擬器端到端實測皆已通過（2026-11-20），僅餘實體 iPhone TestFlight 批次驗收。

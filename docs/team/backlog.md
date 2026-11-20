@@ -49,6 +49,7 @@ P3 = 也許永遠不做的「想法」。
 - **建議交付給**：iOS Feature Builder（在 `pet-form.tsx` 串接 `recommendPetWalkGoal` callable、保留 `walkGoal.source` 與 reduced-motion 規範）
 - **優先級提示**：P2（Web 與共用 backend 已先行就緒；iOS 需等後端設定 `GEMINI_API_KEY` secret 並部署 `recommendPetWalkGoal` 後才可實機端到端驗收）
 - **處理（2026-11-20 iOS Feature Builder）**：已完成 iOS 端實作（[`ai-walk-goal-core.ts`](../../apps/ios/src/lib/ai-walk-goal-core.ts)、[`ai-walk-goal.ts`](../../apps/ios/src/lib/ai-walk-goal.ts)、[`ai-walk-goal.web.ts`](../../apps/ios/src/lib/ai-walk-goal.web.ts)、[`walk-goal-field.tsx`](../../apps/ios/src/components/pets/walk-goal-field.tsx)、[`pet-form.tsx`](../../apps/ios/src/components/pets/pet-form.tsx)、修復 [`pets-write.ts`](../../apps/ios/src/lib/pets-write.ts) `createPet` 遺漏 `walkGoal`，並新增 [`walk-goal-ai.test.cjs`](../../apps/ios/scripts/walk-goal-ai.test.cjs)）。已通過 `apps/ios` / `apps/web` typecheck、非 emulator 單元測試與 `check-keys.js`；待下階段實機批次驗收（iPhone 上新增/編輯寵物點「AI 建議」並檢查寫入 Firestore `walkGoal`）。
+- **驗證（2026-11-20 iOS Bug Hunter）**：於 `iPhone 18 Pro` 模擬器（iOS 27.2，連線正式 `recommendPetWalkGoal` 與正式 Firestore）完成端到端實測通過：既有家庭寵物 `Mango` 編輯表單（含近 14 天散步基線，回傳 40 分鐘／2 次，按取消未覆寫）、新增寵物表單（60 分鐘／2 次）、手動加減 `+5` 後 `建議值（可覆蓋）` 與「套用 X 分鐘」切換、以及兩次冷重啟讀回確認 `walkGoal: { minutes, source }`（`computed` / `manual`）正確寫入 Firestore（並另以 Firestore Emulator + `firestore.rules` 確認原始文件結構）；僅餘實體 iPhone TestFlight 批次驗收。
 
 ### r15-rules.test.cjs adapter mock 缺 `./i18n`（2 項測試失敗）
 - **發現於**：2026-11-15、Backend session（通知中心 Phase 1 跑全套 emulator tests）
