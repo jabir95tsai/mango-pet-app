@@ -1,6 +1,6 @@
 /**
  * AI daily walk-goal recommendation powered by the Gemini Interactions API
- * (`gemini-3.5-flash-lite`, Free-Tier-compatible) with structured JSON output.
+ * (`gemini-4-hydrogen`) with structured JSON output.
  */
 import { GoogleGenAI } from "@google/genai";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
@@ -11,7 +11,7 @@ export const WALK_GOAL_MIN_MINUTES = 5;
 export const WALK_GOAL_MAX_MINUTES = 180;
 export const WALK_GOAL_STEP_MINUTES = 5;
 export const DEFAULT_WALK_GOAL_MINUTES = 30;
-export const WALK_GOAL_AI_MODEL = "gemini-3.5-flash-lite";
+export const WALK_GOAL_AI_MODEL = "gemini-4-hydrogen";
 export const WALK_GOAL_RATE_LIMIT_MAX = 20;
 export const WALK_GOAL_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RECENT_WALK_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
@@ -56,7 +56,7 @@ export type CreateWalkGoalInteractionParams = {
     schema: typeof WALK_GOAL_RESPONSE_SCHEMA;
   };
   generation_config: {
-    thinking_level: "minimal";
+    thinking_level: "low";
   };
   store: false;
 };
@@ -523,7 +523,7 @@ export async function enforceWalkGoalRateLimit(
 }
 
 /**
- * Call Gemini Interactions API (`gemini-3.5-flash-lite`) and return a clamped recommendation.
+ * Call Gemini Interactions API (`gemini-4-hydrogen`) and return a clamped recommendation.
  */
 export async function generateWalkGoalRecommendation(
   input: NormalizedWalkGoalRequest,
@@ -546,7 +546,7 @@ export async function generateWalkGoalRecommendation(
       schema: WALK_GOAL_RESPONSE_SCHEMA,
     },
     generation_config: {
-      thinking_level: "minimal",
+      thinking_level: "low",
     },
     store: false,
   };

@@ -172,7 +172,7 @@ test("parseWalkGoalResponse parses fenced JSON, clamps fields, and rejects malfo
   );
 });
 
-test("generateWalkGoalRecommendation invokes Interactions API with gemini-3.5-flash-lite and store: false", async () => {
+test("generateWalkGoalRecommendation invokes Interactions API with gemini-4-hydrogen and store: false", async () => {
   let capturedParams = null;
   const result = await generateWalkGoalRecommendation(
     {
@@ -203,7 +203,7 @@ test("generateWalkGoalRecommendation invokes Interactions API with gemini-3.5-fl
 
   assert.equal(capturedParams.model, WALK_GOAL_AI_MODEL);
   assert.equal(capturedParams.store, false);
-  assert.deepEqual(capturedParams.generation_config, { thinking_level: "minimal" });
+  assert.deepEqual(capturedParams.generation_config, { thinking_level: "low" });
   assert.deepEqual(capturedParams.response_format, {
     type: "text",
     mime_type: "application/json",

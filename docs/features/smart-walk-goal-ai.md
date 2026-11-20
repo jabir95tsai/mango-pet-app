@@ -11,10 +11,10 @@
 ## Gemini API 設計
 
 - **SDK**：`@google/genai`（僅安裝於 `functions/`，不變動根目錄 `package.json` / `package-lock.json`）。
-- **API 與 Model**：Interactions API (`client.interactions.create`) + `gemini-3.5-flash-lite`（支援 Gemini Developer API 免費額度）。
+- **API 與 Model**：Interactions API (`client.interactions.create`) + `gemini-4-hydrogen`。
 - **設定**：
   - `store: false`（無狀態推薦，不保存使用者寵物輸入紀錄）。
-  - `generation_config: { thinking_level: "minimal" }`。
+  - `generation_config: { thinking_level: "low" }`。
   - `response_format: { type: "text", mime_type: "application/json", schema: WALK_GOAL_RESPONSE_SCHEMA }`（強制回傳 `{ minutes, sessionsPerDay, rationale, tips }`）。
 - **後端保護與收斂**：
   - 呼叫前驗證 Firebase Auth、`deletedAccounts/{uid}` 刪除柵欄、欄位格式/長度與每使用者每小時 20 次 rate limit（`aiRateLimits/walkGoal_{uid}`，僅伺服器可存取）。

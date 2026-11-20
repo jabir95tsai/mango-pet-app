@@ -45,7 +45,7 @@ P3 = 也許永遠不做的「想法」。
 ### iOS 接上 AI 個人化每日遛狗目標推薦（Smart Walk Goal）
 - **發現於**：2026-11-19、Feature Builder session（[`smart-walk-goal-ai.md`](../features/smart-walk-goal-ai.md)）
 - **類型**：新功能 / cross-platform parity
-- **重現 / 觀察**：Web 已實作 Cloud Function `recommendPetWalkGoal`（Gemini Interactions API `gemini-3.5-flash-lite` + structured output）、`@mango/shared-types` 型別（`WalkGoalRecommendationInput` / `WalkGoalRecommendation`）、`@mango/shared-i18n` `PetEdit.walkGoal.*` 雙語文案，以及 `PetFormDialog` 內的 AI 建議按鈕與結果卡片。iOS 端的 `apps/ios/src/components/pets/pet-form.tsx` 尚未串接此 callable。
+- **重現 / 觀察**：Web 已實作 Cloud Function `recommendPetWalkGoal`（Gemini Interactions API `gemini-4-hydrogen` + structured output）、`@mango/shared-types` 型別（`WalkGoalRecommendationInput` / `WalkGoalRecommendation`）、`@mango/shared-i18n` `PetEdit.walkGoal.*` 雙語文案，以及 `PetFormDialog` 內的 AI 建議按鈕與結果卡片。iOS 端的 `apps/ios/src/components/pets/pet-form.tsx` 尚未串接此 callable。
 - **建議交付給**：iOS Feature Builder（在 `pet-form.tsx` 串接 `recommendPetWalkGoal` callable、保留 `walkGoal.source` 與 reduced-motion 規範）
 - **優先級提示**：P2（Web 與共用 backend 已先行就緒；iOS 需等後端設定 `GEMINI_API_KEY` secret 並部署 `recommendPetWalkGoal` 後才可實機端到端驗收）
 
