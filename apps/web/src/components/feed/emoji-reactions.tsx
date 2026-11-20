@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { SmilePlus } from "lucide-react";
+import { Heart, SmilePlus } from "lucide-react";
 import { getMyReaction, setReaction } from "@/lib/firebase/posts";
 import { REACTION_EMOJIS, type ReactionEmoji } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -20,8 +20,8 @@ const LONG_PRESS_MS = 450;
 /**
  * Facebook-style reaction control (feed-comments-and-reactions-v2 §B).
  *
- * Default surface = one ❤️ toggle + a summary cluster (which emojis
- * appeared + total count). Tap the button to set/remove ❤️ (or remove
+ * Threads-style surface: a bare outline heart (or your emoji) + total
+ * count, no pill. Tap the button to set/remove ❤️ (or remove
  * whatever you currently picked). Long-press it — or use the focusable
  * "more reactions" button / mouse hover — to open a 5-emoji tray and
  * replace your single reaction.
@@ -172,8 +172,6 @@ export function EmojiReactions({ postId, uid, counts, onChange }: Props) {
   useEffect(() => cancelLongPress, []);
 
   const total = REACTION_EMOJIS.reduce((s, e) => s + (localCounts[e] ?? 0), 0);
-  const present = REACTION_EMOJIS.filter((e) => (localCounts[e] ?? 0) > 0);
-  const mainEmoji = mine ?? DEFAULT_EMOJI;
   const mainLabel = mine
     ? tP("yourReaction", { emoji: mine })
     : tP("react", { emoji: DEFAULT_EMOJI });
@@ -195,7 +193,8 @@ export function EmojiReactions({ postId, uid, counts, onChange }: Props) {
         }
       }}
     >
-      {/* Main toggle — tap = ❤️/remove, long-press = open tray. */}
+      {/* Threads-style: bare icon + count, no pill. Tap = ❤️/remove,
+          long-press = open tray. */}
       <button
         type="button"
         onClick={handleMainClick}
@@ -203,22 +202,34 @@ export function EmojiReactions({ postId, uid, counts, onChange }: Props) {
         onPointerUp={cancelLongPress}
         onPointerLeave={cancelLongPress}
         disabled={pending}
-        aria-label={mainLabel}
+        aria-label={total > 0 ? `${mainLabel} · ${tP("reactionCount", { count: total })}` : mainLabel}
         aria-pressed={mine !== null}
-        className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep disabled:opacity-60",
-          mine
-            ? "bg-amber-100 ring-1 ring-amber-400 dark:bg-amber-500/20"
-            : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700",
-        )}
+        className="inline-flex h-9 items-center gap-1.5 rounded-full text-sm text-zinc-600 transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep disabled:opacity-60 dark:text-zinc-300"
       >
-        <span aria-hidden="true" className="text-base leading-none">
-          {mainEmoji}
-        </span>
+        {mine && mine !== DEFAULT_EMOJI ? (
+          <span aria-hidden="true" className="text-lg leading-none">
+            {mine}
+          </span>
+        ) : (
+          <Heart
+            className={cn("size-[22px]", mine && "fill-[#ff3040] text-[#ff3040]")}
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
+        )}
+        {total > 0 && (
+          <span
+            aria-hidden="true"
+            className={cn("tabular-nums", mine === DEFAULT_EMOJI && "text-[#ff3040]")}
+          >
+            {total}
+          </span>
+        )}
       </button>
 
-      {/* Accessible tray opener (keyboard / screen-reader path + desktop
-          click). Long-press / hover are progressive enhancements on top. */}
+      {/* Keyboard / screen-reader path to the tray; visually hidden until
+          focused so the row stays Threads-clean. Hover / long-press cover
+          pointer users. */}
       <button
         ref={moreBtnRef}
         type="button"
@@ -229,29 +240,10 @@ export function EmojiReactions({ postId, uid, counts, onChange }: Props) {
         aria-label={tP("moreReactions")}
         aria-haspopup="menu"
         aria-expanded={trayOpen}
-        className="grid size-9 place-items-center rounded-full bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+        className="sr-only grid size-9 place-items-center rounded-full text-zinc-500 focus-visible:not-sr-only focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:text-zinc-400"
       >
         <SmilePlus className="size-4" aria-hidden="true" />
       </button>
-
-      {/* Summary — which emojis appeared + total count (FB-style). */}
-      {total > 0 && (
-        <span
-          className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400"
-          aria-label={tP("reactionCount", { count: total })}
-        >
-          <span aria-hidden="true" className="inline-flex">
-            {present.map((e) => (
-              <span key={e} className="-ml-0.5 first:ml-0 leading-none">
-                {e}
-              </span>
-            ))}
-          </span>
-          <span aria-hidden="true" className="tabular-nums">
-            {total}
-          </span>
-        </span>
-      )}
 
       {/* Reaction tray */}
       {trayOpen && (

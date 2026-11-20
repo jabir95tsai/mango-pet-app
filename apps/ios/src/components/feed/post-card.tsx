@@ -8,8 +8,8 @@
  *  - text (14, relaxed leading, pre-wrap)
  *  - photo grid: 1 → full width, 2+ → 2 columns, square cells, the whole grid
  *    clipped as one 8pt-rounded block; tap opens the lightbox (`onOpenPhotos`)
- *  - actions: reactions + comment pill (36pt, bgAlt, MessageCircle 16 + count)
- *    in a left-aligned wrap row; the pill lazy-mounts CommentSection
+ *  - actions (Threads-style, no pills): reaction heart + MessageCircle 22 with
+ *    counts; the comment button lazy-mounts CommentSection
  *  - guests (anonymous) get GuestLockedNotice("reactions") in place of the
  *    reactions / comments row, like web — they can still read the post
  *
@@ -169,10 +169,10 @@ function PostCardImpl({ warm = false, post, currentUid, onOpenPhotos, onDeleted,
               accessibilityValue={commentCount > 0 ? { text: String(commentCount) } : undefined}
               accessibilityState={{ expanded: commentsOpen }}
               onPress={() => setCommentsOpen((v) => !v)}
-              hitSlop={4}
+              hitSlop={8}
               style={({ pressed }) => [styles.commentBtn, pressed && styles.commentBtnPressed]}
             >
-              <MessageCircle size={16} color={colors.ink2} strokeWidth={2} />
+              <MessageCircle size={22} color={colors.ink2} strokeWidth={1.75} />
               {commentCount > 0 ? (
                 <Text style={styles.commentCount}>{commentCount}</Text>
               ) : null}
@@ -292,22 +292,11 @@ const styles = StyleSheet.create({
   cellImg: { backgroundColor: colors.bgAlt },
   cellPressed: { opacity: 0.9 },
   // web flex flex-wrap items-center gap-2
-  actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm },
-  // web inline-flex h-9 items-center gap-1.5 rounded-full bg-zinc-100 px-3 text-sm text-zinc-600
-  commentBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    height: 36,
-    paddingHorizontal: 12,
-    borderRadius: radius.pill,
-    backgroundColor: colors.bgAlt,
-  },
-  commentBtnPressed: { backgroundColor: colors.hairline },
-  // web text-xs font-medium tabular-nums
+  actions: { flexDirection: "row", alignItems: "center", gap: spacing.lg },
+  commentBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36 },
+  commentBtnPressed: { opacity: 0.7 },
   commentCount: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 14,
     color: colors.ink2,
     fontVariant: ["tabular-nums"],
   },

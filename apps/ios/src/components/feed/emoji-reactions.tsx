@@ -2,12 +2,10 @@
  * Emoji reactions — 1:1 with web apps/web/src/components/feed/emoji-reactions
  * .tsx (feed-comments-and-reactions-v2 §B). Facebook-style:
  *
- *  - main pill (36pt, bgAlt; brandTint + amber ring when you reacted) shows
- *    your emoji or ❤️. Tap = remove whatever you have, else set ❤️. Long-press
- *    (450ms, web LONG_PRESS_MS) opens the tray.
- *  - "more reactions" button (36pt circle, lucide SmilePlus) — the accessible
- *    path to the tray (VoiceOver can't long-press).
- *  - summary cluster: the emojis that appeared (overlapping) + total.
+ *  - Threads-style bare button: outline Heart (or your emoji once reacted) +
+ *    total count, no pill background. Tap = remove whatever you have, else set
+ *    ❤️. Long-press (450ms, web LONG_PRESS_MS) opens the tray; VoiceOver gets
+ *    a "more reactions" custom action instead.
  *  - tray: a floating pill of the 5 emojis just above the control. Rendered
  *    in a transparent Modal at the measured position so it never gets clipped
  *    by the card / list and any tap outside dismisses it (web closes on
@@ -32,7 +30,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { SmilePlus } from "lucide-react-native";
+import { Heart } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { REACTION_EMOJIS, type ReactionEmoji } from "@mango/shared-types";
 
@@ -45,6 +43,8 @@ type Counts = Record<ReactionEmoji, number>;
 
 const DEFAULT_EMOJI: ReactionEmoji = "❤️";
 const LONG_PRESS_MS = 450;
+// Threads-style liked red; only for the filled heart + its count.
+const LIKE_RED = "#ff3040";
 // Tray geometry: p-1 + 5 × size-10 + 4 × gap-1 + 1px border each side.
 const TRAY_ITEM = 40;
 const TRAY_PAD = 4;
@@ -188,64 +188,46 @@ export function EmojiReactions({
   }
 
   const total = REACTION_EMOJIS.reduce((s, e) => s + (counts[e] ?? 0), 0);
-  const present = REACTION_EMOJIS.filter((e) => (counts[e] ?? 0) > 0);
   const mainLabel = mine
     ? t("Post.yourReaction", { emoji: mine })
     : t("Post.react", { emoji: DEFAULT_EMOJI });
 
   return (
     <View ref={wrapperRef} collapsable={false} style={styles.row}>
-      {/* Main toggle — tap = ❤️/remove, long-press = open tray. */}
+      {/* Threads-style: bare icon + count, no pill. Tap = ❤️/remove,
+          long-press = tray. VoiceOver reaches the tray via a custom action. */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={mainLabel}
+        accessibilityValue={total > 0 ? { text: t("Post.reactionCount", { count: total }) } : undefined}
         accessibilityState={{ selected: mine !== null, disabled: pending }}
+        accessibilityActions={[{ name: "moreReactions", label: t("Post.moreReactions") }]}
+        onAccessibilityAction={(e) => {
+          if (e.nativeEvent.actionName === "moreReactions") openTray();
+        }}
         onPress={() => commit(mine ? null : DEFAULT_EMOJI)}
         onLongPress={openTray}
         delayLongPress={LONG_PRESS_MS}
         disabled={pending}
-        hitSlop={4}
-        style={({ pressed }) => [
-          styles.mainBtn,
-          mine ? styles.mainBtnOn : null,
-          pending && styles.pending,
-          pressed && styles.pressed,
-        ]}
+        hitSlop={8}
+        style={({ pressed }) => [styles.mainBtn, pending && styles.pending, pressed && styles.pressed]}
       >
-        <Animated.Text style={[styles.mainEmoji, { transform: [{ scale: popAnim }] }]}>
-          {mine ?? DEFAULT_EMOJI}
-        </Animated.Text>
+        <Animated.View style={{ transform: [{ scale: popAnim }] }}>
+          {mine && mine !== DEFAULT_EMOJI ? (
+            <Text style={styles.mainEmoji}>{mine}</Text>
+          ) : (
+            <Heart
+              size={22}
+              color={mine ? LIKE_RED : colors.ink2}
+              fill={mine ? LIKE_RED : "none"}
+              strokeWidth={1.75}
+            />
+          )}
+        </Animated.View>
+        {total > 0 ? (
+          <Text style={[styles.count, mine === DEFAULT_EMOJI && { color: LIKE_RED }]}>{total}</Text>
+        ) : null}
       </Pressable>
-
-      {/* Accessible tray opener. */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t("Post.moreReactions")}
-        accessibilityState={{ expanded: tray != null }}
-        onPress={() => (tray ? closeTray() : openTray())}
-        hitSlop={4}
-        style={({ pressed }) => [styles.moreBtn, pressed && styles.morePressed]}
-      >
-        <SmilePlus size={16} color={colors.ink3} strokeWidth={2} />
-      </Pressable>
-
-      {/* Summary — which emojis appeared + total (FB-style). */}
-      {total > 0 ? (
-        <View
-          accessible
-          accessibilityLabel={t("Post.reactionCount", { count: total })}
-          style={styles.summary}
-        >
-          <View style={styles.summaryEmojis}>
-            {present.map((e, i) => (
-              <Text key={e} style={[styles.summaryEmoji, i > 0 && styles.summaryOverlap]}>
-                {e}
-              </Text>
-            ))}
-          </View>
-          <Text style={styles.summaryCount}>{total}</Text>
-        </View>
-      ) : null}
 
       <Modal
         visible={tray != null}
@@ -305,40 +287,12 @@ export function EmojiReactions({
 }
 
 const styles = StyleSheet.create({
-  // web relative inline-flex items-center gap-2
-  row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  // web inline-flex h-9 items-center rounded-full px-3; off bg-zinc-100
-  mainBtn: {
-    height: 36,
-    paddingHorizontal: 12,
-    borderRadius: radius.pill,
-    backgroundColor: colors.bgAlt,
-    borderWidth: 1,
-    borderColor: "transparent",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  // web bg-amber-100 ring-1 ring-amber-400 → mango brandTint + amber ring
-  mainBtnOn: { backgroundColor: colors.brandTint, borderColor: colors.amber },
-  mainEmoji: { fontSize: 16, lineHeight: 20 },
+  row: { flexDirection: "row", alignItems: "center" },
+  mainBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36 },
+  mainEmoji: { fontSize: 19, lineHeight: 24 },
+  count: { fontSize: 14, color: colors.ink2, fontVariant: ["tabular-nums"] },
   // web disabled:opacity-60
   pending: { opacity: 0.6 },
-  // web grid size-9 place-items-center rounded-full bg-zinc-100 text-zinc-500
-  moreBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.bgAlt,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  morePressed: { backgroundColor: colors.hairline },
-  // web inline-flex items-center gap-1 text-xs font-medium text-zinc-500
-  summary: { flexDirection: "row", alignItems: "center", gap: 4 },
-  summaryEmojis: { flexDirection: "row", alignItems: "center" },
-  summaryEmoji: { fontSize: 12 },
-  summaryOverlap: { marginLeft: -2 },
-  summaryCount: { fontSize: 12, fontWeight: "500", color: colors.ink3 },
   // web absolute bottom-full left-0 mb-2 flex gap-1 rounded-full border bg-white p-1 shadow-lg
   tray: {
     position: "absolute",

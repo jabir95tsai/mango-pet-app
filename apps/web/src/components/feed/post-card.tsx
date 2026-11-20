@@ -143,7 +143,7 @@ export function PostCard({ post, currentUid, onDelete, onBlocked }: Props) {
         <GuestLockedNotice feature="reactions" />
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-4">
             <EmojiReactions
               postId={post.postId}
               uid={currentUid}
@@ -155,11 +155,11 @@ export function PostCard({ post, currentUid, onDelete, onBlocked }: Props) {
               aria-expanded={commentsOpen}
               aria-controls={commentsId}
               aria-label={tCm("toggle")}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-zinc-100 px-3 text-sm text-zinc-600 transition-colors hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full text-sm text-zinc-600 transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:text-zinc-300"
             >
-              <MessageCircle className="size-4" aria-hidden="true" />
+              <MessageCircle className="size-[22px]" strokeWidth={1.75} aria-hidden="true" />
               {commentCount > 0 && (
-                <span className="text-xs font-medium tabular-nums">
+                <span className="tabular-nums">
                   {commentCount}
                 </span>
               )}
