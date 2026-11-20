@@ -10,11 +10,11 @@
 
 整個 stack：
 
-- `src/lib/types.ts` — 新 type
-- `src/lib/firebase/*.ts` — 新資料層 module 或新函式
-- `src/lib/*.ts` — utility helpers
-- `src/app/**/*.tsx` — 新頁面
-- `src/components/**/*.tsx` — 新元件
+- `apps/web/src/lib/types.ts` — 新 type
+- `apps/web/src/lib/firebase/*.ts` — 新資料層 module 或新函式
+- `apps/web/src/lib/*.ts` — utility helpers
+- `apps/web/src/app/**/*.tsx` — 新頁面
+- `apps/web/src/components/**/*.tsx` — 新元件
 - `messages/zh-TW.json` + `messages/en.json` — 新 i18n key（兩個都要）
 - `firestore.rules` — 新 collection 的規則
 - `firestore.indexes.json` — 新 query 需要的複合索引
@@ -33,7 +33,7 @@
 git fetch && git log -5 --stat origin/main
 ```
 
-看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。Feature Builder 涉及整 stack，最容易撞別人的 in-flight 工作 — 如果對方剛動 `src/lib/firebase/*`、`firestore.rules`、或你預計要改的 page，**先 `git pull --rebase` 同步**；如果是無關區域照常開工。詳見 [`README.md` 的「並行模式」段落](./README.md#並行模式兩個-session-同時開的-git-紀律)。
+看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。Feature Builder 涉及整 stack，最容易撞別人的 in-flight 工作 — 如果對方剛動 `apps/web/src/lib/firebase/*`、`firestore.rules`、或你預計要改的 page，**先 `git pull --rebase` 同步**；如果是無關區域照常開工。詳見 [`README.md` 的「多個 session 同時開」](./README.md#多個-session-同時開)。
 
 ## 標準工作流
 
@@ -115,9 +115,9 @@ User Story:
 
 ```bash
 # 規格參考既有檔案結構
-cat src/lib/firebase/pets.ts     # firebase lib pattern
-cat src/app/app/pets/page.tsx    # page pattern
-cat src/components/pets/pet-card.tsx  # card component pattern
+cat apps/web/src/lib/firebase/pets.ts     # firebase lib pattern
+cat apps/web/src/app/app/pets/page.tsx    # page pattern
+cat apps/web/src/components/pets/pet-card.tsx  # card component pattern
 
 # typecheck
 npx tsc --noEmit

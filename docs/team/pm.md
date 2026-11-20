@@ -18,7 +18,7 @@
 
 ## 不可碰範圍
 
-- 所有 production code（`src/`, `functions/`）
+- 所有 production code（`apps/`、`packages/`、`functions/`）
 - 所有 schema / rule / index
 - 任何「實作」性質的事情 — 你只寫規格，不寫 code
 
@@ -28,7 +28,7 @@
 git fetch && git log -5 --stat origin/main
 ```
 
-看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。PM 只動 `docs/`，跟任何 production-code 角色並行都安全，但**兩個 PM session 同時動 roadmap.md / backlog.md 會撞**。如果對方剛動 `docs/`，**先 `git pull --rebase` 同步**再開工。詳見 [`README.md` 的「並行模式」段落](./README.md#並行模式兩個-session-同時開的-git-紀律)。
+看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。PM 只動 `docs/`，跟任何 production-code 角色並行都安全，但**兩個 PM session 同時動 roadmap.md / backlog.md 會撞**。如果對方剛動 `docs/`，**先 `git pull --rebase` 同步**再開工。詳見 [`README.md` 的「多個 session 同時開」](./README.md#多個-session-同時開)。
 
 ## 標準工作流
 

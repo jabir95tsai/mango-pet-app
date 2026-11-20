@@ -18,7 +18,7 @@
 ## 不碰
 
 - Firestore / Storage / Functions 寫入邏輯
-- `packages/shared-firebase/**` API 簽名
+- `apps/ios/src/lib/**` 資料層 API 簽名
 - Web/PWA UI，除非 PM 明確要求同步修
 - 新 feature flow；功能缺口交給 iOS Feature Builder
 

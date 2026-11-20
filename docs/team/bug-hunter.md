@@ -11,7 +11,7 @@
 
 任何檔案都可以碰，**只要那個改動是為了修一個已重現的 bug**：
 
-- `src/**/*.{ts,tsx,css}`
+- `apps/web/src/**/*.{ts,tsx,css}`
 - `firestore.rules` / `firestore.indexes.json` — 但只動跟這個 bug 有關的條目
 - `functions/src/index.ts`
 - `apphosting.yaml` / 環境變數
@@ -29,7 +29,7 @@
 git fetch && git log -5 --stat origin/main
 ```
 
-看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。如果有跟你預計要動的檔案重疊，**先 `git pull --rebase` 同步**再開工；如果完全不重疊，照常進入下一段。詳見 [`README.md` 的「並行模式」段落](./README.md#並行模式兩個-session-同時開的-git-紀律)。
+看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。如果有跟你預計要動的檔案重疊，**先 `git pull --rebase` 同步**再開工；如果完全不重疊，照常進入下一段。詳見 [`README.md` 的「多個 session 同時開」](./README.md#多個-session-同時開)。
 
 ## 標準工作流（必做）
 
@@ -88,31 +88,16 @@ git fetch && git log -5 --stat origin/main
 
 ## 常用工具
 
-> 本機是 Windows + PowerShell（搭配 Git Bash on Windows）。`npx` / `git` /
-> `firebase` 在兩邊都一樣，但 `curl | grep | for` 那種 pipeline 寫法差很多。
-> 兩種都列出來，挑你當下開的 terminal 用。
-
 ### 確認 deploy 完成（找新 commit 的特徵字串）
 
-優先查本機 `.next/static/chunks`。如果真的要查 production，只能做一次首頁或單一目標 chunk 檢查；不要寫迴圈抓 production 全部 chunks。
-
-**Bash / Git Bash:**
+優先查本機 `apps/web/.next/static/chunks`。如果真的要查 production，只能做一次首頁或單一目標 chunk 檢查；不要寫迴圈抓 production 全部 chunks。
 
 ```bash
 NEEDLE='你的特徵字串'      # 例：'mango.migrated' / '走的' / 'sendTestPush'
-grep -R "$NEEDLE" .next/static/chunks && echo "FOUND in local build"
+grep -R "$NEEDLE" apps/web/.next/static/chunks && echo "FOUND in local build"
 ```
 
-**PowerShell:**
-
-```powershell
-$needle = '你的特徵字串'
-Get-ChildItem .next\static\chunks -Recurse -Filter *.js |
-  Select-String -SimpleMatch $needle |
-  Select-Object -First 5
-```
-
-### 部署（兩邊指令一樣）
+### 部署
 
 ```
 npx firebase deploy --only functions:scanReminders
@@ -120,12 +105,12 @@ npx firebase deploy --only firestore:rules
 npx firebase deploy --only firestore:indexes
 
 # typecheck before commit
-npx tsc --noEmit
+npm run typecheck -w apps/web
 ```
 
-Chrome MCP 工具：
+瀏覽器驗證：
 
-- `mcp__Claude_in_Chrome__navigate` + `screenshot` + `read_console_messages` + `read_network_requests`
+- 瀏覽器工具（Claude in Chrome 或內建瀏覽器）：navigate、screenshot、read_console_messages、read_network_requests
 - 卡死的 tab 砍掉重開：`tabs_close_mcp` → `tabs_context_mcp({ createIfEmpty: true })`
 - 攔 fetch payload 看 request/response：JS patch `window.fetch`，存到 `window.__fetchLog`，再讀
 

@@ -30,5 +30,5 @@
 ## 完成標準
 
 - bug 修前可重現，修後同路徑不再重現。
-- `npx tsc --noEmit` pass，或清楚說明 monorepo P0 前無法跑的原因。
+- `npm run typecheck -w apps/ios` pass。
 - 沒混入新功能 / 大重構。

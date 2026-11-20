@@ -1,5 +1,7 @@
 # iOS P0 — User Setup Tracker（手動步驟 + 收集到的值）
 
+> 歷史紀錄（2026-05-31 已完成）。當時開發機是 Windows、用 EAS 出 build；現在改用 Mac mini 本機 build 加 Transporter，流程見 `apps/ios/AGENTS.md`。
+
 狀態：**✅ P0 COMPLETE**（2026-05-31 iPhone 實機簽收：Google + Apple 登入通 + 空白 5-tab nav 顯示）
 維護：iOS PM（記錄用；config 寫入由 iOS Backend 執行）
 配合：[`../features/ios-p0-monorepo-migration.md`](../features/ios-p0-monorepo-migration.md)、[`../features/ios-parity-checklist.md`](../features/ios-parity-checklist.md)

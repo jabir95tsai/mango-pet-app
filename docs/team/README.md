@@ -1,227 +1,46 @@
 # Mango Pet 開發角色分工
 
-開新 Claude / Codex session 前，先決定**這個 session 是哪個平台軌道 + 哪個角色**。把通用初始 prompt 和對應角色檔案塞進 context（複製貼上，或叫 agent `read docs/team/{role}.md`）。**一個 session 只當一個角色**，跨角色的事丟到該角色的 backlog 等下次。
+每個 session 固定一個平台和一個角色。分角色是為了設護欄：每個 session 都清楚這次「該做什麼、不該做什麼、怎樣算做完」，commit 也才能各自回滾。共用規則（檢查指令、Git、部署）寫在根目錄的 [`AGENTS.md`](../../AGENTS.md)，這份只管角色和多個 session 怎麼協作。
 
-通用初始 prompt：[`session-start-prompt.md`](./session-start-prompt.md)。填入平台、角色檔案、本次任務與完成標準；agent 能讀 repo 時可直接用文件末尾的短版啟動範例。
-
-以下是協作與操作參考，不代表每個 session 都要執行 push / deploy。依通用 prompt 先檢查工作樹、目前 scripts 與任務授權；歷史 P0 說明不代表目前尚未完成 migration。
+不知道要開哪個角色時，直接描述任務，agent 會依下面的決策樹自己選。要指定角色見 [`session-start-prompt.md`](./session-start-prompt.md)。
 
 ## 決策樹
 
-> 我手上有 bug 想修 →
+- 有 bug 要修 → **Bug Hunter**：重現、找證據、最小修法、回頭驗證
+- 想加新功能 → spec 還沒寫就先開 **PM**；spec 寫好了就開 **Feature Builder**，從頭做到可用
+- 畫面不舒服、響應式壞掉、a11y 有問題 → **UI/UX**
+- Firestore 慢、rules 有疑慮、缺 index、function 出錯 → **Backend**
+- 不知道下一步做什麼 → **PM**：排優先、決定不做什麼、寫 spec
+- Web 和 iOS 要不要一起改、誰先做 → **Cross-platform PM**
+- 只要提到 iOS、App、iPhone、Expo，就用對應的 `ios-*` 角色
 
-→ **[Bug Hunter](./bug-hunter.md)** — 重現 / 證據 / 最小修法 / 部署驗證
+## 角色一覽
 
-> 我想加一個新功能 →
-
-→ 規格寫好了嗎？
-- 沒寫好 → 先當 **[PM](./pm.md)** 寫 spec
-- 寫好了 → **[Feature Builder](./feature-builder.md)** 端到端做完
-
-> 畫面看了不舒服 / 響應式壞了 / a11y 有問題 →
-
-→ **[UI/UX 工程師](./ui-ux.md)** — 截圖 baseline / 改 / 截圖 after
-
-> Firestore 慢、規則有疑慮、index 缺、function 出錯 →
-
-→ **[Backend / 資料工程師](./backend.md)** — 風險盤點 / 一次一個 / 對的部署順序
-
-> 不知道下一步該做什麼、覺得進度有點散 →
-
-→ **[PM / 策略](./pm.md)** — 排序、決定不做什麼、寫 spec 給其他角色
-
-> 我要決定 Web/PWA 與 iOS 兩邊是否要一起改、誰先做、如何保持同一個產品 →
-
-→ **[Cross-platform PM](./cross-platform-pm.md)** — 雙平台共同規格、parity、取捨與 handoff
-
-> 我要開始 iOS app / React Native / Expo / monorepo / TestFlight →
-
-→ 先選 iOS 五角色之一：
-- 沒寫好 phase / scope → **[iOS PM](./ios-pm.md)**
-- 要做 iOS 新 feature parity → **[iOS Feature Builder](./ios-feature-builder.md)**
-- 要調 iOS 原生畫面 / safe area / a11y → **[iOS UI/UX](./ios-ui-ux.md)**
-- iOS simulator / 真機 bug → **[iOS Bug Hunter](./ios-bug-hunter.md)**
-- Firebase native / APNs / shared data layer → **[iOS Backend](./ios-backend.md)**
-
-## 5 個角色一覽
-
-| 角色 | Web/PWA role file | iOS role file | 一句話 |
+| 角色 | Web/PWA | iOS | 一句話 |
 |---|---|---|---|
-| **PM / 策略** | [`pm.md`](./pm.md) / [`cross-platform-pm.md`](./cross-platform-pm.md) | [`ios-pm.md`](./ios-pm.md) / [`cross-platform-pm.md`](./cross-platform-pm.md) | 規格、優先序、roadmap、不做清單；Cross-platform PM 管雙平台共同真相 |
-| **Bug Hunter** | [`bug-hunter.md`](./bug-hunter.md) | [`ios-bug-hunter.md`](./ios-bug-hunter.md) | 重現 + 最小修法 + 回驗 |
-| **UI/UX 工程師** | [`ui-ux.md`](./ui-ux.md) | [`ios-ui-ux.md`](./ios-ui-ux.md) | 視覺層級、響應式 / safe area、a11y、動效 |
-| **Feature Builder** | [`feature-builder.md`](./feature-builder.md) | [`ios-feature-builder.md`](./ios-feature-builder.md) | 端到端新功能 / iOS parity feature |
-| **Backend / 資料** | [`backend.md`](./backend.md) | [`ios-backend.md`](./ios-backend.md) | schema、rules、indexes、functions、native Firebase / shared data |
+| PM / 策略 | [`pm.md`](./pm.md) | [`ios-pm.md`](./ios-pm.md) | spec、優先序、roadmap、不做清單 |
+| Cross-platform PM | [`cross-platform-pm.md`](./cross-platform-pm.md) | 同左 | 兩端的共同規格、parity、誰先做；不寫 code |
+| Bug Hunter | [`bug-hunter.md`](./bug-hunter.md) | [`ios-bug-hunter.md`](./ios-bug-hunter.md) | 重現、最小修法、回頭驗證 |
+| UI/UX | [`ui-ux.md`](./ui-ux.md) | [`ios-ui-ux.md`](./ios-ui-ux.md) | 視覺層級、響應式／safe area、a11y、動效 |
+| Feature Builder | [`feature-builder.md`](./feature-builder.md) | [`ios-feature-builder.md`](./ios-feature-builder.md) | 端到端新功能、iOS 對齊 Web 的功能 |
+| Backend / 資料 | [`backend.md`](./backend.md) | [`ios-backend.md`](./ios-backend.md) | schema、rules、indexes、functions、native Firebase |
 
-## 為什麼這樣分
+iOS 角色檔只寫和 Web 版不同的地方，要搭配它指定的基底角色檔一起讀。
 
-過去整個 vibe-coding session 在一個對話裡做完一切：UI/UX、bug 修、feature、backend、push debug。結果：
+## 跨角色協作
 
-1. 對話塞爆（一次 conv 250k tokens 是正常）
-2. 一個 commit 順手改了 UI + migration + rules，無法 partial rollback
-3. 沒人主動驗證 → 上線後使用者才回報「家庭功能裡寵物消失了」
-4. 「下一步要做什麼」永遠沒人問，只回應「下一個 bug 是什麼」
+- 做到一半發現屬於別的角色的事（例如 UI/UX 看到 bug、Feature Builder 發現 schema 不夠）：不要順手做，寫進 `docs/team/backlog.md` 或對應的 spec，寫清楚交給哪個角色。
+- 所有「想做但還沒人做」的事，最後都回到 PM 排優先。
+- Backend 做完 migration 後，要在 backlog 註明舊路徑可以清掉了。
+- iOS 角色需要改 backend 或 schema → 交給 iOS Backend／Backend；需要產品取捨 → 交給 iOS PM；看到 Web 的 bug → 交給 Web Bug Hunter。
 
-分角色不是為了形式 — 是為了**護欄**：每個 session 有明確的「該做什麼」「不該做什麼」「什麼叫做完了」。
+## 多個 session 同時開
 
-## 跨角色協作規則
-
-- **Bug Hunter** 不修的 bug → 寫進 `docs/team/backlog.md`，下次 PM session 排序
-- **UI/UX** 改的時候看到 bug → 不修，記下來丟 backlog
-- **Feature Builder** 做到一半發現 schema 不夠 → 暫停，回到當下 session 寫一段「需要 Backend 先做 X」，丟出去等 Backend 處理完再繼續
-- **Backend** 跑完 migration → 通知所有角色舊路徑可以清了
-- **PM** 是 fan-out 端點：所有「想做但沒人實作」最終都要回到 PM 排序
-- **Cross-platform PM** 管 Web/PWA 與 iOS 的共同規格、platform policy、parity checklist；不寫 code
-- **iOS Feature Builder / UI/UX / Bug Hunter** 需要 backend/schema change → 先寫 handoff 給 iOS Backend 或 Backend；需要產品取捨 → 回 iOS PM；看到 Web bug → 丟 Web Bug Hunter
-
-## 並行模式（兩個 session 同時開的 git 紀律）
-
-> Claude + Codex 雙開、或兩個 Claude 雙開時，commit 才不會撞車。
-
-### 規則 1（永遠做）：Push 前三件套
-
-不管有沒有並行，commit 完一律：
-
-```bash
-git fetch && git pull --rebase origin main && git push origin main
-```
-
-- 對方有新 commit → rebase 把你的 commit 重放在上面，沒衝突就順利推上
-- 有衝突 → git 停下叫你解，你立刻知道對方改了同樣的地方
-- 養成這個三件套肌肉記憶後，後面所有層都站得穩
-
-**PowerShell 版本相同**（`git` 指令在 Bash / PowerShell 完全一致，不用換）。
-
-### 規則 2（要並行就遵守）：角色分流不分檔
-
-兩邊同時開 session 時，**刻意挑不重疊的角色**：
-
-| 安全組合 | 為什麼 |
-|---|---|
-| **Backend / PM** + **UI/UX** | 一個動 `firestore/functions/lib/`、一個動 `app/components/`，撞檔案機率近 0 |
-| **Bug Hunter (前端 bug)** + **Backend** | 一個查 UI、一個整 schema |
-| **PM / Cross-platform PM** + 任何一個其他角色 | PM 只動 `docs/`，零碰 production code |
-| **iOS Feature Builder** + **Web UI/UX** | P0 後一個主要動 `apps/ios/`，一個動 web UI；但 shared packages 要先溝通 |
-| ❌ 兩邊都 **Bug Hunter** | 都可動任何檔案，撞 src/ 機率高 |
-| ❌ 兩邊都 **UI/UX** 或 **Feature Builder** | 同 lane 必撞 |
-| ❌ **iOS P0 monorepo migration** + 任何 production code session | P0 搬路徑期間會碰 repo shape，先暫停其他 code session |
-
-### 規則 3（會省下半小時痛苦）：Session 開頭 pre-flight
-
-每個角色檔案頂端的「Session 開頭 pre-flight」段落都寫了同樣的指令：
-
-```bash
-git fetch && git log -5 --stat origin/main
-```
-
-讀對方最近 5 個 commit 改了什麼，再決定要不要動同一個檔案。Session 開頭花 30 秒做這件事，省下後面 30 分鐘解衝突。
-
-### 規則 4（血淚換來）：dep / lockfile / repo-shape 改動 → branch-first + linux build gate
-
-> 2026-05-31 web production build 連紅 3 支 build 才發現的教訓。
-
-monorepo 化之後，**任何動到 `package.json` / `package-lock.json` / native dep / repo 結構**的改動，**不准直推 main**。要：
-
-1. **Branch-first**：開 branch 做，main 保持 live 可回滾。
-2. **linux build gate**：push branch 後，對該 commit 使用既有 backend 的 App Hosting Build API 建置，確認 build 為 `READY` 才 merge。只建立 build、不建立 rollout，可避免 gate 提前切換線上流量。若本次已授權部署，也可用：
-   ```bash
-   npx firebase apphosting:rollouts:create -b <branch>
-   ```
-   讓 App Hosting 在 **linux** 對該 branch 跑一次真 build **並部署**。**綠了才 merge main**；紅了留在 branch 改。注意此 CLI 指令成功後會發布該分支，不能當作純 build 使用。
-3. 嚴格走這套，紅 3 次都不會污染 main / production（已驗證）。
-
-**為什麼一定要 linux gate**：本機是 **Windows**。`npm install` 在 Windows 生的 monorepo lockfile **會漏掉 linux 平台的 transitive optional native binary**（例：`@parcel/watcher-linux-x64-glibc`）。本地 `npm run build` 在 Windows 全綠，App Hosting（linux）卻紅在「找不到原生 binary」。**Windows 本地 build 過 ≠ App Hosting 會過** → 一定要 linux branch build 當 gate。
-
-- 長期更穩：CI/lockfile 改在 linux 生成；或保留 `apps/web` 的 `optionalDependencies` 平台清單（已在 `_comment_optionalDependencies` 寫明）。任一 native dep 升版，記得同步那份 pin。
-- 「直推 main 中招」在 P0 migration + 本次已連續發生 → 這條是硬規則，不是建議。
-
-### 規則 5（iOS 驗收節奏）：實機驗收 per-phase 批次，不 per-sub-phase
-
-> user 2026-06-01：「不想每個 sub-phase 都實機驗收，很麻煩，一次做完一次驗。」
-
-**分清兩種「驗證」**：
-- **自動關卡（dev session 自己跑，不需 user）**：`tsc --noEmit` + 碰 dep 的 **linux web-rollout gate**（規則 4，保護 web production）。**每個 sub-phase 都要做**，因為它保命且免費。
-- **實機驗收（user 裝 iPhone 走查）**：**per-phase 一次**。一個 phase（如 P2）的所有 sub-phase code 全 merge 後，發**一顆** EAS build，user 一次走完整個 phase 的端到端清單。**不要每個 sub-phase 都叫 user 裝一次。**
-
-**為何安全**：iOS 尚未上 App Store（無 production release），未實機驗的 iOS code 進 main 不影響線上；web 由 web-gate 保護。**tradeoff**：runtime bug 會在 phase 末一次浮現（較難逐項隔離）→ 末端驗完開 iOS Bug Hunter 收。
-
-**dev session 紀律**：碰 dep → branch + tsc + web-gate 綠 → merge；**不主動發 device build、不要 user 中途驗**。phase 全 code 收齊 → iOS PM 發該 phase 唯一一顆 EAS build + 端到端清單給 user。
-
-### 規則 6（血淚換來，2026-06-03）：並行 = 強制 git worktree 隔離，**不要共用同一個 working tree**
-
-> 背景：一次 PWA PM + iOS/UI 並行期，兩邊共用同一個 working tree，連環肇事 — commit 落錯 branch、push 不到 main、merge 衝突擋住所有 commit，最後一個基於「舊 base」的並行 session 在共用 index 裡**逐一刪掉剛建立的 PM docs（design-system SoT / 多份 spec）**。全部只發生在本地、靠人工發現+還原才沒上 origin。根因都是**同一個 working tree 被多 session 同時動 + 切 branch**。
-
-**規則**：只要有第二個 session 會動 code/docs，**第二個 session 一律用獨立 git worktree**（見下方指令），不要兩個 session 開同一個資料夾。
-
-- 每個 worktree 從**當前 origin/main** 開（`git fetch` 後再 `worktree add`），自帶最新檔案（含 SoT / 最新 spec），不會基於 stale base。
-- 共用 `.git`、各自獨立 working tree / index / 當前 branch → 不會互相落錯 branch、不會在彼此 index 留殘留。
-- 各自 push 仍走規則 1 三件套。
-- ⚠️ 若發現某 session 在共用 tree 裡顯示「刪掉一堆本來存在的檔」→ 多半是它基於 stale base。**先 `git fetch && git rebase origin/main`（或重開 worktree）對齊現況再繼續**，不要把刪除 commit/push 上去。
-
-### 進階選項細節：Git Worktree 指令（規則 6 的具體做法）
-
-如果你預期長期雙開、想徹底隔離兩邊的 working tree（連 system-reminder「intentional change」狂噴都消除），用 git worktree：
-
-```bash
-cd /c/Users/jabir/Hacker_J
-git -C mango_pet_app worktree add ../mango_pet_app-codex main
-```
-
-- Claude 開 `C:\Users\jabir\Hacker_J\mango_pet_app\`
-- Codex 開 `C:\Users\jabir\Hacker_J\mango_pet_app-codex\`
-- 兩邊獨立 working tree，共用 `.git`，push 時還是回到規則 1
-
-iOS 長期開發期間建議啟動 worktree。尤其 P0 完成後，Web/PWA 維護和 iOS feature parity 會長期並行。
-
-## 共用工具備忘
-
-每個角色都會用到：
-
-```bash
-# Typecheck（code 改動 commit 前，依受影響專案執行）
-npm run typecheck -w apps/web
-npm run typecheck -w apps/ios
-# Functions：進 functions 目錄後執行 npx tsc --noEmit
-# shared packages：執行套件既有檢查及受影響使用端檢查
-
-# 部署（看你動了什麼）
-git push origin main                                    # 前端 → App Hosting auto-build
-npx firebase deploy --only firestore:rules
-npx firebase deploy --only firestore:indexes
-npx firebase deploy --only functions:函式名
-
-# Chrome MCP 驗證 production
-# mcp__Claude_in_Chrome__navigate / screenshot / read_console_messages
-# URL: https://mango-pet--mango-pet-app.asia-east1.hosted.app
-```
-
-## iOS 階段新增工具備忘
-
-```bash
-# Firebase iOS app / config
-npx firebase apps:list IOS --project mango-pet-app
-npx firebase apps:create IOS "Mango Pet iOS" --bundle-id com.mangopet.app --project mango-pet-app
-npx firebase apps:sdkconfig IOS <APP_ID> --project mango-pet-app
-
-# Expo / EAS（P0 建立 apps/ios 後才用）
-npx expo start
-npx eas build --platform ios
-```
-
-P0 monorepo migration 前，這些指令只是目標狀態；實際 script 以 iOS 五角色文件和當時 `package.json` 為準。
-
-## iOS session：依現況選擇五角色
-
-進入 iOS app 工作時，用 [`session-start-prompt.md`](./session-start-prompt.md) 的 iOS PM 短版範例盤點現況，或指定已規格化任務的工程角色。目前 repo 已有 `apps/web`、`apps/ios` 與 `packages/*`，不要因舊 checklist 未勾選就重做 migration。
-
-以下為 P0 規劃的歷史起手順序；只有任務確實涉及新的 repo 結構遷移時才套用：
-
-1. 讀 `docs/features/ios-app-strategy.md`
-2. 檢查 repo shape / package scripts / App Hosting 設定
-3. 列 P0 monorepo migration 的最小安全步驟
-4. 確認 Web/PWA 回滾策略
-5. 產出 handoff 給 iOS Feature Builder / iOS Backend，再開始 `apps/ios` / `packages/*` foundation
-
-選擇方式：如果問題是「iOS 自己怎麼排 P0」用 iOS PM；如果問題是「Web/PWA 與 iOS 共同產品策略怎麼走」用 Cross-platform PM。
-
-舊的 Bug Hunter 起手式仍在 [`bug-hunter.md`](./bug-hunter.md)；需要 production bug sweep 時再開 Bug Hunter session。
+1. **Push 前先同步**：`git fetch && git pull --rebase origin main && git push origin main`。有衝突時 git 會停下來，代表另一個 session 改了同一個地方。
+2. **挑不會撞檔案的角色組合**：PM 搭任何角色都安全；Backend 搭 UI/UX 也安全。兩個 Bug Hunter、兩個 UI/UX、兩個 Feature Builder 一定會撞。
+3. **開工先看別人最近改了什麼**：`git fetch && git log -5 --stat origin/main`。
+4. **改依賴要先開 branch，跑 Linux build gate**：改到 `package.json`、lockfile、原生依賴或 repo 結構時，不能直接 push main。先開 branch，對那個 commit 用 App Hosting Build API 建置（只建 build，不建 rollout），結果是 `READY` 才 merge，merge 完刪掉 branch。除了這種情況和使用者明確要求，其他改動一律直接在 main 上做。注意 `npx firebase apphosting:rollouts:create -b <branch>` 會直接上線，不能拿來當純 build 檢查。
+   - 原因：本機 macOS 產生的 lockfile 可能漏掉 Linux 平台才需要的原生 binary（例如 `@parcel/watcher-linux-x64-glibc`），本機 build 會過，App Hosting 卻會失敗。2026-05-31 曾因此連續失敗 3 次。
+   - 升級任何原生依賴時，記得同步 `apps/web/package.json` 的 `optionalDependencies` 平台清單。
+5. **一個 session 一個 worktree，但不用開 branch**：給第二個 session 開一個不帶 branch 的 worktree：`git worktree add --detach ../mango-pet-app-2 origin/main`，做完用 `git push origin HEAD:main` 推回 main，用完 `git worktree remove ../mango-pet-app-2`。不要兩個 session 共用同一個資料夾：2026-06-03 曾經因為共用工作目錄，commit 落到錯的 branch，PM 剛寫好的文件也被另一個 session 刪掉。如果看到某個 session 準備刪掉一堆原本存在的檔案，多半是它的 base 太舊，要先 `git rebase origin/main` 再繼續。
+6. **iOS 實機驗收一個 phase 驗一次**：每個 sub-phase 只跑自動檢查（typecheck；有改依賴的話加跑 Linux build gate）。整個 phase 的 code 都進 main 後，再出一個 TestFlight build 讓使用者一次走完驗收（使用者 2026-06-01 的決定）。iOS 1.0 還沒正式上架，沒驗過的 code 進 main 不會影響線上使用者。

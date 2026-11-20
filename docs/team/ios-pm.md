@@ -10,7 +10,7 @@
 
 ## iOS PM 負責
 
-- 把 iOS P0-P7 phase 拆成可交付 spec。
+- 把 iOS phase 拆成可交付 spec。
 - 對照 Web/PWA 已 shipped features，維護 iOS parity checklist。
 - 依照 Cross-platform PM 的 platform policy，決定哪些 Web 新功能要進 iOS catch-up sprint。
 - 寫 `docs/features/ios-*.md` 規格給 iOS Feature Builder / iOS UI/UX / iOS Backend 接。

@@ -10,15 +10,15 @@
 
 ## 可碰範圍
 
-- `src/app/**/*.tsx` — 頁面 layout
-- `src/components/**/*.tsx` — 共用元件
-- `src/app/globals.css` + Tailwind tokens / CSS variables
+- `apps/web/src/app/**/*.tsx` — 頁面 layout
+- `apps/web/src/components/**/*.tsx` — 共用元件
+- `apps/web/src/app/globals.css` + Tailwind tokens / CSS variables
 - `public/icons/*` — App icon / favicon 替換（不改 manifest 結構）
 - `messages/zh-TW.json` / `messages/en.json` — 顯示文字微調（不新增 key，那是 Feature Builder 的事）
 
 ## 不可碰範圍
 
-- `src/lib/firebase/*` — 所有資料層
+- `apps/web/src/lib/firebase/*` — 所有資料層
 - `functions/` — Cloud Functions
 - `firestore.rules` / `firestore.indexes.json`
 - `apphosting.yaml`
@@ -31,7 +31,7 @@
 git fetch && git log -5 --stat origin/main
 ```
 
-看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。UI/UX 跟 Backend 並行通常很安全，但跟另一個 UI/UX 或 Feature Builder 並行就會撞 `src/components/`。有重疊 **先 `git pull --rebase`**；零重疊照常進入下一段。詳見 [`README.md` 的「並行模式」段落](./README.md#並行模式兩個-session-同時開的-git-紀律)。
+看對方（另一個 session 或上次的自己）最近 5 個 commit 改了什麼。UI/UX 跟 Backend 並行通常很安全，但跟另一個 UI/UX 或 Feature Builder 並行就會撞 `apps/web/src/components/`。有重疊 **先 `git pull --rebase`**；零重疊照常進入下一段。詳見 [`README.md` 的「多個 session 同時開」](./README.md#多個-session-同時開)。
 
 ## 標準工作流
 

@@ -11,7 +11,6 @@
 ## 可碰範圍
 
 - `packages/shared-types/**`
-- `packages/shared-firebase/**`
 - `packages/shared-business/**`
 - `apps/ios/**` Firebase init / native config / data services
 - Firebase CLI 建立或查詢 iOS app config
@@ -43,4 +42,4 @@ npx firebase apps:sdkconfig IOS <APP_ID> --project mango-pet-app
 - iOS Firebase init / Auth / Firestore / Storage / Messaging 的資料路徑清楚。
 - Shared types / helpers 與 Web 不漂移。
 - Rules / functions / indexes 若有改，部署順序與驗證紀錄完整。
-- `npx tsc --noEmit` pass。
+- `npm run typecheck -w apps/ios` pass。

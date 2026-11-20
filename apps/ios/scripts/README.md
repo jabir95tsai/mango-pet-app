@@ -2,7 +2,7 @@
 
 Run from the repository root with installed workspace dependencies:
 
-```powershell
+```bash
 node --test apps/ios/scripts/auth-push.test.cjs
 node --test apps/ios/scripts/tab-gestures.test.cjs
 node --test apps/ios/scripts/push-open.test.cjs
@@ -22,14 +22,11 @@ gesture recognition and rendering still require the phase device check.
 
 To prove the first-permission regression detects the original bug:
 
-```powershell
-$env:IOS_PUSH_BASELINE_REF='248686f'
-node --test --test-name-pattern='NOT_DETERMINED' apps/ios/scripts/auth-push.test.cjs
-Remove-Item Env:IOS_PUSH_BASELINE_REF
+```bash
+IOS_PUSH_BASELINE_REF=248686f node --test --test-name-pattern='NOT_DETERMINED' apps/ios/scripts/auth-push.test.cjs
 ```
 
-Expected: one failure, actual `denied` versus expected `notDetermined`. Do not
-leave this environment variable set for normal regression runs.
+Expected: one failure, actual `denied` versus expected `notDetermined`.
 
 ## Real SDK and rules integration
 
@@ -43,15 +40,14 @@ are accepted; see `functions/tests/README.md` for the combined run.
 
 Create a local ignored config and copy the rules under test:
 
-```powershell
-New-Item -ItemType Directory -Force outputs/ios-auth-tests | Out-Null
-Copy-Item firestore.rules outputs/ios-auth-tests/firestore.rules
-'{"firestore":{"rules":"firestore.rules"},"emulators":{"firestore":{"host":"127.0.0.1","port":8193},"ui":{"enabled":false},"singleProjectMode":true}}' | Set-Content outputs/ios-auth-tests/firebase.json -Encoding utf8
-$env:JAVA_HOME='C:/Program Files/Java/jdk-21'
-$env:PATH=$env:JAVA_HOME+'/bin;'+$env:PATH
-$env:JAVA_TOOL_OPTIONS='-Duser.language=en -Duser.country=US'
-$env:GCLOUD_PROJECT='demo-mango-ios-auth'
-$env:TEST_DELETION_MARKER='1'
+```bash
+mkdir -p outputs/ios-auth-tests
+cp firestore.rules outputs/ios-auth-tests/firestore.rules
+echo '{"firestore":{"rules":"firestore.rules"},"emulators":{"firestore":{"host":"127.0.0.1","port":8193},"ui":{"enabled":false},"singleProjectMode":true}}' > outputs/ios-auth-tests/firebase.json
+export PATH=/opt/homebrew/opt/openjdk@21/bin:$PATH
+export JAVA_TOOL_OPTIONS='-Duser.language=en -Duser.country=US'
+export GCLOUD_PROJECT=demo-mango-ios-auth
+export TEST_DELETION_MARKER=1
 npx -y firebase-tools@15.32.1 emulators:exec --project demo-mango-ios-auth --config outputs/ios-auth-tests/firebase.json --only firestore 'node --test --test-concurrency=1 apps/ios/scripts/auth-push-emulator.test.cjs'
 ```
 

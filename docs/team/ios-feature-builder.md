@@ -39,5 +39,5 @@
 - iOS 使用者能走完 spec 的主流程。
 - 資料寫入同一套 Firestore / Storage / Functions。
 - i18n 至少保留 zh-TW / en 對應策略。
-- `npx tsc --noEmit` pass。
+- `npm run typecheck -w apps/ios` pass。
 - 沒破 Web/PWA production workflow。
