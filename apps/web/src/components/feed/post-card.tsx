@@ -9,7 +9,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { Globe, Users, Lock, MessageCircle, Trash2 } from "lucide-react";
 import type { Post, Visibility } from "@/lib/types";
 import { useAuth } from "@/components/auth/auth-provider";
-import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { Avatar } from "@/components/ui/avatar";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { EmojiReactions } from "./emoji-reactions";
@@ -135,48 +134,43 @@ export function PostCard({ post, currentUid, onDelete, onBlocked }: Props) {
         </div>
       )}
 
-      {/* Reactions + comments need a real identity — guests get an upgrade
-          nudge in place of the interactive row. They can still read the
-          post above. Spec §C (留言 / 表情 → guest 不可用). */}
-      {isGuest ? (
-        <GuestLockedNotice feature="reactions" />
-      ) : (
-        <>
-          <div className="flex items-center gap-4">
-            <EmojiReactions
-              postId={post.postId}
-              uid={currentUid}
-              counts={post.reactionCounts}
-            />
-            <button
-              type="button"
-              onClick={() => setCommentsOpen((o) => !o)}
-              aria-expanded={commentsOpen}
-              aria-controls={commentsId}
-              aria-label={tCm("toggle")}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full text-sm text-zinc-600 transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:text-zinc-300"
-            >
-              <MessageCircle className="size-[22px]" strokeWidth={1.75} aria-hidden="true" />
-              {commentCount > 0 && (
-                <span className="tabular-nums">
-                  {commentCount}
-                </span>
-              )}
-            </button>
-          </div>
+      {/* Guests see counts + comments read-only; EmojiReactions and
+          CommentSection gate interaction themselves. Spec guest-login §C. */}
+      <>
+        <div className="flex items-center gap-4">
+          <EmojiReactions
+            postId={post.postId}
+            uid={currentUid}
+            counts={post.reactionCounts}
+          />
+          <button
+            type="button"
+            onClick={() => setCommentsOpen((o) => !o)}
+            aria-expanded={commentsOpen}
+            aria-controls={commentsId}
+            aria-label={tCm("toggle")}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full text-sm text-zinc-600 transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep dark:text-zinc-300"
+          >
+            <MessageCircle className="size-[22px]" strokeWidth={1.75} aria-hidden="true" />
+            {commentCount > 0 && (
+              <span className="tabular-nums">
+                {commentCount}
+              </span>
+            )}
+          </button>
+        </div>
 
-          {commentsOpen && (
-            <CommentSection
-              id={commentsId}
-              postId={post.postId}
-              postAuthorUid={post.authorUid}
-              currentUid={currentUid}
-              onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
-              onBlocked={onBlocked}
-            />
-          )}
-        </>
-      )}
+        {commentsOpen && (
+          <CommentSection
+            id={commentsId}
+            postId={post.postId}
+            postAuthorUid={post.authorUid}
+            currentUid={currentUid}
+            onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
+            onBlocked={onBlocked}
+          />
+        )}
+      </>
 
       <PhotoLightbox
         photos={post.photoURLs}

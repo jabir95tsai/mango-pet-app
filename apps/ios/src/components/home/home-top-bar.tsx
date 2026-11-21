@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { WarmGlass } from "@/components/ui/WarmCanvas";
 import { Bell, Home } from "lucide-react-native";
 
@@ -19,11 +19,13 @@ export function HomeTopBar({
   const label = familyName ?? userDisplayName ?? null;
   return (
     <View style={styles.bar}>
-      {/* Brand: 🥭 + locale-aware App.name ("芒果寵物") — the mango emoji is
-          the visual hook, matching web. */}
-      <Text style={styles.brand} numberOfLines={1}>
-        <Text aria-hidden>🥭</Text> {t("App.name")}
-      </Text>
+      {/* Brand: Mango Pet logo + locale-aware App.name ("芒果寵物"), matching web. */}
+      <View style={styles.brandRow}>
+        <Image source={require("../../../assets/icon.png")} style={styles.logo} accessibilityIgnoresInvertColors />
+        <Text style={styles.brand} numberOfLines={1}>
+          {t("App.name")}
+        </Text>
+      </View>
       {label ? (
         <WarmGlass style={styles.pill}>
           <Home size={11} color={colors.brandDeep} strokeWidth={2.4} />
@@ -63,6 +65,8 @@ const styles = StyleSheet.create({
     maxWidth: CONTENT_MAX_WIDTH,
     alignSelf: "center",
   },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexShrink: 1 },
+  logo: { width: 30, height: 30, borderRadius: 8 },
   brand: {
     fontSize: 25,
     flexShrink: 1,

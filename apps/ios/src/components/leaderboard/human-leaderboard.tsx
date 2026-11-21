@@ -49,12 +49,14 @@ export function HumanLeaderboard({
   initialScope: HumanScope;
   onCreateFamily: () => void;
 }) {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { family, status: familyStatus, refresh: retryFamily } = useFamily();
   const familyLoading = familyStatus === "loading";
   const familyId = family?.familyId ?? null;
   const [period, setPeriod] = useState<LeaderboardPeriod>("weekly");
-  const [scope, setScope] = useState<HumanScope>(initialScope);
+  const [storedScope, setScope] = useState<HumanScope>(initialScope);
+  // Guests can't join a family: they view the all-app board only (and never appear on it).
+  const scope: HumanScope = isGuest ? "all" : storedScope;
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,7 @@ export function HumanLeaderboard({
 
   useEffect(() => {
     if (!active || familyLoading) return;
-    if (!familyId) {
+    if (!familyId && !isGuest) {
       setEntries([]);
       setLoading(false);
       return;
@@ -87,7 +89,7 @@ export function HumanLeaderboard({
       },
     );
     return unsub;
-  }, [active, familyLoading, familyId, period, nonce]);
+  }, [active, familyLoading, familyId, isGuest, period, nonce]);
 
   const refreshMembers = useCallback(async () => {
     if (!family) {
@@ -175,7 +177,7 @@ export function HumanLeaderboard({
   }
 
   // Personal mode (resolved, no family): the explanation card only.
-  if (!familyLoading && !family) {
+  if (!familyLoading && !family && !isGuest) {
     return (
       <BoardList
         data={[] as LeaderboardEntry[]}
@@ -262,14 +264,16 @@ export function HumanLeaderboard({
               value={period}
               onChange={setPeriod}
             />
-            <ScopePill
-              options={[
-                { value: "all", label: t("Leaderboard.scope.all") },
-                { value: "family", label: t("Leaderboard.scope.family") },
-              ]}
-              value={scope}
-              onChange={changeScope}
-            />
+            {isGuest ? null : (
+              <ScopePill
+                options={[
+                  { value: "all", label: t("Leaderboard.scope.all") },
+                  { value: "family", label: t("Leaderboard.scope.family") },
+                ]}
+                value={scope}
+                onChange={changeScope}
+              />
+            )}
           </View>
           <Podium
             items={list.slice(0, 3).map((e) => ({

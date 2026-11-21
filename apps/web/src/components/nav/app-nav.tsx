@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -111,12 +112,13 @@ export function AppNav() {
         className="hidden border-r border-zinc-200/80 bg-white/90 backdrop-blur md:sticky md:top-0 md:flex md:h-dvh md:w-64 md:shrink-0 md:flex-col dark:border-zinc-800 dark:bg-zinc-950/90"
       >
         <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-4 dark:border-zinc-900">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-lg bg-amber-100 text-2xl dark:bg-amber-500/15"
-            aria-hidden="true"
-          >
-            🥭
-          </span>
+          <Image
+            src="/icons/mango-pet-logo.png"
+            alt=""
+            width={44}
+            height={44}
+            className="size-11 shrink-0 rounded-lg"
+          />
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-zinc-950 dark:text-zinc-50">
               {tApp("name")}

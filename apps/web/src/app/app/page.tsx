@@ -12,7 +12,6 @@ import { PostComposer } from "@/components/feed/post-composer";
 import { HomeTopBar } from "@/components/home/home-top-bar";
 import { StoriesBar } from "@/components/home/stories-bar";
 import { FeedSectionHeader } from "@/components/home/feed-section-header";
-import { HomeEmptyState } from "@/components/home/home-empty-state";
 import { InviteFamilyCard } from "@/components/home/invite-family-card";
 import { NoPostsHint } from "@/components/home/no-posts-hint";
 import { listPersonalPets, listPets } from "@/lib/firebase/pets";
@@ -26,7 +25,6 @@ import type { Pet, Post } from "@/lib/types";
  * Spec: docs/features/home-v3-feed-first.md
  *
  * Renders four variants driven by pets / family / posts state:
- *   - 0 pets                       → HomeEmptyState hero
  *   - ≥1 pet, no family            → Stories + InviteFamilyCard + Feed
  *   - ≥1 pet, family, 0 posts      → Stories + NoPostsHint
  *   - ≥1 pet, family, ≥1 posts (B1) → Stories + Feed + 「查看更多」
@@ -104,25 +102,7 @@ export default function AppHome() {
     return <p className="text-sm text-mango-ink-3">{tC("loading")}</p>;
   }
 
-  // ── Variant D1: 0 pets → hero empty state ───────────────────────
-  if (pets.length === 0) {
-    return (
-      <>
-        <HomeTopBar
-          familyName={family?.name ?? null}
-          userDisplayName={user?.displayName ?? null}
-        />
-        <HomeEmptyState />
-        <PostComposer
-          open={composerOpen}
-          onClose={() => setComposerOpen(false)}
-          pets={pets}
-          onCreated={refresh}
-        />
-      </>
-    );
-  }
-
+  const noPets = pets.length === 0;
   const isPersonal = !family;
   const hasPosts = feedPosts.length > 0;
 
@@ -143,7 +123,7 @@ export default function AppHome() {
       {/* Personal-mode upsell (≥1 pet + no family) — inserted between
           stories and the feed so users always see it without scroll
           past their pets. */}
-      {isPersonal && (
+      {isPersonal && !noPets && (
         <div className="mt-3">
           <InviteFamilyCard pet={pets[0]} />
         </div>

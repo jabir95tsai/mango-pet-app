@@ -34,10 +34,12 @@ export function HumanLeaderboard() {
   const t = useTranslations("Nav");
   const tC = useTranslations("Common");
   const tLb = useTranslations("Leaderboard");
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { family, loading: familyLoading } = useFamily();
 
-  const [scope, setScope] = useState<Scope>("all");
+  const [storedScope, setScope] = useState<Scope>("all");
+  // Guests can't join a family: they view the all-app board only (and never appear on it).
+  const scope: Scope = isGuest ? "all" : storedScope;
   const [period, setPeriod] = useState<LeaderboardPeriod>("weekly");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -66,7 +68,7 @@ export function HumanLeaderboard() {
   // row renders).
   useEffect(() => {
     if (familyLoading) return;
-    if (!family) {
+    if (!family && !isGuest) {
       setEntries([]);
       setLoading(false);
       return;
@@ -81,7 +83,7 @@ export function HumanLeaderboard() {
       () => setLoading(false),
     );
     return () => unsub();
-  }, [familyLoading, family, period, refreshNonce]);
+  }, [familyLoading, family, isGuest, period, refreshNonce]);
 
   function handleRefresh() {
     if (isRefreshing) return;
@@ -162,7 +164,7 @@ export function HumanLeaderboard() {
   // No toggle, no period tabs, no rows — just the explanation card.
   // Gated on familyLoading so we don't flash the empty state to a
   // family user while their family doc is loading.
-  if (!familyLoading && !family) {
+  if (!familyLoading && !family && !isGuest) {
     return (
       <>
         <RouteHeader title={t("leaderboard")} className="mb-4" />
@@ -221,16 +223,18 @@ export function HumanLeaderboard() {
         </button>
       </div>
 
-      <div className="mb-3">
-        <Tabs<Scope>
-          value={scope}
-          onChange={handleScopeChange}
-          options={[
-            { value: "all", label: tLb("scope.all") },
-            { value: "family", label: tLb("scope.family") },
-          ]}
-        />
-      </div>
+      {!isGuest && (
+        <div className="mb-3">
+          <Tabs<Scope>
+            value={scope}
+            onChange={handleScopeChange}
+            options={[
+              { value: "all", label: tLb("scope.all") },
+              { value: "family", label: tLb("scope.family") },
+            ]}
+          />
+        </div>
+      )}
 
       <div className="mb-4">
         <Tabs<LeaderboardPeriod>

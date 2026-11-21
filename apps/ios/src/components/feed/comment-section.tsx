@@ -40,6 +40,7 @@ import { useAuth } from "@/state/auth-context";
 import { colors, radius, spacing } from "@/theme/theme";
 import { UserAvatar } from "./user-avatar";
 import { PostMenu } from "./post-menu";
+import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 
 type Cursor = FirebaseFirestoreTypes.QueryDocumentSnapshot | null;
 
@@ -62,7 +63,7 @@ export function CommentSection({
   onCountChange?: (delta: number) => void;
   onBlocked?: (blockedUid: string) => void;
 }) {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [cursor, setCursor] = useState<Cursor>(null);
   const [loading, setLoading] = useState(true);
@@ -267,7 +268,7 @@ export function CommentSection({
                         <Text style={styles.metaText}>{t("Comments.delete")}</Text>
                       </Pressable>
                     ) : null}
-                    {c.authorUid !== currentUid ? (
+                    {c.authorUid !== currentUid && !isGuest ? (
                       <PostMenu
                         currentUid={currentUid}
                         targetType="comment"
@@ -286,8 +287,10 @@ export function CommentSection({
         </>
       )}
 
-      {/* Composer — bottom-anchored, optimistic append. */}
-      {user ? (
+      {/* Composer — bottom-anchored, optimistic append. Guests read only. */}
+      {isGuest ? (
+        <GuestLockedNotice feature="reactions" />
+      ) : user ? (
         <View style={styles.composer}>
           <UserAvatar name={user.displayName ?? ""} photoURL={user.photoURL} size={32} />
           <TextInput

@@ -10,8 +10,8 @@
  *    clipped as one 8pt-rounded block; tap opens the lightbox (`onOpenPhotos`)
  *  - actions (Threads-style, no pills): reaction heart + MessageCircle 22 with
  *    counts; the comment button lazy-mounts CommentSection
- *  - guests (anonymous) get GuestLockedNotice("reactions") in place of the
- *    reactions / comments row, like web — they can still read the post
+ *  - guests (anonymous) see counts + comments read-only; reacting opens the
+ *    upgrade sheet and the comment section swaps its composer for the notice
  *
  * Memoised: in the feed FlatList the card only re-renders when its post (or a
  * handler) changes. Tagged-pet chips were dropped for web parity (FEED-23);
@@ -30,7 +30,6 @@ import {
 import { Globe, Lock, MessageCircle, Trash2, Users, type LucideIcon } from "lucide-react-native";
 import type { Post, Visibility } from "@mango/shared-types";
 
-import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { deletePost } from "@/lib/posts";
 import { relativeTime } from "@/lib/format";
 import { alertError, confirm } from "@/lib/confirm";
@@ -151,45 +150,41 @@ function PostCardImpl({ warm = false, post, currentUid, onOpenPhotos, onDeleted,
         <PhotoGrid photos={photos} contentW={contentW} onOpenPhotos={onOpenPhotos} />
       ) : null}
 
-      {/* Reactions + comments need a real identity — guests get the upgrade
-          nudge instead (they can still read the post). Spec guest-login §C. */}
-      {isGuest ? (
-        <GuestLockedNotice feature="reactions" />
-      ) : (
-        <>
-          <View style={styles.actions}>
-            <EmojiReactions
-              postId={post.postId}
-              uid={currentUid}
-              initialCounts={post.reactionCounts}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t("Comments.toggle")}
-              accessibilityValue={commentCount > 0 ? { text: String(commentCount) } : undefined}
-              accessibilityState={{ expanded: commentsOpen }}
-              onPress={() => setCommentsOpen((v) => !v)}
-              hitSlop={8}
-              style={({ pressed }) => [styles.commentBtn, pressed && styles.commentBtnPressed]}
-            >
-              <MessageCircle size={22} color={colors.ink2} strokeWidth={1.75} />
-              {commentCount > 0 ? (
-                <Text style={styles.commentCount}>{commentCount}</Text>
-              ) : null}
-            </Pressable>
-          </View>
+      {/* Guests see counts + comments read-only; the reaction button and the
+          comment section gate interaction themselves. Spec guest-login §C. */}
+      <>
+        <View style={styles.actions}>
+          <EmojiReactions
+            postId={post.postId}
+            uid={currentUid}
+            initialCounts={post.reactionCounts}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("Comments.toggle")}
+            accessibilityValue={commentCount > 0 ? { text: String(commentCount) } : undefined}
+            accessibilityState={{ expanded: commentsOpen }}
+            onPress={() => setCommentsOpen((v) => !v)}
+            hitSlop={8}
+            style={({ pressed }) => [styles.commentBtn, pressed && styles.commentBtnPressed]}
+          >
+            <MessageCircle size={22} color={colors.ink2} strokeWidth={1.75} />
+            {commentCount > 0 ? (
+              <Text style={styles.commentCount}>{commentCount}</Text>
+            ) : null}
+          </Pressable>
+        </View>
 
-          {commentsOpen ? (
-            <CommentSection
-              postId={post.postId}
-              postAuthorUid={post.authorUid}
-              currentUid={currentUid}
-              onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
-              onBlocked={onBlocked}
-            />
-          ) : null}
-        </>
-      )}
+        {commentsOpen ? (
+          <CommentSection
+            postId={post.postId}
+            postAuthorUid={post.authorUid}
+            currentUid={currentUid}
+            onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
+            onBlocked={onBlocked}
+          />
+        ) : null}
+      </>
     </View>
   );
 }

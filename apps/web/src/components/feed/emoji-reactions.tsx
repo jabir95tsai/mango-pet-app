@@ -6,6 +6,8 @@ import { Heart, SmilePlus } from "lucide-react";
 import { getMyReaction, setReaction } from "@/lib/firebase/posts";
 import { REACTION_EMOJIS, type ReactionEmoji } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/auth-provider";
+import { useGuestUpgrade } from "@/components/auth/guest-upgrade";
 
 type Props = {
   postId: string;
@@ -38,6 +40,9 @@ const LONG_PRESS_MS = 450;
  */
 export function EmojiReactions({ postId, uid, counts, onChange }: Props) {
   const tP = useTranslations("Post");
+  // Guests see counts but can't react (rules reject it) — any pick opens the upgrade dialog.
+  const { isGuest } = useAuth();
+  const { openUpgrade } = useGuestUpgrade();
   const [mine, setMine] = useState<ReactionEmoji | null>(null);
   const [pending, setPending] = useState(false);
   const [localCounts, setLocalCounts] = useState(counts);
@@ -106,6 +111,7 @@ export function EmojiReactions({ postId, uid, counts, onChange }: Props) {
   // `next === mine` is a no-op; passing the current emoji again from the
   // tray therefore can't happen (callers pass null to clear).
   function commit(next: ReactionEmoji | null) {
+    if (isGuest) return openUpgrade();
     if (pending || next === mine) return;
     const prevMine = mine;
     const prevCounts = localCounts;

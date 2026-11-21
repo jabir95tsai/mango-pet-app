@@ -1,12 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Bell, Home as HomeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * Compact home top bar — leaves room for the stories rail + feed
- * below. Left cluster is "🥭 Mango" + family pill (or user name in
+ * below. Left cluster is logo + "Mango Pet" + family pill (or user name in
  * personal mode); right is the notification bell. Per spec, the bell's
  * unread count is **NOT wired** in v3 — there's no notifications
  * collection yet, so the badge is suppressed when `notifyCount === 0`.
@@ -32,11 +33,10 @@ export function HomeTopBar({
   return (
     <div className="flex items-center gap-2.5 pb-1 pt-1.5">
       {/* Brand title — uses the locale-aware App.name ("芒果寵物" /
-          "Mango Pet") per user 2026-05-26 rename. Mango emoji prefix
-          stays as the visual hook. */}
-      <div className="text-[24px] font-extrabold leading-none tracking-[-0.6px] text-mango-ink">
-        <span aria-hidden="true">🥭</span>{" "}
-        <span className="ml-0.5">{tApp("name")}</span>
+          "Mango Pet") per user 2026-05-26 rename, prefixed by the app logo. */}
+      <div className="flex items-center gap-2 text-[24px] font-extrabold leading-none tracking-[-0.6px] text-mango-ink">
+        <Image src="/icons/mango-pet-logo.png" alt="" width={30} height={30} priority className="size-[30px] rounded-lg" />
+        <span>{tApp("name")}</span>
       </div>
       {label && (
         <span className="inline-flex items-center gap-1 rounded-full border border-mango-hairline bg-mango-card px-2.5 py-1 text-[12.5px] font-bold text-mango-ink-2 shadow-[0_1px_0_rgba(0,0,0,0.02)]">

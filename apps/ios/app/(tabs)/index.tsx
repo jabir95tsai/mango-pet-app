@@ -4,7 +4,6 @@ import { WarmCanvas } from "@/components/ui/WarmCanvas";
  * Home v3 — feed-first + IG stories bar, 1:1 with apps/web/src/app/app/page.tsx
  * (and the app layout's guest nudge):
  *   load failure, 0 pets → top bar + error card + retry (never the hero)
- *   0 pets              → top bar + HomeEmptyState (add pet / join family)
  *   personal (no fam)   → stories + InviteFamilyCard + feed
  *   0 posts             → stories + NoPostsHint (opens the composer)
  *   ≥1 post             → stories + feed (10) + "查看更多動態" → /feed
@@ -41,7 +40,6 @@ import { savePhotoToAlbum } from "@/lib/save-photo";
 import { HomeTopBar } from "@/components/home/home-top-bar";
 import { StoriesBar } from "@/components/home/stories-bar";
 import { FeedSectionHeader } from "@/components/home/feed-section-header";
-import { HomeEmptyState } from "@/components/home/home-empty-state";
 import { InviteFamilyCard } from "@/components/home/invite-family-card";
 import { NoPostsHint } from "@/components/home/no-posts-hint";
 import { useHasUnreadNotifications } from "@/lib/notifications";
@@ -118,22 +116,7 @@ export default function HomeScreen() {
     );
   }
 
-  // Variant: 0 pets → hero (with the same top bar, scrollable + refreshable)
-  if (pets.length === 0) {
-    return (
-      <SafeAreaView edges={["top"]} style={styles.flex}>
-      <WarmCanvas />
-        {topBar}
-        <ScrollView {...tabBarInsets} contentContainerStyle={[styles.scroll, styles.padded]} refreshControl={refreshControl}>
-          <HomeEmptyState
-            onAddPet={() => router.push("/(tabs)/pets")}
-            // web → /onboarding; on iOS the family screen hosts create + join.
-            onJoinFamily={isGuest ? undefined : () => router.push("/family")}
-          />
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  const noPets = pets.length === 0;
 
   return (
     <SafeAreaView edges={["top"]} style={styles.flex}>
@@ -156,7 +139,7 @@ export default function HomeScreen() {
         />
 
         <View style={styles.padded}>
-          {isPersonal && !isGuest ? (
+          {isPersonal && !isGuest && !noPets ? (
             <InviteFamilyCard petName={pets[0]?.name} onInvite={() => router.push("/family")} />
           ) : null}
 

@@ -37,6 +37,8 @@ import { REACTION_EMOJIS, type ReactionEmoji } from "@mango/shared-types";
 import { getMyReaction, setReaction } from "@/lib/posts";
 import { t } from "@/lib/i18n";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { useAuth } from "@/state/auth-context";
+import { useGuestUpgrade } from "@/components/auth/guest-upgrade";
 import { colors, radius, shadows, spacing } from "@/theme/theme";
 
 type Counts = Record<ReactionEmoji, number>;
@@ -76,6 +78,9 @@ export function EmojiReactions({
   initialCounts: Counts | undefined;
 }) {
   const reduceMotion = useReducedMotion();
+  // Guests see counts but can't react (rules reject it) — taps open the upgrade sheet.
+  const { isGuest } = useAuth();
+  const { openUpgrade } = useGuestUpgrade();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const [counts, setCounts] = useState<Counts>(() => normalize(initialCounts));
@@ -203,10 +208,10 @@ export function EmojiReactions({
         accessibilityState={{ selected: mine !== null, disabled: pending }}
         accessibilityActions={[{ name: "moreReactions", label: t("Post.moreReactions") }]}
         onAccessibilityAction={(e) => {
-          if (e.nativeEvent.actionName === "moreReactions") openTray();
+          if (e.nativeEvent.actionName === "moreReactions") (isGuest ? openUpgrade : openTray)();
         }}
-        onPress={() => commit(mine ? null : DEFAULT_EMOJI)}
-        onLongPress={openTray}
+        onPress={isGuest ? openUpgrade : () => commit(mine ? null : DEFAULT_EMOJI)}
+        onLongPress={isGuest ? undefined : openTray}
         delayLongPress={LONG_PRESS_MS}
         disabled={pending}
         hitSlop={8}

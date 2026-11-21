@@ -21,6 +21,7 @@ import {
 } from "@mango/shared-business";
 import { COMMENT_MAX_LEN, type Comment } from "@/lib/types";
 import { PostMenu } from "./post-menu";
+import { GuestLockedNotice } from "@/components/auth/guest-upgrade";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -63,7 +64,7 @@ export function CommentSection({
   const tMod = useTranslations("Moderation");
   const locale = useLocale();
   const dateLocale = locale === "zh-TW" ? zhTW : enUS;
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const askConfirm = useConfirm();
 
   const [comments, setComments] = useState<Comment[]>([]);
@@ -251,7 +252,7 @@ export function CommentSection({
                         {t("delete")}
                       </button>
                     )}
-                    {c.authorUid !== currentUid && (
+                    {c.authorUid !== currentUid && !isGuest && (
                       <PostMenu
                         currentUid={currentUid}
                         targetType="comment"
@@ -272,7 +273,8 @@ export function CommentSection({
 
       {/* Composer — bottom-anchored, optimistic append. Enter sends,
           Shift+Enter newlines; the send button is the touch / a11y path. */}
-      {user && (
+      {isGuest && <GuestLockedNotice feature="reactions" />}
+      {user && !isGuest && (
         <form onSubmit={handleSubmit} className="flex items-end gap-2">
           <Avatar src={user.photoURL} name={user.displayName ?? ""} size={32} />
           <textarea
