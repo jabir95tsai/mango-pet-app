@@ -6,6 +6,8 @@
 
 ## 下一個：已規格化，未實作
 
+- **iOS 散步頁地圖改版（2026-11-21 使用者確認 Q1–Q14）** — [完整規格](features/ios-walk-map-redesign.md)。首頁地圖取代圓環 dial（不主動要權限，沒位置顯示插圖卡片）；追蹤畫面改成一頁式：上數字、中地圖跟隨＋即時路線、下控制列；完成畫面顯示整條路線。無新依賴，交 iOS UI/UX。延後：Web 同款改版、散步照片標在地圖上（需先由 iOS Backend 定義照片座標欄位）。
+
 - **iOS 遛狗路線紀錄與家庭即時位置 v1（納入 1.0，2026-11-16 拍板；已合併 main、Backend 已部署，待 1.0 TestFlight 批次實機驗收）** — [完整規格](features/ios-walk-route-tracking-v1.md)（2026-11-15 使用者確認需求）。完整背景路線、歷史地圖、每次自行開啟家庭最新位置分享、離線／失訊處理、6 小時上限，以及回到起點停留 5 分鐘提醒一次。先由 iOS Backend／Backend 定義資料契約與權限，再交 iOS Feature Builder／UI/UX；全功能完成後批次實機驗收。動態島、鎖屏小工具、途中單獨停止分享、動畫回放與 Web 新地圖延後。實作見 [發布紀錄](features/walk-route-release-2026-11-15.md)。
 
 - **iOS 首頁通知中心 v1（納入 1.0 首版，2026-11-16 拍板）** — [完整規格](features/ios-notification-center.md)。首頁 bell 進新頁：上區今日／逾期寵物提醒（可直接勾完成），下區社交動態（留言、表情合併、好友邀請）；紅點以 `lastSeenAt` 判斷。Backend inbox + triggers 已部署（2026-11-15），iOS 頁面 code 完成（2026-11-16），待隨 1.0 TestFlight 批次實機驗收。不發推播、Web 延後。
