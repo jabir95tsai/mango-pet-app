@@ -7,10 +7,12 @@
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ChevronDown, Pencil } from "lucide-react-native";
+import { GlassView } from "expo-glass-effect";
 import { formatAge } from "@mango/shared-business";
 import type { Pet } from "@mango/shared-types";
 
 import { scoped, t } from "@/lib/i18n";
+import { LIQUID_GLASS } from "@/lib/liquid-glass";
 import { colors, radius, spacing } from "@/theme/theme";
 import { PetAvatar } from "./pet-avatar";
 
@@ -80,11 +82,17 @@ export function PetHeader({
       <Pressable
         onPress={onEdit}
         hitSlop={8}
-        style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
+        style={({ pressed }) => [LIQUID_GLASS ? null : styles.editBtn, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel={t("Common.edit")}
       >
-        <Pencil size={16} color={colors.ink2} strokeWidth={2} />
+        {LIQUID_GLASS ? (
+          <GlassView glassEffectStyle="regular" isInteractive style={styles.editGlass}>
+            <Pencil size={16} color={colors.ink2} strokeWidth={2} />
+          </GlassView>
+        ) : (
+          <Pencil size={16} color={colors.ink2} strokeWidth={2} />
+        )}
       </Pressable>
     </View>
   );
@@ -125,6 +133,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.hairline,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editGlass: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },

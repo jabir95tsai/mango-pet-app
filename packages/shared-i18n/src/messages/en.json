@@ -864,7 +864,8 @@
       "vsAvgLonger": "Longer than weekly avg by {min} min",
       "vsAvgShorter": "Shorter than weekly avg by {min} min",
       "vsAvgSame": "About average for this week",
-      "calories": "{name} burned ~{kcal} kcal"
+      "calories": "{name} burned ~{kcal} kcal",
+      "streakHit": "{days}-day goal streak"
     },
     "streak": {
       "labelShort": "{days} d",

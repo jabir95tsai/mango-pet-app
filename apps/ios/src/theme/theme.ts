@@ -39,6 +39,15 @@ export const radius = {
   pill: 9999,
 } as const;
 
+// Goal-achievement gold (walk done card, walks-tab goal banner; user
+// 2026-11-21). antique = white type (>=4.5:1 on its lightest stop); medal =
+// bright decorative gold; deep = gold text on white. Not in shared-tokens yet.
+export const gold = {
+  antique: ["#9e6d18", "#835610", "#5c3b09"] as const,
+  medal: ["#f3d27a", "#dcaa45", "#b9822a"] as const,
+  deep: "#7d520f",
+};
+
 // The mango primary-button / FAB gradient — 1:1 with web globals.css
 // `.btn-mango` (linear-gradient 160deg amber → brand 50% → brandDeep) with
 // white text + lifted shadow. expo-linear-gradient renders it; the 160deg is

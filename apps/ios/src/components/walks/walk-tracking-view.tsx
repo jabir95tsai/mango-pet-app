@@ -742,22 +742,15 @@ export function WalkTrackingView({
       <TrackingDonePanel
         final={final}
         petName={ctx.petName}
-        petWeightKg={ctx.weightKg}
         streakDays={ctx.streakDays}
         storedTodayMin={ctx.todayMinBefore}
         goalMin={ctx.goalMin}
-        weeklyAvgMin={ctx.weeklyAvgMin}
         saved={saved}
         saving={saving}
         discarding={discarding}
         uploading={uploading}
         saveError={saveError}
         photoGrid={<TrackingPhotoGrid slots={slots} onOpen={setLightboxIdx} />}
-        notes={notes}
-        onNotesChange={setNotes}
-        onNotesBlur={() => {
-          void ensureSaved();
-        }}
         onRetry={() => {
           void ensureSaved();
         }}

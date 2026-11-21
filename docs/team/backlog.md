@@ -49,13 +49,13 @@ P3 = 也許永遠不做的「想法」。
 - **建議交付給**：iOS Bug Hunter
 - **優先級提示**：P1（使用者看不到要按哪裡，所有走 `showPrompt` 的 primary 動作都可能受影響）
 
-### iOS 模擬器上追蹤服務收不到 GPS 點（距離一直 0）
+### ✅ iOS 散步路線一個點都記不到（距離一直 0）— FIXED 2026-11-21（未 commit 前寫入）
 - **發現於**：2026-11-21、iOS UI/UX session（散步地圖改版驗證）
-- **類型**：bug（待實機確認）
-- **重現 / 觀察**：iPhone Air 模擬器，`xcrun simctl location <udid> start --speed=4 ...` 跑路線，地圖藍點會移動，但 `WalkTrackingState.path` 一直是空的，距離停在 0.00、完成畫面顯示「沒取得 GPS 點」。冷啟動後重新開始的散步也一樣。還沒判斷是模擬器背景定位的限制，還是 `walk-tracking-service.ts` 的問題。也因此即時路線線條、暫停前後分段不相連，在模擬器上都沒驗到。
-- **建議交付給**：實機驗收時先確認；實機也是 0 就交 iOS Bug Hunter
-- **優先級提示**：P1（若實機也發生）／P3（只有模擬器）
-
+- **類型**：bug
+- **根因**：iOS CoreLocation 的 `timestamp` 帶小數毫秒（例 `1795269036412.189`），共用的 `addRouteSample` 要求 `Number.isSafeInteger(t)`，每一筆定位都被丟掉。不是模擬器限制，實機應該也一樣。
+- **修法**：`packages/shared-business/src/walk-route.ts` 先把 `t` 取整數毫秒；回歸測試 `apps/ios/scripts/walk-route.test.cjs`「fractional iOS timestamps…」（修前失敗、修後通過）。模擬器已驗：即時路線、暫停分段、完成畫面路線圖都出現。
+- **待確認**：實機走一趟；已上線版本的 iOS 散步是否都沒有路線（資料面影響），交 iOS Backend 評估。
+- **優先級提示**：P1
 
 ### iOS 接上 AI 個人化每日遛狗目標推薦（Smart Walk Goal）
 - **發現於**：2026-11-19、Feature Builder session（[`smart-walk-goal-ai.md`](../features/smart-walk-goal-ai.md)）

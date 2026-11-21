@@ -27,7 +27,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Footprints, Hand, Plus } from "lucide-react-native";
+import { Footprints, Hand, Plus, Trophy } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import type { Walk } from "@mango/shared-types";
 
 import { useTabBarOverlap, useTabBarScrollInsets } from "@/lib/liquid-glass";
@@ -50,7 +51,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { alertError, confirm } from "@/lib/confirm";
 import { t } from "@/lib/i18n";
 import { deleteWalk } from "@/lib/walks";
-import { colors, CONTENT_MAX_WIDTH, radius, spacing } from "@/theme/theme";
+import { colors, CONTENT_MAX_WIDTH, gold, radius, shadows, spacing } from "@/theme/theme";
 
 const WEEK_GOAL_COUNT = 5;
 const RECENT_LIMIT = 5;
@@ -199,7 +200,7 @@ export default function WalksScreen() {
         </View>
 
         {/* Week strip */}
-        <View style={styles.section}>
+        <View style={styles.weekSection}>
           <View style={styles.sectionHead}>
             <Text style={styles.sectionLabel}>{t("Walks.page.weekLabel")}</Text>
             <Text style={styles.sectionMeta}>
@@ -210,13 +211,27 @@ export default function WalksScreen() {
           <WalksWeekStrip days={weekDayFlags} todayIdx={todayIdx} complete={goalHit} />
         </View>
 
-        {/* Hero copy */}
-        <View style={styles.hero}>
-          <Text style={styles.heroTitle} accessibilityLiveRegion="polite">
-            {heroTitle}
-          </Text>
-          <Text style={styles.heroSub}>{heroSub}</Text>
-        </View>
+        {/* Hero copy — goal hit becomes a gold banner (user 2026-11-21: make it stand out) */}
+        {goalHit ? (
+          <LinearGradient colors={gold.antique} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.goalBanner}>
+            <View style={styles.goalMedal}>
+              <Trophy size={26} color={gold.deep} strokeWidth={2.2} />
+            </View>
+            <View style={styles.goalText}>
+              <Text style={styles.goalTitle} accessibilityRole="header" accessibilityLiveRegion="polite">
+                {heroTitle}
+              </Text>
+              <Text style={styles.goalSub}>{heroSub}</Text>
+            </View>
+          </LinearGradient>
+        ) : (
+          <View style={styles.hero}>
+            <Text style={styles.heroTitle} accessibilityLiveRegion="polite">
+              {heroTitle}
+            </Text>
+            <Text style={styles.heroSub}>{heroSub}</Text>
+          </View>
+        )}
 
         {/* Where-you-are map (replaces the dial; re-checks when tracking closes) */}
         <HomeWalkMap recheckKey={sessionOpen} />
@@ -346,7 +361,30 @@ const styles = StyleSheet.create({
     letterSpacing: -0.65,
   },
   heroSub: { textAlign: "center", marginTop: 6, fontSize: 13, fontWeight: "500", color: colors.ink2 },
+  goalBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    // Same 12pt rhythm as week strip → banner → map (user 2026-11-21).
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.xl2,
+    ...shadows.elevated,
+  },
+  goalMedal: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.pill,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  goalText: { flex: 1, gap: 2 },
+  goalTitle: { fontSize: 24, lineHeight: 30, fontWeight: "800", letterSpacing: -0.5, color: "#ffffff" },
+  goalSub: { fontSize: 13, fontWeight: "600", color: "#ffffff" },
   section: { marginBottom: spacing.xl },
+  weekSection: { marginBottom: spacing.md },
   sectionHead: {
     flexDirection: "row",
     alignItems: "center",

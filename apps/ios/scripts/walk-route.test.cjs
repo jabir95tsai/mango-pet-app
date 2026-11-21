@@ -58,3 +58,10 @@ test('local discard during append prevents finalize without deleting committed s
  await drainRouteOutbox(()=>record,async op=>{ops.push(op.op);if(op.op==='append')record.discarded=true;return {};},async()=>{});
  assert.deepEqual(ops,['append']);assert.equal(record.finalized,false);
 });
+test('fractional iOS timestamps are accepted as whole milliseconds',()=>{
+ assert.equal(typeof route.addRouteSample,'function');let s=route.emptyRouteAccumulator();
+ s=route.addRouteSample(s,{lat:25,lng:121,t:1000.189,accuracy:5},0);
+ s=route.addRouteSample(s,{lat:25.0001,lng:121,t:2000.7,accuracy:5},0);
+ assert.deepEqual(s.path.map(p=>p.t),[1000,2000]);
+ assert.ok(s.totalDistanceKm>0.01);
+});

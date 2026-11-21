@@ -22,7 +22,8 @@ import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { routeSegments } from "@/lib/walk-route-read-policy";
 import { colors, radius, spacing } from "@/theme/theme";
 
-const HOME_MAP_HEIGHT = 280;
+// Taller than the spec's 280 (user 2026-11-21): the map leads, records scroll below.
+const HOME_MAP_HEIGHT = 420;
 const CLOSE_DELTA = 0.004;
 
 /** `recheckKey` change (e.g. tracking modal closed) re-reads permission + fix. */

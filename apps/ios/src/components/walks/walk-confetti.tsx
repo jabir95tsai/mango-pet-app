@@ -5,6 +5,8 @@
  * 2.4s ease-in fall to 110% of the viewport height with a 720° turn, fading in
  * over the first 10% and out at the end. The layer is clipped to its parent
  * (web: absolute inset-0 overflow-hidden inside the headline block).
+ * iOS differences: mango + celebration palette (no green), optional `count`,
+ * wider stagger, and the done screen mounts it over the whole screen.
  *
  * Reduced motion (docs/design-system.md §5, hard rule): web hides the whole
  * layer (`display: none`), so we render nothing — no static slivers.
@@ -26,17 +28,17 @@ import {
 
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
-// Web walk-tracking-view palette (decorative; design-system §1 allows
-// celebration colours for confetti).
-const PALETTE = ["#f59e0b", "#10b981", "#fbbf24", "#34d399", "#fde68a"];
+// Gold / mango + celebration colours (design-system §1: peach / pink / sky only as
+// confetti decoration). No green: it clashed with the warm done screen.
+const PALETTE = ["#d6a03a", "#f3d27a", "#f39800", "#ffb4a2", "#f7a8c8", "#9fd3f5"];
 const COUNT = 20;
 const DURATION_MS = 2400;
 
-export function WalkConfetti({ width }: { width?: number } = {}) {
+export function WalkConfetti({ width, count = COUNT }: { width?: number; count?: number } = {}) {
   const reduceMotion = useReducedMotion();
   const { height: windowHeight } = useWindowDimensions();
   const [measured, setMeasured] = useState(0);
-  const progress = useRef(Array.from({ length: COUNT }, () => new Animated.Value(0))).current;
+  const progress = useRef(Array.from({ length: count }, () => new Animated.Value(0))).current;
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -44,7 +46,7 @@ export function WalkConfetti({ width }: { width?: number } = {}) {
       Animated.timing(v, {
         toValue: 1,
         duration: DURATION_MS,
-        delay: (i % 5) * 120,
+        delay: (i % 8) * 140,
         easing: Easing.in(Easing.ease),
         useNativeDriver: true,
       }),
@@ -88,6 +90,8 @@ export function WalkConfetti({ width }: { width?: number } = {}) {
                   styles.piece,
                   {
                     left: (((i * 53) % 100) / 100) * layerWidth,
+                    width: i % 3 === 0 ? 6 : 8,
+                    height: i % 3 === 0 ? 18 : 14,
                     backgroundColor: PALETTE[i % PALETTE.length],
                     opacity,
                     transform: [{ translateY }, { rotate }],

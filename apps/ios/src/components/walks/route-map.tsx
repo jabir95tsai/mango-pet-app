@@ -1,17 +1,17 @@
 import { useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import type { WalkRoutePoint } from '@mango/shared-types';
 import { routeSegments } from '@/lib/walk-route-read-policy';
 import { colors } from '@/theme/theme';
 import { t } from '@/lib/i18n';
-export type RouteMapProps = { points:WalkRoutePoint[]; live?:boolean };
-export function RouteMap({points, live = false}:RouteMapProps) {
+export type RouteMapProps = { points:WalkRoutePoint[]; live?:boolean; style?:StyleProp<ViewStyle> };
+export function RouteMap({points, live = false, style}:RouteMapProps) {
   const ref = useRef<MapView>(null);
   if (!points.length) return null;
   const coordinate = (p:WalkRoutePoint) => ({latitude:p.lat, longitude:p.lng});
   const first = points[0], last = points[points.length - 1];
-  return <MapView ref={ref} style={styles.map} accessibilityLabel={t(live ? 'WalkRoutes.latest' : 'WalkRoutes.history')}
+  return <MapView ref={ref} style={[styles.map, style]} accessibilityLabel={t(live ? 'WalkRoutes.latest' : 'WalkRoutes.history')}
     initialRegion={{...coordinate(first), latitudeDelta:0.01, longitudeDelta:0.01}}
     onMapReady={() => ref.current?.fitToCoordinates(points.map(coordinate), {edgePadding:{top:40,bottom:40,left:40,right:40}, animated:false})}>
     {!live && routeSegments(points).filter(s => s.length > 1).map((s,i) => <Polyline key={i} coordinates={s.map(coordinate)} strokeColor={colors.brandDeep} strokeWidth={4} />)}

@@ -16,7 +16,9 @@ export function emptyRouteAccumulator(): RouteAccumulator {
 export function interruptRoute(acc: RouteAccumulator): RouteAccumulator {
   return { ...acc, gapPending: true, dwellSince: null, lastValidAt: null };
 }
-export function addRouteSample(acc: RouteAccumulator, sample: {lat:number;lng:number;t:number;accuracy:number}, startedAt: number): RouteAccumulator {
+export function addRouteSample(acc: RouteAccumulator, raw: {lat:number;lng:number;t:number;accuracy:number}, startedAt: number): RouteAccumulator {
+  // iOS CoreLocation timestamps carry sub-ms fractions; points use whole ms.
+  const sample = Number.isFinite(raw.t) ? { ...raw, t: Math.floor(raw.t) } : raw;
   if (!Number.isSafeInteger(sample.t) || sample.t < startedAt || sample.t > startedAt + WALK_ROUTE_LIMIT_MS ||
       (acc.lastValidAt !== null && sample.t <= acc.lastValidAt)) return acc;
   if (![sample.lat,sample.lng,sample.accuracy].every(Number.isFinite) || Math.abs(sample.lat)>90 || Math.abs(sample.lng)>180 || sample.accuracy<0 || sample.accuracy>50) {

@@ -864,7 +864,8 @@
       "vsAvgLonger": "比本週平均多 {min} 分鐘",
       "vsAvgShorter": "比本週平均少 {min} 分鐘",
       "vsAvgSame": "跟本週平均差不多",
-      "calories": "{name} 消耗約 {kcal} 大卡"
+      "calories": "{name} 消耗約 {kcal} 大卡",
+      "streakHit": "連續 {days} 天達標"
     },
     "streak": {
       "labelShort": "{days} 天",
