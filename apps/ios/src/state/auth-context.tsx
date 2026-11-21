@@ -44,19 +44,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let generation = 0;
     let lastIdentity: string | null = null;
+    let readyAccount: string | null = null; // account whose bootstrap finished
     const unsubscribe = auth().onUserChanged((next) => {
       // Native onUserChanged also fires for token refresh. Do not unmount a
       // live walk just because the unchanged identity got a refreshed token.
       const identity = next ? JSON.stringify([next.uid, next.isAnonymous, next.displayName, next.photoURL, next.email, next.providerData]) : "signed-out";
       if (identity === lastIdentity) return;
+      // Same account, only name/photo/email changed (e.g. a rename in Settings): refresh in place
+      // instead of tearing the app down and re-bootstrapping.
+      const account = next ? JSON.stringify([next.uid, next.isAnonymous, next.providerData.map((p) => p.providerId)]) : "signed-out";
       lastIdentity = identity;
+      if (next && account === readyAccount) {
+        setUser(next);
+        return;
+      }
       const current = ++generation;
+      readyAccount = null;
       setUser(null);
       setProfileError(false);
       setInitializing(!!next);
       if (!next) return;
       ensureUserProfile(next).then(() => {
         if (generation !== current) return;
+        readyAccount = account;
         setUser(next);
         setInitializing(false);
       }).catch(() => {
