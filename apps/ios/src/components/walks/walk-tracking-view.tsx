@@ -23,8 +23,9 @@
  * via `recovered` + `recoveredAction` ("continue" re-attaches tracking,
  * "finish" goes straight to the save + recap).
  */
+import { showPrompt } from "@/lib/prompts";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Alert, Modal, StyleSheet, View } from "react-native";
+import { Modal, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import type { Pet } from "@mango/shared-types";
@@ -724,7 +725,7 @@ export function WalkTrackingView({
   async function handleSaveLightboxPhoto(url: string) {
     try {
       await savePhotoToAlbum(url);
-      Alert.alert(t("Common.saveToAlbum.saved"));
+      showPrompt(t("Common.saveToAlbum.saved"));
     } catch {
       alertError(t("Common.saveToAlbum.failed"));
     }
@@ -732,7 +733,7 @@ export function WalkTrackingView({
 
   // ── Render ──────────────────────────────────────────────────────────
   const sessionPet = ctx ? (pets.find((p) => p.petId === ctx.petId) ?? pet) : pet;
-  const lightboxPhotos = slots.map((s) => s.url ?? s.localUri);
+  const lightboxPhotos = slots.map((s) => s.localUri);
 
   let body: ReactNode = null;
   if (ctx && phase === "done" && final) {

@@ -4,17 +4,17 @@
  * must offer report + block). Mirrors web apps/web/src/components/feed/
  * post-menu.tsx. Callers hide it for guests and for the viewer's own content.
  *
- *  - menu: native ActionSheetIOS (accepted platform equivalent of web's
- *    dropdown) — "report post/comment" + destructive "block {name}"
+ *  - menu: Mango action sheet — "report post/comment" + destructive "block {name}"
  *  - report: a Dialog like web — reason radio list (spam default), optional
  *    note (≤300 chars, written to reports/{id}.note only when non-empty, same
  *    field web writes) and a primary submit button
  *  - block: confirm() (destructive) → blockUser → onBlocked
- * Feedback for submit / failure uses native alerts (web shows a tiny inline
+ * Feedback for submit / failure uses Mango dialogs (web shows a tiny inline
  * bubble).
  */
+import { showPrompt, showMenu } from "@/lib/prompts";
 import { useRef, useState } from "react";
-import { ActionSheetIOS, Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MoreVertical } from "lucide-react-native";
 import { REPORT_REASONS, type ReportReason, type ReportTargetType } from "@mango/shared-types";
 
@@ -89,7 +89,7 @@ export function PostMenu({
       submittedRef.current = true;
       setReportOpen(false);
     } catch {
-      Alert.alert(t("Moderation.reportFailed"));
+      showPrompt(t("Moderation.reportFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -107,28 +107,17 @@ export function PostMenu({
       await blockUser(currentUid, targetAuthorUid);
       onBlocked?.(targetAuthorUid);
     } catch {
-      Alert.alert(t("Moderation.blockFailed"));
+      showPrompt(t("Moderation.blockFailed"));
     }
   }
 
   function openMenu() {
     const reportLabel =
       targetType === "comment" ? t("Moderation.reportComment") : t("Moderation.reportPost");
-    const cancel = t("Common.cancel");
-    const options = isMine
-      ? [reportLabel, cancel]
-      : [reportLabel, t("Moderation.block", { name: targetAuthorName }), cancel];
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex: options.length - 1,
-        destructiveButtonIndex: isMine ? undefined : options.length - 2,
-      },
-      (index) => {
-        if (index === 0) openReport();
-        else if (!isMine && index === 1) void handleBlock();
-      },
-    );
+    showMenu(t("Moderation.menu"), [
+      { text: reportLabel, onPress: openReport },
+      ...(!isMine ? [{ text: t("Moderation.block", { name: targetAuthorName }), style: "destructive" as const, onPress: handleBlock }] : []),
+    ]);
   }
 
   return (
@@ -151,7 +140,7 @@ export function PostMenu({
             setReportMounted(false);
             if (submittedRef.current) {
               submittedRef.current = false;
-              Alert.alert(t("Moderation.reportSubmitted"));
+              showPrompt(t("Moderation.reportSubmitted"));
             }
           }}
           title={t("Moderation.reportTitle")}
@@ -217,7 +206,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.hairline,
   },

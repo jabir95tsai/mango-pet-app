@@ -208,7 +208,6 @@ export function WalkTrackingView({
   // mismatch is invisible to readers. Abandoned-walk photos (user
   // closes view without completing) are GC'd by an out-of-scope script
   // (see spec).
-  const sessionIdRef = useRef<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [photos, setPhotos] = useState<PhotoSlot[]>([]);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
@@ -243,14 +242,8 @@ export function WalkTrackingView({
     setEndPromptOpen(false);
     setEndComposerOpen(false);
     setEndPhoto(null);
-    // Reset photos + mint a fresh session id so a re-opened tracking
-    // view doesn't leak the previous walk's photos into the new walk.
     setPhotos([]);
     setLightboxIdx(null);
-    sessionIdRef.current =
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `walk-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     session.start();
     return () => {
       unsub();
@@ -396,7 +389,7 @@ export function WalkTrackingView({
       const ext = fileExt(processed) || "jpg";
       const path = walkPhotoPath(
         user.uid,
-        sessionIdRef.current,
+        context.walkId,
         idx,
         ts,
         ext,
@@ -1038,7 +1031,7 @@ export function WalkTrackingView({
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={p.uploadedUrl ?? p.previewUrl}
+                      src={p.previewUrl}
                       alt=""
                       className="size-full object-cover"
                     />
@@ -1120,7 +1113,7 @@ export function WalkTrackingView({
           `lightboxIdx` now stores an ARRAY POSITION (was the photo's
           `idx` field), so the grid onClick passes `i` from .map(). */}
       <PhotoLightbox
-        photos={photos.map((p) => p.uploadedUrl ?? p.previewUrl)}
+        photos={photos.map((p) => p.previewUrl)}
         initialIdx={lightboxIdx ?? 0}
         open={lightboxIdx !== null}
         onClose={() => setLightboxIdx(null)}

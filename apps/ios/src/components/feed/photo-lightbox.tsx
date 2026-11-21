@@ -20,10 +20,10 @@
  * repeated taps can't start duplicate saves. `saving` is still honoured for
  * callers that track it themselves.
  */
+import { ScopedPhoto } from "@/components/ui/ScopedPhoto";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -295,8 +295,8 @@ export function PhotoLightbox({
                   <View key={`${uri}-${i}`} style={[styles.slide, { width, height }]}>
                     {/* Only the current photo ±1 decode (galleries pass hundreds). */}
                     {Math.abs(i - index) <= 1 ? (
-                    <Image
-                      source={{ uri }}
+                    <ScopedPhoto
+                      uri={uri}
                       resizeMode="contain"
                       style={{ width: width - PHOTO_INSET * 2, height: height - PHOTO_INSET * 2 }}
                       accessibilityIgnoresInvertColors

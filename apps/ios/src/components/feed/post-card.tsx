@@ -17,9 +17,9 @@
  * handler) changes. Tagged-pet chips were dropped for web parity (FEED-23);
  * `petNameById` is still accepted so existing callers compile.
  */
+import { ScopedPhoto } from "@/components/ui/ScopedPhoto";
 import { memo, useState } from "react";
 import {
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -222,8 +222,8 @@ function PhotoGrid({
     <View style={[styles.grid, { gap }]} onLayout={onLayout}>
       {photos.map((uri, i) => {
         const img = (
-          <Image
-            source={{ uri }}
+          <ScopedPhoto
+            uri={uri}
             style={[styles.cellImg, { width: cell, height: cell }]}
             accessibilityIgnoresInvertColors
           />

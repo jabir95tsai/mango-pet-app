@@ -11,10 +11,10 @@
  *  - "My QR" sheet: QR with the Mango logo, display name, copy (→ Check for
  *    2s) + back; iOS keeps a native Share action
  */
+import { showPrompt } from "@/lib/prompts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -162,7 +162,7 @@ export default function FriendsScreen() {
   }
 
   function confirmRemove(f: Friend) {
-    Alert.alert(t("Friends.removeConfirm"), f.displayName, [
+    showPrompt(t("Friends.removeConfirm"), f.displayName, [
       { text: t("Common.cancel"), style: "cancel" },
       {
         text: t("Common.delete"),

@@ -1,8 +1,9 @@
 "use client";
 
+import { ScopedPhoto } from "@/components/ui/scoped-photo";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+
 import { useTranslations } from "next-intl";
 import { Images } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -90,13 +91,11 @@ export function PhotosPreviewSection() {
               aria-label={tS("photosLink")}
               className="relative aspect-square overflow-hidden rounded-[var(--radius-md)] bg-mango-bg-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
             >
-              <Image
+              <ScopedPhoto
                 src={p.url}
                 alt=""
-                fill
                 sizes="(max-width: 640px) 33vw, 160px"
-                className="object-cover"
-                unoptimized
+                className="absolute inset-0 size-full object-cover"
               />
             </Link>
           ))}

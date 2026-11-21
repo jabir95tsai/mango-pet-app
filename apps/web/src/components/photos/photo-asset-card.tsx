@@ -1,6 +1,7 @@
 "use client";
 
-import Image from "next/image";
+
+import { ScopedPhoto } from "@/components/ui/scoped-photo";
 import { format } from "date-fns";
 import { enUS, zhTW } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
@@ -51,13 +52,11 @@ export function PhotoAssetCard({
           className="relative block size-full overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mango-brand-deep"
           aria-label={t("openPhoto", { title: asset.title })}
         >
-          <Image
+          <ScopedPhoto
             src={asset.url}
             alt=""
-            fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 260px"
-            className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-            unoptimized
+            className="absolute inset-0 size-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
           />
         </button>
 

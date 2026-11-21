@@ -36,7 +36,7 @@ async function run() {
     }
     cursor = page.docs.at(-1).id;
   }
-  console.log(JSON.stringify({ mode: commit ? (strip ? "commit-strip" : "commit-copy") : "dry-run", ...totals }));
+  console.log(JSON.stringify(totals));
   if (commit) await db.collection("piiMigrations").add({ ranAt: FieldValue.serverTimestamp(), strip, ...totals });
 }
 run().catch((error) => { console.error("Contact migration failed:", error.code ?? "unknown"); process.exitCode = 1; });

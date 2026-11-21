@@ -11,6 +11,8 @@
  * `PhotoPermissionError` so screens can offer iOS Settings.
  */
 import * as FileSystem from "expo-file-system/legacy";
+import storage from "@react-native-firebase/storage";
+import { isScopedPhoto } from "./photos";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
@@ -40,8 +42,17 @@ function extOf(url: string): string {
 
 /** Local copy of `url` + whether it is a temp file we must delete. */
 async function localise(url: string): Promise<{ uri: string; temp: boolean }> {
-  if (!/^https?:/i.test(url)) return { uri: url, temp: false };
   const target = `${FileSystem.cacheDirectory}mango-photo-${Date.now()}-${Math.round(Math.random() * 1e6)}.${extOf(url)}`;
+  if (isScopedPhoto(url)) {
+    try {
+      await storage().ref(url).writeToFile(target.replace(/^file:\/\//, ""));
+      return { uri: target, temp: true };
+    } catch (error) {
+      await FileSystem.deleteAsync(target, { idempotent: true }).catch(() => {});
+      throw error;
+    }
+  }
+  if (!/^https?:/i.test(url)) return { uri: url, temp: false };
   try {
     const res = await FileSystem.downloadAsync(url, target);
     if (res.status >= 200 && res.status < 300) return { uri: res.uri, temp: true };

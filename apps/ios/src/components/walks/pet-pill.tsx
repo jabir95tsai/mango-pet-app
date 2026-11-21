@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     minHeight: 44,
   },
   rowSelected: { backgroundColor: colors.brandTint },

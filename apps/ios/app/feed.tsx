@@ -14,9 +14,9 @@
  * iOS: back row (stack navigation), the lightbox lives at screen level
  * (PostCard → onOpenPhotos) and offers save-to-Photos (PhotosKit extra).
  */
+import { showPrompt } from "@/lib/prompts";
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import {
-  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -101,7 +101,7 @@ export default function FeedScreen() {
   const savePhoto = useCallback(async (url: string) => {
     try {
       await savePhotoToAlbum(url);
-      Alert.alert(t("Common.saveToAlbum.saved"));
+      showPrompt(t("Common.saveToAlbum.saved"));
     } catch {
       alertError(t("Photos.status.failed"));
     }

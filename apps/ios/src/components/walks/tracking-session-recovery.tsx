@@ -10,8 +10,8 @@
  *
  * The caller opens WalkTrackingView with `recovered` + `recoveredAction`.
  */
+import { showPrompt } from "@/lib/prompts";
 import { useCallback, useRef } from "react";
-import { Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
 
 import { t } from "@/lib/i18n";
@@ -68,7 +68,7 @@ export function useActiveWalkRecovery({
           onRecoverRef.current(found, "finish");
           return;
         }
-        Alert.alert(
+        showPrompt(
           t("Ios.walks.resumeActiveTitle"),
           t("Ios.walks.resumeActiveBody") + (found.shareLive ? "\n" + t("WalkRecorder.resumeShare") : ""),
           [
@@ -87,7 +87,7 @@ export function useActiveWalkRecovery({
               },
             },
           ],
-          { cancelable: false },
+          { dismissible: false },
         );
       })();
       return () => {

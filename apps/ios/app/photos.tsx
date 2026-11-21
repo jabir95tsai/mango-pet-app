@@ -12,10 +12,10 @@
  * photoDownloadState, keeps failed items selected, and gates every save
  * control (incl. the lightbox) while a batch runs.
  */
+import { showPrompt } from "@/lib/prompts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Linking,
   Pressable,
@@ -143,7 +143,7 @@ export default function PhotosScreen() {
       try {
         if (!(await ensureAddPermission())) {
           setStatus(t("Photos.status.failed"));
-          Alert.alert(t("Photos.status.failed"), t("Common.saveToAlbum.permissionDenied"), [
+          showPrompt(t("Photos.status.failed"), t("Common.saveToAlbum.permissionDenied"), [
             { text: t("Common.cancel"), style: "cancel" },
             { text: t("Push.openIosSettings"), onPress: () => void Linking.openSettings() },
           ]);

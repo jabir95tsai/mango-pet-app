@@ -134,3 +134,27 @@ test('Web concurrent bootstrap and token registration preserve both devices and 
   assert.deepEqual(new Set((await contact(uid).get()).data().fcmTokens),new Set(['web','ios','new-device']));
   await assert.rejects(save(user(prefix+'-not-me'),'en'),{code:'permission-denied'});
 });
+
+test('migration CLI dry-run counts only; commit-strip and rerun preserve device registrations', async () => {
+  const uid = 'zz-' + prefix, ref = db.doc('users/' + uid);
+  const { promisify } = require('node:util');
+  const exec = promisify(require('node:child_process').execFile);
+  const run = async (...args) => {
+    const { stdout } = await exec(process.execPath, [path.resolve(__dirname, '../scripts/migrate-user-pii.mjs'), '--after=' + uid.slice(0, -1), ...args], {
+      env: { ...process.env, GOOGLE_CLOUD_PROJECT: 'demo-mango-security' },
+    });
+    const totals = JSON.parse(stdout);
+    assert.ok(Object.values(totals).every(Number.isInteger));
+    return totals;
+  };
+  await profile(uid, {email:'legacy@example.test', fcmTokens:['old-device']});
+  await contact(uid).set({fcmTokens:['current-device']});
+  assert.ok((await run()).needsCopy > 0);
+  assert.ok('email' in (await ref.get()).data());
+  assert.deepEqual((await contact(uid).get()).data(), {fcmTokens:['current-device']});
+  await run('--commit', '--strip');
+  await run('--commit', '--strip');
+  const publicFields = (await ref.get()).data();
+  assert.ok(!('email' in publicFields) && !('fcmTokens' in publicFields));
+  assert.deepEqual((await contact(uid).get()).data(), {email:'legacy@example.test', fcmTokens:['current-device','old-device']});
+});

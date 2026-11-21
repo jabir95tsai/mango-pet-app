@@ -15,6 +15,7 @@
  * only when they are older than FOCUS_STALE_MS (the photo preview alone is
  * 4 source queries); pull-to-refresh always refreshes, incl. the family.
  */
+import { showPrompt } from "@/lib/prompts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -139,7 +140,7 @@ export default function SettingsScreen() {
     try {
       await signOut();
     } catch {
-      Alert.alert(t("Settings.signOutFailed.title"), t("Settings.signOutFailed.body"));
+      showPrompt(t("Settings.signOutFailed.title"), t("Settings.signOutFailed.body"));
     } finally {
       setSigningOut(false);
     }
@@ -253,14 +254,14 @@ export default function SettingsScreen() {
                 void Linking.canOpenURL(url)
                   .then((ok) => {
                     if (ok) return Linking.openURL(url);
-                    Alert.alert(
+                    showPrompt(
                       t("Settings.contactSupportFallbackTitle"),
                       t("Settings.contactSupportFallbackBody"),
                     );
                     return undefined;
                   })
                   .catch(() => {
-                    Alert.alert(
+                    showPrompt(
                       t("Settings.contactSupportFallbackTitle"),
                       t("Settings.contactSupportFallbackBody"),
                     );
@@ -384,7 +385,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: colors.bgAlt,

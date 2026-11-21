@@ -12,8 +12,9 @@
  *  - optional 36pt photo thumb (radius 8, count badge for 2+) → lightbox
  *  - 32pt Trash2 16 ink3 delete (red while pressed, web hover)
  */
+import { ScopedPhoto } from "@/components/ui/ScopedPhoto";
 import { memo, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Clock, Hand, Route, Star, Trash2 } from "lucide-react-native";
 import type { Walk } from "@mango/shared-types";
 
@@ -102,8 +103,8 @@ function WalkRowBase({ walk, onDelete }: { walk: Walk; onDelete: (walk: Walk) =>
           onPress={() => setLightboxOpen(true)}
           style={({ pressed }) => [styles.thumb, pressed && styles.pressed]}
         >
-          <Image
-            source={{ uri: photos[0] }}
+          <ScopedPhoto
+            uri={photos[0]}
             style={styles.thumbImg}
             resizeMode="cover"
             accessibilityIgnoresInvertColors

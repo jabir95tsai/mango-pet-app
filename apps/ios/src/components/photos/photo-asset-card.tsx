@@ -8,8 +8,9 @@
  *   - bottom-right "新" brand pill, or a white check disc once saved
  * and a footer: pet name / title, the title again (secondary), yyyy/MM/dd.
  */
+import { ScopedPhoto } from "@/components/ui/ScopedPhoto";
 import { memo } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Check, Download } from "lucide-react-native";
 import type { GalleryPhotoAsset, GalleryPhotoSource } from "@mango/shared-types";
 
@@ -59,8 +60,8 @@ function PhotoAssetCardBase({
         onPress={onOpen}
         style={StyleSheet.absoluteFill}
       >
-        <Image
-          source={{ uri: asset.url }}
+        <ScopedPhoto
+          uri={asset.url}
           style={styles.image}
           resizeMode="cover"
           accessibilityIgnoresInvertColors

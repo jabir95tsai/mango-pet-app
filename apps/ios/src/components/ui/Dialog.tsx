@@ -39,6 +39,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FullWindowOverlay } from "react-native-screens";
 import { X } from "lucide-react-native";
 
 import { t } from "@/lib/i18n";
@@ -48,6 +49,8 @@ import { colors, radius, spacing, CONTENT_MAX_WIDTH } from "@/theme/theme";
 export type DialogSize = "sheet" | "center";
 
 export type DialogProps = {
+  /** Present above existing iOS modals for app-wide prompts. */
+  windowOverlay?: boolean;
   visible?: boolean;
   /** Alias of `visible` (web prop name). */
   open?: boolean;
@@ -95,6 +98,7 @@ const BODY_PAD = 20;
 const CENTER_MAX_WIDTH = Math.min(512, CONTENT_MAX_WIDTH);
 
 export function Dialog({
+  windowOverlay,
   visible,
   open,
   onClose,
@@ -180,16 +184,7 @@ export function Dialog({
   // Sheet: clear the home indicator, unless the keyboard already covers it.
   const bottomPad = isSheet && !keyboardShown ? insets.bottom : 0;
 
-  return (
-    <Modal
-      visible={mounted}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={requestClose}
-      onDismiss={() => onClosedRef.current?.()}
-      testID={testID}
-    >
+  const content = (
       <View style={styles.root}>
         <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, { opacity: progress }]}>
           <Pressable
@@ -267,6 +262,21 @@ export function Dialog({
           </View>
         </KeyboardAvoidingView>
       </View>
+  );
+  if (windowOverlay && Platform.OS === "ios") {
+    return mounted ? <FullWindowOverlay unstable_accessibilityContainerViewIsModal>{content}</FullWindowOverlay> : null;
+  }
+  return (
+    <Modal
+      visible={mounted}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={requestClose}
+      onDismiss={() => onClosedRef.current?.()}
+      testID={testID}
+    >
+      {content}
     </Modal>
   );
 }

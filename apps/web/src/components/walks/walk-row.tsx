@@ -1,5 +1,6 @@
 "use client";
 
+import { ScopedPhoto } from "@/components/ui/scoped-photo";
 import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { enUS, zhTW } from "date-fns/locale";
@@ -133,7 +134,7 @@ export function WalkRow({ walk, onDelete }: Props) {
           className="relative size-9 shrink-0 overflow-hidden rounded-lg border border-mango-hairline bg-mango-bg-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <ScopedPhoto
             src={photos[0]}
             alt=""
             className="size-full object-cover"

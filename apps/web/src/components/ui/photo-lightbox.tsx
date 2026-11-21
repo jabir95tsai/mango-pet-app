@@ -1,5 +1,6 @@
 "use client";
 
+import { ScopedPhoto } from "@/components/ui/scoped-photo";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
@@ -327,7 +328,7 @@ export function PhotoLightbox({
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <ScopedPhoto
               src={url}
               alt=""
               draggable={false}

@@ -1,10 +1,19 @@
 import {
   deleteObject,
   getDownloadURL,
+  getBlob,
   ref,
   uploadBytes,
 } from "firebase/storage";
 import { getFirebaseStorage } from "./config";
+
+export function isScopedPhoto(path: string): boolean {
+  return /^users\/[^/]+\/(posts|walks)\//.test(path);
+}
+
+export function readPhotoBlob(path: string): Promise<Blob> {
+  return getBlob(ref(getFirebaseStorage(), path));
+}
 
 export async function uploadImage(
   path: string,
@@ -13,7 +22,7 @@ export async function uploadImage(
   const storage = getFirebaseStorage();
   const objectRef = ref(storage, path);
   await uploadBytes(objectRef, file, { contentType: file.type });
-  const url = await getDownloadURL(objectRef);
+  const url = isScopedPhoto(path) ? path : await getDownloadURL(objectRef);
   return { url, path };
 }
 

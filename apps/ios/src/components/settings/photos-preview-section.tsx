@@ -4,8 +4,9 @@
  * (tap-through to the full gallery), or a dashed empty box. Reuses the same
  * aggregator the gallery screen uses; read-only.
  */
+import { ScopedPhoto } from "@/components/ui/ScopedPhoto";
 import { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Images } from "lucide-react-native";
 import type { GalleryPhotoAsset } from "@mango/shared-types";
@@ -91,7 +92,7 @@ export function PhotosPreviewSection({ reloadKey = 0 }: { reloadKey?: number }) 
                 accessibilityLabel={tS("photosLink")}
                 style={styles.cell}
               >
-                <Image source={{ uri: p.url }} style={styles.cellImg} />
+                <ScopedPhoto uri={p.url} style={styles.cellImg} />
               </Pressable>
             ) : (
               <View key={i} style={styles.cell} />

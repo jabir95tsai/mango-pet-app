@@ -10,15 +10,15 @@
  *
  * Usage:
  *   REVIEWER_PASSWORD="<strong-password>" node functions/scripts/seed-reviewer-account.mjs --commit
- *   node functions/scripts/seed-reviewer-account.mjs --generate-password --commit
- *   node functions/scripts/seed-reviewer-account.mjs --client --generate-password --commit
+ *   With REVIEWER_PASSWORD and NEIGHBOR_PASSWORD provided by a secret manager:
+ *   node functions/scripts/seed-reviewer-account.mjs --client --commit
  *
  * Options:
  *   --commit              Apply changes to Firebase Auth + Firestore (default: dry-run)
- *   --generate-password   Generate a strong random password and print it once
+ *   --generate-password   Send a random password to a private pipe on fd 3 (never stdout/stderr)
  *   --email=<addr>        Override reviewer email (default: env REVIEWER_EMAIL or appreview@mangopet.app)
  *   --client              Use the Firebase Client SDK (Email/Password auth + security-rules-compliant
- *                         writes + createFamily callable) instead of Admin SDK ADC. Requires Email/Password
+ *                         writes + createFamily callable) instead of Admin SDK ADC. Requires NEIGHBOR_PASSWORD and Email/Password
  *                         provider to be enabled in Firebase Authentication.
  *
  * Auth credentials:
@@ -26,6 +26,7 @@
  *     or GOOGLE_APPLICATION_CREDENTIALS), or emulators when FIRESTORE_EMULATOR_HOST is set.
  *   - Client mode (--client): Firebase Web API key (env NEXT_PUBLIC_FIREBASE_API_KEY or project plist).
  */
+import { fstatSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 
 const args = process.argv.slice(2);
@@ -41,11 +42,7 @@ const reviewerEmail = (
 ).trim().toLowerCase();
 
 let reviewerPassword = process.env.REVIEWER_PASSWORD ?? "";
-if (!reviewerPassword && generatePassword) {
-  reviewerPassword = `Mango!${randomBytes(9).toString("base64url")}`;
-}
-
-if (commit && !reviewerPassword) {
+if (commit && !reviewerPassword && !generatePassword) {
   console.error(
     "Missing password. Set REVIEWER_PASSWORD or pass --generate-password with --commit.",
   );
@@ -62,7 +59,23 @@ const WALK_ID = "seed-review-walk";
 const OWN_POST_ID = "seed-review-own-post";
 const NEIGHBOR_UID = "seed-community-neighbor";
 const NEIGHBOR_EMAIL = (process.env.NEIGHBOR_EMAIL ?? "neighbor-demo@mangopet.app").trim().toLowerCase();
-const NEIGHBOR_PASSWORD = process.env.NEIGHBOR_PASSWORD ?? "MangoNeighbor!2026";
+const NEIGHBOR_PASSWORD = process.env.NEIGHBOR_PASSWORD;
+if (commit && useClient && !NEIGHBOR_PASSWORD?.trim()) {
+  console.error("Client seed requires NEIGHBOR_PASSWORD.");
+  process.exit(1);
+}
+// A secret-manager parent can consume descriptor 3 without exposing the credential in logs.
+if (commit && !reviewerPassword && generatePassword) {
+  try {
+    const sink = fstatSync(3);
+    if (!sink.isFIFO() && !sink.isSocket()) throw new Error();
+    reviewerPassword = `Mango!${randomBytes(18).toString("base64url")}`;
+    writeFileSync(3, reviewerPassword);
+  } catch {
+    console.error("Password generation requires a private pipe on descriptor 3. Otherwise set REVIEWER_PASSWORD.");
+    process.exit(1);
+  }
+}
 const NEIGHBOR_NAME = "柴柴鄰居";
 const NEIGHBOR_POST_ID = "seed-review-public-post";
 const NEIGHBOR_COMMENT_ID = "seed-review-comment";
@@ -272,7 +285,6 @@ async function runAdminSeed() {
         reviewerUid,
         reviewerEmail,
         createdAuthUser: created,
-        ...(generatePassword ? { generatedPassword: reviewerPassword } : {}),
         neighborPostId: NEIGHBOR_POST_ID,
       },
       null,
@@ -538,7 +550,6 @@ async function runClientSeed() {
           reviewerEmail,
           familyId,
           createdAuthUser: created,
-          ...(generatePassword ? { generatedPassword: reviewerPassword } : {}),
           neighborUid,
           neighborEmail: NEIGHBOR_EMAIL,
           neighborPostId: NEIGHBOR_POST_ID,
@@ -590,6 +601,6 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error("Failed to seed reviewer account:", err);
+  console.error("Failed to seed reviewer account:", err.code ?? "unknown");
   process.exitCode = 1;
 });

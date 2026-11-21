@@ -1,3 +1,4 @@
+import { PromptHost } from "@/components/ui/PromptHost";
 import "@/lib/rnfb-setup";
 import { listenWalkReminderOpen } from "@/lib/walk-route-notifications";
 import { listenPushOpen } from "@/lib/push-open";
@@ -271,6 +272,7 @@ export default function RootLayout() {
             <FamilyProvider>
               <StatusBar style="dark" />
               <RootNavigator />
+              <PromptHost />
             </FamilyProvider>
           </GuestUpgradeProvider>
         </AuthProvider>

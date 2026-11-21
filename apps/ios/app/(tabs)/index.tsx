@@ -1,3 +1,4 @@
+import { showPrompt } from "@/lib/prompts";
 import { WarmCanvas } from "@/components/ui/WarmCanvas";
 /**
  * Home v3 — feed-first + IG stories bar, 1:1 with apps/web/src/app/app/page.tsx
@@ -16,7 +17,6 @@ import { WarmCanvas } from "@/components/ui/WarmCanvas";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -209,9 +209,9 @@ export default function HomeScreen() {
           onSave={async (url) => {
             try {
               await savePhotoToAlbum(url);
-              Alert.alert(t("Photos.status.saved", { count: 1 }));
+              showPrompt(t("Photos.status.saved", { count: 1 }));
             } catch {
-              Alert.alert(t("Photos.status.failed"));
+              showPrompt(t("Photos.status.failed"));
             }
           }}
         />

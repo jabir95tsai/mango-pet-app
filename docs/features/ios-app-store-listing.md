@@ -143,9 +143,9 @@ Apple 問「你（或你用的第三方 SDK）蒐集哪些資料類型」，逐�
   - First Name / Last Name：`Chih-Po` / `Tsai`（蔡智博）
   - Email：`jabir95tsai@gmail.com`
   - Phone Number：送審前請於 ASC 補填本人聯絡電話
-- **Sign-In Required**：**打勾（Sign-in required）**，並於下欄填入審查專用 Email/密碼帳號（由 `node functions/scripts/seed-reviewer-account.mjs --generate-password --commit` 建立，並確認 Firebase Console → Authentication → Sign-in method 已啟用 **Email/Password**）：
+- **Sign-In Required**：**打勾（Sign-in required）**，並於下欄填入審查專用 Email/密碼帳號（由密碼管理器提供環境變數 `REVIEWER_PASSWORD` 後執行 `node functions/scripts/seed-reviewer-account.mjs --commit` 建立，並確認 Firebase Console → Authentication → Sign-in method 已啟用 **Email/Password**）：
   - Email：`appreview@mangopet.app`
-  - Password：`<填寫 seed-reviewer-account.mjs 產生的密碼>`
+  - Password：`<填寫密碼管理器中的審查帳號密碼>`
 
 ## 審查備註（App Review Notes）— 建議內容
 

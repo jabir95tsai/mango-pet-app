@@ -173,7 +173,7 @@ export function TrackingPhotoGrid({
                 ]}
               >
                 <Image
-                  source={{ uri: slot.url ?? slot.localUri }}
+                  source={{ uri: slot.localUri }}
                   style={styles.gridImage}
                   resizeMode="cover"
                   accessibilityIgnoresInvertColors

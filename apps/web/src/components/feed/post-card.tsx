@@ -1,7 +1,8 @@
 "use client";
 
+import { ScopedPhoto } from "@/components/ui/scoped-photo";
 import { useState } from "react";
-import Image from "next/image";
+
 import { formatDistanceToNow } from "date-fns";
 import { zhTW, enUS } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
@@ -123,13 +124,11 @@ export function PostCard({ post, currentUid, onDelete, onBlocked }: Props) {
               })}
               className="group relative aspect-square overflow-hidden bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mango-brand-deep"
             >
-              <Image
+              <ScopedPhoto
                 src={url}
                 alt=""
-                fill
                 sizes="(max-width: 640px) 50vw, 300px"
-                className="object-cover transition-transform group-hover:scale-[1.02]"
-                unoptimized
+                className="absolute inset-0 size-full object-cover transition-transform group-hover:scale-[1.02]"
               />
             </button>
           ))}

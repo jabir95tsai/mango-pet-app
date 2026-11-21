@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     padding: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     minHeight: 44,
   },
   rowActive: { backgroundColor: colors.brandTint },

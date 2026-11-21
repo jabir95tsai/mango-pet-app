@@ -72,6 +72,12 @@ async function fetchPhotoFile(
   url: string,
   fileName: string,
 ): Promise<File> {
+  const { isScopedPhoto, readPhotoBlob } = await import("./firebase/storage");
+  if (isScopedPhoto(url)) {
+    const blob = await readPhotoBlob(url);
+    const type = blob.type || "image/jpeg";
+    return new File([blob], normalizeFileName(fileName, type), { type });
+  }
   const res = await fetch(url, { mode: "cors" });
   if (!res.ok) {
     throw new Error(`Photo fetch failed: ${res.status}`);

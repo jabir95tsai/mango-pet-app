@@ -36,15 +36,19 @@ export async function compressImage(
   return result.uri;
 }
 
+export function isScopedPhoto(path: string): boolean {
+  return /^users\/[^/]+\/(posts|walks)\//.test(path);
+}
+
 async function uploadJpeg(localUri: string, path: string): Promise<string> {
   const ref = storage().ref(path);
   await ref.putFile(localUri, { contentType: "image/jpeg" });
-  return ref.getDownloadURL();
+  return isScopedPhoto(path) ? path : ref.getDownloadURL();
 }
 
 /**
  * Compress + upload one walk photo (≤5 per walk). `sessionId` is the walk id;
- * `idx` is 0-4. Returns the Storage download URL to store in walk.photoURLs.
+ * `idx` is 0-4. Returns the Storage path to store in walk.photoURLs.
  */
 export async function uploadWalkPhoto(
   uri: string,
@@ -89,7 +93,7 @@ export async function deleteStorageObject(path: string): Promise<void> {
 
 /**
  * Compress + upload one post photo. `idx` is 0-based. Returns the Storage
- * download URL to store in post.photoURLs.
+ * object path to store in post.photoURLs.
  */
 export async function uploadPostPhoto(
   uri: string,
