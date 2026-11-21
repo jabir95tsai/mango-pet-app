@@ -778,6 +778,12 @@
     "scopeA11y": "Scope: {scope}, tap to change"
   },
   "Walks": {
+    "map": {
+      "noLocation": "Start a walk to see where you are",
+      "recenter": "Back to my location",
+      "label": "Map of your current location",
+      "distance": "Distance"
+    },
     "manual": {
       "title": "Log a past walk",
       "pet": "Pet",

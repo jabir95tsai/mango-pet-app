@@ -10,7 +10,7 @@
  *                                🔥 streak (pop)
  *              saved & missed: 今天完成 N% + 再 N 分鐘就達標
  *   3h auto-stop notice → ONE 2-col stat card (km | min) + recap list
- *   (vs weekly avg, calories) → no-path warning → photo grid → 加備註
+ *   (vs weekly avg, calories) → route map (iOS) or no-path warning → photo grid → 加備註
  *   disclosure → save error + Retry / Discard draft → status line →
  *   回到遛狗 (primary) / 查看排行榜 (secondary), disabled until saved.
  */
@@ -28,9 +28,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AlertTriangle, ChevronDown, Trophy } from "lucide-react-native";
 
+import type { WalkRoutePoint } from "@mango/shared-types";
+
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
+import { RouteMap } from "@/components/walks/route-map";
 import { StreakPop, WalkConfetti } from "@/components/walks/walk-confetti";
 import { blendTodayProgress } from "@/components/walks/tracking-active-panel";
 import { t } from "@/lib/i18n";
@@ -201,7 +204,12 @@ export function TrackingDonePanel({
                 <AlertTriangle size={16} color={colors.brandDeep} strokeWidth={2} />
                 <Text style={styles.noticeText}>{t("Walks.core.noPathWarning")}</Text>
               </View>
-            ) : null}
+            ) : (
+              // Runtime path is the segmented accumulator path (acc.path).
+              <View style={styles.route}>
+                <RouteMap points={final.path as WalkRoutePoint[]} />
+              </View>
+            )}
 
             {photoGrid}
 
@@ -294,6 +302,7 @@ export function TrackingDonePanel({
 }
 
 const styles = StyleSheet.create({
+  route: { borderRadius: radius.xl, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline },
   flex: { flex: 1 },
   // web: flex-1 flex-col items-center justify-center gap-6 px-6 py-8 sm:max-w-md
   scroll: {

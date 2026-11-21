@@ -778,6 +778,12 @@
     "scopeA11y": "範圍：{scope}，點擊切換"
   },
   "Walks": {
+    "map": {
+      "noLocation": "按開始後顯示你的位置",
+      "recenter": "回到我的位置",
+      "label": "目前位置地圖",
+      "distance": "距離"
+    },
     "manual": {
       "title": "手動補登遛狗",
       "pet": "寵物",

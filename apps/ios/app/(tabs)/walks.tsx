@@ -2,8 +2,8 @@ import { WarmCanvas } from "@/components/ui/WarmCanvas";
 import { FamilyLiveViewer } from "@/components/walks/family-live-viewer";
 /**
  * WalksHome — 1:1 with apps/web/src/app/app/walks/page.tsx:
- * top bar (title + active-pet pill/picker + streak chip) → hero copy → dial →
- * week strip → recent walks (rows with delete / walker / photo) → manual log,
+ * top bar (title + active-pet pill/picker + streak chip) → week strip → hero copy → map →
+ * recent walks (rows with delete / walker / photo) → manual log,
  * plus the sticky 「開始遛狗」 CTA, the pending-draft recovery notice and the
  * brief goal-hit confetti. Every string comes from the shared catalog.
  *
@@ -32,7 +32,7 @@ import type { Walk } from "@mango/shared-types";
 
 import { useTabBarOverlap, useTabBarScrollInsets } from "@/lib/liquid-glass";
 import { useWalksData } from "@/lib/use-walks-data";
-import { WalksDial } from "@/components/walks/walks-dial";
+import { HomeWalkMap } from "@/components/walks/walk-maps";
 import { WalksWeekStrip } from "@/components/walks/walks-week-strip";
 import { WalksStreakChip } from "@/components/walks/walks-streak-chip";
 import { WalksStartCta } from "@/components/walks/walks-start-cta";
@@ -218,15 +218,8 @@ export default function WalksScreen() {
           <Text style={styles.heroSub}>{heroSub}</Text>
         </View>
 
-        {/* Dial (web: relative mb-6 pt-2 pb-6) */}
-        <View style={styles.dialWrap}>
-          <WalksDial
-            percent={todayProgress.percent}
-            complete={goalHit}
-            doneMin={todayProgress.minutes}
-            goalMin={goalMin}
-          />
-        </View>
+        {/* Where-you-are map (replaces the dial; re-checks when tracking closes) */}
+        <HomeWalkMap recheckKey={sessionOpen} />
 
         {/* Recent walks — or the empty state in place of the whole section */}
         {loading ? (
@@ -343,7 +336,7 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44, marginBottom: spacing.md },
   h1: { fontSize: 26, fontWeight: "800", color: colors.ink, letterSpacing: -0.5 },
   // web: mb-3 px-1; h2 26/700 leading-tight tracking-tight
-  hero: { marginBottom: 4, paddingHorizontal: spacing.xs, alignItems: "center" },
+  hero: { marginBottom: spacing.md, paddingHorizontal: spacing.xs, alignItems: "center" },
   heroTitle: {
     fontSize: 23,
     lineHeight: 30,
@@ -353,7 +346,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.65,
   },
   heroSub: { textAlign: "center", marginTop: 6, fontSize: 13, fontWeight: "500", color: colors.ink2 },
-  dialWrap: { paddingTop: 4, paddingBottom: 8, marginBottom: 12 },
   section: { marginBottom: spacing.xl },
   sectionHead: {
     flexDirection: "row",

@@ -56,33 +56,38 @@ export function TrackingPhotoControls({
   onOpenCamera,
   onDelete,
   onRetry,
+  showButton = true,
 }: {
   slots: WalkPhotoSlot[];
   onOpenCamera: () => void;
   onDelete: (id: string) => void;
   onRetry: (id: string) => void;
+  /** false: the map layout's round Photo button opens the camera instead. */
+  showButton?: boolean;
 }) {
   const full = slots.length >= WALK_PHOTO_LIMIT;
   return (
     <View style={styles.controls}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: full }}
-        disabled={full}
-        onPress={onOpenCamera}
-        style={({ pressed }) => [
-          styles.photoBtn,
-          full ? styles.photoBtnFull : styles.photoBtnActive,
-          pressed && !full && styles.photoBtnPressed,
-        ]}
-      >
-        <Camera size={16} color={full ? colors.ink3 : colors.ink} strokeWidth={2} />
-        <Text style={[styles.photoBtnText, full && styles.photoBtnTextFull]}>
-          {full
-            ? t("Walks.photo.limitReached")
-            : t("Walks.photo.button", { n: slots.length, max: WALK_PHOTO_LIMIT })}
-        </Text>
-      </Pressable>
+      {showButton ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: full }}
+          disabled={full}
+          onPress={onOpenCamera}
+          style={({ pressed }) => [
+            styles.photoBtn,
+            full ? styles.photoBtnFull : styles.photoBtnActive,
+            pressed && !full && styles.photoBtnPressed,
+          ]}
+        >
+          <Camera size={16} color={full ? colors.ink3 : colors.ink} strokeWidth={2} />
+          <Text style={[styles.photoBtnText, full && styles.photoBtnTextFull]}>
+            {full
+              ? t("Walks.photo.limitReached")
+              : t("Walks.photo.button", { n: slots.length, max: WALK_PHOTO_LIMIT })}
+          </Text>
+        </Pressable>
+      ) : null}
 
       {slots.length > 0 ? (
         <ScrollView

@@ -1,6 +1,6 @@
 # iOS 散步頁地圖改版
 
-狀態：**READY-FOR-DEV**（未實作）
+狀態：**IMPLEMENTED（未 commit）**。模擬器已驗：首頁卡片／地圖、捲動不被攔截、追蹤一頁版面、跟隨與回到位置、無路線的完成畫面。未驗：即時路線線條、暫停分段、完成畫面路線圖（模擬器收不到 GPS 點，見 backlog）、iPhone SE 尺寸、實機。
 建立日期：2026-11-21
 規格作者：iOS PM session（使用者 2026-11-21 逐題確認 Q1–Q14）
 接手角色：iOS UI/UX（主）。可動 `apps/ios/app/(tabs)/walks.tsx`、`apps/ios/src/components/walks/*`、`packages/shared-i18n`。**不碰** `walk-tracking-service.ts` 的定位／存檔邏輯、schema、rules、functions。
@@ -32,7 +32,7 @@
 | Q4 | 視覺 | 只借版面，照 Mango design system |
 | Q5 | 地圖供應 | Apple Maps（`react-native-maps` 預設，無 API key） |
 | Q6 | 平台 | 只做 iOS；Web 進 roadmap |
-| Q7 | 追蹤排版 | 不捲動一頁：上 timer＋距離、中地圖填滿、下 暫停／停止／拍照；次要提示改成地圖上的浮動小條 |
+| Q7 | 追蹤排版 | 不捲動一頁。2026-11-21 改採設計稿 3B：地圖滿版當背景，狀態膠囊與次要提示浮在頂端中央；底部白色卡片放 timer、距離｜今日 %、進度條、照片縮圖、暫停／停止／拍照三顆置中圓鈕（設計稿：https://claude.ai/artifact/Bf4Hd4hZUsMwsN7JWnif7Z） |
 | Q8 | 追蹤鏡頭 | 預設跟隨；使用者拖動後停止跟隨並出現「回到我的位置」按鈕 |
 | Q9 | 追蹤路線 | 即時畫 polyline，暫停前後分段不相連 |
 | Q10 | 首頁無權限／無位置 | **不顯示地圖**，顯示插圖卡片「按開始後顯示你的位置」；拿到位置後換成地圖 |
@@ -53,7 +53,7 @@
 
 ### 追蹤畫面
 
-1. 版面固定一頁：上方 timer、距離、目標進度；中間地圖 `flex:1`；下方控制列。
+1. 版面固定一頁（3B）：地圖滿版延伸到安全區外；頂端中央浮動狀態膠囊與提示；底部浮動卡片放 timer、距離｜今日 %、進度條、照片縮圖、三顆圓鈕。地圖用 `mapPadding` 避開膠囊與卡片，藍點落在可見範圍中央。
 2. `showsUserLocation`；`path` 經 `routeSegments` 畫 polyline（顏色 `colors.brandDeep`，寬 4），只有一個點的段不畫線。
 3. 跟隨：新點進來時 `animateCamera` 到最新點；`onPanDrag` 後關閉跟隨並顯示「回到我的位置」浮動按鈕，按下恢復跟隨。
 4. `reminderShown`、背景定位說明、`timingOnly` 提示 → 地圖頂端浮動小條（保留 `accessibilityRole="alert"`）。

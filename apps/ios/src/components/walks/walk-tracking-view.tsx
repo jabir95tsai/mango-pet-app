@@ -26,14 +26,14 @@
 import { showPrompt } from "@/lib/prompts";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Modal, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import type { Pet } from "@mango/shared-types";
 import { computeWalkScore, getPetWalkGoalMinutes } from "@mango/shared-business";
 
 import { CameraCaptureModal } from "@/components/walks/camera-capture-modal";
 import { PhotoShareFlow } from "@/components/walks/photo-share-flow";
-import { TrackingActivePanel } from "@/components/walks/tracking-active-panel";
+import { showsLiveMap, TrackingActivePanel } from "@/components/walks/tracking-active-panel";
 import { TrackingDonePanel } from "@/components/walks/tracking-done-panel";
 import {
   TrackingPhotoControls,
@@ -159,6 +159,7 @@ export function WalkTrackingView({
   const { user, isGuest } = useAuth();
   const router = useRouter();
   const reduceMotion = useReducedMotion();
+  const insets = useSafeAreaInsets();
   const serviceRef = useRef<WalkTrackingService | null>(null);
   if (!serviceRef.current) serviceRef.current = new WalkTrackingService();
   const svc = serviceRef.current;
@@ -800,6 +801,8 @@ export function WalkTrackingView({
           storedTodayMin={ctx.todayMinBefore}
           goalMin={ctx.goalMin}
           onPauseResume={handlePauseResume}
+          photoCount={slots.length}
+          onOpenCamera={() => setCameraOpen(true)}
           onStop={() => {
             void handleStop();
           }}
@@ -809,6 +812,7 @@ export function WalkTrackingView({
               onOpenCamera={() => setCameraOpen(true)}
               onDelete={handleDeletePhoto}
               onRetry={handleRetryPhoto}
+              showButton={!showsLiveMap(state)}
             />
           }
         />
@@ -816,7 +820,18 @@ export function WalkTrackingView({
     } else {
       content = <TrackingStartingScreen />;
     }
-    body = <SafeAreaView style={styles.safe}>{content}</SafeAreaView>;
+    // Insets from the root provider: a native SafeAreaView inside this
+    // slide-in Modal measured 0 (status pill hid under the Dynamic Island).
+    body = (
+      <View
+        style={[
+          styles.safe,
+          { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right },
+        ]}
+      >
+        {content}
+      </View>
+    );
   }
 
   return (
