@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   locked: {
     alignItems: "flex-start",
     gap: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.brandTint,
     backgroundColor: colors.cardSoft,

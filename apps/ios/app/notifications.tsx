@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     minHeight: 44,
     padding: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: colors.card,

@@ -160,7 +160,7 @@ export default function HomeScreen() {
             <InviteFamilyCard petName={pets[0]?.name} onInvite={() => router.push("/family")} />
           ) : null}
 
-          <FeedSectionHeader onViewAll={() => router.push("/feed")} />
+          <FeedSectionHeader />
 
           {posts.length === 0 ? (
             <NoPostsHint onCompose={openComposer} />

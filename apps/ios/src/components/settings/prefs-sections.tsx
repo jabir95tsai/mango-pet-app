@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.hairline,
   },
