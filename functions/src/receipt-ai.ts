@@ -395,7 +395,8 @@ export async function extractReceiptWithGemini(
         "Gemini API key is not configured.",
       );
     }
-    const ai = new GoogleGenAI({ apiKey });
+    // Image inputs on the Interactions API are only accepted on v1beta (v1 returns 400).
+    const ai = new GoogleGenAI({ apiKey, apiVersion: "v1beta" });
     interaction = await ai.interactions.create(params);
   }
 
