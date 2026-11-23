@@ -247,7 +247,11 @@ service cloud.firestore {
           request.resource.data.familyId == null
           || isFamilyMember(request.resource.data.familyId)
         ));
+      // Ownership/scope moves only via callables (importPersonalToFamily);
+      // otherwise a family member could re-own a family pet as personal.
       allow update: if activeAccount() && petOwnerActive(resource.data)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['ownerUid', 'familyId'])
         && petOwnerActive(request.resource.data) && ((
           isPersonalPetOwner(resource.data)
           || isFamilyMember(resource.data.familyId)
@@ -406,10 +410,14 @@ service cloud.firestore {
       // only the owner in personal mode. The doneByUid anti-impersonation
       // guard applies in both modes — if the update touches doneByUid it
       // must be cleared or equal request.auth.uid.
+      // familyId/createdByUid are fixed after create so a doc can't be
+      // pushed into another family's scope.
       allow update: if activeAccount() && ((
           isPersonalReminderOwner(resource.data)
           || isFamilyMember(resource.data.familyId)
         )
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['familyId', 'createdByUid'])
         && (
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(["doneByUid"])
           || !("doneByUid" in request.resource.data)
@@ -432,7 +440,9 @@ service cloud.firestore {
       // Payer edits their own expense in both modes. Family members
       // can delete bad entries in family mode; personal owner deletes
       // in personal mode.
-      allow update: if activeAccount() && (request.auth.uid == resource.data.payerUid);
+      allow update: if activeAccount() && request.auth.uid == resource.data.payerUid
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['familyId', 'payerUid']);
       allow delete: if activeAccount() && (isPersonalExpenseOwner(resource.data)
         || isFamilyMember(resource.data.familyId));
     }
@@ -627,15 +637,46 @@ service cloud.firestore {
     // ── Restaurants & reviews ──
     match /restaurants/{rid} {
       allow read: if true;
-      allow create: if activeAccount() && (request.auth != null
-        && request.resource.data.submittedByUid == request.auth.uid);
+      // Shape mirrors createRestaurant() in apps/web/src/lib/firebase/restaurants.ts.
+      allow create: if activeAccount() && isRealUser()
+        && request.resource.data.keys().hasOnly([
+          'name', 'address', 'location', 'googlePlaceId', 'phone', 'website',
+          'petFriendlyLevel', 'hasWaterBowl', 'hasPetMenu', 'allowsLargeDogs',
+          'averageRating', 'reviewCount', 'submittedByUid', 'verified', 'createdAt'
+        ])
+        && request.resource.data.submittedByUid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 200
+        && request.resource.data.address is string
+        && request.resource.data.address.size() <= 500
+        && request.resource.data.verified == false
+        && request.resource.data.averageRating == 0
+        && request.resource.data.reviewCount == 0
+        && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
 
       match /reviews/{reviewId} {
         allow read: if true;
-        allow create: if activeAccount() && (request.auth != null
-          && request.resource.data.authorUid == request.auth.uid);
-        allow update, delete: if activeAccount() && (request.auth.uid == resource.data.authorUid);
+        // Shape mirrors addReview() in apps/web/src/lib/firebase/restaurants.ts.
+        allow create: if activeAccount() && isRealUser()
+          && request.resource.data.keys().hasOnly([
+            'restaurantId', 'authorUid', 'authorName', 'authorPhotoURL',
+            'rating', 'text', 'photoURLs', 'createdAt'
+          ])
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.restaurantId == rid
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.photoURLs is list
+          && request.resource.data.photoURLs.size() <= 10
+          && request.resource.data.createdAt == request.time;
+        allow update: if activeAccount() && request.auth.uid == resource.data.authorUid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['rating', 'text', 'photoURLs']);
+        allow delete: if activeAccount() && (request.auth.uid == resource.data.authorUid);
       }
     }
 

@@ -28,7 +28,7 @@ const cases=[
  ['reminder',(u)=>`reminders/${u}`,(u)=>({createdByUid:u,familyId:null,title:'Reminder'}),{title:'Changed'}],
  ['expense',(u)=>`expenses/${u}`,(u)=>({payerUid:u,familyId:null,amount:1}),{amount:2}],
  ['post',(u)=>`posts/${u}`,(u)=>({authorUid:u,visibility:'public',text:'Post',reactionCounts:{'❤️':0,'😂':0,'🐶':0,'👍':0,'🎉':0}}),{text:'Changed'}],
- ['review',(u)=>`restaurants/${u}/reviews/review`,(u)=>({authorUid:u,rating:4}),{rating:5}],
+ ['review',(u)=>`restaurants/${u}/reviews/review`,(u)=>({restaurantId:u,authorUid:u,authorName:'N',authorPhotoURL:null,rating:4,text:'Review',photoURLs:[],createdAt:f.serverTimestamp()}),{rating:5}],
 ];
 for(const [label,location,data,patch,canDelete=true] of cases)test(`deletion checkpoint freezes ${label} create/update/delete without changing reads`,async()=>{
  const uid=prefix+'-'+label.replaceAll(' ','-'),sdk=client(uid),ref=f.doc(sdk,location(uid));
@@ -80,11 +80,12 @@ test('checkpoint freezes comments, reactions, reports, restaurant submission and
  await atomicReaction('❤️');await atomicReaction('🐶');await atomicReaction(null);await atomicReaction('❤️');
  await f.setDoc(request,{fromUid:uid});await f.deleteDoc(request);await f.setDoc(request,{fromUid:uid});
  await f.setDoc(f.doc(sdk,'reports/'+uid),report);
- await f.setDoc(f.doc(sdk,'restaurants/'+uid),{submittedByUid:uid});
+ const restaurant={name:'Cafe',address:'Taipei',submittedByUid:uid,verified:false,averageRating:0,reviewCount:0,createdAt:f.serverTimestamp()};
+ await f.setDoc(f.doc(sdk,'restaurants/'+uid),restaurant);
  await db.doc('deletedAccounts/'+uid).set({state:'finalizing'});
  await assert.rejects(atomicReaction('🐶'),{code:'permission-denied'});
  await assert.rejects(atomicReaction(null),{code:'permission-denied'});
- for(const action of [()=>f.deleteDoc(comment),()=>f.setDoc(f.doc(sdk,`posts/${post}/comments/new`),commentData),()=>f.updateDoc(reaction,{type:'heart'}),()=>f.deleteDoc(reaction),()=>f.setDoc(reaction,{type:'heart'}),()=>f.deleteDoc(request),()=>f.updateDoc(f.doc(sdk,'posts/'+post),{reactionCounts:{like:2}}),()=>f.setDoc(f.doc(sdk,'reports/'+uid+'-new'),report),()=>f.setDoc(f.doc(sdk,'restaurants/'+uid+'-new'),{submittedByUid:uid})])await assert.rejects(action(),{code:'permission-denied'});
+ for(const action of [()=>f.deleteDoc(comment),()=>f.setDoc(f.doc(sdk,`posts/${post}/comments/new`),commentData),()=>f.updateDoc(reaction,{type:'heart'}),()=>f.deleteDoc(reaction),()=>f.setDoc(reaction,{type:'heart'}),()=>f.deleteDoc(request),()=>f.updateDoc(f.doc(sdk,'posts/'+post),{reactionCounts:{like:2}}),()=>f.setDoc(f.doc(sdk,'reports/'+uid+'-new'),report),()=>f.setDoc(f.doc(sdk,'restaurants/'+uid+'-new'),restaurant)])await assert.rejects(action(),{code:'permission-denied'});
  await db.doc(request.path).delete();await assert.rejects(f.setDoc(request,{fromUid:uid}),{code:'permission-denied'});
 });
 
