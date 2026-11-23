@@ -253,6 +253,10 @@ _目前沒有 active 條目。已 SHIPPED 的見「已處理（audit trail）」
 
 ## 已分類 — Backend 接
 
+### 同一帳號的 iOS 與 PWA 每個事件只推播一次（2026-11-23）
+
+- 已在本機實作 iOS 優先、PWA 接手、每帳號每事件去重及分平台開關。待 Functions、PWA 與 iOS 發版後，以同帳號雙端啟用及僅啟用 PWA 各做一次實機驗收。
+
 ### ⚠️ main working tree 卡未解 stash-pop conflict in `functions/src/index.ts`（#3 family-leaderboard）
 - **發現於**：2026-06-01、Cross-platform PM session（user 回報）
 - **類型**：技術債 / 工作流 blocker（**local-only,origin/main 乾淨、production 無影響**）

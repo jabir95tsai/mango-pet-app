@@ -67,9 +67,9 @@ test('account switch revokes an orphan installation token before registering the
  h.authState.currentUser=h.user('bob');await h.profile.ensureUserProfile(h.authState.currentUser);h.state.token='bob-device';await h.push.probePushStatus('bob');
  assert.ok(h.events.includes('deleteToken'));assert.deepEqual(h.docs.get(privatePath).fcmTokens,aTokens);assert.deepEqual(h.docs.get('users/bob/private/contact').fcmTokens,['bob-device']);
 });
-test('global disabled preference is respected by login, foreground and refresh',async()=>{
- const h=await ready();h.state.permission=1;await h.push.enablePush('alice');await h.push.disablePush('alice');const count=h.events.filter(x=>x==='getToken').length;const stop=h.push.startPushSession('alice',()=>{});await tick();h.state.foreground('active');h.state.refresh('new-token');await tick();await tick();
- assert.equal(h.events.filter(x=>x==='getToken').length,count);assert.deepEqual(h.docs.get(privatePath).fcmTokens,[]);stop();
+test('iOS opt-out survives login, foreground and refresh while retaining PWA registration',async()=>{
+ const h=await ready();h.docs.get(privatePath).fcmTokens=['pwa'];h.state.permission=1;await h.push.enablePush('alice');assert.deepEqual(h.docs.get(privatePath).iosFcmTokens,['device-token']);await h.push.disablePush('alice');const count=h.events.filter(x=>x==='getToken').length;const stop=h.push.startPushSession('alice',()=>{});await tick();h.state.foreground('active');h.state.refresh('new-token');await tick();await tick();
+ assert.equal(h.events.filter(x=>x==='getToken').length,count);assert.deepEqual(h.docs.get(privatePath).fcmTokens,['pwa']);assert.deepEqual(h.docs.get(privatePath).iosFcmTokens,[]);stop();
 });
 test('deleted-account logout does not recreate profile/private docs',async()=>{
  const h=await ready();h.state.permission=1;await h.push.enablePush('alice');h.docs.clear();h.state.failWrite=true;await h.authApi.signOut({accountDeleted:true});assert.equal(h.docs.size,0);assert.equal(h.authState.currentUser,null);

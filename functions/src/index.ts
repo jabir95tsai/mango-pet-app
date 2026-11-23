@@ -1,3 +1,4 @@
+import { deliverPush } from "./push-delivery";
 import { eraseWalkRoute } from "./walk-routes";
 import {
   enforceReceiptRateLimit,
@@ -22,7 +23,7 @@ import {
  */
 
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { randomInt } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import {
@@ -38,7 +39,7 @@ import {
   getFirestore,
   Timestamp,
 } from "firebase-admin/firestore";
-import { getMessaging } from "firebase-admin/messaging";
+import { getMessaging, type TokenMessage } from "firebase-admin/messaging";
 import { getStorage } from "firebase-admin/storage";
 import {
   computeWalkerPeriodScore,
@@ -125,6 +126,22 @@ async function removeInvalidFcmTokens(
   await removeContactTokens(db, uid, invalid);
 }
 
+/** Claim before contacting FCM. A retry after an ambiguous send must not alert another device. */
+async function sendAccountPush(uid: string, tokens: string[], payload: Omit<TokenMessage, "token">, eventKey?: string) {
+  if (eventKey && tokens.length) {
+    const id = createHash("sha256").update(eventKey).digest("hex");
+    const ref = db.doc(`users/${uid}/pushDeliveries/${id}`);
+    const claimed = await withActiveAccounts(db, [uid], async (tx) => {
+      if ((await tx.get(ref)).exists) return false;
+      tx.create(ref, { createdAt: FieldValue.serverTimestamp() });
+      return true;
+    });
+    if (!claimed) return { ok: false, invalidCount: 0 };
+  }
+  return deliverPush(tokens, token => messaging.send({ ...payload, token }),
+    invalid => removeInvalidFcmTokens(uid, invalid));
+}
+
 /** True when the callable's auth token is an anonymous (guest) sign-in.
  *  Guests are blocked from community callables (createFamily /
  *  joinFamilyByCode / acceptFriendRequest) — a defense-in-depth layer on
@@ -205,64 +222,28 @@ export const scanReminders = onSchedule(
           continue;
         }
 
-        // Collect FCM tokens from every recipient. Each token-removal write
-        // happens against its own user doc, so we keep track of which uid
-        // each token came from for later cleanup.
-        const tokensWithOwner: { uid: string; token: string }[] = [];
-        for (const recipUid of recipientUids) {
-          const t = await readUserFcmTokens(recipUid);
-          for (const tok of t) tokensWithOwner.push({ uid: recipUid, token: tok });
-        }
-
-        if (tokensWithOwner.length === 0) {
-          await reminderDoc.ref.update({ notified: true, notifiedAt: now });
-          noTokens++;
-          continue;
-        }
-
         const title = (reminder.title as string) || "Mango Pet";
         const body =
           (reminder.description as string) ||
           (reminder.petId ? "🐾 提醒到時間了" : "🔔 提醒到時間了");
 
-        const tokensList = tokensWithOwner.map((t) => t.token);
-        const response = await messaging.sendEachForMulticast({
-          tokens: tokensList,
-          notification: { title, body },
-          data: {
-            reminderId: reminderDoc.id,
-            petId: (reminder.petId as string) || "",
-            url: reminder.petId ? `/app/pets/${reminder.petId}` : "/app",
-          },
-          webpush: {
-            fcmOptions: {
-              link: reminder.petId ? `/app/pets/${reminder.petId}` : "/app",
-            },
-          },
-        });
-
-        // Group invalid tokens by their owner uid for per-user arrayRemove.
-        const invalidByUid = new Map<string, string[]>();
-        response.responses.forEach((r, idx) => {
-          if (!r.success && r.error) {
-            const code = r.error.code;
-            if (
-              code === "messaging/invalid-registration-token" ||
-              code === "messaging/registration-token-not-registered"
-            ) {
-              const { uid, token } = tokensWithOwner[idx];
-              const list = invalidByUid.get(uid) ?? [];
-              list.push(token);
-              invalidByUid.set(uid, list);
-            }
-          }
-        });
-        for (const [uid, tokens] of invalidByUid) {
-          await removeInvalidFcmTokens(uid, tokens);
+        let hasRecipients = false;
+        let delivered = false;
+        for (const uid of new Set(recipientUids)) {
+          const tokens = await readUserFcmTokens(uid);
+          if (!tokens.length) continue;
+          hasRecipients = true;
+          const url = reminder.petId ? `/app/pets/${reminder.petId}` : "/app";
+          const result = await sendAccountPush(uid, tokens, {
+            notification: { title, body },
+            data: { reminderId: reminderDoc.id, petId: (reminder.petId as string) || "", url },
+            webpush: { fcmOptions: { link: url } },
+          }, JSON.stringify(["reminder", reminderDoc.ref.path, triggerMs]));
+          delivered ||= result.ok;
         }
-
+        if (!hasRecipients) noTokens++;
         await reminderDoc.ref.update({ notified: true, notifiedAt: now });
-        sent++;
+        if (delivered) sent++;
       } catch (err) {
         failed++;
         logger.error(
@@ -398,8 +379,8 @@ export const aggregateLeaderboards = onSchedule(
     retryCount: 1,
     memory: "512MiB",
   },
-  async () => {
-    const now = new Date();
+  async (event) => {
+    const now = new Date(event.scheduleTime || Date.now());
     const weekKey = isoWeekLabel(now);
     const monthKey = monthLabel(now);
 
@@ -460,7 +441,7 @@ export const aggregateLeaderboards = onSchedule(
     );
 
     // Phase 2 B1 — rank-overtake push. Runs against all_time only.
-    await runRankOvertakePushes(allTimeResult, allTime);
+    await runRankOvertakePushes(allTimeResult, allTime, now);
 
     // Dog-centric board (leaderboard v2) — same batch, same cron, no new
     // scheduled function (cost rule). Isolated so a dog-pass failure can't
@@ -1286,6 +1267,7 @@ export const onCommentCreated = onDocumentCreated(
 
     try {
       await sendEngagementPush({
+        eventKey: JSON.stringify(["comment", postId, event.params.commentId]),
         uid: post.authorUid as string,
         tokens: target.tokens,
         body: copy,
@@ -1438,6 +1420,7 @@ export const onReactionCreated = onDocumentCreated(
 
     try {
       await sendEngagementPush({
+        eventKey: "reaction:" + event.id,
         uid: post.authorUid as string,
         tokens: target.tokens,
         body: copy,
@@ -1535,6 +1518,7 @@ async function notifyModerationOperator(params: {
       if (tokens.length === 0) continue;
       const statusText = action === "hidden" ? "已達門檻自動隱藏" : "待 24 小時內人工複查";
       await sendEngagementPush({
+        eventKey: "report:" + reportId,
         uid: adminUid,
         tokens,
         body: {
@@ -1663,6 +1647,7 @@ async function sendAchievementUnlockPush(
   }
 
   await sendEngagementPush({
+    eventKey: JSON.stringify(["achievement", ...badges.map(b => b.id).sort()]),
     uid,
     tokens: target.tokens,
     body: copy,
@@ -1817,6 +1802,7 @@ async function runRankOvertakePushes(
     newRanks: Map<string, number>;
   },
   accums: Map<string, UserAccum>,
+  now: Date,
 ): Promise<void> {
   const newRankToUid = new Map<number, string>();
   for (const [uid, rank] of result.newRanks) newRankToUid.set(rank, uid);
@@ -1885,6 +1871,7 @@ async function runRankOvertakePushes(
 
     try {
       const res = await sendEngagementPush({
+        eventKey: RANK_OVERTAKE_TYPE + taipeiDateStamp(now),
         uid,
         tokens,
         body: copy,
@@ -2037,42 +2024,12 @@ export const sendTestPush = onCall(
     // Recheck after token lookup. A deletion starting after this final check
     // can still overlap the external send, but cannot recreate account data.
     await withActiveAccounts(db, [uid], async () => {});
-    const response = await messaging.sendEachForMulticast({
-      tokens,
-      notification: {
-        title: "🥭 測試推播",
-        body: "推播設定成功！提醒到時間會像這樣通知你。",
-      },
+    const result = await sendAccountPush(uid, tokens, {
+      notification: { title: "🥭 測試推播", body: "推播設定成功！提醒到時間會像這樣通知你。" },
       data: { url: "/app" },
-      webpush: {
-        fcmOptions: { link: "/app" },
-      },
+      webpush: { fcmOptions: { link: "/app" } },
     });
-
-    // Clean up invalid tokens — same logic as scanReminders so test
-    // pushes also self-heal stale registrations.
-    const invalidTokens: string[] = [];
-    response.responses.forEach((r, idx) => {
-      if (!r.success && r.error) {
-        const code = r.error.code;
-        if (
-          code === "messaging/invalid-registration-token" ||
-          code === "messaging/registration-token-not-registered"
-        ) {
-          invalidTokens.push(tokens[idx]);
-        }
-      }
-    });
-    if (invalidTokens.length > 0) {
-      await removeInvalidFcmTokens(uid, invalidTokens);
-    }
-
-    return {
-      ok: response.successCount > 0,
-      sent: response.successCount,
-      failed: response.failureCount,
-      invalidTokens: invalidTokens.length,
-    };
+    return { ok: result.ok, sent: Number(result.ok), failed: Number(!result.ok), invalidTokens: result.invalidCount };
   },
 );
 
@@ -3580,35 +3537,18 @@ type EngagementBody = { title: string; body: string };
  *  one delivery succeeded. */
 async function sendEngagementPush(args: {
   uid: string;
+  eventKey: string;
   tokens: string[];
   body: EngagementBody;
   data?: Record<string, string>;
   link?: string;
 }): Promise<{ ok: boolean; invalidCount: number }> {
-  const { uid, tokens, body, data, link } = args;
-  if (tokens.length === 0) return { ok: false, invalidCount: 0 };
-  const response = await messaging.sendEachForMulticast({
-    tokens,
-    notification: { title: body.title, body: body.body },
+  const { uid, tokens, body, data, link, eventKey } = args;
+  return sendAccountPush(uid, tokens, {
+    notification: body,
     data: { ...(data ?? {}), ...(link ? { url: link } : {}) },
     webpush: link ? { fcmOptions: { link } } : undefined,
-  });
-  const invalidTokens: string[] = [];
-  response.responses.forEach((r, idx) => {
-    if (!r.success && r.error) {
-      const code = r.error.code;
-      if (
-        code === "messaging/invalid-registration-token" ||
-        code === "messaging/registration-token-not-registered"
-      ) {
-        invalidTokens.push(tokens[idx]);
-      }
-    }
-  });
-  if (invalidTokens.length > 0) {
-    await removeInvalidFcmTokens(uid, invalidTokens);
-  }
-  return { ok: response.successCount > 0, invalidCount: invalidTokens.length };
+  }, eventKey);
 }
 
 /** Pick i18n copy for an engagement push based on user.locale. The
@@ -3668,8 +3608,8 @@ export const eveningWalkReminder = onSchedule(
     retryCount: 1,
     memory: "256MiB",
   },
-  async () => {
-    const now = new Date();
+  async (event) => {
+    const now = new Date(event.scheduleTime || Date.now());
     const startOfToday = startOfTaipeiDay(now);
 
     // Pre-aggregate today's walk minutes per walker. One global query
@@ -3757,6 +3697,7 @@ export const eveningWalkReminder = onSchedule(
 
       try {
         const res = await sendEngagementPush({
+          eventKey: EVENING_WALK_REMINDER_TYPE + taipeiDateStamp(now),
           uid,
           tokens,
           body: copy,
@@ -3846,8 +3787,8 @@ export const streakBreakWarning = onSchedule(
     retryCount: 1,
     memory: "256MiB",
   },
-  async () => {
-    const now = new Date();
+  async (event) => {
+    const now = new Date(event.scheduleTime || Date.now());
     const todayIdx = taipeiDayIdx(now.getTime());
     const yesterdayIdx = todayIdx - 1;
     const since = new Date(
@@ -3943,6 +3884,7 @@ export const streakBreakWarning = onSchedule(
 
       try {
         const res = await sendEngagementPush({
+          eventKey: STREAK_WARNING_TYPE + taipeiDateStamp(now),
           uid,
           tokens,
           body: copy,
@@ -4130,6 +4072,7 @@ export const familyGoalMilestone = onDocumentCreated(
       );
       try {
         const res = await sendEngagementPush({
+          eventKey: FAMILY_MILESTONE_TYPE + statId,
           uid: recipientUid,
           tokens,
           body: copy,

@@ -55,7 +55,7 @@ async function register(uid: string, enable = false): Promise<PushStatus> {
   const profile = await userRef(uid).get();
   assertCurrent(uid);
   if (!profile.exists()) throw new Error("Profile is not ready");
-  if (!enable && profile.data()?.pushPrefs?.globalDisabled) return publish(uid, "disabled");
+  if (!enable && (profile.data()?.pushPrefs?.globalDisabled || profile.data()?.pushPrefs?.iosDisabled)) return publish(uid, "disabled");
   let previous = await storedRegistration();
   if (previous && previous.uid !== uid) {
     // An external auth change cannot edit the former owner's private document.
@@ -80,13 +80,21 @@ async function register(uid: string, enable = false): Promise<PushStatus> {
     assertCurrent(uid);
     if (!currentProfile.exists()) throw new Error("Profile is not ready");
     // Another device may have switched the global preference off since getToken.
-    if (!enable && currentProfile.data()?.pushPrefs?.globalDisabled) return false;
+    if (!enable && (currentProfile.data()?.pushPrefs?.globalDisabled || currentProfile.data()?.pushPrefs?.iosDisabled)) return false;
     const storedTokens: unknown = snapshot.data()?.fcmTokens;
     const tokens: string[] = Array.isArray(storedTokens)
       ? storedTokens.filter((item: unknown): item is string => typeof item === "string" && item.length > 0) : [];
     const current = tokens.filter((item) => !previous || previous.uid !== uid || (item !== previous.token && item !== previous.previousToken));
-    tx.set(contactRef(uid), { fcmTokens: [...new Set([...current, token])] }, { merge: true });
-    if (enable) tx.update(userRef(uid), { "pushPrefs.globalDisabled": false });
+    const previousIos: unknown = snapshot.data()?.iosFcmTokens;
+    const iosTokens = Array.isArray(previousIos) ? current.filter((item) => previousIos.includes(item)) : [];
+    tx.set(contactRef(uid), {
+      fcmTokens: [...new Set([...current, token])],
+      iosFcmTokens: [...new Set([...iosTokens, token])],
+    }, { merge: true });
+    if (enable) tx.update(userRef(uid), {
+      "pushPrefs.globalDisabled": false, "pushPrefs.iosDisabled": false,
+      ...(currentProfile.data()?.pushPrefs?.globalDisabled && { "pushPrefs.webDisabled": true }),
+    });
     return true;
   });
   await AsyncStorage.setItem(REGISTRATION_KEY, JSON.stringify({ uid, token }));
@@ -106,7 +114,10 @@ export function probePushStatus(uid: string): Promise<PushStatus> {
     assertCurrent(uid);
     const permission = permissionState(await messaging().hasPermission());
     assertCurrent(uid);
-    if (permission !== "enabled") return publish(uid, permission);
+    if (permission !== "enabled") {
+      await removeStoredTokens(uid);
+      return publish(uid, permission);
+    }
     return register(uid);
   });
 }
@@ -117,7 +128,10 @@ export function enablePush(uid: string): Promise<PushStatus> {
     assertCurrent(uid);
     const permission = permissionState(await messaging().requestPermission());
     assertCurrent(uid);
-    if (permission !== "enabled") return publish(uid, permission);
+    if (permission !== "enabled") {
+      await removeStoredTokens(uid);
+      return publish(uid, permission);
+    }
     return register(uid, true);
   });
 }
@@ -125,15 +139,28 @@ export async function reconcilePushToken(uid: string): Promise<void> { await pro
 export function disablePush(uid: string): Promise<PushStatus> {
   return operation(uid, async () => {
     assertCurrent(uid);
+    const registration = await storedRegistration();
     const batch = firestore().batch();
-    batch.update(userRef(uid), { "pushPrefs.globalDisabled": true });
-    // This is the existing account-wide off preference, unlike logout.
-    batch.set(contactRef(uid), { fcmTokens: [] }, { merge: true });
+    batch.update(userRef(uid), { "pushPrefs.iosDisabled": true });
+    if (registration?.uid === uid) {
+      batch.set(contactRef(uid), tokenRemoval(registration.token, registration.previousToken), { merge: true });
+    }
     await batch.commit();
     assertCurrent(uid);
     return publish(uid, "disabled");
   });
 }
+async function removeStoredTokens(uid: string) {
+  const registration = await storedRegistration();
+  if (registration?.uid !== uid) return;
+  await contactRef(uid).set(tokenRemoval(registration.token, registration.previousToken), { merge: true });
+}
+
+function tokenRemoval(token: string, previousToken?: string) {
+  const remove = firestore.FieldValue.arrayRemove(token, ...(previousToken ? [previousToken] : []));
+  return { fcmTokens: remove, iosFcmTokens: remove };
+}
+
 /** Stop refresh registration synchronously, then remove only this installation. */
 export async function detachPushToken(uid: string, accountDeleted = false): Promise<void> {
   suspendedUid = uid;
@@ -149,7 +176,7 @@ export async function detachPushToken(uid: string, accountDeleted = false): Prom
       }
       assertCurrent(uid, true);
       if (token && !accountDeleted) {
-        await contactRef(uid).set({ fcmTokens: firestore.FieldValue.arrayRemove(token, ...(previous?.previousToken ? [previous.previousToken] : [])) }, { merge: true });
+        await contactRef(uid).set(tokenRemoval(token, previous?.previousToken), { merge: true });
       }
       // Revocation also makes a leftover token under a previous UID unusable.
       if (token || previous) await messaging().deleteToken();

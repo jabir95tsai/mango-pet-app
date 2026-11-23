@@ -22,7 +22,7 @@ function upsert(sdk){
   const filename=path.resolve(__dirname,'../../apps/web/src/lib/firebase/users.ts');
   const source=ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
   const module={exports:{}};
-  const mocks={'firebase/firestore':f,'firebase/functions':{},'./config':{getDb:()=>sdk},'./auth':{
+  const mocks={'firebase/auth':require('firebase/auth'),'firebase/firestore':f,'firebase/functions':{},'./config':{getDb:()=>sdk},'./auth':{
     resolveUserDisplayName:user=>user.displayName,resolveUserPhotoURL:user=>user.photoURL??null,
   }};
   vm.runInThisContext(`(function(require,module,exports){${source}\n})`,{filename})(name=>{
@@ -37,6 +37,71 @@ test('push reads both devices during migration, deduplicates and ignores malform
   await contact(uid).set({fcmTokens:['web','duplicate',{},'  ']});
   assert.deepEqual(await readContactTokens(db,uid),['web','duplicate','ios']);
   assert.deepEqual(contactTokens('bad',{token:'bad'},['valid','valid',false]),['valid']);
+});
+
+test('same family reminder sends once per account across concurrent scans, with native priority', async () => {
+  const { functions, Timestamp } = require('./emulator.cjs');
+  const messaging = require('firebase-admin/messaging').getMessaging();
+  const [both, webOnly, stale, disabled] = ['both','web','stale','off'].map(id => prefix + id);
+  const prefs = [{}, {iosDisabled: true}, {}, {globalDisabled: true}];
+  for (const [index, uid] of [both, webOnly, stale, disabled].entries()) {
+    await profile(uid, {pushPrefs: prefs[index]});
+    await contact(uid).set({fcmTokens: [uid+'-ios', uid+'-web'], iosFcmTokens: [uid+'-ios'], webFcmTokens: [uid+'-web']});
+  }
+  const familyId = prefix+'-family';
+  await db.doc('families/'+familyId).set({memberUids: [both, both, webOnly, stale, disabled]});
+  const reminder = db.doc('reminders/'+prefix);
+  await reminder.set({familyId, triggerAt: Timestamp.now(), notified: false, done: false});
+  const accepted = [];
+  const original = messaging.send;
+  messaging.send = async ({token}) => {
+    if (token === stale+'-ios') throw Object.assign(new Error('Expired'), {code:'messaging/registration-token-not-registered'});
+    accepted.push(token);
+    return 'test-message-id';
+  };
+  try {
+    await Promise.all([functions.scanReminders.run({}), functions.scanReminders.run({})]);
+    assert.deepEqual(accepted.sort(), [both+'-ios', webOnly+'-web', stale+'-web'].sort());
+    assert.deepEqual((await contact(stale).get()).data().iosFcmTokens, []);
+    assert.equal((await reminder.get()).data().notified, true);
+  } finally { messaging.send = original; }
+});
+
+test('ambiguous FCM failure never falls through to another device', async () => {
+  const { deliverPush } = require('../lib/push-delivery.js');
+  const attempted = [];
+  await assert.rejects(deliverPush(['ios','web'], async token => {
+    attempted.push(token);
+    throw new Error('timeout');
+  }, async () => assert.fail('should retain the token')), /timeout/);
+  assert.deepEqual(attempted, ['ios']);
+});
+
+test('PWA settings toggle only Web delivery and preserve the native registration', async () => {
+  const uid = prefix+'-settings';
+  await profile(uid);
+  await contact(uid).set({fcmTokens:['native'], iosFcmTokens:['native']});
+  const filename = path.resolve(__dirname,'../../apps/web/src/lib/firebase/messaging.ts');
+  const source = ts.transpileModule(fs.readFileSync(filename,'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+  const module = {exports:{}};
+  const registration = {active:true};
+  const serviceWorker = {register:async()=>registration};
+  const notification = {requestPermission:async()=>'granted'};
+  const sdk = client(uid);
+  const mocks = {'firebase/firestore':f, 'firebase/functions':{}, './config':{getDb:()=>sdk,getFirebaseApp:()=>({})},
+    'firebase/messaging':{isSupported:async()=>true,getMessaging:()=>({}),getToken:async()=>'browser'}};
+  vm.compileFunction(source, ['module','exports','require','window','Notification','navigator','process'], {filename})(
+    module, module.exports, name=>mocks[name], {Notification:notification}, notification,
+    {serviceWorker}, {env:{NEXT_PUBLIC_FIREBASE_VAPID_KEY:'test'}});
+  const web = module.exports;
+  await web.enablePush(uid);
+  assert.deepEqual(await readContactTokens(db,uid), ['native','browser']);
+  await web.disablePush(uid);
+  assert.deepEqual(await readContactTokens(db,uid), ['native']);
+  await db.doc('users/'+uid).update({'pushPrefs.iosDisabled':true});
+  assert.deepEqual(await readContactTokens(db,uid), []);
+  await web.enablePush(uid);
+  assert.deepEqual(await readContactTokens(db,uid), ['browser']);
 });
 
 test('copy then atomic strip preserves private email, every device and unrelated fields',async()=>{

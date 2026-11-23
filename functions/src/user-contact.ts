@@ -15,7 +15,18 @@ export async function readContactTokens(db: Firestore, uid: string, publicData?:
     db.doc(`users/${uid}/private/contact`).get(),
     publicData === undefined ? db.doc(`users/${uid}`).get().then((snap) => snap.data()) : publicData,
   ]);
-  return contactTokens(privateSnap.data()?.fcmTokens, publicUser?.fcmTokens);
+  const contact = privateSnap.data();
+  const prefs = publicUser?.pushPrefs ?? {};
+  if (prefs.globalDisabled) return [];
+  const active = contactTokens(contact?.fcmTokens, publicUser?.fcmTokens);
+  const ios = new Set(contactTokens(contact?.iosFcmTokens));
+  const web = new Set(contactTokens(contact?.webFcmTokens));
+  const newest = [...active].reverse();
+  return [
+    ...(!prefs.iosDisabled ? newest.filter(token => ios.has(token)) : []),
+    ...(!prefs.webDisabled ? newest.filter(token => web.has(token) && !ios.has(token)) : []),
+    ...(!prefs.webDisabled && !prefs.iosDisabled ? active.filter(token => !ios.has(token) && !web.has(token)) : []),
+  ];
 }
 
 /** Remove rejected tokens without recreating the forbidden public field or a
@@ -31,7 +42,11 @@ export async function removeContactTokens(db: Firestore, uid: string, invalid: s
     if (!user.exists || deletion.exists) return;
     const tokens = contactTokens(privateSnap.data()?.fcmTokens, user.data()?.fcmTokens)
       .filter((token) => !rejected.has(token));
-    if (privateSnap.exists || tokens.length > 0) tx.set(privateRef, { fcmTokens: tokens }, { merge: true });
+    if (privateSnap.exists || tokens.length > 0) tx.set(privateRef, {
+      fcmTokens: tokens,
+      ...(privateSnap.data()?.iosFcmTokens && { iosFcmTokens: FieldValue.arrayRemove(...invalid) }),
+      ...(privateSnap.data()?.webFcmTokens && { webFcmTokens: FieldValue.arrayRemove(...invalid) }),
+    }, { merge: true });
     if (hasOwn(user.data()!, "fcmTokens")) tx.update(userRef, { fcmTokens: FieldValue.delete() });
   });
 }

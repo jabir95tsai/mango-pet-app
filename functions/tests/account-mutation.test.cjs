@@ -125,13 +125,13 @@ test('sendTestPush rechecks after token lookup when deletion begins after its en
   await profile('push-late');
   await user('push-late').collection('private').doc('contact').set({ fcmTokens: ['local-fake-token'] });
   const messaging = require('firebase-admin/messaging').getMessaging();
-  const original = messaging.sendEachForMulticast;
+  const original = messaging.send;
   let sent = 0;
-  messaging.sendEachForMulticast = async () => { sent++; return { successCount: 1, failureCount: 0, responses: [] }; };
+  messaging.send = async () => { sent++; return "accepted"; };
   try {
     await denied(deleteAfterFirstTransaction('push-late', () => call('sendTestPush', 'push-late')));
     assert.equal(sent, 0);
-  } finally { messaging.sendEachForMulticast = original; }
+  } finally { messaging.send = original; }
 });
 
 test('import rechecks the checkpoint between 400-document chunks and does not write a late audit', async () => {

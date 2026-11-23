@@ -64,7 +64,7 @@ export function PushToggle() {
         // (OS permission stays "granted" after disable), so push could
         // never be turned off from the UI.
         const appUser = await getAppUser(user.uid);
-        if (appUser?.pushPrefs?.globalDisabled) {
+        if (appUser?.pushPrefs?.globalDisabled || appUser?.pushPrefs?.webDisabled) {
           if (!cancelled) setStatus({ kind: "disabled" });
           return;
         }

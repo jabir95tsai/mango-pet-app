@@ -43,7 +43,7 @@
 ### 目前在用（top-level + family-scoped 為主）
 
 ```
-users/{uid}                                       — 使用者 profile（含 fcmTokens、familyIds、currentFamilyId）
+users/{uid}                                       — 使用者 profile（含 pushPrefs、familyIds、currentFamilyId）
 users/{uid}/friends/{friendUid}                   — 雙向好友（兩邊各寫一份）
 users/{uid}/friendRequests/{requestId}            — 待處理好友邀請（requestId == fromUid）
 users/{uid}/favoriteRestaurants/{restaurantId}    — 收藏餐廳
@@ -104,16 +104,18 @@ Spec：[features/legacy-path-cleanup.md](features/legacy-path-cleanup.md)。Audi
 | 欄位 | 寫入時機 | 備註 |
 |---|---|---|
 | `uid` | upsertUser（首次登入） | 與 doc id 同；冗餘存方便 collectionGroup query |
-| `displayName`, `email`, `photoURL`, `authProvider`, `locale` | upsertUser | provider 推斷自 `user.providerData[0].providerId` |
+| `displayName`, `photoURL`, `authProvider`, `locale` | upsertUser | provider 推斷自 `user.providerData[0].providerId` |
 | `displayNameLower` | upsertUser（create / displayName 變更 / 缺欄位防呆 backfill） | `displayName.trim().toLowerCase()`；`searchUsers` 用它做 case-insensitive prefix match。歷史 docs 由 `displayNameLowerBackfills/2026-05-23T14-52-04-246Z` 補齊 |
 | `createdAt`, `lastSeenAt` | upsertUser；lastSeenAt 一小時節流一次 | serverTimestamp |
 | `defaultPostVisibility` | upsertUser，預設 `"friends"` | 影響發貼文預設選項 |
 | `allowFriendRequests` | upsertUser，預設 `true` | 目前 lib 沒檢查；未來 friends UI 可選擇關閉 |
-| `fcmTokens?: string[]` | `enablePush` arrayUnion / `disablePush` arrayRemove / scanReminders 失敗時 arrayRemove | 失效 token 由 scanReminders + sendTestPush 自我清理 |
+| `pushPrefs.iosDisabled`、`pushPrefs.webDisabled` | 對應平台的推播設定 | 舊版的 `globalDisabled` 仍適用 |
 | `familyIds?: string[]` | createFamily / joinFamilyByCode / leaveFamily / removeFamilyMember | UI 快取；不可作授權依據。成員資格以 `families.memberUids` 為準 |
 | `currentFamilyId?: string` | createFamily（auto-set）/ joinFamily（auto-set）/ setCurrentFamily（client 直寫）/ leave 時 FieldValue.delete() | 是 client 端決定看哪個 family 的「active 選擇」 |
 
-⚠ **PII 弱點**：`firestore.rules` 目前允許**任何登入者讀任何 user doc**。`email` / `fcmTokens` / `familyIds` 都被洩漏。修法是把 PII 拆到 sub-doc（如 `users/{uid}/private/contact`）— 已在風險清單，未動工。
+推播 token 與 email 存在限本人存取的 `users/{uid}/private/contact`。兩端註冊時更新 `fcmTokens`，並以 `iosFcmTokens` 或 `webFcmTokens` 標示平台。後端依 iOS、PWA 順序送出；舊版未標示平台的 token 僅在兩端均未被明確關閉時作為備援。新版 iOS 開啟時補標，PWA 登入時補標現有登錄。
+
+自動推播在發送前以交易建立 `users/{uid}/pushDeliveries/{eventHash}`，僅後端可讀寫。同一事件重跑會略過該帳號。發送結果不明時保留紀錄，避免重送。手動測試按鈕每按一次視為新通知。
 
 ### `families/{familyId}` — [Family](../src/lib/types.ts#L31)
 

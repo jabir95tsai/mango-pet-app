@@ -11,7 +11,7 @@ import {
 import type { User } from "firebase/auth";
 import { useLocale } from "next-intl";
 import { subscribeAuth, syncAuthProfileFromProviders } from "@/lib/firebase/auth";
-import { setupPushMessageListener } from "@/lib/firebase/messaging";
+import { reconcileCurrentToken, setupPushMessageListener } from "@/lib/firebase/messaging";
 import { upsertUser } from "@/lib/firebase/users";
 
 type AuthContextValue = {
@@ -58,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         try {
           await upsertUser(u, locale);
+          void reconcileCurrentToken(u.uid, true).catch(() => undefined);
         } catch (err) {
           console.error("upsertUser failed:", err);
         }

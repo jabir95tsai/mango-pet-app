@@ -8,6 +8,7 @@ import {
 } from "firebase/messaging";
 import {
   arrayUnion,
+  runTransaction,
   doc,
   setDoc,
 } from "firebase/firestore";
@@ -100,45 +101,24 @@ export async function enablePush(uid: string): Promise<{ token: string } | null>
   // Clear any prior "user turned push off" intent — they just opted back
   // in. fcmTokens are PII → owner-only private subdoc (security-hardening
   // #2); pushPrefs stays on the public doc (read by the Settings probe).
-  await Promise.all([
-    setDoc(
-      doc(getDb(), "users", uid, "private", "contact"),
-      { fcmTokens: arrayUnion(token) },
-      { merge: true },
-    ),
-    setDoc(
-      doc(getDb(), "users", uid),
-      { pushPrefs: { globalDisabled: false } },
-      { merge: true },
-    ),
-  ]);
+  const db = getDb();
+  const profile = doc(db, "users", uid);
+  await runTransaction(db, async tx => {
+    const prefs = (await tx.get(profile)).data()?.pushPrefs;
+    tx.set(doc(db, "users", uid, "private", "contact"),
+      { fcmTokens: arrayUnion(token), webFcmTokens: arrayUnion(token) }, { merge: true });
+    tx.set(profile, { pushPrefs: {
+      globalDisabled: false, webDisabled: false,
+      ...(prefs?.globalDisabled && { iosDisabled: true }),
+    } }, { merge: true });
+  });
 
   return { token };
 }
 
-/**
- * Turn push OFF for this account. Clears ALL fcmTokens (not just the
- * current context's — stale tokens from other contexts would otherwise
- * keep receiving push) and records the explicit `globalDisabled` intent
- * so the Settings probe stops re-minting a token via
- * reconcileCurrentToken. The OS notification permission can't be revoked
- * programmatically, so this intent flag is the only thing that makes
- * "off" stick while permission stays "granted".
- */
+/** Pause Web delivery across browser contexts for this account. */
 export async function disablePush(uid: string): Promise<void> {
-  // fcmTokens → private subdoc; pushPrefs → public doc (security-hardening #2).
-  await Promise.all([
-    setDoc(
-      doc(getDb(), "users", uid, "private", "contact"),
-      { fcmTokens: [] },
-      { merge: true },
-    ),
-    setDoc(
-      doc(getDb(), "users", uid),
-      { pushPrefs: { globalDisabled: true } },
-      { merge: true },
-    ),
-  ]);
+  await setDoc(doc(getDb(), "users", uid), { pushPrefs: { webDisabled: true } }, { merge: true });
 }
 
 /** Reconcile the in-memory FCM token for the **current browser context**
@@ -165,6 +145,7 @@ export async function disablePush(uid: string): Promise<void> {
  *  on null. */
 export async function reconcileCurrentToken(
   uid: string,
+  existingOnly = false,
 ): Promise<string | null> {
   if (currentPermission() !== "granted") return null;
   const messaging = await getMessagingInstance();
@@ -178,7 +159,8 @@ export async function reconcileCurrentToken(
   // a brand-new context can still mint a token without the user having
   // to click "啟用" first — getToken needs a registration regardless.
   const swReg =
-    (await findExistingFcmSwRegistration()) ?? (await ensureSwRegistration());
+    (await findExistingFcmSwRegistration()) ?? (existingOnly ? null : await ensureSwRegistration());
+  if (!swReg) return null;
 
   try {
     const token = await getToken(messaging, {
@@ -186,17 +168,18 @@ export async function reconcileCurrentToken(
       serviceWorkerRegistration: swReg,
     });
     if (!token) return null;
-    // arrayUnion is idempotent at the doc level — already-present
-    // tokens make this a no-op write that still updates server time.
-    // Acceptable: probe runs once per Settings page open. fcmTokens →
-    // owner-only private subdoc (security-hardening #2). setDoc/merge
-    // (not updateDoc) so the subdoc is created on first write.
-    await setDoc(
-      doc(getDb(), "users", uid, "private", "contact"),
-      { fcmTokens: arrayUnion(token) },
-      { merge: true },
-    );
-    return token;
+    const db = getDb();
+    const contact = doc(db, "users", uid, "private", "contact");
+    return await runTransaction(db, async tx => {
+      const prefs = (await tx.get(doc(db, "users", uid))).data()?.pushPrefs;
+      if (prefs?.globalDisabled || prefs?.webDisabled) return null;
+      const saved = (await tx.get(contact)).data();
+      if (existingOnly && !saved?.fcmTokens?.includes(token)) return null;
+      if (!saved?.webFcmTokens?.includes(token) || !saved?.fcmTokens?.includes(token)) {
+        tx.set(contact, { fcmTokens: arrayUnion(token), webFcmTokens: arrayUnion(token) }, { merge: true });
+      }
+      return token;
+    });
   } catch {
     return null;
   }
@@ -254,6 +237,7 @@ export async function setupPushMessageListener(): Promise<() => void> {
     const title = n?.title ?? "Mango Pet";
     await reg.showNotification(title, {
       body: n?.body ?? "",
+      tag: payload.messageId,
       icon: n?.icon ?? "/web-app-manifest-192x192.png",
       badge: "/favicon-96x96.png",
       data: payload.data ?? {},
